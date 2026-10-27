@@ -28,6 +28,11 @@ while IFS= read -r f; do
     if [ "$st" = "in-progress" ] && [ -z "$as" ]; then
       echo "ОШИБКА: $f: статус 'in-progress', но не указан assignee"; fail=1
     fi
+    # Готовый код в незавершённых задачах запрещён: только концепции, пробный код — в poc/ (docs/tasks.md)
+    case "$st" in done|cancelled) ;; *)
+      grep -qE '^[[:space:]]*```(csharp|cs|xml|xaml)[[:space:]]*$' "$f" \
+        && { echo "ОШИБКА: $f: в задаче блок кода C#/XAML; в плане только концепции, пробный код — в poc/"; fail=1; } ;;
+    esac
     case "$st" in done|cancelled)
       [ -z "$as" ] || { echo "ОШИБКА: $f: статус '$st', но задача всё ещё занята ($as): scripts/release-task.sh ${id:-N}"; fail=1; } ;;
     esac

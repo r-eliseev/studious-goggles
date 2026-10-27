@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pm="clr-namespace:ImageGen.Maui.PageModels"
+             xmlns:strings="clr-namespace:ImageGen.Maui.Resources.Strings"
+             x:Class="ImageGen.Maui.Pages.SessionModelsPage"
+             x:DataType="pm:SessionModelsPageModel"
+             Title="{x:Static strings:AppResources.ModelsTitle}">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="16" RowSpacing="8">
+        <SearchBar Text="{Binding SearchText}"
+                   Placeholder="{x:Static strings:AppResources.ModelsSearchPlaceholder}"
+                   SemanticProperties.Description="{x:Static strings:AppResources.ModelsSearchPlaceholder}" />
+        <HorizontalStackLayout Grid.Row="1" Spacing="12">
+            <Label Text="{Binding RunsPerModelText}" VerticalOptions="Center" />
+            <Stepper Value="{Binding RunsPerModel}"
+                     Minimum="{Binding MinRunsPerModel}"
+                     Maximum="{Binding MaxRunsPerModel}"
+                     Increment="1"
+                     SemanticProperties.Description="{Binding RunsPerModelText}" />
+            <Button Text="{x:Static strings:AppResources.Refresh}"
+                    Command="{Binding RefreshCommand}"
+                    SemanticProperties.Description="{x:Static strings:AppResources.Refresh}" />
+        </HorizontalStackLayout>
+        <ActivityIndicator Grid.Row="2" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" VerticalOptions="Start" />
+        <CollectionView Grid.Row="2" ItemsSource="{Binding Models}" SelectionMode="None">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="pm:ModelOptionViewModel">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="0,4">
+                        <CheckBox IsChecked="{Binding IsSelected}" SemanticProperties.Description="{Binding Name}" />
+                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                            <Label Text="{Binding Name}" />
+                            <Label Text="{Binding DetailsText}" FontSize="12" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+        <Button Grid.Row="3"
+                Text="{x:Static strings:AppResources.Save}"
+                Command="{Binding SaveCommand}"
+                SemanticProperties.Description="{x:Static strings:AppResources.Save}" />
+    </Grid>
+</ContentPage>

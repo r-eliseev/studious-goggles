@@ -38,7 +38,14 @@ while IFS= read -r f; do
   done < <(grep -oE '\]\([^)#[:space:]]+\.md(#[^)]*)?\)' "$f" | sed -E 's/^\]\(([^)#]+).*/\1/')
 done < <(find . -name '*.md' -not -path './.git/*' -not -path './node_modules/*' | sort)
 
-# 5. Предупреждение: изменён код, а docs/ и tasks/ нет (для CI на pull request)
+# 5. architecture.md описывает устройство, а не ход работ: без номеров задач, путей tasks/ и раздела о состоянии
+if [ -f docs/architecture.md ]; then
+  grep -nE '[Зз]адач[а-я]* +[0-9]{3}|tasks/|^#+ +Состояние' docs/architecture.md | while IFS= read -r line; do
+    echo "ОШИБКА: docs/architecture.md:${line%%:*}: ход работ (номер задачи, tasks/ или раздел «Состояние») — ему место в «Отчёте» задачи"
+  done | grep . && fail=1
+fi
+
+# 6. Предупреждение: изменён код, а docs/ и tasks/ нет (для CI на pull request)
 base="${BASE_REF:-origin/main}"
 if git rev-parse --verify -q "$base" >/dev/null 2>&1; then
   changed="$(git diff --name-only "$base"...HEAD 2>/dev/null)"

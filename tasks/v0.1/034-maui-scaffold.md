@@ -25,6 +25,7 @@ created: 2026-10-27
 - Работать в клоне по короткому пути (например `C:\git\studious-goggles`): длинный путь ломает Windows-сборку (`MSB3030`).
 - Шаблонная `MainPage` остаётся до задачи 013.
 - Правка `.github/workflows/build.yml` разрешена одобрением этого плана владельцем.
+- Итоговый csproj пробной сборки: `poc/v0.1/034-maui-scaffold/` (подсказка, см. `poc/README.md`).
 
 ## План
 1. Из корня репозитория:
@@ -34,45 +35,24 @@ created: 2026-10-27
    Сообщение шаблона об ошибке восстановления пакетов (`Restore failed`) ожидаемо: центральные версии ещё не подключены. Восстановление пройдёт при сборке после шага 2.
 
 2. Изменить `ImageGen/ImageGen.Maui/ImageGen.Maui.csproj`, созданный шаблоном:
-   - строку `<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />` заменить на три строки:
-     ```xml
-     <PackageReference Include="Microsoft.Maui.Controls" />
-     <PackageReference Include="CommunityToolkit.Mvvm" />
-     <PackageReference Include="CommunityToolkit.Maui" />
-     ```
-   - строку `<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />` заменить на `<PackageReference Include="Microsoft.Extensions.Logging.Debug" />`;
-   - `<ApplicationTitle>ImageGen.Maui</ApplicationTitle>` заменить на `<ApplicationTitle>ImageGen</ApplicationTitle>`;
-   - перед закрывающим `</Project>` добавить:
-     ```xml
-     <ItemGroup>
-       <ProjectReference Include="../ImageGen.Core/ImageGen.Core.csproj" />
-     </ItemGroup>
-     ```
+   - у всех `PackageReference` убрать атрибут `Version` (версии центральные, из `Directory.Packages.props`): это `Microsoft.Maui.Controls` и `Microsoft.Extensions.Logging.Debug`;
+   - рядом с `Microsoft.Maui.Controls` добавить `PackageReference` на `CommunityToolkit.Mvvm` и `CommunityToolkit.Maui` (тоже без версии);
+   - `ApplicationTitle` поменять с `ImageGen.Maui` на `ImageGen`;
+   - в конец добавить `ItemGroup` с `ProjectReference` на `../ImageGen.Core/ImageGen.Core.csproj`.
    Остальное в csproj не менять (в том числе `ApplicationId`).
 
 3. В `ImageGen/ImageGen.Maui/MauiProgram.cs` добавить `using CommunityToolkit.Maui;` первой строкой и строку `.UseMauiCommunityToolkit()` сразу после `.UseMauiApp<App>()`.
 
 4. В `ImageGen/ImageGen.slnx` перед строкой `</Solution>` добавить строку `  <Project Path="ImageGen.Maui/ImageGen.Maui.csproj" />`. Затем отформатировать шаблонные файлы: `dotnet format ImageGen/ImageGen.Maui/ImageGen.Maui.csproj` (без `--verify-no-changes`).
 
-5. В конец `.github/workflows/build.yml` (после задачи `core`, с пустой строкой перед ней) добавить задачу `maui`; отступы как у задачи `core`:
-   ```yaml
-     # Android собираем на Windows: установка нагрузки maui-android на ubuntu-latest падала с "Disk quota exceeded"
-     maui:
-       runs-on: windows-latest
-       steps:
-         - uses: actions/checkout@v4
-         - uses: actions/setup-dotnet@v4
-           with:
-             dotnet-version: 10.0.x
-         - run: dotnet workload install maui
-         - run: dotnet format ImageGen/ImageGen.Maui/ImageGen.Maui.csproj --verify-no-changes
-         - run: dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0 -c Release
-         - run: dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android -c Release
-   ```
+5. В конец `.github/workflows/build.yml` (после задачи `core`, через пустую строку, с теми же отступами) добавить задачу `maui` с комментарием, почему Android собирается на Windows (установка `maui-android` на ubuntu-latest падала с «Disk quota exceeded»). Задача: `runs-on: windows-latest`; шаги по порядку:
+   - checkout и setup-dotnet с `dotnet-version: 10.0.x` (те же версии действий, что у `core`);
+   - `dotnet workload install maui`;
+   - `dotnet format` MAUI-проекта с `--verify-no-changes`;
+   - сборка Release под `net10.0-windows10.0.19041.0`;
+   - сборка Release под `net10.0-android`.
 
-6. В `docs/architecture.md`, раздел «Состояние кода»: фразу «Пустое `ImageGen.Maui` из шаблона добавляет задача 034» заменить на «Пустое `ImageGen.Maui` из шаблона добавлено задачей 034».
-
-Файлы: `ImageGen/ImageGen.Maui/**`, `ImageGen/ImageGen.slnx`, `.github/workflows/build.yml`, `docs/architecture.md`
+Файлы: `ImageGen/ImageGen.Maui/**`, `ImageGen/ImageGen.slnx`, `.github/workflows/build.yml`
 
 ### Проверка
 ```

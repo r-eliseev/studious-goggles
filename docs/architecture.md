@@ -1,13 +1,15 @@
 # Архитектура
 
-Статус: 2026-10-27. Основной сценарий — сессии с ассистентом (`docs/specs/chat-sessions.md`, ADR 0004). Первый релиз v0.1 — ходячий скелет: только OpenRouter, только MAUI (`tasks/v0.1/`). Целевая раскладка с fal, Replicate и Web — ниже, в разделе «Целевая раскладка»; она строится поверх скелета (`tasks/backlog/`).
+Основной сценарий — сессии с ассистентом (`docs/specs/chat-sessions.md`, ADR 0004). Первый релиз v0.1 — ходячий скелет: только OpenRouter, только MAUI. Целевая раскладка с fal, Replicate и Web строится поверх скелета (раздел «Целевая раскладка»).
+
+Документ описывает задуманное устройство, а не ход работ: что уже сделано, видно по статусам задач. Правится, только когда код разошёлся с описанием (`AGENTS.md`, «Когда что обновлять»).
 
 ## Скелет v0.1: раскладка
-Это источник правды для задач `tasks/v0.1/`. Имена проектов, каталогов и типов в задачах совпадают с этим разделом. Ядро, хранилище и их тесты собираются на Linux и Windows, `ImageGen.Maui` только на Windows (`docs/knowledge/claude-cloud-session.md`).
+Источник правды для задач скелета: имена проектов, каталогов и типов в задачах совпадают с этим разделом. Где какой проект собирается: `docs/knowledge/dev-environment.md`.
 
 ```
-.editorconfig                      форматирование (задача 001)
-global.json                        режим dotnet test: Microsoft.Testing.Platform (задача 001)
+.editorconfig                      форматирование
+global.json                        режим dotnet test: Microsoft.Testing.Platform
 ImageGen/
   ImageGen.slnx
   Directory.Build.props            Nullable, ImplicitUsings, TreatWarningsAsErrors
@@ -23,7 +25,7 @@ ImageGen/
                                    IImageModelRepository, IImageFileStore
     Providers/                     ProviderException, IImageGenerator, ImageGenerationRequest, ImageGenerationResult
     Providers/IModelProvider       слой абстракции над провайдером моделей (реализация: OpenRouterClient)
-    OpenRouter/                    OpenRouterClient, запросы и ответы чата
+    OpenRouter/                    OpenRouterClient, IOpenRouterChatClient (чат ассистента), запросы и ответы чата
     Services/                      ApiKeyService, ModelCatalogService, SessionService, TimelineOrdering, GenerationService,
                                    AssistantService, AssistantPrompts, ISeedSource, RandomSeedSource
     Serialization/                 CoreJsonContext
@@ -50,7 +52,7 @@ ImageGen/
 **Обновление экрана.** `ChatPageModel` после каждого своего действия перечитывает ленту сессии (`SessionService.GetTimelineAsync`), а событие `GenerationUpdated` обновляет одну карточку в UI-потоке (`MainThread.BeginInvokeOnMainThread`).
 
 ## Скелет v0.1: хранение
-SQLite-файл `imagegen.db` в `IAppPaths.DataDirectory`, схема в `ImageGen.Data/Migrations/*.sql` — встроенные ресурсы, подключаются через `Migrations.cs` (ADR 0002, задача 003). Картинки: `images/<sessionId>/<generationId>.<ext>` в той же папке; в БД хранится относительный путь. Ключ OpenRouter — только `SecureStorage`.
+SQLite-файл `imagegen.db` в `IAppPaths.DataDirectory`, схема в `ImageGen.Data/Migrations/*.sql` — встроенные ресурсы, подключаются через `Migrations.cs` (ADR 0002). Картинки: `images/<sessionId>/<generationId>.<ext>` в той же папке; в БД хранится относительный путь. Ключ OpenRouter — только `SecureStorage`.
 
 Известное упрощение скелета: удаление сессии удаляет её генерации вместе с ценами. Правило ADR 0002 «удаление картинки не удаляет запись о расходах» вводится вместе с учётом расходов (backlog).
 
@@ -72,18 +74,15 @@ Dockerfile, docker-compose.yml   том /data
 
 ## Правила слоёв
 - `Core` не знает про MAUI, ASP.NET Core, SQLite и UI-типы (`Brush`, `Color`, `Shell`, `Preferences`, `FileSystem`). Платформенное — через `Core/Platform`.
-- Код вне `Providers/` и `OpenRouter/` не знает, какой провайдер рисует картинки (исключение скелета: ассистент работает только через OpenRouter, `AssistantService` использует `IModelProvider` и OpenRouter-клиент чата).
+- Код вне `Providers/` и `OpenRouter/` не знает, какой провайдер рисует картинки (исключение скелета: ассистент работает только через OpenRouter, `AssistantService` использует `IOpenRouterChatClient`).
 - Ядро не формирует тексты интерфейса: ошибки и состояния отдаёт кодами (`ErrorKind`, `GenerationStatus`), тексты в `.resx` оболочки.
 - Страницы MAUI знают только свой `PageModel`; `PageModel` знает сервисы ядра.
 
 ## Внешние системы
 OpenRouter (HTTP API: `/api/v1/key`, `/api/v1/images/models`, `/api/v1/images`, `/api/v1/chat/completions`). Позже fal.ai и Replicate.
 
-## Состояние кода
-Каркас скелета создан задачей 001: `ImageGen.Core`, `ImageGen.Core.Tests` (архитектурный тест). Задача 002 добавила доменную модель и интерфейсы ядра. Задача 003 добавила `ImageGen.Data` (`SqliteDatabase`: путь к файлу, открытие соединения, миграции через `PRAGMA user_version`; первая миграция `Migrations/0001_initial.sql` создаёт таблицы скелета) и `ImageGen.Data.Tests` (временная БД в файле). Задача 006 добавила `ImageGen.Core/OpenRouter/` (`OpenRouterClient` для `GET key`, `GET images/models`, `POST images`, `POST chat/completions`; ошибки приводятся к `ProviderException` с `ErrorKind`) и тестовую подмену `StubHttpMessageHandler`. Задача 007 добавила `ApiKeyService` (ключ сохраняется в `ISecretStore` только при `ApiKeyStatus.Valid`; маска «••••» и последние 4 символа) и `ModelCatalogService` (каталог картинок из `IImageModelRepository`; из API перечитывается только при пустом кеше или `forceRefresh`; при сбое сети с непустым кешем отдаётся кеш). Задача 004 добавила репозитории сессий, сообщений, прогонов и моделей на SQLite (`ImageGen.Data/Repositories/`, `SqliteValues`; тесты в `ImageGen.Data.Tests/Repositories/`). `FileImageStore` пока не написан (задача 005). Пустое `ImageGen.Maui` из шаблона добавляет задача 034, остальное — задачи `tasks/v0.1/`. Сервис сессий `SessionService` и порядок ленты `TimelineOrdering` (строка ленты `TimelineEntry`) — задача 008: они берут репозитории только через интерфейсы, реализации репозиториев есть с задачи 004, `IImageFileStore` пока без реализации (задача 005).
-
 ## Ограничения
-- Платформы: цель Windows у MAUI на Linux не собирается (проверено, `docs/knowledge/claude-cloud-session.md`); Android-цель собирается. Linux обслуживает будущая Web-оболочка.
+- Платформы: у MAUI нет цели Linux; Linux как платформу пользователя обслуживает будущая Web-оболочка. Цель Windows у MAUI собирается только на Windows (`docs/knowledge/dev-environment.md`).
 - Безопасность: ключ только в шифрованном хранилище; ключи и пароли не попадают в журналы, экспорт и репозиторий.
 - Производительность: генерации идут параллельно, UI-поток не блокируется.
 - Ссылки провайдеров истекают, поэтому файл сохраняется сразу (у OpenRouter картинка приходит в ответе).

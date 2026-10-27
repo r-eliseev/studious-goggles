@@ -53,4 +53,4 @@ dockerd > ~/dockerd.log 2>&1 &
 
 ## Особенности облачной сессии
 - Тесты не ходят в сеть: OpenRouter подменяется `StubHttpMessageHandler`, ключ не нужен.
-- Скрипты задач (`scripts/claim-task.sh`, `scripts/new-task.sh --publish`) по умолчанию пишут в текущую ветку (`TASKS_BRANCH`), а не в `main`. Запись в `main` — только явным `TASKS_BRANCH=main`.
+- Скрипты задач (`scripts/claim-task.sh`, `scripts/release-task.sh`, `scripts/new-task.sh --publish`) пишут занятость и новые задачи прямо в `origin/main`: так агенты в разных ветках видят занятость друг друга. Если облачной сессии запрещён пуш в `main`, скрипт завершится ошибкой; тогда задачу занимает человек или агент на локальной машине. Переменная `TASKS_BRANCH` переопределяет ветку, но задачи, занятые не в `main`, другие агенты не увидят.
