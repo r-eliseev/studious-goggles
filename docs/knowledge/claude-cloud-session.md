@@ -22,6 +22,10 @@
 - **MAUI, цель Windows:** `dotnet build -f net10.0-windows10.0.19041.0` на Linux не проходит. Без обхода — `NETSDK1100`. С `-p:EnableWindowsTargeting=true` и явным TFM — падает на XAML-компиляции (`XamlCompiler output file … was not created`). Компилятор WinUI XAML — Windows-инструмент. Значит, задачи 012–016 и Windows-часть 034 здесь не выполняются.
 - **sqlite3 CLI:** не установлен. Не нужен: БД через `Microsoft.Data.Sqlite`. Установка `apt-get install sqlite3` не проверялась.
 - **`chromium` в PATH:** нет. Использовать Playwright-версию из `/opt/pw-browsers`.
+- **Эмулятор Android (запуск приложения):** `/dev/kvm` отсутствует, у процессора нет флагов `vmx`/`svm`. Замер 2026-10-27 (эмулятор 37.2.12, Android 36 Google APIs, 4 vCPU, 3 ГБ RAM, `-no-accel -gpu swiftshader_indirect`):
+  - образ `arm64-v8a` не запускается: `System image must match the host architecture`;
+  - образ `x86_64` стартует, но загрузка не завершилась за 31 минуту: `sys.boot_completed` не выставлен, `bootanim` в состоянии `running`. Эмулятор остановлен.
+  - Вывод: отладка запуска и UI MAUI-приложения в облачной сессии не выполняется. Сборка, анализ APK и тесты логики — выполняются.
 
 ## Как поставить (нужно в каждой новой сессии: окружение не сохраняется)
 Состояние не переживает сессию: SDK, Android SDK и запущенный `dockerd` ставятся заново.
