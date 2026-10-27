@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pm="clr-namespace:ImageGen.Maui.PageModels"
+             xmlns:strings="clr-namespace:ImageGen.Maui.Resources.Strings"
+             x:Class="ImageGen.Maui.Pages.SessionsPage"
+             x:DataType="pm:SessionsPageModel"
+             Title="{x:Static strings:AppResources.SessionsTitle}">
+    <Grid RowDefinitions="Auto,Auto,*" Padding="16" RowSpacing="12">
+        <Button Text="{x:Static strings:AppResources.NewSession}"
+                Command="{Binding NewSessionCommand}"
+                MinimumHeightRequest="44"
+                HorizontalOptions="Start"
+                SemanticProperties.Description="{x:Static strings:AppResources.NewSession}" />
+
+        <ActivityIndicator Grid.Row="1"
+                           IsRunning="{Binding IsBusy}"
+                           IsVisible="{Binding IsBusy}"
+                           HorizontalOptions="Start"
+                           AutomationProperties.IsInAccessibleTree="False" />
+
+        <CollectionView Grid.Row="2" ItemsSource="{Binding Sessions}" SelectionMode="None">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="pm:SessionItemViewModel">
+                    <Grid ColumnDefinitions="*,Auto" Padding="0,8" ColumnSpacing="12">
+                        <VerticalStackLayout SemanticProperties.Description="{Binding Title}">
+                            <VerticalStackLayout.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenCommand}" />
+                            </VerticalStackLayout.GestureRecognizers>
+                            <Label Text="{Binding Title}" FontAttributes="Bold" />
+                            <Label Text="{Binding UpdatedText}" FontSize="12" />
+                        </VerticalStackLayout>
+
+                        <Button Grid.Column="1"
+                                Text="{x:Static strings:AppResources.DeleteSession}"
+                                Command="{Binding DeleteCommand}"
+                                MinimumHeightRequest="44"
+                                SemanticProperties.Description="{x:Static strings:AppResources.DeleteSession}" />
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

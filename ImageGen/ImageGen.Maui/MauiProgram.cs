@@ -2,6 +2,8 @@ using CommunityToolkit.Maui;
 using ImageGen.Core;
 using ImageGen.Core.Platform;
 using ImageGen.Data;
+using ImageGen.Maui.PageModels;
+using ImageGen.Maui.Pages;
 using ImageGen.Maui.Services;
 using Microsoft.Extensions.Logging;
 
@@ -34,6 +36,9 @@ public static class MauiProgram
         builder.Services.AddSingleton<INavigationService, ShellNavigationService>();
 
         // Pages and page models
+        builder.Services.AddSingleton<SessionsPageModel>();
+        builder.Services.AddSingleton<SessionsPage>();
+        builder.Services.AddTransientWithShellRoute<ApiKeyPage, ApiKeyPageModel>(Routes.ApiKey);
 
         return builder.Build();
     }

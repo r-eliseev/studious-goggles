@@ -1,8 +1,8 @@
 ---
 id: 013
-status: planned
-assignee:
-claimed:
+status: in-progress
+assignee: claude-qnrqyt
+claimed: 2026-10-27T00:00:00Z
 created: 2026-10-27
 ---
 
@@ -65,5 +65,24 @@ scripts/check.sh
 ```
 
 ## Отчёт
+
+Статус `in-progress`: критерии «запуск под Windows» и «сборка под Windows» не проверены (облачная сессия, XAML-компилятор только под Windows); ручная проверка за задачей 016. Занятость не снималась.
+
+- Сделано (план пп. 1–5): удалены `MainPage.xaml` и `MainPage.xaml.cs`; `AppShell.xaml` с одним `ShellContent` на `SessionsPage` (`DataTemplate`, заголовок из `AppResources`); `Pages/ApiKeyPage.xaml(.cs)` и `Pages/SessionsPage.xaml(.cs)`; `PageModels/ApiKeyPageModel.cs`, `PageModels/SessionItemViewModel.cs`, `PageModels/SessionsPageModel.cs`; регистрации в `MauiProgram.cs` после `// Pages and page models`.
+- Открытый вопрос из 012 (вызов `AppInitializer` при старте): решено по плану 013. Вызов стоит в `SessionsPageModel.OnAppearingAsync` (первая страница), `App` не менялся. Описание 012 говорит «при запуске»: вызов выполняется при первом и каждом последующем появлении списка сессий, но сама инициализация однократна (`AppInitializer`). Это явное отклонение от формулировки 012, согласованное с планом 013.
+- Логика вынесена в PageModel'ы без типов MAUI и покрыта тестами, написанными до реализации:
+  - `ImageGen.Core.Tests/MauiLinked/ApiKeyPageModelTests.cs` (8): доступность сохранения, принятый/отклонённый/сетевой ключ, состояние «проверка», неожиданная ошибка;
+  - `ImageGen.Core.Tests/MauiLinked/SessionItemViewModelTests.cs` (4): поля строки, формат времени, команды открытия и удаления;
+  - `ImageGen.Data.Tests/MauiLinked/SessionsPageModelTests.cs` (9): переход на ключ без ключа, порядок «новые сверху», замена строк без дублей, ошибка списка → alert, создание сессии → чат, открытие, удаление с подтверждением и отменой.
+- Результаты: `dotnet test` ImageGen.Core.Tests 114 passed, 0 failed (было 102); ImageGen.Data.Tests 38 passed, 0 failed (было 29). `dotnet format --verify-no-changes`: ImageGen.Maui, ImageGen.Core, ImageGen.Core.Tests, ImageGen.Data, ImageGen.Data.Tests: все код выхода 0. `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android`: 0 Error(s), 0 Warning(s). `scripts/check.sh`: все проверки пройдены.
+- Тестовые проекты: в `ImageGen.Core.Tests` и `ImageGen.Data.Tests` подключены через `Compile`/`EmbeddedResource` с `Link` файлы PageModel'ов, `IDialogService`, `INavigationService`; в `ImageGen.Data.Tests` дополнительно `Routes.cs` и `AppResources` (нужны `SessionsPageModel`). Добавлена ссылка `CommunityToolkit.Mvvm` с версией из `Directory.Packages.props`.
+- Отклонения от плана (мелкие):
+  - при ошибке списка и создания сессии текст alert — `ex.Message` (ключа под общий текст ошибки в таблице 012 нет); неожиданная ошибка сохранения ключа тоже уходит в alert `ErrorTitle`, план её не описывает;
+  - индикатор загрузки списка без текста и с `AutomationProperties.IsInAccessibleTree="False"`: подходящего ключа строки нет (`AssistantThinking` не подходит);
+  - строка списка: `TapGestureRecognizer` на блоке заголовка и даты, кнопка Delete справа; `SemanticProperties.Description` блока — заголовок сессии;
+  - сортировка «новые сверху» сделана в `SessionsPageModel` (S1.1), а не полагается на порядок репозитория.
+- Не проверено (нужен Windows, задача 016): сборка `-f net10.0-windows10.0.19041.0`; запуск и первый экран (страница ключа при первом запуске, пустой список после сохранения верного ключа); `DisplayAlertAsync`/`DisplayPromptAsync` в Shell; `SemanticScreenReader.Announce` и реальная озвучка; разрешение `SessionsPage` через DI в `DataTemplate` Shell; переход `apikey` через `AddTransientWithShellRoute`; визуальная разметка (`MaximumWidthRequest=600`, касание 44). XAML на Android проверен компилятором SourceGen (сборка без ошибок); XAML-разметка страниц в тестах не покрыта.
+- Переход `chat?sessionId=...` работает только после задачи 014 (ожидаемо по плану).
+- `docs/architecture.md` не менялся: раскладка и правила слоёв совпадают с реализацией.
 
 ## Комментарии

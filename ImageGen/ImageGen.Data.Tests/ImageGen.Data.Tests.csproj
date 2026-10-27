@@ -10,6 +10,7 @@
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />
@@ -21,5 +22,12 @@
   <ItemGroup>
     <!-- Platform-free MAUI source, compiled here so that it is tested on Linux (the MAUI project does not build here). -->
     <Compile Include="../ImageGen.Maui/Services/AppInitializer.cs" Link="MauiLinked/AppInitializer.cs" />
+    <Compile Include="../ImageGen.Maui/Routes.cs" Link="MauiLinked/Routes.cs" />
+    <Compile Include="../ImageGen.Maui/Resources/Strings/AppResources.cs" Link="MauiLinked/AppResources.cs" />
+    <EmbeddedResource Include="../ImageGen.Maui/Resources/Strings/AppResources.resx" LogicalName="ImageGen.Maui.Resources.Strings.AppResources.resources" />
+    <Compile Include="../ImageGen.Maui/Services/IDialogService.cs" Link="MauiLinked/IDialogService.cs" />
+    <Compile Include="../ImageGen.Maui/Services/INavigationService.cs" Link="MauiLinked/INavigationService.cs" />
+    <Compile Include="../ImageGen.Maui/PageModels/SessionsPageModel.cs" Link="MauiLinked/SessionsPageModel.cs" />
+    <Compile Include="../ImageGen.Maui/PageModels/SessionItemViewModel.cs" Link="MauiLinked/SessionItemViewModel.cs" />
   </ItemGroup>
 </Project>
