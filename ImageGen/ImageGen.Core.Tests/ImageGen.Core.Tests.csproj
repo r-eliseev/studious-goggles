@@ -30,6 +30,8 @@
     <Compile Include="../ImageGen.Maui/PageModels/GenerationItemViewModel.cs" Link="MauiLinked/GenerationItemViewModel.cs" />
     <Compile Include="../ImageGen.Maui/PageModels/MessageItemViewModel.cs" Link="MauiLinked/MessageItemViewModel.cs" />
     <Compile Include="../ImageGen.Maui/PageModels/RunItemViewModel.cs" Link="MauiLinked/RunItemViewModel.cs" />
+    <Compile Include="../ImageGen.Maui/PageModels/ModelOptionViewModel.cs" Link="MauiLinked/ModelOptionViewModel.cs" />
+    <Compile Include="../ImageGen.Maui/PageModels/SessionModelsPageModel.cs" Link="MauiLinked/SessionModelsPageModel.cs" />
     <Compile Include="../ImageGen.Maui/PageModels/ChatItemTemplateChoice.cs" Link="MauiLinked/ChatItemTemplateChoice.cs" />
     <Compile Include="../ImageGen.Maui/PageModels/ChatPageModel.cs" Link="MauiLinked/ChatPageModel.cs" />
     <Compile Include="../ImageGen.Maui/Services/IMainThread.cs" Link="MauiLinked/IMainThread.cs" />

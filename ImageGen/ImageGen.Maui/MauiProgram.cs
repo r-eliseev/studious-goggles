@@ -41,6 +41,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<SessionsPage>();
         builder.Services.AddTransientWithShellRoute<ApiKeyPage, ApiKeyPageModel>(Routes.ApiKey);
         builder.Services.AddTransientWithShellRoute<ChatPage, ChatPageModel>(Routes.Chat);
+        builder.Services.AddTransientWithShellRoute<SessionModelsPage, SessionModelsPageModel>(Routes.SessionModels);
 
         return builder.Build();
     }
