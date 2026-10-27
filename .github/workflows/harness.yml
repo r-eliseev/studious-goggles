@@ -1,0 +1,9 @@
+name: harness-check
+on: [pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: BASE_REF=origin/${{ github.base_ref }} bash scripts/check.sh
