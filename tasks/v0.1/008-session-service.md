@@ -1,8 +1,8 @@
 ---
 id: 008
 status: done
-assignee: claude-qnrqyt
-claimed: 2026-10-27T00:00:00Z
+assignee:
+claimed:
 created: 2026-10-27
 ---
 
