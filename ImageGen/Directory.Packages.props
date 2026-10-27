@@ -1,0 +1,20 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.110" />
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageVersion Include="CommunityToolkit.Maui" Version="15.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
+    <PackageVersion Include="NSubstitute" Version="6.2.0" />
+  </ItemGroup>
+</Project>
