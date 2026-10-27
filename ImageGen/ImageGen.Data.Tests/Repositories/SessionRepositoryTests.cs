@@ -1,3 +1,5 @@
+using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Domain.Sessions;
 using ImageGen.Data.Repositories;
 
 namespace ImageGen.Data.Tests.Repositories;

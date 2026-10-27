@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using ImageGen.Core.Domain;
+using ImageGen.Core.Domain.Sessions;
 
 namespace ImageGen.Core.Serialization;
 

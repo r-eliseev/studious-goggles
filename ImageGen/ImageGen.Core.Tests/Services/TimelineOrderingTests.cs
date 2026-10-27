@@ -1,4 +1,6 @@
-using ImageGen.Core.Domain;
+using ImageGen.Core.Domain.Chat;
+using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Services;
 
 namespace ImageGen.Core.Tests.Services;

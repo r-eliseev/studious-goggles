@@ -12,4 +12,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="ImageGen.Data.Tests" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Migrations/*.sql" LogicalName="%(Filename)%(Extension)" />
+  </ItemGroup>
 </Project>

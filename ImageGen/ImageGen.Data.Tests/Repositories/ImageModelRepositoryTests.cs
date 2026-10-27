@@ -1,4 +1,4 @@
-using ImageGen.Core.Domain;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Data.Repositories;
 
 namespace ImageGen.Data.Tests.Repositories;

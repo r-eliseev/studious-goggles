@@ -1,4 +1,4 @@
-namespace ImageGen.Core.Domain;
+namespace ImageGen.Core.Domain.Chat;
 
 public sealed class ChatMessage
 {

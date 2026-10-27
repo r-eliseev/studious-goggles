@@ -13,17 +13,20 @@ ImageGen/
   Directory.Build.props            Nullable, ImplicitUsings, TreatWarningsAsErrors
   Directory.Packages.props         все версии пакетов
   ImageGen.Core/                   net10.0, без UI и без SQLite
-    Domain/                        Session, SessionSettings, ChatMessage, ChatRole, Run, RunOrigin,
-                                   Generation, GenerationStatus, ErrorKind, ImageModel, ApiKeyStatus, SessionTimeline, TimelineEntry
-    Platform/                      ISecretStore, IAppPaths, SecretNames
+    Domain/Sessions/               Session, SessionSettings, SessionTimeline, TimelineEntry
+    Domain/Chat/                   ChatMessage, ChatRole
+    Domain/Generations/            Run, RunOrigin, Generation, GenerationStatus, ErrorKind
+    Domain/Keys/                   ApiKeyStatus, SecretNames
+    Domain/Models/                 ImageModel
+    Platform/                      ISecretStore, IAppPaths
     Storage/                       ISessionRepository, IChatMessageRepository, IRunRepository,
                                    IImageModelRepository, IImageFileStore
     Providers/                     ProviderException, IImageGenerator, ImageGenerationRequest, ImageGenerationResult
-    OpenRouter/                    IOpenRouterClient, OpenRouterClient, OpenRouterImageGenerator, запросы и ответы
+    Providers/IModelProvider       слой абстракции над провайдером моделей (реализация: OpenRouterClient)
+    OpenRouter/                    OpenRouterClient, запросы и ответы чата
     Services/                      ApiKeyService, ModelCatalogService, SessionService, TimelineOrdering, GenerationService,
                                    AssistantService, AssistantPrompts, ISeedSource, RandomSeedSource
     Serialization/                 CoreJsonContext
-    CoreAssemblyMarker.cs
     CoreServiceCollectionExtensions.cs   AddImageGenCore()
   ImageGen.Data/                   net10.0, Microsoft.Data.Sqlite: SqliteDatabase, Migrations, репозитории, FileImageStore,
                                    DataServiceCollectionExtensions (AddImageGenData())
@@ -47,7 +50,7 @@ ImageGen/
 **Обновление экрана.** `ChatPageModel` после каждого своего действия перечитывает ленту сессии (`SessionService.GetTimelineAsync`), а событие `GenerationUpdated` обновляет одну карточку в UI-потоке (`MainThread.BeginInvokeOnMainThread`).
 
 ## Скелет v0.1: хранение
-SQLite-файл `imagegen.db` в `IAppPaths.DataDirectory`, схема в `ImageGen.Data/Migrations.cs` (ADR 0002, задача 003). Картинки: `images/<sessionId>/<generationId>.<ext>` в той же папке; в БД хранится относительный путь. Ключ OpenRouter — только `SecureStorage`.
+SQLite-файл `imagegen.db` в `IAppPaths.DataDirectory`, схема в `ImageGen.Data/Migrations/*.sql` — встроенные ресурсы, подключаются через `Migrations.cs` (ADR 0002, задача 003). Картинки: `images/<sessionId>/<generationId>.<ext>` в той же папке; в БД хранится относительный путь. Ключ OpenRouter — только `SecureStorage`.
 
 Известное упрощение скелета: удаление сессии удаляет её генерации вместе с ценами. Правило ADR 0002 «удаление картинки не удаляет запись о расходах» вводится вместе с учётом расходов (backlog).
 
@@ -69,7 +72,7 @@ Dockerfile, docker-compose.yml   том /data
 
 ## Правила слоёв
 - `Core` не знает про MAUI, ASP.NET Core, SQLite и UI-типы (`Brush`, `Color`, `Shell`, `Preferences`, `FileSystem`). Платформенное — через `Core/Platform`.
-- Код вне `Providers/` и `OpenRouter/` не знает, какой провайдер рисует картинки (исключение скелета: ассистент работает только через OpenRouter, `AssistantService` использует `IOpenRouterClient`).
+- Код вне `Providers/` и `OpenRouter/` не знает, какой провайдер рисует картинки (исключение скелета: ассистент работает только через OpenRouter, `AssistantService` использует `IModelProvider` и OpenRouter-клиент чата).
 - Ядро не формирует тексты интерфейса: ошибки и состояния отдаёт кодами (`ErrorKind`, `GenerationStatus`), тексты в `.resx` оболочки.
 - Страницы MAUI знают только свой `PageModel`; `PageModel` знает сервисы ядра.
 
@@ -77,7 +80,7 @@ Dockerfile, docker-compose.yml   том /data
 OpenRouter (HTTP API: `/api/v1/key`, `/api/v1/images/models`, `/api/v1/images`, `/api/v1/chat/completions`). Позже fal.ai и Replicate.
 
 ## Состояние кода
-Каркас скелета создан задачей 001: `ImageGen.Core`, `ImageGen.Core.Tests` (архитектурный тест). Задача 002 добавила доменную модель и интерфейсы ядра. Задача 003 добавила `ImageGen.Data` (`SqliteDatabase`: путь к файлу, открытие соединения, миграции через `PRAGMA user_version`; первая миграция создаёт таблицы скелета в `Migrations.cs`) и `ImageGen.Data.Tests` (временная БД в файле). Задача 006 добавила `ImageGen.Core/OpenRouter/` (`OpenRouterClient` для `GET key`, `GET images/models`, `POST images`, `POST chat/completions`; ошибки приводятся к `ProviderException` с `ErrorKind`) и тестовую подмену `StubHttpMessageHandler`. Задача 004 добавила в `ImageGen.Data/Repositories/` реализации `ISessionRepository`, `IChatMessageRepository`, `IRunRepository`, `IImageModelRepository` на SQLite (параметризованный SQL, колонки читаются по имени; `SqliteValues` переводит значения) и тесты в `ImageGen.Data.Tests/Repositories/` на временной БД. `FileImageStore` пока не написан (задача 005). Пустое `ImageGen.Maui` из шаблона добавляет задача 034, остальное — задачи `tasks/v0.1/`. Сервис сессий `SessionService` и порядок ленты `TimelineOrdering` (строка ленты `TimelineEntry`) — задача 008: они берут репозитории только через интерфейсы, реализации репозиториев есть с задачи 004, `IImageFileStore` пока без реализации (задача 005). Пустое `ImageGen.Maui` из шаблона добавляет задача 034, остальное — задачи `tasks/v0.1/`.
+Каркас скелета создан задачей 001: `ImageGen.Core`, `ImageGen.Core.Tests` (архитектурный тест). Задача 002 добавила доменную модель и интерфейсы ядра. Задача 003 добавила `ImageGen.Data` (`SqliteDatabase`: путь к файлу, открытие соединения, миграции через `PRAGMA user_version`; первая миграция `Migrations/0001_initial.sql` создаёт таблицы скелета) и `ImageGen.Data.Tests` (временная БД в файле). Задача 006 добавила `ImageGen.Core/OpenRouter/` (`OpenRouterClient` для `GET key`, `GET images/models`, `POST images`, `POST chat/completions`; ошибки приводятся к `ProviderException` с `ErrorKind`) и тестовую подмену `StubHttpMessageHandler`. Задача 004 добавила репозитории сессий, сообщений, прогонов и моделей на SQLite (`ImageGen.Data/Repositories/`, `SqliteValues`; тесты в `ImageGen.Data.Tests/Repositories/`). `FileImageStore` пока не написан (задача 005). Пустое `ImageGen.Maui` из шаблона добавляет задача 034, остальное — задачи `tasks/v0.1/`. Сервис сессий `SessionService` и порядок ленты `TimelineOrdering` (строка ленты `TimelineEntry`) — задача 008: они берут репозитории только через интерфейсы, реализации репозиториев есть с задачи 004, `IImageFileStore` пока без реализации (задача 005).
 
 ## Ограничения
 - Платформы: MAUI не поддерживает Linux; Linux обслуживает будущая Web-оболочка.

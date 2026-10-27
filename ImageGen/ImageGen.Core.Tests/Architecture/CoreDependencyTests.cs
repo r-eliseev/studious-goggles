@@ -12,7 +12,7 @@ public class CoreDependencyTests
     [Fact]
     public void CoreAssembly_ReferencedAssemblies_DoNotIncludeUiOrStorage()
     {
-        var referenced = typeof(CoreAssemblyMarker).Assembly
+        var referenced = typeof(CoreServiceCollectionExtensions).Assembly
             .GetReferencedAssemblies()
             .Select(a => a.Name ?? string.Empty)
             .ToList();

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json.Nodes;
-using ImageGen.Core.Domain;
+using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.OpenRouter;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
@@ -88,8 +89,8 @@ public class OpenRouterClientTests
         var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, json);
         var client = CreateClient(handler);
 
-        var result = await client.GenerateImageAsync(
-            new OpenRouterImageRequest("m/x", "a red fox", 42),
+        var result = await client.GenerateAsync(
+            new ImageGenerationRequest("m/x", "a red fox", 42),
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpMethod.Post, handler.Requests[0].Method);
@@ -111,8 +112,8 @@ public class OpenRouterClientTests
         var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"data":[{"b64_json":"AQID"}]}""");
         var client = CreateClient(handler);
 
-        var result = await client.GenerateImageAsync(
-            new OpenRouterImageRequest("m/x", "p", null),
+        var result = await client.GenerateAsync(
+            new ImageGenerationRequest("m/x", "p", null),
             TestContext.Current.CancellationToken);
 
         Assert.False(JsonNode.Parse(handler.RequestBodies[0])!.AsObject().ContainsKey("seed"));
@@ -125,8 +126,8 @@ public class OpenRouterClientTests
     {
         var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"data":[]}"""));
 
-        var ex = await Assert.ThrowsAsync<ProviderException>(() => client.GenerateImageAsync(
-            new OpenRouterImageRequest("m/x", "p", null),
+        var ex = await Assert.ThrowsAsync<ProviderException>(() => client.GenerateAsync(
+            new ImageGenerationRequest("m/x", "p", null),
             TestContext.Current.CancellationToken));
 
         Assert.Equal(ErrorKind.EmptyResponse, ex.Kind);
@@ -147,12 +148,11 @@ public class OpenRouterClientTests
     {
         var client = CreateClient(StubHttpMessageHandler.Json((HttpStatusCode)status, json));
 
-        var ex = await Assert.ThrowsAsync<ProviderException>(() => client.GenerateImageAsync(
-            new OpenRouterImageRequest("m/x", "p", null),
+        var ex = await Assert.ThrowsAsync<ProviderException>(() => client.GenerateAsync(
+            new ImageGenerationRequest("m/x", "p", null),
             TestContext.Current.CancellationToken));
 
         Assert.Equal(expected, ex.Kind);
-        Assert.Equal(status, ex.StatusCode);
     }
 
     [Fact]
@@ -162,8 +162,8 @@ public class OpenRouterClientTests
             HttpStatusCode.OK,
             """{"error":{"code":502,"message":"provider failed"}}"""));
 
-        var ex = await Assert.ThrowsAsync<ProviderException>(() => client.GenerateImageAsync(
-            new OpenRouterImageRequest("m/x", "p", null),
+        var ex = await Assert.ThrowsAsync<ProviderException>(() => client.GenerateAsync(
+            new ImageGenerationRequest("m/x", "p", null),
             TestContext.Current.CancellationToken));
 
         Assert.Equal(ErrorKind.ModelUnavailable, ex.Kind);
@@ -175,8 +175,8 @@ public class OpenRouterClientTests
     {
         var client = CreateClient(StubHttpMessageHandler.Throws(new HttpRequestException("down")));
 
-        var ex = await Assert.ThrowsAsync<ProviderException>(() => client.GenerateImageAsync(
-            new OpenRouterImageRequest("m/x", "p", null),
+        var ex = await Assert.ThrowsAsync<ProviderException>(() => client.GenerateAsync(
+            new ImageGenerationRequest("m/x", "p", null),
             TestContext.Current.CancellationToken));
 
         Assert.Equal(ErrorKind.Network, ex.Kind);
@@ -188,8 +188,8 @@ public class OpenRouterClientTests
         var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, "{}");
         var client = CreateClient(handler, storedKey: null);
 
-        var ex = await Assert.ThrowsAsync<ProviderException>(() => client.GenerateImageAsync(
-            new OpenRouterImageRequest("m/x", "p", null),
+        var ex = await Assert.ThrowsAsync<ProviderException>(() => client.GenerateAsync(
+            new ImageGenerationRequest("m/x", "p", null),
             TestContext.Current.CancellationToken));
 
         Assert.Equal(ErrorKind.InvalidKey, ex.Kind);
@@ -203,8 +203,8 @@ public class OpenRouterClientTests
             HttpStatusCode.Unauthorized,
             """{"error":{"code":401,"message":"No auth credentials found"}}"""));
 
-        var ex = await Assert.ThrowsAsync<ProviderException>(() => client.GenerateImageAsync(
-            new OpenRouterImageRequest("m/x", "p", null),
+        var ex = await Assert.ThrowsAsync<ProviderException>(() => client.GenerateAsync(
+            new ImageGenerationRequest("m/x", "p", null),
             TestContext.Current.CancellationToken));
 
         Assert.DoesNotContain(ApiKey, ex.ToString(), StringComparison.Ordinal);

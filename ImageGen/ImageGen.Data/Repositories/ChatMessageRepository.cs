@@ -1,4 +1,4 @@
-using ImageGen.Core.Domain;
+using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Storage;
 using Microsoft.Data.Sqlite;
 
