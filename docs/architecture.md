@@ -34,7 +34,7 @@ ImageGen/
                                    DataServiceCollectionExtensions (AddImageGenData())
   ImageGen.Core.Tests/             xUnit v3 + NSubstitute
   ImageGen.Data.Tests/             xUnit v3, временная БД в файле
-  ImageGen.Maui/                   MAUI: Pages/, PageModels/, Services/ (MauiSecretStore, MauiAppPaths), Resources/Strings/
+  ImageGen.Maui/                   MAUI: Pages/, PageModels/, Services/ (MauiSecretStore, MauiAppPaths), Converters/, Resources/Strings/
 ```
 
 Зависимости: `Maui → Data → Core`, `Maui → Core`. `Core` ссылается только на `Microsoft.Extensions.Http`, `Microsoft.Extensions.Logging.Abstractions`, `Microsoft.Extensions.DependencyInjection.Abstractions`. Архитектурный тест в `ImageGen.Core.Tests` проверяет, что `Core` не ссылается на `Microsoft.Maui*`, `Microsoft.AspNetCore*`, `Microsoft.Data.Sqlite*`.

@@ -34,11 +34,13 @@ public static class MauiProgram
         builder.Services.AddSingleton<AppInitializer>();
         builder.Services.AddSingleton<IDialogService, ShellDialogService>();
         builder.Services.AddSingleton<INavigationService, ShellNavigationService>();
+        builder.Services.AddSingleton<IMainThread, MauiMainThread>();
 
         // Pages and page models
         builder.Services.AddSingleton<SessionsPageModel>();
         builder.Services.AddSingleton<SessionsPage>();
         builder.Services.AddTransientWithShellRoute<ApiKeyPage, ApiKeyPageModel>(Routes.ApiKey);
+        builder.Services.AddTransientWithShellRoute<ChatPage, ChatPageModel>(Routes.Chat);
 
         return builder.Build();
     }
