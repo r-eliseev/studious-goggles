@@ -1,6 +1,6 @@
 ---
 id: 007
-status: planned
+status: done
 assignee:
 claimed:
 created: 2026-10-27
@@ -294,5 +294,13 @@ scripts/check.sh
 ```
 
 ## Отчёт
+- Создан `ImageGen/ImageGen.Core/Services/ApiKeyService.cs`: `HasKeyAsync`, `SaveAsync` (trim; ключ сохраняется в `ISecretStore` только при `ApiKeyStatus.Valid`), `RemoveAsync`, `GetMaskedKeyAsync` (маска «••••» + последние 4 символа, `null` без ключа).
+- Создан `ImageGen/ImageGen.Core/Services/ModelCatalogService.cs`: `GetImageModelsAsync(forceRefresh, ct)` (кеш из `IImageModelRepository`, перечитывание из API только при пустом кеше или `forceRefresh`, при `ProviderException` с непустым кешем отдаётся кеш, результат сортируется по имени), `FindAsync(modelId, ct)`.
+- Созданы тесты `ImageGen/ImageGen.Core.Tests/Services/ApiKeyServiceTests.cs` (4 теста с учётом Theory) и `ImageGen/ImageGen.Core.Tests/Services/ModelCatalogServiceTests.cs` (5 тестов); содержимое дословно по плану, тесты не ослаблялись. Сеть не используется, ключи в тестах только тестовые строки.
+- `dotnet test ImageGen/ImageGen.Core.Tests`: 59 из 59 пройдены (включая тесты 002, 006 и архитектурный тест).
+- `dotnet format --verify-no-changes` для `ImageGen.Core` и `ImageGen.Core.Tests`: без изменений (код 0).
+- `docs/architecture.md`, раздел «Состояние кода»: добавлена запись о задаче 007. Модули `ApiKeyService` и `ModelCatalogService` уже были в дереве модулей, поэтому остальная документация не менялась. Спецификации не менялись: поведение совпадает с F1.1–F1.3 и S1.3/S5.1.
+- Отклонений от плана нет. Пакеты и `Directory.Packages.props` не менялись, `scripts/` и `.github/workflows/` не трогались (кроме вызова `release-task.sh`).
+- Статус задачи в файле был `planned`; реализация начата по явному указанию пользователя в запуске (не через `approved`). Это отмечено для проверки владельцем.
 
 ## Комментарии
