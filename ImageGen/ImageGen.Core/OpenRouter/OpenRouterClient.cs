@@ -12,7 +12,8 @@ using ImageGen.Core.Providers;
 
 namespace ImageGen.Core.OpenRouter;
 
-public sealed class OpenRouterClient(HttpClient httpClient, ISecretStore secretStore, TimeProvider timeProvider) : IModelProvider
+public sealed class OpenRouterClient(HttpClient httpClient, ISecretStore secretStore, TimeProvider timeProvider)
+    : IModelProvider, IOpenRouterChatClient
 {
     public static readonly Uri BaseAddress = new("https://openrouter.ai/api/v1/");
     public const string DefaultMediaType = "image/png";
