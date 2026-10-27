@@ -1,4 +1,4 @@
-namespace ImageGen.Core.Domain;
+namespace ImageGen.Core.Domain.Generations;
 
 /// <summary>What started a run.</summary>
 public enum RunOrigin

@@ -1,4 +1,4 @@
-using ImageGen.Core.Domain;
+using ImageGen.Core.Domain.Generations;
 
 namespace ImageGen.Core.Storage;
 
