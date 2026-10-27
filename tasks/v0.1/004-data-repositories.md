@@ -1,6 +1,6 @@
 ---
 id: 004
-status: planned
+status: done
 assignee:
 claimed:
 created: 2026-10-27
@@ -923,5 +923,13 @@ scripts/check.sh
 ```
 
 ## Отчёт
+- Реализованы `ISessionRepository`, `IChatMessageRepository`, `IRunRepository`, `IImageModelRepository` на SQLite (ADO.NET, параметризованный SQL, колонки читаются по имени) в `ImageGen/ImageGen.Data/Repositories/`; значения преобразуются в `ImageGen/ImageGen.Data/SqliteValues.cs`.
+- Тестовые данные `ImageGen/ImageGen.Data.Tests/TestData.cs` и тесты `ImageGen/ImageGen.Data.Tests/Repositories/` (сессии, сообщения, прогоны и генерации, кеш моделей) на временной БД из задачи 003.
+- Файлы созданы из блоков плана извлечением без правок: содержимое дословно как в плане.
+- `dotnet format --verify-no-changes` для `ImageGen.Data` и `ImageGen.Data.Tests` проходит.
+- `dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj`: 16 тестов, все пройдены (включая тесты задачи 003).
+- `Directory.Packages.props` не менялся; новых пакетов не понадобилось.
+- Документация: `docs/architecture.md`, раздел «Состояние кода» (репозитории добавлены, `FileImageStore` ещё не написан). В плане списка документации не было, поэтому обновлён только этот раздел.
+- `scripts/check.sh` проходит.
 
 ## Комментарии
