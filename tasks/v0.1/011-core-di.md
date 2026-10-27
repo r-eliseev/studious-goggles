@@ -1,6 +1,6 @@
 ---
 id: 011
-status: planned
+status: done
 assignee:
 claimed:
 created: 2026-10-27
@@ -53,5 +53,13 @@ scripts/check.sh
 ```
 
 ## Отчёт
+- `CoreServiceCollectionExtensions.AddImageGenCore()` наполнен по плану: `TimeProvider.System` (singleton); `AddHttpClient<OpenRouterClient>` с `BaseAddress = OpenRouterClient.BaseAddress` и `Timeout = 3 минуты`; `IModelProvider`, `IImageGenerator`, `IOpenRouterChatClient` через фабрики, которые возвращают `OpenRouterClient` из контейнера; singleton: `ISeedSource` → `RandomSeedSource`, `ApiKeyService`, `ModelCatalogService`, `SessionService`, `GenerationService`, `AssistantService`.
+- XML-комментарий перечисляет, что хост регистрирует сам: `ISecretStore`, `IAppPaths`, вызов `AddImageGenData()`.
+- Отклонение: интерфейсы провайдера зарегистрированы как transient (план не задавал время жизни). Типизированный клиент `OpenRouterClient` регистрируется `AddHttpClient<T>` как transient, и фабрики следуют ему. Замечание: singleton-сервисы (`ApiKeyService`, `ModelCatalogService`, `GenerationService`, `AssistantService`) фиксируют один экземпляр клиента и его `HttpClient`, поэтому ротация обработчиков `HttpClientFactory` до них не доходит. Не исправлял; при необходимости вынести в отдельную задачу.
+- Тест `ImageGen.Data.Tests/CompositionTests.cs` (файл из плана): контейнер с `AddLogging()`, подменённые `IAppPaths` (системный временный каталог) и `ISecretStore`, `AddImageGenCore()` + `AddImageGenData()`, построение с `ValidateOnBuild = true` и `ValidateScopes = true`. Проверяется разрешение `IModelProvider`, `IOpenRouterChatClient`, `IImageGenerator` и всех пяти сервисов; отдельный тест проверяет, что `GenerationService`, `AssistantService` и `SessionService` выдаются одним экземпляром. Singleton для `ApiKeyService`, `ModelCatalogService` и `ISeedSource` тестом не проверяется.
+- Новые пакеты не добавлялись, `Directory.Packages.props` не менялся. `poc/v0.1/011-core-di/` не использовался.
+- Результаты: `dotnet format --verify-no-changes` для `ImageGen.Core`, `ImageGen.Core.Tests`, `ImageGen.Data`, `ImageGen.Data.Tests` — код возврата 0. `ImageGen.Core.Tests`: 94 из 94 пройдены. `ImageGen.Data.Tests`: 26 из 26 пройдены (включая 2 новых теста композиции). `scripts/check.sh` — пройден.
+- Документация не менялась (раздел «Состояние кода» в логе не трогал).
+- `scripts/release-task.sh 011` без `--publish` очистил `assignee` и `claimed` в локальном файле задачи (так работает скрипт), поэтому в файле они пустые, а не `claude-qnrqyt` и дата. Статус `done` сохранён.
 
 ## Комментарии
