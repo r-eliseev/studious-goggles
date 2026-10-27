@@ -2,7 +2,9 @@
 # Общие функции для скриптов задач. Подключается командой: . scripts/tasks-lib.sh
 
 T_REMOTE="${TASKS_REMOTE:-origin}"
-T_BRANCH="${TASKS_BRANCH:-main}"
+# По умолчанию задачи живут в текущей ветке (она должна быть на origin); TASKS_BRANCH переопределяет.
+_cur_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+T_BRANCH="${TASKS_BRANCH:-$([ -n "$_cur_branch" ] && [ "$_cur_branch" != HEAD ] && echo "$_cur_branch" || echo main)}"
 
 # task_field <файл> <поле>: значение поля из заголовка файла задачи
 task_field() {
