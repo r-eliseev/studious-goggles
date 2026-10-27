@@ -12,6 +12,7 @@ created: 2026-10-27
 Создать проект `ImageGen.Data` с классом `SqliteDatabase`: путь к файлу БД, открытие соединения, применение миграций через `PRAGMA user_version` (ADR 0002). Первая миграция создаёт все таблицы скелета. Создать тестовый проект `ImageGen.Data.Tests` и добавить его в CI.
 
 Зависит от: 002.
+Среда: Linux или Windows (нужен только .NET 10 SDK, MAUI-нагрузки не нужны).
 
 ## Критерии готовности
 - Проекты `ImageGen.Data` и `ImageGen.Data.Tests` есть в `ImageGen/ImageGen.slnx`.

@@ -12,6 +12,7 @@ created: 2026-10-27
 Реализовать `IImageFileStore` (картинки в `images/<sessionId>/<generationId>.<ext>` внутри `IAppPaths.DataDirectory`) и метод `AddImageGenData()`, который регистрирует базу, репозитории и файловое хранилище как singleton.
 
 Зависит от: 004.
+Среда: Linux или Windows (нужен только .NET 10 SDK, MAUI-нагрузки не нужны).
 
 ## Критерии готовности
 - Файлы из плана созданы с содержимым как в плане.

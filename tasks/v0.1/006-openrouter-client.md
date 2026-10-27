@@ -12,6 +12,7 @@ created: 2026-10-27
 Клиент `OpenRouterClient` для четырёх вызовов OpenRouter: проверка ключа (`GET key`), список моделей картинок (`GET images/models`), генерация картинки (`POST images`), chat completions с инструментами и картинками на входе (`POST chat/completions`). Ошибки приводятся к `ProviderException` с `ErrorKind`. Плюс подмена HTTP для тестов `StubHttpMessageHandler`.
 
 Зависит от: 002.
+Среда: Linux или Windows (нужен только .NET 10 SDK, MAUI-нагрузки не нужны).
 
 ## Критерии готовности
 - Файлы из плана созданы с содержимым как в плане.

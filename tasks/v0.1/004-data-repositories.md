@@ -12,6 +12,7 @@ created: 2026-10-27
 Реализовать интерфейсы `ISessionRepository`, `IChatMessageRepository`, `IRunRepository`, `IImageModelRepository` (задача 002) на SQLite поверх `SqliteDatabase` (задача 003). Все запросы параметризованы, колонки читаются по имени.
 
 Зависит от: 002, 003.
+Среда: Linux или Windows (нужен только .NET 10 SDK, MAUI-нагрузки не нужны).
 
 ## Критерии готовности
 - Файлы из плана созданы с содержимым как в плане.

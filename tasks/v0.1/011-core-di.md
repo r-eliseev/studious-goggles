@@ -12,6 +12,7 @@ created: 2026-10-27
 Наполнить `AddImageGenCore()`: `TimeProvider`, типизированный `HttpClient` для OpenRouter, генератор картинок, источник сидов и все сервисы как singleton. Тест сборки контейнера из `AddImageGenCore()` + `AddImageGenData()` с проверкой при построении.
 
 Зависит от: 005, 010.
+Среда: Linux или Windows (нужен только .NET 10 SDK, MAUI-нагрузки не нужны).
 
 ## Критерии готовности
 - `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs` совпадает с планом.
