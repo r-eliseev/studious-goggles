@@ -16,7 +16,8 @@ jobs:
       - run: dotnet build ImageGen/ImageGen.Core/ImageGen.Core.csproj -c Release
       - run: dotnet test ImageGen/ImageGen.Core/ImageGen.Core.csproj -c Release --no-build
 
-  maui-windows:
+  # Android собираем на Windows: установка нагрузки maui-android на ubuntu-latest падала с "Disk quota exceeded"
+  maui:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,22 +26,4 @@ jobs:
           dotnet-version: 10.0.x
       - run: dotnet workload install maui
       - run: dotnet build ImageGen/ImageGen/ImageGen.csproj -f net10.0-windows10.0.19041.0 -c Release
-
-  maui-android:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Free disk space
-        run: |
-          df -h /
-          sudo rm -rf /usr/share/swift /usr/local/share/boost /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/.ghcup
-          df -h /
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.x
-      - uses: actions/setup-java@v5
-        with:
-          distribution: microsoft
-          java-version: '21'
-      - run: dotnet workload install maui-android
       - run: dotnet build ImageGen/ImageGen/ImageGen.csproj -f net10.0-android -c Release

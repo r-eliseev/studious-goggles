@@ -8,7 +8,7 @@
 
 Проект ядра `ImageGen/ImageGen.Core/` (net10.0) добавлен в `ImageGen.slnx` и подключён ссылкой из MAUI-проекта. Сейчас там только пустые интерфейсы-заготовки (`IProvider`, `IGeneration`, `ITextToImage`, `IImageToImage`, `IImageToText` в пространстве `ImageGen.Core.Integration`).
 
-CI: `.github/workflows/build.yml` (форматирование, сборка и тесты ядра на Ubuntu; сборка MAUI под Windows и Android) и `harness.yml`/`harness-audit.yml`. Сборка MAUI под Windows проверена локально, сам workflow на GitHub ещё не запускался; шаги `maui-android` и установка нагрузок не проверены.
+CI: `.github/workflows/build.yml` (задача `core` на Ubuntu: форматирование, сборка, тесты; задача `maui` на Windows: сборка под Windows и Android) и `harness.yml`/`harness-audit.yml`. Нагрузка `maui-android` на ubuntu-latest падала с «Disk quota exceeded» (при 24 ГБ свободного места, причина не выяснена), поэтому Android собирается на Windows.
 
 ## Открытые вопросы
 - нет (все вопросы из первой сессии закрыты, см. ниже). Новые добавляйте сюда.
