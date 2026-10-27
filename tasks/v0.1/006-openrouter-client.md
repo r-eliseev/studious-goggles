@@ -1,8 +1,8 @@
 ---
 id: 006
-status: planned
-assignee:
-claimed:
+status: done
+assignee: claude-qnrqyt
+claimed: 2026-10-27T00:00:00Z
 created: 2026-10-27
 ---
 
@@ -762,5 +762,13 @@ scripts/check.sh
 ```
 
 ## Отчёт
+- Создано 9 файлов в `ImageGen/ImageGen.Core/OpenRouter/` (запросы, ответы, `IOpenRouterClient`, `OpenRouterClient`) и 2 тестовых файла: `ImageGen/ImageGen.Core.Tests/TestDoubles/StubHttpMessageHandler.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`. Содержимое сверено с блоками плана побайтно (скриптом); отклонений от плана в коде нет.
+- `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`: 36 тестов, все пройдены, 0 упавших. Сеть и ключи не используются, HTTP подменяется `StubHttpMessageHandler`.
+- `dotnet format --verify-no-changes` для `ImageGen.Core` и `ImageGen.Core.Tests`: без изменений (код 0).
+- `ImageGen/Directory.Packages.props` не менялся: все нужные пакеты уже были заявлены.
+- `scripts/check.sh` не проходит, и причина не в этой задаче: `tasks/v0.1/001-cleanup-and-scaffold.md` и `002-core-domain-and-contracts.md` в статусе `done`, но заняты (`claude-qnrqyt`). После отметки 006 та же ошибка будет и для неё, потому что `mark_done.py` оставляет `assignee`. Снимать занятость (`scripts/release-task.sh`) не стал: это решение владельца, вопрос записан в `docs/status.md` («Открытые вопросы»).
+- Документация: `docs/architecture.md` (раздел «Состояние кода» описывает клиент OpenRouter и `StubHttpMessageHandler`), `docs/status.md` (открытый вопрос про `check.sh`).
+- Живые запросы к OpenRouter не выполнялись; проверка формата ответов только по тестам из плана (первая ручная проверка: задача 016).
+- Статус задачи в файле был `planned`; реализация выполнена по прямому поручению пользователя.
 
 ## Комментарии
