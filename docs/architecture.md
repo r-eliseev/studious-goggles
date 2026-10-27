@@ -3,7 +3,7 @@
 Статус: 2026-10-27. Основной сценарий — сессии с ассистентом (`docs/specs/chat-sessions.md`, ADR 0004). Первый релиз v0.1 — ходячий скелет: только OpenRouter, только MAUI (`tasks/v0.1/`). Целевая раскладка с fal, Replicate и Web — ниже, в разделе «Целевая раскладка»; она строится поверх скелета (`tasks/backlog/`).
 
 ## Скелет v0.1: раскладка
-Это источник правды для задач `tasks/v0.1/`. Имена проектов, каталогов и типов в задачах совпадают с этим разделом. Ядро, хранилище и их тесты собираются на Linux и Windows, `ImageGen.Maui` только на Windows (`docs/knowledge/dev-environment.md`).
+Это источник правды для задач `tasks/v0.1/`. Имена проектов, каталогов и типов в задачах совпадают с этим разделом. Ядро, хранилище и их тесты собираются на Linux и Windows, `ImageGen.Maui` только на Windows (`docs/knowledge/claude-cloud-session.md`).
 
 ```
 .editorconfig                      форматирование (задача 001)
@@ -83,7 +83,7 @@ OpenRouter (HTTP API: `/api/v1/key`, `/api/v1/images/models`, `/api/v1/images`, 
 Каркас скелета создан задачей 001: `ImageGen.Core`, `ImageGen.Core.Tests` (архитектурный тест). Задача 002 добавила доменную модель и интерфейсы ядра. Задача 003 добавила `ImageGen.Data` (`SqliteDatabase`: путь к файлу, открытие соединения, миграции через `PRAGMA user_version`; первая миграция `Migrations/0001_initial.sql` создаёт таблицы скелета) и `ImageGen.Data.Tests` (временная БД в файле). Задача 006 добавила `ImageGen.Core/OpenRouter/` (`OpenRouterClient` для `GET key`, `GET images/models`, `POST images`, `POST chat/completions`; ошибки приводятся к `ProviderException` с `ErrorKind`) и тестовую подмену `StubHttpMessageHandler`. Репозитории и `FileImageStore` пока не написаны (задачи 004 и 005). Пустое `ImageGen.Maui` из шаблона добавляет задача 034, остальное — задачи `tasks/v0.1/`. Сервис сессий `SessionService` и порядок ленты `TimelineOrdering` (строка ленты `TimelineEntry`) — задача 008: они берут репозитории только через интерфейсы, реализаций хранилища пока нет (задачи 003–005).
 
 ## Ограничения
-- Платформы: MAUI не поддерживает Linux; Linux обслуживает будущая Web-оболочка.
+- Платформы: цель Windows у MAUI на Linux не собирается (проверено, `docs/knowledge/claude-cloud-session.md`); Android-цель собирается. Linux обслуживает будущая Web-оболочка.
 - Безопасность: ключ только в шифрованном хранилище; ключи и пароли не попадают в журналы, экспорт и репозиторий.
 - Производительность: генерации идут параллельно, UI-поток не блокируется.
 - Ссылки провайдеров истекают, поэтому файл сохраняется сразу (у OpenRouter картинка приходит в ответе).

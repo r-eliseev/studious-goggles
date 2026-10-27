@@ -1,32 +1,24 @@
 # Среды разработки
 
-Где какую задачу можно выполнять. Записано 2026-10-27. Пункты с пометкой «не проверено» ещё не проверялись в реальной облачной сессии.
+Общий обзор: где какой проект собирается и что умеет каждая среда. Записано 2026-10-27. Репозиторий используется из двух сред:
+
+- **Windows-машина** — полная среда, включая цель Windows у MAUI. Описание: `docs/knowledge/windows-machine.md`.
+- **Облачная сессия Claude Code** (Linux-контейнер) — без цели Windows у MAUI, с целью Android. Описание: `docs/knowledge/claude-cloud-session.md`.
+
+Пункты с пометкой «не проверено» ещё не проверялись в реальной среде.
 
 ## Что где собирается
-| Проект | Linux (в том числе облачная сессия Claude Code) | Windows с нагрузками MAUI |
+| Проект | Windows-машина | Облачная сессия (Linux) |
 |---|---|---|
-| `ImageGen.Core`, `ImageGen.Core.Tests` | да | да |
-| `ImageGen.Data`, `ImageGen.Data.Tests` | да | да |
-| `ImageGen.Maui` | нет (см. ниже) | да: Windows и Android |
+| `ImageGen.Core`, `ImageGen.Core.Tests` | да | да, проверено |
+| `ImageGen.Data`, `ImageGen.Data.Tests` | да | да, проверено |
+| `ImageGen.Maui`, цель Android (`net10.0-android`) | да | да, проверено (APK собран на шаблоне) |
+| `ImageGen.Maui`, цель Windows (`net10.0-windows…`) | да | нет, проверено (XAML-компилятор только под Windows) |
 
-- У .NET MAUI нет цели Linux. На Linux `ImageGen.Maui.csproj` оставляет только цель `net10.0-android` (условия в csproj), а для неё нужны нагрузка `maui-android`, Android SDK и JDK. В CI на ubuntu-latest установка `maui-android` падала с «Disk quota exceeded», поэтому MAUI-проект на Linux не собираем.
-- Без нагрузки MAUI-проект не загружается, поэтому на Linux не работают `dotnet build ImageGen/ImageGen.slnx` и `dotnet format ImageGen/ImageGen.slnx`. Форматирование и сборку запускать по отдельным проектам: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`.
-- Windows-цель MAUI собирается только на Windows. Проверка интерфейса скелета (задача 016) тоже только на Windows.
+- Сборка всего решения (`dotnet build ImageGen/ImageGen.slnx`) и `dotnet format ImageGen/ImageGen.slnx` на Linux не запускаются, потому что решение включает MAUI-проект, а без нагрузки MAUI он не загружается. Форматирование и сборка по отдельным проектам: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`.
+- В CI на ubuntu-latest установка нагрузки `maui-android` падала с «Disk quota exceeded», поэтому Android в CI собирается на Windows (`.github/workflows/build.yml`, задача `maui`). В облачной сессии Android-сборка проверена, но CI на ней не настроен.
 
 ## Строка «Среда» в задаче
-У каждой задачи в «Описании» есть строка «Среда»: `Linux или Windows` или `только Windows ...`. Правило в `docs/tasks.md`: агент без нужной среды задачу не занимает.
+У каждой задачи в «Описании» есть строка «Среда»: `Linux или Windows` или `только Windows ...`. Правило в `docs/tasks.md`: агент, у которого нет нужной среды, задачу не занимает.
 
-Для скелета v0.1: на Linux идут задачи 001–011, на Windows — 034 и 012–016.
-
-## Облачная сессия Claude Code
-- Нужен .NET 10 SDK (`dotnet --list-sdks` показывает `10.0.x`) и доступ к `nuget.org` для восстановления пакетов. Есть ли SDK в облачной среде по умолчанию — неизвестно (не проверено).
-- Если SDK нет, его можно поставить в скрипте настройки окружения (не проверено в облаке; скрипт официальный, https://dot.net/v1/dotnet-install.sh):
-  ```bash
-  curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh
-  bash /tmp/dotnet-install.sh --channel 10.0 --install-dir "$HOME/.dotnet"
-  export DOTNET_ROOT="$HOME/.dotnet"
-  export PATH="$HOME/.dotnet:$PATH"
-  ```
-  Если сеть облачной среды ограничена списком адресов, в нём должны быть `dot.net`, `builds.dotnet.microsoft.com` (загрузка SDK) и `api.nuget.org` (пакеты) — неизвестно, нужно ли это настраивать (не проверено).
-- Тесты не ходят в сеть: OpenRouter подменяется `StubHttpMessageHandler`, ключ не нужен.
-- Скрипты задач (`scripts/claim-task.sh`, `scripts/new-task.sh --publish`) пушат прямо в `origin/main`. Если облачной сессии запрещён пуш в `main`, занятие задачи не сработает: тогда задачу занимает человек или агент на локальной машине.
+Для скелета v0.1 по строке «Среда»: на Linux идут задачи 001–011, на Windows — 034 и 012–016. Android-часть задачи 034 (пустое MAUI-приложение под Android) в облачной сессии собирается, Windows-часть — нет. Менять ли строку «Среда» у 034, решает владелец.
