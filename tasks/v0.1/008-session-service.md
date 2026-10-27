@@ -1,8 +1,8 @@
 ---
 id: 008
-status: planned
-assignee:
-claimed:
+status: done
+assignee: claude-qnrqyt
+claimed: 2026-10-27T00:00:00Z
 created: 2026-10-27
 ---
 
@@ -420,5 +420,12 @@ scripts/check.sh
 ```
 
 ## Отчёт
+- Создано 5 файлов по плану дословно: `ImageGen/ImageGen.Core/Domain/TimelineEntry.cs`, `ImageGen/ImageGen.Core/Services/SessionService.cs`, `ImageGen/ImageGen.Core/Services/TimelineOrdering.cs`, `ImageGen/ImageGen.Core.Tests/Services/SessionServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/TimelineOrderingTests.cs`. Содержимое взято из плана без правок.
+- `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`: 21 тест, все пройдены (11 новых, 10 прежних).
+- `dotnet format ... --verify-no-changes` для `ImageGen.Core` и `ImageGen.Core.Tests`: без изменений, проходит.
+- `docs/architecture.md`: в раскладке добавлены `TimelineEntry` (Domain) и `TimelineOrdering` (Services); в «Состоянии кода» описаны сервис сессий и порядок ленты.
+- `scripts/check.sh`: проверка документации (`check-docs.sh`) проходит. Проверка задач (`check-tasks.sh`) падает на задачах 001 и 002: статус `done`, но поле `assignee` заполнено (`claude-qnrqyt`). Эти файлы в ветку не менялись, ошибка существовала до задачи 008.
+- `mark_done.py` тоже заполняет `assignee`, поэтому та же проверка «статус done при занятой задаче» срабатывает и для 008. Снять занятость (`scripts/release-task.sh`) не делалось: это вне задачи 008.
+- Отклонений от плана нет. `Directory.Packages.props` и пакеты не менялись; `scripts/` и `.github/workflows/` не трогались.
 
 ## Комментарии
