@@ -1,8 +1,8 @@
 ---
 id: 001
-status: planned
-assignee:
-claimed:
+status: done
+assignee: claude-qnrqyt
+claimed: 2026-10-27T00:00:00Z
 created: 2026-10-27
 ---
 
@@ -267,5 +267,11 @@ scripts/check.sh
 Тест `CoreAssembly_ReferencedAssemblies_DoNotIncludeUiOrStorage` проходит (1 тест).
 
 ## Отчёт
+- Удалены `ImageGen/ImageGen/`, старый `ImageGen/ImageGen.Core/` и `docs/knowledge/example-patterns.md` (через `git rm`).
+- Созданы файлы из плана дословно: `.editorconfig`, `global.json`, `ImageGen/Directory.Build.props`, `ImageGen/Directory.Packages.props`, `ImageGen.Core` (csproj, маркер, пустой `AddImageGenCore`), `ImageGen.Core.Tests` (csproj и `CoreDependencyTests`), `ImageGen/ImageGen.slnx` (два проекта), `.github/workflows/build.yml` (задача `core`).
+- Документация обновлена по списку плана (`AGENTS.md`, `docs/index.md`, `docs/conventions.md`, `docs/architecture.md`, `docs/status.md`, `docs/specs/image-client.md`). Проверка `grep` по «проект-пример / example-patterns» вне `docs/log/` и `docs/decisions/` пустая.
+- Проверено на Linux (.NET SDK 10.0.403): `dotnet format ... --verify-no-changes` для обоих проектов — без изменений; `dotnet build` — 0 предупреждений, 0 ошибок; `dotnet test` — 1 тест, пройден; `scripts/check.sh` — пройден.
+- Отличие от плана: занятость поставлена только в файле задачи на рабочей ветке. `scripts/claim-task.sh` пушит напрямую в `origin/main`, а задачи велись в ветке `ccr-81a5f3ba-qnrqyt`, поэтому скрипт не запускался.
+- Отличие от плана: в `docs/status.md` строка про `planned` у задач осталась как была (это не входит в план 001).
 
 ## Комментарии

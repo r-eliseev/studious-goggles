@@ -1,4 +1,4 @@
 <Solution>
   <Project Path="ImageGen.Core/ImageGen.Core.csproj" />
-  <Project Path="ImageGen/ImageGen.csproj" />
+  <Project Path="ImageGen.Core.Tests/ImageGen.Core.Tests.csproj" />
 </Solution>

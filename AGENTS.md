@@ -1,12 +1,15 @@
 # AGENTS.md
 
 ## О проекте
-Мульти-провайдерный клиент для генерации изображений: ключи fal.ai, Replicate и OpenRouter (BYOK) подключаются один раз, один промпт параллельно уходит в несколько моделей, результаты показываются рядом с ценой и временем и сохраняются локально. Стек: C# / .NET 10; целевая раскладка: общее ядро и оболочки (MAUI для мобильных и десктопа, Web API + Vue для браузера и Docker). Цели и решения владельца: `docs/product.md`. Полная спецификация: `docs/specs/image-client.md`. В `ImageGen/` сейчас только проект-пример (MAUI-шаблон), не продукт.
+Мульти-провайдерный клиент для генерации изображений: ключи fal.ai, Replicate и OpenRouter (BYOK) подключаются один раз, один промпт параллельно уходит в несколько моделей, результаты показываются рядом с ценой и временем и сохраняются локально. Стек: C# / .NET 10; целевая раскладка: общее ядро и оболочки (MAUI для мобильных и десктопа, Web API + Vue для браузера и Docker). Цели и решения владельца: `docs/product.md`. Полная спецификация: `docs/specs/image-client.md`. Основной сценарий (сессии с ассистентом): `docs/specs/chat-sessions.md`.
 
 ## Команды
-- Сборка: `dotnet build ImageGen/ImageGen.slnx`
-- Тесты: `dotnet test ImageGen/ImageGen.slnx` (тестовых проектов пока нет)
-- Линтер/форматирование: `dotnet format ImageGen/ImageGen.slnx --verify-no-changes`
+- Среда: задачи ядра и хранилища идут на Linux или Windows, MAUI-задачи только на Windows (строка «Среда» в задаче, `docs/knowledge/dev-environment.md`)
+- Сборка ядра: `dotnet build ImageGen/ImageGen.Core/ImageGen.Core.csproj`; всё решение только на Windows с MAUI-нагрузками (долго): `dotnet build ImageGen/ImageGen.slnx`
+- Тесты: `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj` и, после задачи 003, `dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj`
+- Сборка MAUI (Windows, после задачи 034): `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0` (и `-f net10.0-android`)
+- Запуск под Windows: после сборки `ImageGen/ImageGen.Maui/bin/Debug/net10.0-windows10.0.19041.0/win-x64/ImageGen.Maui.exe`
+- Линтер/форматирование: по каждому изменённому проекту `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes` (решение целиком не форматировать: на Linux MAUI-проект не загружается)
 - Проверка харнеса (документация и задачи): `scripts/check.sh`
 - Сигналы устаревания (аудит): `scripts/audit.sh`
 
@@ -23,7 +26,7 @@
 - Изменил модули, зависимости, потоки данных → `docs/architecture.md`.
 - Принял значимое решение (выбор библиотеки, схема данных, компромисс) → новый ADR в `docs/decisions/` по шаблону `_template.md`.
 - Изменил поведение фичи → соответствующий файл в `docs/specs/`.
-- Нашёл новый неочевидный факт о C#/MAUI или о проекте-примере → `docs/knowledge/`.
+- Нашёл новый неочевидный факт о C#/MAUI или о проекте → `docs/knowledge/`.
 - Закончил работу, не связанную с задачей → файл `docs/log/YYYY-MM-DD-тема.md` и обновление `docs/status.md`. Работа по задаче записывается в «Отчёт» самой задачи.
 - Добавил или переименовал файл верхнего уровня в `docs/` → обнови `docs/index.md`.
 
@@ -45,11 +48,9 @@
 - Результат генерации сохраняется сразу при получении; фильтрация провайдером — отдельное состояние, не ошибка.
 - MVVM на `CommunityToolkit.Mvvm`, компилируемые привязки (`x:DataType`), доступность (`SemanticProperties`) обязательна.
 - SQL только с параметрами; `async void` только через `FireAndForgetSafeAsync`; UI-поток не блокировать.
-- Паттерны проекта-примера не копировать вслепую: что брать и что нет — `docs/knowledge/example-patterns.md`.
 - Подробности: `docs/conventions.md`
 
 ## Запреты
-- Не меняй `ImageGen/` (проект-пример) без явной просьбы: это эталон для чтения. Новый код пиши в новых проектах, когда их заведут по `docs/architecture.md`.
 - Не меняй `scripts/` и `.github/workflows/` без явной просьбы.
 - Не обходи модерацию провайдеров, не переписывай промпт и не подменяй модель скрытно.
 - Не коммитить ключи, файлы секретов, `bin/`, `obj/`, `.vs/`.

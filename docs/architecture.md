@@ -77,7 +77,7 @@ Dockerfile, docker-compose.yml   том /data
 OpenRouter (HTTP API: `/api/v1/key`, `/api/v1/images/models`, `/api/v1/images`, `/api/v1/chat/completions`). Позже fal.ai и Replicate.
 
 ## Состояние кода
-Сейчас в репозитории лежат проект-пример `ImageGen/ImageGen/` (MAUI-шаблон «проекты и задачи») и пустые заготовки `ImageGen/ImageGen.Core/Integration/`. Задача `tasks/v0.1/001-cleanup-and-scaffold.md` удаляет их и создаёт каркас скелета.
+Каркас скелета создан задачей 001: `ImageGen.Core` (пустой), `ImageGen.Core.Tests` (архитектурный тест). Пустое `ImageGen.Maui` из шаблона добавляет задача 034, остальное — задачи `tasks/v0.1/`.
 
 ## Ограничения
 - Платформы: MAUI не поддерживает Linux; Linux обслуживает будущая Web-оболочка.
