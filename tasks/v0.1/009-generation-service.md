@@ -1,6 +1,6 @@
 ---
 id: 009
-status: planned
+status: done
 assignee:
 claimed:
 created: 2026-10-27
@@ -85,5 +85,15 @@ scripts/check.sh
 ```
 
 ## Отчёт
+
+- Реализованы `GenerationService`, `ISeedSource`, `RandomSeedSource` (`MaxSeed = int.MaxValue`) и `GenerationUpdatedEventArgs` в `ImageGen.Core/Services/` по плану.
+- Отклонения от плана: клиент назван `IModelProvider`, в сервисе используется `IImageGenerator` (интерфейс из плана `IOpenRouterClient` и `OpenRouterImageRequest` не применялись: в репозитории их нет).
+- Регистрация `GenerationService` как singleton в `AddImageGenCore()` не сделана: метод пустой, регистрация всех сервисов относится к задаче 011.
+- `docs/architecture.md` не менялся: раздела «Состояние кода» больше нет (правило из `docs/log/2026-10-27-architecture-without-progress.md`), описанное устройство совпадает с кодом.
+- Фоновые генерации: `Task.Run` с ожиданием шлюза, чтобы задача не удалила свою запись раньше её добавления; семафор на 4 слота; `CancellationToken.None` для фона.
+- Если сохранение записи в БД упало, генерация не отправляет событие и ошибка пишется в лог; ошибки неизвестного типа дают `ErrorKind.Unknown`, текст ошибки берётся из `Exception.Message`.
+- Тесты: `ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, 14 тестов (плюс проверки пустого промпта, неизвестной сессии и генерации). Сумма `ImageGen.Core.Tests`: 73 теста, все проходят, три прогона подряд без сбоев.
+- `dotnet format --verify-no-changes` для `ImageGen.Core` и `ImageGen.Core.Tests` проходит; `scripts/check.sh` проходит.
+- Среда: Linux, .NET SDK 10.0.403, сеть в тестах не используется.
 
 ## Комментарии
