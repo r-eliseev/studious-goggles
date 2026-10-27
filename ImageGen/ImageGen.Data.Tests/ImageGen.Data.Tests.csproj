@@ -18,4 +18,8 @@
   <ItemGroup>
     <ProjectReference Include="../ImageGen.Data/ImageGen.Data.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Platform-free MAUI source, compiled here so that it is tested on Linux (the MAUI project does not build here). -->
+    <Compile Include="../ImageGen.Maui/Services/AppInitializer.cs" Link="MauiLinked/AppInitializer.cs" />
+  </ItemGroup>
 </Project>

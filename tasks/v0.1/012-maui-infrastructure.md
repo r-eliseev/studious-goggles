@@ -1,8 +1,8 @@
 ---
 id: 012
-status: planned
-assignee:
-claimed:
+status: in-progress
+assignee: claude-qnrqyt
+claimed: 2026-10-27T00:00:00Z
 created: 2026-10-27
 ---
 
@@ -86,5 +86,22 @@ scripts/check.sh
 ```
 
 ## Отчёт
+
+Статус `in-progress`: критерий «сборка под Windows» здесь не проверен (XAML-компилятор только под Windows). Занятость не снималась.
+
+- Статус `planned` → `in-progress`: владелец одобрил все задачи v0.1 в чате (передано координатором), статус поставлен по этому одобрению.
+- `ImageGen.Maui.csproj`: `ProjectReference` на `ImageGen.Data`; `EmbeddedResource Update` для `AppResources.resx` с `LogicalName="ImageGen.Maui.Resources.Strings.AppResources.resources"`.
+- `Resources/Strings/AppResources.resx`: 45 ключей из таблицы плана, тексты дословно, английский. `AppResources.cs`: класс с свойством на каждый ключ, `Get` через `ResourceManager` и `CurrentUICulture`, при отсутствии ключа бросает `InvalidOperationException`.
+- `Services/`: `MauiAppPaths`, `MauiSecretStore`, `AppInitializer` (ленивая задача под `Lock`), `IDialogService`/`ShellDialogService` (maxLength 4000), `INavigationService`/`ShellNavigationService` (назад через `..`).
+- `Routes.cs` и `Utilities/TaskExtensions.cs` (`FireAndForgetSafeAsync`) по плану.
+- `MauiProgram.cs`: регистрации `IAppPaths`, `ISecretStore`, `AddImageGenCore()`, `AddImageGenData()`, `AppInitializer`, диалоги, навигация; строка `// Pages and page models` в конце.
+- Тесты (красные до реализации, затем зелёные): `ImageGen.Core.Tests/MauiLinked/` (маршруты 3, `FireAndForgetSafeAsync` 2, ключи ресурсов 3), `ImageGen.Data.Tests/MauiLinked/AppInitializerTests.cs` (3: БД создаётся до пометки Interrupted, повторный и параллельный вызов запускают один раз).
+- Отклонение: тестируемые файлы из `ImageGen.Maui` подключены в тестовые проекты через `<Compile Include ... Link>` (и resx через `EmbeddedResource`), а не вынесены в Core/Data. Так сохраняются пути из плана, а логика проверяется на Linux. Если владелец предпочтёт перенос, это отдельная правка.
+- Отклонение: `MauiSecretStore.GetAsync` оборачивает чтение в `try/catch` и возвращает `null` (правило `docs/knowledge/maui.md`); `SetAsync` и `RemoveAsync` исключения пробрасывают.
+- Открыто: `AppInitializer` нигде не вызывается при старте. План не включает `App.xaml.cs`, поэтому в этой задаче вызова нет; первая страница (013) вызывает `EnsureInitializedAsync()` сама. Описание задачи говорит «при запуске»: нужно решить, вызывать ли из `App` в 012.
+- Не проверено на Windows: сборка `-f net10.0-windows10.0.19041.0`, запуск, `SecureStorage` и `FileSystem.AppDataDirectory` в рантайме, `DisplayAlertAsync`/`DisplayPromptAsync` (их тесты требуют рантайма MAUI, не добавлялись).
+- Проверки здесь: `dotnet format --verify-no-changes` по ImageGen.Maui, ImageGen.Core, ImageGen.Core.Tests, ImageGen.Data, ImageGen.Data.Tests: все проходят (код выхода 0). `dotnet test` ImageGen.Core.Tests: 102 passed, 0 failed. `dotnet test` ImageGen.Data.Tests: 29 passed, 0 failed. `dotnet build ImageGen.Maui -f net10.0-android`: 0 Error(s), 0 Warning(s). `scripts/check.sh`: пройден.
+- Ограничение теста `FireAndForgetSafeAsync`: async void не наблюдаем, тест проверяет, что исключение не уходит вызывающему и не роняет процесс.
+- `docs/architecture.md` не менялся: раскладка совпадает с реализацией (Maui → Data → Core).
 
 ## Комментарии
