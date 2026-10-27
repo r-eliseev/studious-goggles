@@ -16,3 +16,7 @@ jobs:
       - run: dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-no-changes
       - run: dotnet build ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj -c Release
       - run: dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj -c Release --no-build
+      - run: dotnet format ImageGen/ImageGen.Data/ImageGen.Data.csproj --verify-no-changes
+      - run: dotnet format ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj --verify-no-changes
+      - run: dotnet build ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj -c Release
+      - run: dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj -c Release --no-build
