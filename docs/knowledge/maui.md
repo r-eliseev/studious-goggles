@@ -85,6 +85,16 @@
 - `Shell.Current.DisplayAlertAsync` — .NET 10 API; в более ранних версиях был `DisplayAlert`.
 - Windows: `CollectionView` по умолчанию выбирает элемент при фокусе; для клавиатурной доступности это отключено в `MauiProgram`.
 
+## Проверено пробной сборкой (2026-10-27, SDK 10.0.402, MAUI 10.0.110)
+Проверено в отдельной папке вне репозитория: шаблон `dotnet new maui` + центральные версии пакетов + сборка под Windows и Android + запуск под Windows.
+- Шаблон `dotnet new maui` создаёт пустое приложение (`MainPage` со счётчиком, `dotnet_bot.png`), `ApplicationId` `com.companyname.<имя>` и `$(MauiVersion)` в `PackageReference`. При `ManagePackageVersionsCentrally=true` атрибут `Version` в `PackageReference` запрещён: версии `Microsoft.Maui.Controls` и `Microsoft.Extensions.Logging.Debug` переносятся в `Directory.Packages.props`.
+- Файлы шаблона отформатированы табами: `dotnet format --verify-no-changes` падает, пока не выполнить один раз `dotnet format` без `--verify-no-changes` (при `.editorconfig` с `indent_style = space`).
+- С пакетом `CommunityToolkit.Maui` сборка падает с ошибкой `MCT001`, если в `MauiProgram` нет `.UseMauiCommunityToolkit()` сразу после `.UseMauiApp<App>()` (и `using CommunityToolkit.Maui;`).
+- Длинный путь к папке проекта ломает Windows-сборку: ошибка `MSB3030` про `WindowsAppSdk.AppxDeploymentExtensions.Desktop-EventLog-Instrumentation.dll` в `MsixContent`. Путь `C:\git\studious-goggles` подходит; клон в глубокую папку (например во временную) нет.
+- Строго типизированный класс из `.resx` без Visual Studio под Windows-целью не генерируется (под Android генерируется). Рабочий способ: `.resx` + вручную написанный класс доступа на `ResourceManager` и явный `LogicalName` у `EmbeddedResource` (имя ресурса проверено в собранной сборке).
+- `SecureStorage.Default.SetAsync/GetAsync` работает в неупакованном Windows-приложении (`WindowsPackageType=None`). `FileSystem.AppDataDirectory` там равен `%LOCALAPPDATA%\<издатель>\<ApplicationId>\Data` (у шаблона издатель `User Name`).
+- `dotnet build <slnx>` на Windows собирает MAUI-проект под все цели, включая iOS и Mac Catalyst; это долго. Для проверки ядра собирать и тестировать отдельные проекты.
+
 ## Что MAUI не даёт для этого проекта
 - Linux, Docker и веб: поэтому Web API + Vue вынесены в отдельную оболочку (`docs/architecture.md`, ADR 0001).
 - Шифрованная БД и фоновые сервисы: нужны отдельные решения.

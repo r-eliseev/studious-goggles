@@ -12,5 +12,5 @@
 | subagents.md | правила для вспомогательных агентов | когда делегируешь часть работы |
 | knowledge/ | база знаний: `csharp.md`, `maui.md`, `example-patterns.md` (паттерны проекта-примера `ImageGen/`) | перед написанием C#/MAUI-кода |
 | decisions/ | ADR, шаблон `_template.md` | перед спорными изменениями |
-| specs/ | спецификации фич (`image-client.md`), шаблон `_template.md` | при работе над фичей |
+| specs/ | спецификации фич (`image-client.md`, `chat-sessions.md` — сессии и скелет), шаблон `_template.md` | при работе над фичей |
 | log/ | записи по сессиям, шаблон `_template.md` | при поиске контекста |

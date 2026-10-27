@@ -54,8 +54,10 @@
 - `ILogger<T>` из `Microsoft.Extensions.Logging`; структурные сообщения (`_logger.LogError(e, "... {Id}", id)`), не интерполяция. Ключи, пароли, содержимое промптов не логировать.
 
 ## Тесты
-- xUnit (или NUnit/MSTest, выбор не зафиксирован) + `dotnet test`. Ядро на `net10.0`, тесты не требуют MAUI-нагрузок. Тесты PageModel возможны, если вынесены `INavigationService`/`IToastService` (см. `docs/knowledge/example-patterns.md`).
-- Мок-библиотеки (NSubstitute, Moq) опциональны; сначала вручную написанные фейки интерфейсов.
+- Выбрано (ADR 0004): xUnit v3 (`xunit.v3`) и NSubstitute для подмен. Ядро на `net10.0`, тесты не требуют MAUI-нагрузок. Тесты PageModel возможны, если навигация и сообщения вынесены в интерфейсы.
+- xUnit v3 на .NET 10 SDK работает только в новом режиме `dotnet test` (Microsoft.Testing.Platform): в корне репозитория `global.json` с `{"test": {"runner": "Microsoft.Testing.Platform"}}`, тестовый проект с `<OutputType>Exe</OutputType>`. Иначе ошибка «Testing with VSTest target is no longer supported». Запуск: `dotnet test --project <путь к csproj>` (проверено 2026-10-27).
+- В режиме Microsoft.Testing.Platform `dotnet test --solution <slnx>` собирает все проекты решения, включая MAUI; для ядра запускать `--project`.
+- HTTP в тестах подменяется своим наследником `HttpMessageHandler` (NSubstitute не подменяет защищённый `SendAsync`).
 
 ## Команды dotnet
 ```
