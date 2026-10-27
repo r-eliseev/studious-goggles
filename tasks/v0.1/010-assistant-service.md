@@ -1,6 +1,6 @@
 ---
 id: 010
-status: planned
+status: done
 assignee:
 claimed:
 created: 2026-10-27
@@ -94,5 +94,18 @@ scripts/check.sh
 ```
 
 ## Отчёт
+- Добавлены `OpenRouter/IOpenRouterChatClient.cs` (один метод `CompleteChatAsync`); `OpenRouterClient` теперь объявляет `IOpenRouterChatClient`, тело метода не менялось.
+- Добавлены `Services/AssistantPrompts.cs` (системный промпт и описание инструмента дословно из плана, `RunMessage`, `CurrentPrompt`), `Services/AssistantTurnResult.cs`, `Services/AssistantService.cs` (`SendUserMessageAsync`, внутренний `ReadPrompt`).
+- Тесты: `ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, 21 тест (текст, запрос, история 20 без ошибок, прогон, вызов без промпта, пустой ответ, нет моделей, `RateLimited`, пустой текст, неизвестная сессия, `ReadPrompt`). Вся `ImageGen.Core.Tests` проходит: 94 теста, 0 падений.
+- `dotnet format --verify-no-changes` для `ImageGen.Core` и `ImageGen.Core.Tests` проходит без изменений. `scripts/check.sh` проходит.
+- Отклонение от плана: `GenerationService.StartRunAsync` в репозитории принимает `(sessionId, prompt, ct)`, а не `(session, prompt)`; вызывается с `sessionId`.
+- Отклонение от плана: `ReadPrompt` объявлен `internal static` (тесты видят его через `InternalsVisibleTo`), а не `public`.
+- Отклонение от плана: разделитель между текстом ассистента и строкой `Prompt:` равен `\n\n`, а не `Environment.NewLine`, чтобы текст не зависел от ОС.
+- Отклонение от плана: имена тестов в английском стиле `Метод_Условие_Результат` (как в существующих тестах ядра), описания тест-кейсов из плана сохранены по смыслу.
+- Не сделано (вне плана): стоимость чата `CostUsd` из ответа ассистента не сохраняется, в `ChatMessage` нет поля для неё.
+- Не сделано (вне плана): `OperationCanceledException` при отмене во время запроса к ассистенту пробрасывается наружу, сообщение ассистента не сохраняется (сообщение пользователя уже записано).
+- Живой запрос к модели ассистента не выполнялся (тесты без сети; ручная проверка — задача 016).
+- Документация `docs/` не менялась (план её не требовал; раздел «Состояние кода» в `docs/architecture.md` не дописывался).
+- Файл задачи после `scripts/release-task.sh 010` (локально): `status: done`, поля `assignee` и `claimed` очищены этим скриптом, как и задумано.
 
 ## Комментарии

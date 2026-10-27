@@ -1,0 +1,312 @@
+using ImageGen.Core.Domain.Chat;
+using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Domain.Sessions;
+using ImageGen.Core.OpenRouter;
+using ImageGen.Core.Providers;
+using ImageGen.Core.Services;
+using ImageGen.Core.Storage;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace ImageGen.Core.Tests.Services;
+
+public class AssistantServiceTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 10, 27, 12, 0, 0, TimeSpan.Zero);
+    private const string ImageModel = "vendor/image";
+    private const string AssistantModel = "vendor/assistant";
+    private const string GenerateImages = AssistantPrompts.GenerateImagesToolName;
+    private static readonly byte[] Image = [1, 2, 3];
+
+    private readonly ISessionRepository _sessions = Substitute.For<ISessionRepository>();
+    private readonly IChatMessageRepository _messages = Substitute.For<IChatMessageRepository>();
+    private readonly IRunRepository _runs = Substitute.For<IRunRepository>();
+    private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
+    private readonly IImageGenerator _generator = Substitute.For<IImageGenerator>();
+    private readonly ISeedSource _seeds = Substitute.For<ISeedSource>();
+    private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
+    private readonly IOpenRouterChatClient _chat = Substitute.For<IOpenRouterChatClient>();
+    private readonly List<ChatMessage> _stored = [];
+    private readonly List<Run> _storedRuns = [];
+    private readonly Session _session;
+    private readonly GenerationService _generations;
+    private readonly AssistantService _service;
+
+    public AssistantServiceTests()
+    {
+        var time = Substitute.For<TimeProvider>();
+        time.GetUtcNow().Returns(Now);
+
+        _modelRepository.ListAsync(Arg.Any<CancellationToken>()).Returns(
+            [ModelCatalogServiceTests.Model(ImageModel, "Image")]);
+        var catalog = new ModelCatalogService(Substitute.For<IModelProvider>(), _modelRepository);
+        _seeds.NextSeed().Returns(7L);
+        _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new ImageGenerationResult(Image, "image/png", 0.01m));
+        _files.SaveAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns("images/session/generation.png");
+
+        _session = new Session
+        {
+            Id = Guid.NewGuid(),
+            Title = Session.NewSessionTitle,
+            CreatedAt = Now,
+            UpdatedAt = Now,
+            Settings = new SessionSettings
+            {
+                ImageModelIds = [ImageModel],
+                RunsPerModel = 1,
+                AssistantModelId = AssistantModel,
+            },
+        };
+        _sessions.GetAsync(_session.Id, Arg.Any<CancellationToken>()).Returns(_session);
+
+        _messages.AddAsync(Arg.Any<ChatMessage>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                _stored.Add(ci.Arg<ChatMessage>());
+                return Task.CompletedTask;
+            });
+        _messages.ListBySessionAsync(_session.Id, Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromResult<IReadOnlyList<ChatMessage>>(_stored.ToList()));
+        _runs.AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                _storedRuns.Add(ci.Arg<Run>());
+                return Task.CompletedTask;
+            });
+        _runs.ListRunsBySessionAsync(_session.Id, Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromResult<IReadOnlyList<Run>>(_storedRuns.ToList()));
+
+        var sessionService = new SessionService(_sessions, _messages, _runs, _files, time);
+        _generations = new GenerationService(
+            _sessions, _runs, _generator, _files, catalog, _seeds, time, NullLogger<GenerationService>.Instance);
+        _service = new AssistantService(
+            sessionService, _messages, _runs, _chat, _generations, time, NullLogger<AssistantService>.Instance);
+    }
+
+    private ChatMessage AssistantMessage => _stored.Last();
+
+    private OpenRouterChatRequest LastRequest =>
+        (OpenRouterChatRequest)_chat.ReceivedCalls().Last().GetArguments()[0]!;
+
+    private void ReplyWith(OpenRouterChatResult reply) =>
+        _chat.CompleteChatAsync(Arg.Any<OpenRouterChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(reply);
+
+    private void ReplyWithToolCall(string argumentsJson, string? text = null) =>
+        ReplyWith(new OpenRouterChatResult(text, [new OpenRouterToolCall(GenerateImages, argumentsJson)], 0.001m));
+
+    [Fact]
+    public async Task SendUserMessageAsync_TextReply_SavesUserAndAssistantWithoutRun()
+    {
+        ReplyWith(new OpenRouterChatResult("  Which style do you want?  ", [], null));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "  a fox  ", TestContext.Current.CancellationToken);
+
+        Assert.Null(result.Run);
+        Assert.Equal(ChatRole.User, result.UserMessage.Role);
+        Assert.Equal("a fox", result.UserMessage.Text);
+        Assert.Equal(ChatRole.Assistant, result.AssistantMessage.Role);
+        Assert.Equal("Which style do you want?", result.AssistantMessage.Text);
+        Assert.False(result.AssistantMessage.IsError);
+        Assert.Null(result.AssistantMessage.RunId);
+        Assert.Equal(2, _stored.Count);
+        Assert.Empty(_storedRuns);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_FirstMessage_SetsSessionTitle()
+    {
+        ReplyWith(new OpenRouterChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "  a fox  ", TestContext.Current.CancellationToken);
+
+        Assert.Equal("a fox", _session.Title);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_Request_UsesAssistantModelPromptsAndTool()
+    {
+        ReplyWith(new OpenRouterChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
+
+        var request = LastRequest;
+        Assert.Equal(AssistantModel, request.Model);
+        Assert.Equal(AssistantPrompts.System, request.Messages[0].Text);
+        Assert.Equal(OpenRouterChatMessage.SystemRole, request.Messages[0].Role);
+        Assert.Equal(AssistantPrompts.NoCurrentPrompt, request.Messages[1].Text);
+        Assert.Equal(OpenRouterChatMessage.UserRole, request.Messages[2].Role);
+        Assert.Equal("a fox", request.Messages[2].Text);
+        var tool = Assert.Single(request.Tools);
+        Assert.Equal(GenerateImages, tool.Name);
+        Assert.Equal(AssistantPrompts.GenerateImagesToolDescription, tool.Description);
+        Assert.Equal(AssistantPrompts.GenerateImagesToolSchema, tool.ParametersJsonSchema);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_ExistingRun_SendsItsPromptAsCurrentPrompt()
+    {
+        _storedRuns.Add(new Run
+        {
+            Id = Guid.NewGuid(),
+            SessionId = _session.Id,
+            Prompt = "old fox",
+            Origin = RunOrigin.Assistant,
+            CreatedAt = Now.AddMinutes(-5),
+        });
+        ReplyWith(new OpenRouterChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "make it red", TestContext.Current.CancellationToken);
+
+        Assert.Equal("Current prompt: old fox", LastRequest.Messages[1].Text);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_LongHistory_SendsLastTwentyNonErrorMessages()
+    {
+        for (var i = 0; i < 25; i++)
+        {
+            _stored.Add(new ChatMessage
+            {
+                Id = Guid.NewGuid(),
+                SessionId = _session.Id,
+                Role = i % 2 == 0 ? ChatRole.User : ChatRole.Assistant,
+                Text = i % 5 == 0 ? $"error {i}" : $"m{i}",
+                CreatedAt = Now,
+                IsError = i % 5 == 0,
+            });
+        }
+        ReplyWith(new OpenRouterChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "new", TestContext.Current.CancellationToken);
+
+        var history = LastRequest.Messages.Skip(2).ToList();
+        Assert.Equal(AssistantPrompts.HistoryMessageCount, history.Count);
+        Assert.Equal("m2", history[0].Text);
+        Assert.Equal("new", history[^1].Text);
+        Assert.DoesNotContain(history, m => m.Text.StartsWith("error", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_ToolCallWithPrompt_StartsRunAndShowsPrompt()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        ReplyWithToolCall("""{"prompt":"a red fox in snow"}""", "Here is the plan.");
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "a fox", ct);
+        await _generations.WhenIdleAsync();
+
+        Assert.NotNull(result.Run);
+        Assert.Equal("a red fox in snow", result.Run.Prompt);
+        Assert.Equal(RunOrigin.Assistant, result.Run.Origin);
+        Assert.Equal(result.Run.Id, result.AssistantMessage.RunId);
+        Assert.False(result.AssistantMessage.IsError);
+        Assert.Equal("Here is the plan.\n\nPrompt: a red fox in snow", result.AssistantMessage.Text);
+        await _generator.Received(1).GenerateAsync(
+            Arg.Is<ImageGenerationRequest>(r => r.Prompt == "a red fox in snow" && r.ModelId == ImageModel),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_ToolCallWithoutText_RunMessageIsOnlyPrompt()
+    {
+        ReplyWithToolCall("""{"prompt":"a fox"}""");
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
+        await _generations.WhenIdleAsync();
+
+        Assert.Equal("Prompt: a fox", result.AssistantMessage.Text);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_ToolCallWithoutPrompt_SavesErrorAndStartsNoRun()
+    {
+        ReplyWithToolCall("{}");
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
+
+        Assert.Null(result.Run);
+        Assert.True(result.AssistantMessage.IsError);
+        Assert.Equal("The assistant returned an invalid tool call.", result.AssistantMessage.Text);
+        Assert.Empty(_storedRuns);
+        await _runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_EmptyReply_SavesError()
+    {
+        ReplyWith(new OpenRouterChatResult("  ", [], null));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
+
+        Assert.True(result.AssistantMessage.IsError);
+        Assert.Equal("The assistant returned an empty response.", result.AssistantMessage.Text);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_NoImageModels_SavesErrorAndKeepsUserMessage()
+    {
+        _session.Settings.ImageModelIds = [];
+        ReplyWithToolCall("""{"prompt":"a fox"}""");
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
+
+        Assert.Null(result.Run);
+        Assert.True(result.AssistantMessage.IsError);
+        Assert.Equal($"Session {_session.Id} has no image models.", result.AssistantMessage.Text);
+        Assert.Equal("a fox", result.UserMessage.Text);
+        Assert.Equal(2, _stored.Count);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_ProviderRateLimited_SavesUserAndErrorMessage()
+    {
+        _chat.CompleteChatAsync(Arg.Any<OpenRouterChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<OpenRouterChatResult>(
+                new ProviderException(ErrorKind.RateLimited, "Rate limit exceeded")));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
+
+        Assert.Null(result.Run);
+        Assert.Equal("a fox", result.UserMessage.Text);
+        Assert.Equal(2, _stored.Count);
+        Assert.Equal(ChatRole.Assistant, result.AssistantMessage.Role);
+        Assert.True(result.AssistantMessage.IsError);
+        Assert.Equal("Assistant error (RateLimited): Rate limit exceeded", result.AssistantMessage.Text);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_EmptyText_Throws()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.SendUserMessageAsync(_session.Id, "  ", TestContext.Current.CancellationToken));
+        Assert.Empty(_stored);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_UnknownSession_Throws()
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.SendUserMessageAsync(Guid.NewGuid(), "a fox", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public void ReadPrompt_ValidArguments_ReturnsTrimmedPrompt()
+    {
+        Assert.Equal("a fox", AssistantService.ReadPrompt("""{"prompt":"  a fox  "}"""));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("{}")]
+    [InlineData("""{"prompt":""}""")]
+    [InlineData("""{"prompt":"   "}""")]
+    [InlineData("""{"prompt":3}""")]
+    [InlineData("{\"prompt\":\"a fox\"")]
+    [InlineData("[]")]
+    public void ReadPrompt_InvalidArguments_ReturnsNull(string json)
+    {
+        Assert.Null(AssistantService.ReadPrompt(json));
+    }
+}
