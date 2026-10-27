@@ -1,0 +1,41 @@
+name: build
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet format ImageGen/ImageGen.Core/ImageGen.Core.csproj --verify-no-changes
+      - run: dotnet build ImageGen/ImageGen.Core/ImageGen.Core.csproj -c Release
+      - run: dotnet test ImageGen/ImageGen.Core/ImageGen.Core.csproj -c Release --no-build
+
+  maui-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet workload install maui
+      - run: dotnet build ImageGen/ImageGen/ImageGen.csproj -f net10.0-windows10.0.19041.0 -c Release
+
+  maui-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-java@v4
+        with:
+          distribution: microsoft
+          java-version: '21'
+      - run: dotnet workload install maui-android
+      - run: dotnet build ImageGen/ImageGen/ImageGen.csproj -f net10.0-android -c Release

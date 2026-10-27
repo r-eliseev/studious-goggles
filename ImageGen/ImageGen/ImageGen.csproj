@@ -76,5 +76,9 @@
 		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
 		<PackageReference Include="Syncfusion.Maui.Toolkit" Version="1.0.10" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\ImageGen.Core\ImageGen.Core.csproj" />
+	</ItemGroup>
 	
 </Project>

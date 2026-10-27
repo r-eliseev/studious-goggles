@@ -6,7 +6,9 @@
 
 Состояние проекта: харнес установлен, цели и база знаний записаны. Кода приложения нет: в `ImageGen/` лежит MAUI-проект-пример (шаблон «задачи и проекты»), его паттерны описаны в `docs/knowledge/example-patterns.md`. Решение о раскладке проектов (`docs/architecture.md`, раздел «Целевая раскладка») пока предложено, не принято: см. `docs/decisions/0001-core-and-heads.md`.
 
-Во время установки харнеса в `ImageGen/ImageGen.Core/` появился проект ядра (интерфейсы `IProvider`, `IGeneration`, `ITextToImage`, `IImageToImage`, `IImageToText`, пространство `Integration`). Его создал не агент и в документации он не разобран; он ещё не добавлен в `ImageGen.slnx`. Раскладку ядра в `docs/architecture.md` сверить с ним, когда владелец подтвердит направление.
+Проект ядра `ImageGen/ImageGen.Core/` (net10.0) добавлен в `ImageGen.slnx` и подключён ссылкой из MAUI-проекта. Сейчас там только пустые интерфейсы-заготовки (`IProvider`, `IGeneration`, `ITextToImage`, `IImageToImage`, `IImageToText` в пространстве `ImageGen.Core.Integration`).
+
+CI: `.github/workflows/build.yml` (форматирование, сборка и тесты ядра на Ubuntu; сборка MAUI под Windows и Android) и `harness.yml`/`harness-audit.yml`. Сборка MAUI под Windows проверена локально, сам workflow на GitHub ещё не запускался; шаги `maui-android` и установка нагрузок не проверены.
 
 ## Открытые вопросы
 - Linux: .NET MAUI не поддерживает Linux официально (target frameworks шаблона: android, ios, maccatalyst, windows). Заметки просят «Win / Linux / MacOS». Чем закрывать Linux: Web API + Vue в браузере, стороннее решение на MAUI, другой UI-стек? Допущение пока: Linux обслуживает Web-оболочка.
@@ -21,5 +23,6 @@
 - В проекте-примере `ApplicationId` равен `com.companyname.imagegen`, в `Package.appxmanifest` placeholder-значения издателя. Заменить до релиза.
 - В проекте-примере модели хранят UI-типы (`Brush`, `Color`), поэтому не переносятся в Core как есть.
 - Файл `ImageGen/ImageGen/Data/TaskRespository.cs` назван с опечаткой (класс `TaskRepository`).
+- В `ImageGen.Core` все интерфейсы объявлены `internal`: MAUI-проект и будущая Web-оболочка их не увидят (нужен `public` или `InternalsVisibleTo`). В `IImageToText.cs` интерфейс назван `IImangeToText` (опечатка).
 - Тестовых проектов нет, `dotnet test` ничего не проверяет.
 - Не проверено: сборка `dotnet build ImageGen/ImageGen.slnx` в этой сессии не запускалась (требует MAUI-нагрузок).

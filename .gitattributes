@@ -1,0 +1,14 @@
+# Нормализация переводов строк: в репозитории всегда LF
+* text=auto
+
+# Скрипты и CI должны быть с LF, иначе bash и GitHub Actions ломаются на CRLF
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+
+# Бинарные файлы
+*.ttf binary
+*.png binary
+*.jpg binary
+*.ico binary
