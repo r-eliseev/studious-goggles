@@ -1,8 +1,8 @@
 ---
 id: 034
-status: in-progress
-assignee: claude-qnrqyt
-claimed: 2026-10-27T00:00:00Z
+status: done
+assignee:
+claimed:
 created: 2026-10-27
 ---
 
@@ -65,7 +65,7 @@ scripts/check.sh
 
 ## Отчёт
 
-Статус `in-progress`: Windows-часть не проверена (сборка Windows-цели на Linux невозможна, владелец подтвердил). Занятость не снимается до проверки на Windows.
+Windows-часть проверена позже на Windows-машине (см. «Проверено на Windows» ниже), задача закрыта.
 
 **Сделано (по шагам плана):**
 1. `dotnet new maui -n ImageGen.Maui -o ImageGen/ImageGen.Maui`. Восстановление упало с NU1008 (ожидаемо, см. план).
@@ -87,6 +87,12 @@ scripts/check.sh
 - `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0` (Linux не может собрать Windows-цель, NETSDK1100/XAML-компилятор, см. `docs/knowledge/claude-cloud-session.md`). Проверить также, что нет `MSB3030` (путь клона `C:\git\studious-goggles`).
 - Запуск под Windows не выполнялся.
 - CI: задача `maui` ещё не запускалась на GitHub.
+
+**Проверено на Windows (2026-10-27, Windows 11, SDK 10.0.402, клон `C:\git\studious-goggles`, ревью после мерджа):**
+- `dotnet format ImageGen/ImageGen.Maui/ImageGen.Maui.csproj --verify-no-changes`: без изменений.
+- `dotnet build ... -f net10.0-windows10.0.19041.0` и `-f net10.0-android`, Debug и Release: успешно, 0 предупреждений, `MSB3030` нет.
+- CI: задача `maui` на `windows-latest` прошла (запуск после мерджа PR #10).
+- Запуск приложения под Windows не выполнялся: критериями задачи не требуется, проверка интерфейса — задача 016.
 
 **Отклонения от плана:**
 - `docs/architecture.md`: раздел «Состояние кода» в плане не добавлялся. По `docs/log/2026-10-27-architecture-without-progress.md` такого раздела больше нет; архитектура описывает задуманное, и код с ней не расходится.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Занимает задачу: записывает assignee и claimed прямо в origin/main одним маленьким коммитом.
+# Занимает задачу: записывает assignee и claimed в ветку origin, одноимённую текущей (TASKS_BRANCH переопределяет), одним маленьким коммитом.
 # Гонку двух агентов решает git: пушит первый, второй увидит занятость и получит код 2.
 # Использование: scripts/claim-task.sh <номер> <имя-исполнителя>
 # Коды возврата: 0 — занята вами, 2 — занята другим, 3 — задача не найдена, 4 — в этом статусе занять нельзя.
@@ -11,7 +11,7 @@ case "$1" in ''|*[!0-9]*) echo "Номер задачи — число" >&2; exi
 CL_ID=$(task_norm_id "$1"); CL_WHO="$2"
 case "$CL_WHO" in ''|*[!a-zA-Z0-9._-]*) echo "Имя исполнителя: только буквы, цифры, точка, дефис, подчёркивание" >&2; exit 1 ;; esac
 
-claim() {  # <корень копии origin/main>
+claim() {  # <корень копии $T_REMOTE/$T_BRANCH>
   local f st cur
   f=$(task_file "$1" "$CL_ID")
   [ -n "$f" ] || { echo "Задача $CL_ID не найдена в $T_REMOTE/$T_BRANCH" >&2; return 3; }
@@ -35,4 +35,4 @@ case $rc in
   *)   exit $rc ;;
 esac
 CL_BASE=$(basename "${CL_REL:-$CL_ID}" .md)
-echo "Дальше: git fetch $T_REMOTE && git switch -c task/$CL_BASE $T_REMOTE/$T_BRANCH"
+echo "Дальше: git pull --ff-only (коммит с занятостью уже в $T_REMOTE/$T_BRANCH)"
