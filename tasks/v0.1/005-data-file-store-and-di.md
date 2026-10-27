@@ -1,6 +1,6 @@
 ---
 id: 005
-status: planned
+status: done
 assignee:
 claimed:
 created: 2026-10-27
@@ -57,5 +57,11 @@ scripts/check.sh
 ```
 
 ## Отчёт
+- Изменены и добавлены файлы: `ImageGen/ImageGen.Data/FileImageStore.cs` (`FileImageStore : IImageFileStore`, `GetExtension` внутренний статический), `ImageGen/ImageGen.Data/DataServiceCollectionExtensions.cs` (`AddImageGenData()`: singleton для `SqliteDatabase`, четырёх репозиториев и `IImageFileStore`), тесты `ImageGen/ImageGen.Data.Tests/FileImageStoreTests.cs` (8 кейсов с теорией) и `ImageGen/ImageGen.Data.Tests/DataServiceCollectionExtensionsTests.cs`.
+- Относительный путь в БД собирается через `/` на любой ОС (`images/<sessionId:N>/<generationId:N>.<ext>`), полный путь — через `Path.Combine(DataDirectory, relative)`.
+- `DeleteSessionFilesAsync` удаляет `images/<sessionId>` рекурсивно; если каталога нет, ничего не делает.
+- Пакеты и `Directory.Packages.props` не менялись. `docs/` не менялись: раздела «Состояние кода» в `docs/architecture.md` уже нет (убран по `docs/log/2026-10-27-architecture-without-progress.md`), устройство совпадает с описанием.
+- Проверка: `dotnet format --verify-no-changes` для `ImageGen.Data` и `ImageGen.Data.Tests` проходит (код возврата 0). `dotnet test --project ImageGen/ImageGen.Data.Tests` — 24 из 24 пройдены (16 старых и 8 новых).
+- Отклонения от плана: нет по существу. Статус перед реализацией в файле был `planned`; одобрение дано в чате, поэтому статусы проставлены вручную, без `scripts/claim-task.sh` (он пушит в origin/main).
 
 ## Комментарии
