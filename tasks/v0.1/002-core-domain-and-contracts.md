@@ -1,8 +1,8 @@
 ---
 id: 002
-status: planned
-assignee:
-claimed:
+status: done
+assignee: claude-qnrqyt
+claimed: 2026-10-27T00:00:00Z
 created: 2026-10-27
 ---
 
@@ -493,5 +493,8 @@ scripts/check.sh
 ```
 
 ## Отчёт
+- Созданы файлы плана дословно: `ImageGen.Core/Domain/` (enum-ы с явными значениями, `Session`, `ChatMessage`, `Run`, `Generation`, `ImageModel`, `SessionSettings`, `SessionTimeline`), `Platform/` (`ISecretStore`, `IAppPaths`, `SecretNames`), `Storage/` (интерфейсы репозиториев и `IImageFileStore`), `Providers/` (`ProviderException`, `ImageGenerationRequest`, `ImageGenerationResult`, `IImageGenerator`), `Serialization/CoreJsonContext.cs`.
+- Тесты: `ImageGen.Core.Tests/Domain/SessionSettingsTests.cs` (3 теста) и `GenerationTests.cs` (6 случаев `IsFinished`).
+- Проверено: `dotnet format --verify-no-changes` для Core и Core.Tests — без изменений; `dotnet test` — 10 тестов, все пройдены.
 
 ## Комментарии
