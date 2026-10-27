@@ -1,6 +1,6 @@
 ---
 id: 003
-status: planned
+status: done
 assignee:
 claimed:
 created: 2026-10-27
@@ -322,5 +322,13 @@ scripts/check.sh
 ```
 
 ## Отчёт
+- Создан проект `ImageGen/ImageGen.Data` (net10.0, `Microsoft.Data.Sqlite`, ссылка на `ImageGen.Core`): `SqliteDatabase` (путь к файлу из `IAppPaths.DataDirectory` или явный путь, `Foreign Keys=True`, `OpenAsync`, `InitializeAsync` с WAL и миграциями в транзакции, `GetSchemaVersionAsync` через `PRAGMA user_version`), `Migrations.cs` с первой миграцией: таблицы `sessions`, `chat_messages`, `runs`, `generations`, `image_models` и индексы. SQL из плана перенесён дословно.
+- Создан тестовый проект `ImageGen/ImageGen.Data.Tests` (xUnit v3, NSubstitute): `TestDatabase` (временная БД в каталоге temp, удаляется в `DisposeAsync` после `SqliteConnection.ClearAllPools()`) и `SqliteDatabaseTests` с 4 тестами по плану.
+- Оба проекта добавлены в `ImageGen/ImageGen.slnx`. В `.github/workflows/build.yml` в задачу `core` добавлены четыре шага по плану (format для Data и Data.Tests, build и test Data.Tests в Release).
+- `ImageGen/Directory.Packages.props` не менялся: все нужные пакеты уже там.
+- Проверки: `dotnet format --verify-no-changes` для `ImageGen.Data`, `ImageGen.Data.Tests` и `ImageGen.Core.Tests` прошёл без изменений. `dotnet test --project ImageGen/ImageGen.Data.Tests` прошёл: 4 из 4. `dotnet test --project ImageGen/ImageGen.Core.Tests` прошёл: 10 из 10 (регрессий нет). Release-сборка и `--no-build` тест для Data.Tests прошли, как в CI.
+- `docs/architecture.md`, раздел «Состояние кода»: описаны `ImageGen.Data` и `ImageGen.Data.Tests`; уточнено, что ядро содержит доменную модель и интерфейсы (задача 002), а не пустой каркас.
+- Отклонений от плана нет. Новых ADR и пакетов не понадобилось.
+- `scripts/check.sh` падает по задачам 001 и 002: у них статус `done`, а занятость (`assignee`) не снята. Ошибка есть в исходной ветке, файлы 001 и 002 в этой задаче не менялись. Эти задачи нужно закрыть через `scripts/release-task.sh 001` и `002` отдельно. Для 003 занятость снята по `docs/tasks.md` (шаг «Завершение», п. 4).
 
 ## Комментарии
