@@ -77,7 +77,7 @@ Dockerfile, docker-compose.yml   том /data
 OpenRouter (HTTP API: `/api/v1/key`, `/api/v1/images/models`, `/api/v1/images`, `/api/v1/chat/completions`). Позже fal.ai и Replicate.
 
 ## Состояние кода
-Каркас скелета создан задачей 001: `ImageGen.Core`, `ImageGen.Core.Tests` (архитектурный тест). Задача 002 добавила доменную модель и интерфейсы ядра. Задача 003 добавила `ImageGen.Data` (`SqliteDatabase`: путь к файлу, открытие соединения, миграции через `PRAGMA user_version`; первая миграция создаёт таблицы скелета в `Migrations.cs`) и `ImageGen.Data.Tests` (временная БД в файле). Репозитории и `FileImageStore` пока не написаны (задача 004). Пустое `ImageGen.Maui` из шаблона добавляет задача 034, остальное — задачи `tasks/v0.1/`.
+Каркас скелета создан задачей 001: `ImageGen.Core`, `ImageGen.Core.Tests` (архитектурный тест). Задача 002 добавила доменную модель и интерфейсы ядра. Задача 003 добавила `ImageGen.Data` (`SqliteDatabase`: путь к файлу, открытие соединения, миграции через `PRAGMA user_version`; первая миграция создаёт таблицы скелета в `Migrations.cs`) и `ImageGen.Data.Tests` (временная БД в файле). Задача 006 добавила `ImageGen.Core/OpenRouter/` (`OpenRouterClient` для `GET key`, `GET images/models`, `POST images`, `POST chat/completions`; ошибки приводятся к `ProviderException` с `ErrorKind`) и тестовую подмену `StubHttpMessageHandler`. Репозитории и `FileImageStore` пока не написаны (задачи 004 и 005). Пустое `ImageGen.Maui` из шаблона добавляет задача 034, остальное — задачи `tasks/v0.1/`.
 
 ## Ограничения
 - Платформы: MAUI не поддерживает Linux; Linux обслуживает будущая Web-оболочка.
