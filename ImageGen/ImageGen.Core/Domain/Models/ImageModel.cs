@@ -1,4 +1,4 @@
-namespace ImageGen.Core.Domain;
+namespace ImageGen.Core.Domain.Models;
 
 public sealed class ImageModel
 {

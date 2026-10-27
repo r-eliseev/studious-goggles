@@ -1,11 +1,10 @@
-using ImageGen.Core.Domain;
-using ImageGen.Core.OpenRouter;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Storage;
 
 namespace ImageGen.Core.Services;
 
-public sealed class ModelCatalogService(IOpenRouterClient client, IImageModelRepository repository)
+public sealed class ModelCatalogService(IModelProvider client, IImageModelRepository repository)
 {
     /// <summary>
     /// Returns image models sorted by name. Uses the cache unless it is empty or <paramref name="forceRefresh"/> is true.

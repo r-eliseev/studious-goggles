@@ -4,13 +4,15 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using ImageGen.Core.Domain;
+using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Domain.Keys;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 
 namespace ImageGen.Core.OpenRouter;
 
-public sealed class OpenRouterClient(HttpClient httpClient, ISecretStore secretStore, TimeProvider timeProvider) : IOpenRouterClient
+public sealed class OpenRouterClient(HttpClient httpClient, ISecretStore secretStore, TimeProvider timeProvider) : IModelProvider
 {
     public static readonly Uri BaseAddress = new("https://openrouter.ai/api/v1/");
     public const string DefaultMediaType = "image/png";
@@ -75,12 +77,12 @@ public sealed class OpenRouterClient(HttpClient httpClient, ISecretStore secretS
         return result;
     }
 
-    public async Task<OpenRouterImageResult> GenerateImageAsync(OpenRouterImageRequest request, CancellationToken cancellationToken)
+    public async Task<ImageGenerationResult> GenerateAsync(ImageGenerationRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         var body = new JsonObject
         {
-            ["model"] = request.Model,
+            ["model"] = request.ModelId,
             ["prompt"] = request.Prompt,
             ["n"] = 1,
         };
@@ -99,7 +101,7 @@ public sealed class OpenRouterClient(HttpClient httpClient, ISecretStore secretS
         }
 
         var mediaType = first!["media_type"]?.GetValue<string>();
-        return new OpenRouterImageResult(
+        return new ImageGenerationResult(
             Convert.FromBase64String(base64),
             string.IsNullOrWhiteSpace(mediaType) ? DefaultMediaType : mediaType,
             ReadCost(root));
@@ -249,10 +251,10 @@ public sealed class OpenRouterClient(HttpClient httpClient, ISecretStore secretS
                 var code = error?["code"] is JsonValue codeValue && codeValue.TryGetValue<int>(out var c) ? c : statusCode;
                 var message = error?["message"]?.GetValue<string>() ?? $"OpenRouter returned HTTP {statusCode}.";
                 var hasReasons = error?["metadata"]?["reasons"] is JsonArray;
-                throw new ProviderException(MapErrorKind(code, hasReasons), message, code);
+                throw new ProviderException(MapErrorKind(code, hasReasons), message);
             }
 
-            return root ?? throw new ProviderException(ErrorKind.EmptyResponse, "OpenRouter returned an empty response.", statusCode);
+            return root ?? throw new ProviderException(ErrorKind.EmptyResponse, "OpenRouter returned an empty response.");
         }
     }
 

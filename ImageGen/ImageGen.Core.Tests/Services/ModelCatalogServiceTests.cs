@@ -1,5 +1,5 @@
-using ImageGen.Core.Domain;
-using ImageGen.Core.OpenRouter;
+using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
@@ -8,7 +8,7 @@ namespace ImageGen.Core.Tests.Services;
 
 public class ModelCatalogServiceTests
 {
-    private readonly IOpenRouterClient _client = Substitute.For<IOpenRouterClient>();
+    private readonly IModelProvider _client = Substitute.For<IModelProvider>();
     private readonly IImageModelRepository _repository = Substitute.For<IImageModelRepository>();
     private readonly ModelCatalogService _service;
 

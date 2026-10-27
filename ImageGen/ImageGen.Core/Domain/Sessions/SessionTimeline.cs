@@ -1,4 +1,6 @@
-namespace ImageGen.Core.Domain;
+using ImageGen.Core.Domain.Chat;
+using ImageGen.Core.Domain.Generations;
+namespace ImageGen.Core.Domain.Sessions;
 
 public sealed record SessionTimeline(
     Session Session,

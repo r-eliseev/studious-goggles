@@ -1,10 +1,10 @@
-using ImageGen.Core.Domain;
-using ImageGen.Core.OpenRouter;
+using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.Platform;
+using ImageGen.Core.Providers;
 
 namespace ImageGen.Core.Services;
 
-public sealed class ApiKeyService(ISecretStore secretStore, IOpenRouterClient client)
+public sealed class ApiKeyService(ISecretStore secretStore, IModelProvider client)
 {
     public async Task<bool> HasKeyAsync(CancellationToken cancellationToken)
     {

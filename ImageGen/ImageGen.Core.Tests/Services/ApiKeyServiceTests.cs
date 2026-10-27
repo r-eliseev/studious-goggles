@@ -1,6 +1,6 @@
-using ImageGen.Core.Domain;
-using ImageGen.Core.OpenRouter;
+using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.Platform;
+using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 
 namespace ImageGen.Core.Tests.Services;
@@ -8,7 +8,7 @@ namespace ImageGen.Core.Tests.Services;
 public class ApiKeyServiceTests
 {
     private readonly ISecretStore _secrets = Substitute.For<ISecretStore>();
-    private readonly IOpenRouterClient _client = Substitute.For<IOpenRouterClient>();
+    private readonly IModelProvider _client = Substitute.For<IModelProvider>();
     private readonly ApiKeyService _service;
 
     public ApiKeyServiceTests()

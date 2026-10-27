@@ -1,4 +1,4 @@
-namespace ImageGen.Core.Platform;
+namespace ImageGen.Core.Domain.Keys;
 
 public static class SecretNames
 {
