@@ -10,7 +10,7 @@
 | tasks.md | правила работы с задачами | перед любой задачей |
 | audit.md | аудит: сверка документации с кодом | при аудите (раз в неделю или перед релизом) |
 | subagents.md | правила для вспомогательных агентов | когда делегируешь часть работы |
-| knowledge/ | база знаний: `csharp.md`, `maui.md`, `dev-environment.md` (что где собирается), `windows-machine.md` (Windows-машина), `claude-cloud-session.md` (облачная сессия) | перед написанием C#/MAUI-кода |
+| knowledge/ | база знаний: `csharp.md`, `maui.md`, `dev-environment.md` (что где собирается), `windows-machine.md` (Windows-машина), `claude-cloud-session.md` (облачная сессия), `kiro-web-session.md` (Kiro Web) | перед написанием C#/MAUI-кода |
 | decisions/ | ADR, шаблон `_template.md` | перед спорными изменениями |
 | specs/ | спецификации фич (`image-client.md`, `chat-sessions.md` — сессии и скелет), шаблон `_template.md` | при работе над фичей |
 | log/ | записи по сессиям, шаблон `_template.md` | при поиске контекста |
