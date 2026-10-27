@@ -1,8 +1,8 @@
 ---
 id: 034
-status: planned
-assignee:
-claimed:
+status: in-progress
+assignee: claude-qnrqyt
+claimed: 2026-10-27T00:00:00Z
 created: 2026-10-27
 ---
 
@@ -64,5 +64,36 @@ scripts/check.sh
 ```
 
 ## Отчёт
+
+Статус `in-progress`: Windows-часть не проверена (сборка Windows-цели на Linux невозможна, владелец подтвердил). Занятость не снимается до проверки на Windows.
+
+**Сделано (по шагам плана):**
+1. `dotnet new maui -n ImageGen.Maui -o ImageGen/ImageGen.Maui`. Восстановление упало с NU1008 (ожидаемо, см. план).
+2. `ImageGen.Maui.csproj`: убран `Version` у `Microsoft.Maui.Controls` и `Microsoft.Extensions.Logging.Debug`; добавлены `CommunityToolkit.Mvvm` и `CommunityToolkit.Maui` без версии (версии уже есть в `Directory.Packages.props`, новых версий не понадобилось); `ApplicationTitle` = `ImageGen`; `ItemGroup` с `ProjectReference` на `../ImageGen.Core/ImageGen.Core.csproj`. `ApplicationId` не менялся.
+3. `MauiProgram.cs`: `using CommunityToolkit.Maui;` первой строкой и `.UseMauiCommunityToolkit()` после `.UseMauiApp<App>()`.
+4. `ImageGen/ImageGen.slnx`: строка `ImageGen.Maui/ImageGen.Maui.csproj`. `dotnet format` по проекту выполнен.
+5. `.github/workflows/build.yml`: задача `maui` (windows-latest, с комментарием про Disk quota). Задача `core` не менялась.
+
+**Проверено здесь (Linux, SDK 10.0.403, maui-android, Android SDK platform-36):**
+- `dotnet format ImageGen/ImageGen.Maui/ImageGen.Maui.csproj --verify-no-changes`: без изменений.
+- `dotnet format ImageGen/ImageGen.Core/ImageGen.Core.csproj --verify-no-changes`: без изменений.
+- `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android`: успешно, 0 предупреждений, 0 ошибок. Также `-c Release`: успешно.
+- `dotnet build ImageGen.Core`, `dotnet test` для ImageGen.Core.Tests (59/59) и ImageGen.Data.Tests (16/16): пройдены.
+- `scripts/check.sh`: проходит (см. финальный прогон ниже).
+- Юнит-тестов в плане нет; MAUI-тестов на устройстве здесь не запускал (нет эмулятора).
+
+**Не проверено на Windows:**
+- `dotnet format ... --verify-no-changes` для MAUI-проекта на Windows (CI-шаг задачи `maui`) — выполнено только на Linux.
+- `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0` (Linux не может собрать Windows-цель, NETSDK1100/XAML-компилятор, см. `docs/knowledge/claude-cloud-session.md`). Проверить также, что нет `MSB3030` (путь клона `C:\git\studious-goggles`).
+- Запуск под Windows не выполнялся.
+- CI: задача `maui` ещё не запускалась на GitHub.
+
+**Отклонения от плана:**
+- `docs/architecture.md`: раздел «Состояние кода» в плане не добавлялся. По `docs/log/2026-10-27-architecture-without-progress.md` такого раздела больше нет; архитектура описывает задуманное, и код с ней не расходится.
+- В `ImageGen.Maui.csproj` оставлена `ProjectReference` только на `ImageGen.Core` (как в плане). `docs/architecture.md` предполагает `Maui → Data`; ссылка на Data, вероятно, нужна в задаче 012. Проверить там.
+- Шаблон создал `ImageGen/ImageGen.Maui/.gitignore` и `Platforms/*`, `Resources/*`, `MainPage.xaml`: оставлены как есть (план их не трогает). `csproj` по-прежнему с табами (шаблон), `dotnet format` XML не переформатирует. План этого не требует.
+- Android SDK в облачной сессии ставился заново (по `docs/knowledge/claude-cloud-session.md`, раздел «Как поставить»). Без него `dotnet format` по MAUI-проекту не загружается. Записано в `docs/knowledge/claude-cloud-session.md`.
+
+**Файлы:** `ImageGen/ImageGen.Maui/` (новый, из шаблона, с правками), `ImageGen/ImageGen.slnx`, `.github/workflows/build.yml`, `docs/knowledge/claude-cloud-session.md`, `tasks/v0.1/034-maui-scaffold.md`.
 
 ## Комментарии

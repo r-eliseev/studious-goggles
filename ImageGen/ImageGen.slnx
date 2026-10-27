@@ -3,4 +3,5 @@
   <Project Path="ImageGen.Core.Tests/ImageGen.Core.Tests.csproj" />
   <Project Path="ImageGen.Data/ImageGen.Data.csproj" />
   <Project Path="ImageGen.Data.Tests/ImageGen.Data.Tests.csproj" />
+  <Project Path="ImageGen.Maui/ImageGen.Maui.csproj" />
 </Solution>
