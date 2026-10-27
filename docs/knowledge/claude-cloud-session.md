@@ -56,5 +56,6 @@ dockerd > ~/dockerd.log 2>&1 &
 Воспроизвести проверку Android: `dotnet new maui -n Probe`, затем `dotnet build -f net10.0-android` в каталоге проекта.
 
 ## Особенности облачной сессии
+- **`dotnet format` для MAUI-проекта:** без Android SDK проект не загружается (`The Android SDK directory could not be found`), и `dotnet format` выводит «Required references did not load». С SDK из раздела «Как поставить» `dotnet format ImageGen/ImageGen.Maui/ImageGen.Maui.csproj --verify-no-changes` проходит (проверено 2026-10-27). Сначала `dotnet restore` на том же проекте.
 - Тесты не ходят в сеть: OpenRouter подменяется `StubHttpMessageHandler`, ключ не нужен.
 - Скрипты задач (`scripts/claim-task.sh`, `scripts/release-task.sh`, `scripts/new-task.sh --publish`) пишут занятость и новые задачи прямо в `origin/main`: так агенты в разных ветках видят занятость друг друга. Если облачной сессии запрещён пуш в `main`, скрипт завершится ошибкой; тогда задачу занимает человек или агент на локальной машине. Переменная `TASKS_BRANCH` переопределяет ветку, но задачи, занятые не в `main`, другие агенты не увидят.
