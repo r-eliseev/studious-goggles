@@ -1,8 +1,8 @@
 ---
 id: 056
-status: in-progress
-assignee: claude-win
-claimed: 2026-10-28T15:51:09Z
+status: done
+assignee:
+claimed:
 created: 2026-10-28
 ---
 
@@ -43,6 +43,21 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Maui/Controls/ChatEditor.cs` (новый), `ImageGen/ImageGen.Maui/Platforms/Windows/ChatEditorKeyHandling.cs` (новый), `ImageGen/ImageGen.Maui/MauiProgram.cs`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `docs/knowledge/maui.md`, `tasks/v0.1/016-skeleton-manual-check.md`
 
 ## Отчёт
+Исполнитель: claude-win (Windows 11, SDK 10.0.402). Ветка: `task/056-enter-to-send-maui-windows`.
+
+### Что сделано
+- `ImageGen.Maui/Controls/ChatEditor.cs`: наследник `Editor` с привязываемым `SendCommand`.
+- `ImageGen.Maui/Platforms/Windows/ChatEditorKeyHandling.cs`: маппинг `EditorHandler` для `ChatEditor`, `PreviewKeyDown` у WinUI `TextBox`: Enter без Shift — `Handled = true` и `SendCommand.Execute`, если `CanExecute`; Shift+Enter не трогается.
+- `MauiProgram`: регистрация маппинга под `#if WINDOWS`; `ChatPage.xaml`: поле ввода — `ChatEditor` с `SendCommand="{Binding SendCommand}"`.
+- `docs/knowledge/maui.md` («XAML и привязки»): как перехвачен Enter.
+
+### Проверка
+- MAUI `net10.0-windows10.0.19041.0` и `net10.0-android` — 0 ошибок, 0 предупреждений; `dotnet format --verify-no-changes` для `ImageGen.Maui`.
+- Ручная проверка владельцем 2026-10-28 на Windows (сборка 054 + 056 вместе): Enter отправляет, Shift+Enter переносит строку.
+- Не проверено отдельно: Enter на пустом поле (по коду строка не добавляется, команда не вызывается — `CanExecute` ложно).
+
+### Отличия от плана
+- Пункт для задачи 016 не добавлен: поведение уже проверено владельцем вручную.
 
 ## Комментарии
 

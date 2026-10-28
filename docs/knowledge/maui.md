@@ -30,6 +30,8 @@
 - Стили по умолчанию на `TargetType`, именованные по `x:Key`; `Style TargetType="Page" ApplyToDerivedTypes="True"` для общего фона.
 - Не вкладывать `CollectionView` в `ScrollView` без причины (теряется виртуализация); в примере так сделано для коротких списков.
 
+- **Клавиши в `Editor` на Windows (проверено 2026-10-28, задача 056):** у `Editor` нет событий клавиш. Перехват — маппинг `EditorHandler.Mapper.AppendToMapping` и `PreviewKeyDown` у нативного WinUI `TextBox`: обычный `KeyDown` приходит уже после вставки перевода строки. Shift — `InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift)`. Так сделано поле чата `ChatEditor` (Enter — отправить, Shift+Enter — новая строка).
+
 ## Разметка и списки
 - `Grid` (основной), `VerticalStackLayout`/`HorizontalStackLayout`, `FlexLayout` (перенос чипов), `AbsoluteLayout`, `ScrollView`.
 - Для коротких динамических списков `BindableLayout`; для длинных `CollectionView` с `LinearItemsLayout` или `GridItemsLayout` (сетка результатов: `GridItemsLayout` с `Span`, на узком экране две колонки, на широком больше; подгонять через `OnIdiom` или размер окна).
