@@ -20,5 +20,6 @@
     </Application.Resources>
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://ImageGen.Avalonia/Themes/Controls.axaml" />
     </Application.Styles>
 </Application>

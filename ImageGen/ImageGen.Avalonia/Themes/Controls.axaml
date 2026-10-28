@@ -1,0 +1,186 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Base styles of the controls on the Ig* resources (docs/design/implementation.md). Screens use the classes. -->
+
+  <Style Selector="Window">
+    <Setter Property="FontFamily" Value="{DynamicResource IgFontText}" />
+    <Setter Property="FontSize" Value="{DynamicResource IgFontSizeBody}" />
+    <Setter Property="Foreground" Value="{DynamicResource IgFgBrush}" />
+    <Setter Property="Background" Value="{DynamicResource IgBgBrush}" />
+  </Style>
+  <Style Selector="UserControl">
+    <Setter Property="FontFamily" Value="{DynamicResource IgFontText}" />
+    <Setter Property="FontSize" Value="{DynamicResource IgFontSizeBody}" />
+    <Setter Property="Foreground" Value="{DynamicResource IgFgBrush}" />
+  </Style>
+
+  <!-- Buttons: the default is the ordinary button. -->
+  <Style Selector="Button">
+    <Setter Property="Background" Value="{DynamicResource IgSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource IgControlBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource IgRadiusControl}" />
+    <Setter Property="MinHeight" Value="{DynamicResource IgControlHeight}" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Foreground" Value="{DynamicResource IgFgBrush}" />
+  </Style>
+  <Style Selector="Button:pointerover">
+    <Setter Property="Background" Value="{DynamicResource IgSunkenBrush}" />
+  </Style>
+  <Style Selector="Button:pressed">
+    <Setter Property="Background" Value="{DynamicResource IgAccentSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource IgAccentBrush}" />
+  </Style>
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource IgAccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource IgAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource IgOnAccentBrush}" />
+  </Style>
+  <Style Selector="Button.primary:pointerover">
+    <Setter Property="Opacity" Value="0.92" />
+  </Style>
+  <Style Selector="Button.primary:pressed">
+    <Setter Property="Opacity" Value="0.85" />
+  </Style>
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource IgMutedBrush}" />
+  </Style>
+  <Style Selector="Button.ghost:pointerover">
+    <Setter Property="Background" Value="{DynamicResource IgSunkenBrush}" />
+  </Style>
+  <Style Selector="Button.danger">
+    <Setter Property="Background" Value="{DynamicResource IgErrBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource IgErrBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource IgSurfaceBrush}" />
+  </Style>
+  <Style Selector="Button.icon">
+    <Setter Property="Width" Value="{DynamicResource IgControlHeight}" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="Button.small">
+    <Setter Property="MinHeight" Value="28" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+  <Style Selector="Button:disabled, TextBox:disabled, CheckBox:disabled, ComboBox:disabled, ToggleSwitch:disabled">
+    <Setter Property="Opacity" Value="0.45" />
+  </Style>
+
+  <!-- Focus from the keyboard: a 2 px accent outline. -->
+  <Style Selector="Button:focus-visible, TextBox:focus-visible, CheckBox:focus-visible, ComboBox:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource IgAccentBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+
+  <Style Selector="TextBox">
+    <Setter Property="Background" Value="{DynamicResource IgSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource IgControlBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource IgRadiusSm}" />
+    <Setter Property="MinHeight" Value="{DynamicResource IgControlHeight}" />
+    <Setter Property="Foreground" Value="{DynamicResource IgFgBrush}" />
+    <Setter Property="PlaceholderForeground" Value="{DynamicResource IgPlaceholderBrush}" />
+  </Style>
+  <Style Selector="TextBox:focus">
+    <Setter Property="BorderBrush" Value="{DynamicResource IgAccentBrush}" />
+  </Style>
+  <Style Selector="TextBox.error">
+    <Setter Property="BorderBrush" Value="{DynamicResource IgErrBrush}" />
+  </Style>
+
+  <Style Selector="CheckBox">
+    <Setter Property="Foreground" Value="{DynamicResource IgFgBrush}" />
+  </Style>
+  <Style Selector="CheckBox:checked /template/ Border#PART_Border">
+    <Setter Property="Background" Value="{DynamicResource IgAccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource IgAccentBrush}" />
+  </Style>
+  <Style Selector="ComboBox">
+    <Setter Property="Background" Value="{DynamicResource IgSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource IgControlBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource IgRadiusSm}" />
+    <Setter Property="MinHeight" Value="{DynamicResource IgControlHeight}" />
+    <Setter Property="Foreground" Value="{DynamicResource IgFgBrush}" />
+  </Style>
+  <Style Selector="ToggleSwitch:checked /template/ Border#OnContentBorder">
+    <Setter Property="Background" Value="{DynamicResource IgAccentBrush}" />
+  </Style>
+
+  <!-- Text levels. -->
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{DynamicResource IgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.meta">
+    <Setter Property="FontFamily" Value="{DynamicResource IgFontMeta}" />
+    <Setter Property="FontSize" Value="{DynamicResource IgFontSizeMeta}" />
+    <Setter Property="Foreground" Value="{DynamicResource IgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontSize" Value="{DynamicResource IgFontSizeCaption}" />
+  </Style>
+  <Style Selector="TextBlock.title">
+    <Setter Property="FontSize" Value="{DynamicResource IgFontSizeTitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.heading">
+    <Setter Property="FontSize" Value="{DynamicResource IgFontSizeHeading}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.section">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource IgMutedBrush}" />
+    <Setter Property="LetterSpacing" Value="0.6" />
+  </Style>
+  <Style Selector="TextBlock.icon">
+    <Setter Property="FontFamily" Value="avares://ImageGen.Avalonia/Assets/Fonts#lucide" />
+    <Setter Property="FontSize" Value="16" />
+  </Style>
+  <Style Selector="TextBlock.error">
+    <Setter Property="Foreground" Value="{DynamicResource IgErrBrush}" />
+  </Style>
+
+  <!-- Chips, tags and status badges. -->
+  <Style Selector="Border.chip">
+    <Setter Property="BorderBrush" Value="{DynamicResource IgControlBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource IgRadiusControl}" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="Padding" Value="10,0" />
+  </Style>
+  <Style Selector="Border.tag">
+    <Setter Property="Background" Value="{DynamicResource IgSunkenBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource IgRadiusControl}" />
+    <Setter Property="Padding" Value="6,2" />
+  </Style>
+  <Style Selector="Border.status">
+    <Setter Property="CornerRadius" Value="{DynamicResource IgRadiusControl}" />
+    <Setter Property="Padding" Value="8,2" />
+  </Style>
+  <Style Selector="Border.status.done">
+    <Setter Property="Background" Value="{DynamicResource IgSunkenBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource IgOkBrush}" />
+  </Style>
+  <Style Selector="Border.status.running">
+    <Setter Property="Background" Value="{DynamicResource IgAccentSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource IgAccentBrush}" />
+  </Style>
+  <Style Selector="Border.status.queued">
+    <Setter Property="Background" Value="{DynamicResource IgSunkenBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource IgMutedBrush}" />
+  </Style>
+  <Style Selector="Border.status.failed">
+    <Setter Property="Background" Value="{DynamicResource IgErrSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource IgErrBrush}" />
+  </Style>
+  <Style Selector="Border.status.filtered">
+    <Setter Property="Background" Value="{DynamicResource IgWarnSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource IgWarnBrush}" />
+  </Style>
+  <Style Selector="Border.status.cancelled">
+    <Setter Property="Background" Value="{DynamicResource IgSunkenBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource IgMutedBrush}" />
+  </Style>
+</Styles>
