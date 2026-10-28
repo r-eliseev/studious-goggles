@@ -1,6 +1,6 @@
 ---
 id: 052
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-28
@@ -43,3 +43,6 @@ scripts/check.sh
 
 ### 2026-10-28, ревью (claude, Windows)
 В файле журнала владельца на этой машине уже есть такая строка (`%LOCALAPPDATA%\User Name\com.companyname.imagegen.maui\Data\logs\imagegen-20261028.log`). Файл не трогал; ключ целиком в нём не записан, только маска OpenRouter.
+
+### 2026-10-28, владелец (в чате, записал ревью)
+План одобрен.
