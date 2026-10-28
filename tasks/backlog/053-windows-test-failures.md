@@ -1,8 +1,8 @@
 ---
 id: 053
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: claude-win
+claimed: 2026-10-28T14:29:25Z
 created: 2026-10-28
 ---
 
