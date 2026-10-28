@@ -43,6 +43,22 @@ public sealed class ImageGenLoggingTests : IDisposable
         Assert.DoesNotContain("debug-only-entry", text, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void AddImageGenFileLogging_FileOlderThan14Days_IsDeletedAtStart()
+    {
+        Directory.CreateDirectory(_directory);
+        var old = Path.Combine(_directory, $"imagegen-{DateTime.UtcNow.AddDays(-30):yyyyMMdd}.log");
+        File.WriteAllText(old, "old");
+        File.SetLastWriteTimeUtc(old, DateTime.UtcNow.AddDays(-30));
+
+        using (var provider = Build(LogLevel.Information))
+        {
+            provider.GetRequiredService<ILogger<ImageGenLoggingTests>>().LogInformation("start");
+        }
+
+        Assert.False(File.Exists(old));
+    }
+
     private ServiceProvider Build(LogLevel level) =>
         new ServiceCollection()
             .AddLogging(builder => builder.AddImageGenFileLogging(_directory, level))

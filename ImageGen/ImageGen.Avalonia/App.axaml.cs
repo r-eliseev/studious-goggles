@@ -1,9 +1,11 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Logging;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using ImageGen.Avalonia.Composition;
 using ImageGen.Avalonia.Platform;
+using ImageGen.Avalonia.Services.Logging;
 using ImageGen.Avalonia.Services.Navigation;
 using ImageGen.Avalonia.Services.Secrets;
 using ImageGen.Avalonia.Views;
@@ -57,6 +59,8 @@ public partial class App : Application
         }
 
         CrashLog.Attach(logger);
+        // Replaces the trace sink of Program: Avalonia's own warnings now go to the same file.
+        Logger.Sink = new AvaloniaLogSink(logger);
         Dispatcher.UIThread.UnhandledException += (_, args) =>
             logger.LogCritical(args.Exception, "Unhandled exception on the UI thread.");
         AppTaskExtensions.Logger = Services.GetRequiredService<ILoggerFactory>().CreateLogger("ImageGen.Background");

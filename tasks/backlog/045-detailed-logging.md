@@ -98,8 +98,8 @@ scripts/check.sh
 - `dotnet format --verify-no-changes`: Core, Data, Presentation, Avalonia, Maui и четыре тестовых проекта — без изменений.
 
 ### Отличия от плана
-1. Хранение: Serilog держит 14 файлов (`retainedFileCountLimit`), а не «файлы старше 14 дней». Для ежедневного использования это почти одно и то же; отдельного теста на удаление нет.
-2. Внутренние сообщения Avalonia (`LogToTrace`) не перенаправлены в `ILogger` и в файл не попадают. Пункт плана не выполнен.
+1. Хранение исправлено по замечанию владельца: Serilog удаляет файлы старше 14 дней (`retainedFileTimeLimit`), а не держит 14 файлов. Тест `AddImageGenFileLogging_FileOlderThan14Days_IsDeletedAtStart`.
+2. Внутренние предупреждения и ошибки Avalonia идут в тот же файл через `AvaloniaLogSink` (`Logger.Sink`), уровень от Warning. Тесты `AvaloniaLogSinkTests`. Сообщения до старта `App` остаются в трассировке.
 3. Ключ в интеграционном тесте сохраняется через `ShellHarness.SaveKeyAsync`, а не через `ApiKeyService.SaveAsync`. Отдельный тест `ApiKeyServiceTests.SaveAsync_ValidKey_LogsResultWithoutTheKey` проверяет, что ключ не попадает в лог проверки.
 4. Android- и Windows-обработчики исключений (`AndroidEnvironment.UnhandledExceptionRaiser`, `Application.UnhandledException` WinUI) не добавлены: общие `AppDomain` и `TaskScheduler` их покрывают, но не проверены на устройствах. `CrashLog` без теста (исключение AppDomain в тесте не вызвать).
 5. Команды страниц (начало и конец с длительностью на Debug) не логируются отдельно; ошибки команд доходят через `FireAndForgetSafeAsync`.
@@ -110,7 +110,7 @@ scripts/check.sh
 - Запуск окна Avalonia на Linux-рабочем столе с логом: нет дисплея. Пункт добавлен в ручную проверку 046.
 - Запуск MAUI под Windows и на Android (нет эмулятора): путь папки логов и строка старта не видны глазами. Пункт добавлен в 016.
 - Путь логов на Windows (Avalonia) и macOS: не проверен (`docs/knowledge/dev-environment.md`, «Логи»).
-- Ротация по размеру 10 МБ и удаление старых файлов на реальном объёме: не измерялись.
+- Ротация по размеру 10 МБ на реальном объёме: не измерялась.
 
 ## Комментарии
 

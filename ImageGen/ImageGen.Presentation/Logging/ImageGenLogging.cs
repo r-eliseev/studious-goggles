@@ -5,13 +5,13 @@ using Serilog.Events;
 namespace ImageGen.Presentation.Logging;
 
 /// <summary>
-/// Writes the log to files in <c>{DataDirectory}/logs</c>: one file per day (<c>imagegen-yyyyMMdd.log</c>), 14 days kept,
-/// a new file when one reaches 10 MB. This is the only place that knows the logging library; the apps only call it.
+/// Writes the log to files in <c>{DataDirectory}/logs</c>: one file per day (<c>imagegen-yyyyMMdd.log</c>), files older
+/// than 14 days are deleted, a new file when one reaches 10 MB. This is the only place that knows the logging library; the apps only call it.
 /// </summary>
 public static class ImageGenLogging
 {
     public const string LogsFolder = "logs";
-    public const int RetainedFiles = 14;
+    public static readonly TimeSpan RetainedAge = TimeSpan.FromDays(14);
     public const long FileSizeLimitBytes = 10 * 1024 * 1024;
     private const string FilePattern = "imagegen-.log";
     private const string OutputTemplate =
@@ -41,7 +41,7 @@ public static class ImageGenLogging
                 rollingInterval: RollingInterval.Day,
                 rollOnFileSizeLimit: true,
                 fileSizeLimitBytes: FileSizeLimitBytes,
-                retainedFileCountLimit: RetainedFiles)
+                retainedFileTimeLimit: RetainedAge)
             .CreateLogger();
 
         builder.AddSerilog(logger, dispose: true);

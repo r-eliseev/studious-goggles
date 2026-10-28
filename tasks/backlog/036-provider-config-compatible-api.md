@@ -1,8 +1,8 @@
 ---
 id: 036
-status: in-progress
-assignee: claude-qnrqyt
-claimed: 2026-10-28T08:20:24Z
+status: done
+assignee:
+claimed:
 created: 2026-10-27
 ---
 
@@ -188,3 +188,6 @@ scripts/check.sh
 
 ### 2026-10-28, планирование Avalonia (claude)
 Следствие ADR 0006 (2026-10-28): после задачи 038 модели страниц лежат в `ImageGen/ImageGen.Presentation/PageModels/` (а не в `ImageGen.Maui/PageModels/`), тесты — в `ImageGen.Presentation.Tests`; экранная часть делается в обеих оболочках — разметка MAUI и Avalonia (`ImageGen.Avalonia/Views/`), headless-тесты Avalonia. Пути и файлы плана сверить при начале работы.
+
+### 2026-10-28, владелец
+Отмечена `done` по решению владельца; код смержен через PR #22. Непроверенные пункты из «Отчёта» (реальные API OpenAI- и Anthropic-совместимых сервисов, запуск с неверным `providers.json` в окне, сборка MAUI под Windows) остаются открытыми вопросами в `docs/status.md`.
