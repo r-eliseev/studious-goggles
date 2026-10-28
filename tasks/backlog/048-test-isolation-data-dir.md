@@ -1,8 +1,8 @@
 ---
 id: 048
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: claude-07d6
+claimed: 2026-10-28T13:24:05Z
 created: 2026-10-28
 ---
 
