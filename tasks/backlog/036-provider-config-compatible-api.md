@@ -1,8 +1,8 @@
 ---
 id: 036
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: claude-qnrqyt
+claimed: 2026-10-28T08:20:24Z
 created: 2026-10-27
 ---
 
@@ -130,6 +130,39 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Providers/ProviderKind.cs` (новый), `ImageGen/ImageGen.Core/Providers/IAssistantChatClient.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderConfigFile.cs` (новый), `ImageGen/ImageGen.Core/Resources/providers.json` (новый), `ImageGen/ImageGen.Core/OpenAiCompatible/` (новые), `ImageGen/ImageGen.Core/AnthropicCompatible/` (новые), `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core/OpenRouter/IOpenRouterChatClient.cs` (удаляется), `ImageGen/ImageGen.Core/Providers/ProviderConfig.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderRegistry.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderRouter.cs` (новый), `ImageGen/ImageGen.Core/Domain/Models/ModelRef.cs` (новый), `ImageGen/ImageGen.Core/Domain/Models/ImageModel.cs`, `ImageGen/ImageGen.Core/Domain/Generations/Generation.cs`, `ImageGen/ImageGen.Core/Domain/Sessions/SessionSettings.cs`, `ImageGen/ImageGen.Core/Domain/Keys/SecretNames.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Services/ApiKeyService.cs`, `ImageGen/ImageGen.Core/Services/ModelCatalogService.cs`, `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/Storage/IImageModelRepository.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data/Migrations/NNNN_providers.sql` (новый), `ImageGen/ImageGen.Data/Repositories/ImageModelRepository.cs`, `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Data/DataServiceCollectionExtensions.cs` (если меняется регистрация), `ImageGen/ImageGen.Core.Tests/Providers/ProviderRegistryTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/ApiKeyServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/ModelCatalogServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `ImageGen/ImageGen.Core.Tests/Domain/SessionSettingsTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/ImageModelRepositoryTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/RunRepositoryTests.cs`, `ImageGen/ImageGen.Data.Tests/SqliteDatabaseTests.cs`, `ImageGen/ImageGen.Maui/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Maui/PageModels/ApiKeyPageModel.cs`, `docs/decisions/NNNN-provider-config-and-model-ref.md` (новый ADR, номер — следующий свободный; 0005 занят ADR про OpenRouter в фоне), `docs/architecture.md` (раскладка: ProviderRegistry, ProviderRouter, ModelRef)
 
 ## Отчёт
+
+Статус `in-progress`: проверки на реальных API (OpenAI-совместимый и Anthropic-совместимый), запуск приложения с неверным `providers.json` в окне MAUI и Avalonia и сборка MAUI под Windows здесь не выполнялись (см. ниже).
+
+- Конфиг провайдеров: `providers.json` без ключей. Встроенный `Providers/builtin-providers.json` (ресурс сборки; сейчас только OpenRouter) и пользовательский файл в `DataDirectory`. Разбор и проверка: `ProviderConfigLoader`, `ProviderRegistry`, `ProviderConfigException`. Неверный конфиг останавливает старт (`AppInitializer` берёт реестр).
+- Виды: `ProviderKind` (`openRouter`, `openAiCompatible`, `anthropicCompatible`). `ProviderRouter` / `IProviderRouter` создаёт клиент по id провайдера (один на провайдера).
+- Ссылка на модель `ModelRef` (`provider:model`), JSON-конвертер; старые строки в `settings_json` читаются как OpenRouter, имена свойств сохранены.
+- Клиенты: `OpenRouterClient` (прежнее поведение), `OpenAiCompatibleClient` (картинки и чат, модели из конфига), `AnthropicCompatibleClient` (только чат). Общая HTTP-база `ProviderClientBase`; формат `chat/completions` в `OpenAiChatWire`.
+- Чат: `IAssistantChatClient` и `AssistantChat*` вместо `IOpenRouterChatClient`/`OpenRouterChat*`.
+- Ключи: `SecretNames.ForProvider(id)`; для OpenRouter имя `openrouter_api_key` прежнее. `ApiKeyService` и `ModelCatalogService` принимают id провайдера; `GetAllImageModelsAsync` для страницы моделей.
+- Клиенты берут `HttpClient` из `IHttpClientFactory` на каждый запрос; таймаут из конфига (задача 037 закрыта здесь).
+- Миграция `0002_providers.sql`: `generations.provider_id` (по умолчанию `openrouter`); `image_models` пересоздана с ключом `(provider_id, id)`, строки копируются как `openrouter`. Тест на базе версии 1 с данными (`ProviderMigrationTests`).
+- Документация: `docs/decisions/0009-provider-config-and-model-ref.md` (новый ADR), `docs/architecture.md` (раздел модулей, правило слоёв, внешние системы), `docs/status.md` (два открытых вопроса).
+
+Проверки (здесь, Linux):
+- Тесты: Core 156 (было 94), Data 44 (было 37), Presentation 114 (все прошли), Avalonia 44 прошли, 2 пропущены (secret service и DPAPI, как и раньше).
+- `dotnet format --verify-no-changes`: Core, Core.Tests, Data, Data.Tests, Presentation, Presentation.Tests, Avalonia, Avalonia.Tests: код 0.
+- Сборка MAUI под Android: 0 предупреждений, 0 ошибок.
+- `scripts/check.sh`: проходит.
+
+Отклонения от плана:
+- Встроенный список содержит только OpenRouter: виды fal и Replicate появятся с задачами 025 и 026 (нет `ProviderKind` для них). В описании владельца «встроенные OpenRouter, fal и Replicate» — выполнено частично по этой причине.
+- Контракт `IImageProvider` и общий опрос в эту задачу не входят (план 036 и ADR 0005: это задача 025). Текущий интерфейс `IModelProvider` сохранён.
+- Порядок TDD нарушен для клиентов и маршрутизатора: код написан до тестов, тесты затем добавлены и проверены на поведение (не на падение). Конфиг, `ModelRef`, репозитории и страницы писались красными тестами.
+- `ModelCatalogService.FindAsync` при ошибке провайдера возвращает «без seed» вместо исключения: прогон без ключа теперь даёт ошибку у каждой генерации, а не падает при старте.
+- `image_models` в миграции пересоздаётся через `DROP TABLE` после копирования строк (это кэш каталога; данные сессий и генераций не теряются). Правило `docs/conventions.md` запрещает `DROP TABLE` как в `SeedDataService`, а не миграционную перестройку кэша.
+- Коммиты: один на задачу.
+
+Не проверено:
+- Реальные API: формат ответа `images/generations` у OpenAI-совместимых сервисов (только base64), заголовок `anthropic-version: 2023-06-01`, `GET /models` у Anthropic. Вопросы в `docs/status.md`.
+- Сборка MAUI под Windows (`net10.0-windows10.0.19041.0`) и запуск приложения с неверным `providers.json` в окне.
+- Страница моделей сессии при нескольких провайдерах: тесты покрывают один провайдер (OpenRouter) и каталог из двух провайдеров на уровне сервиса; ручная проверка не делалась.
+
+Блокеров нет.
 
 ## Комментарии
 

@@ -37,25 +37,24 @@ public sealed class SessionService(
         await files.DeleteSessionFilesAsync(sessionId, cancellationToken);
     }
 
-    /// <summary>Validates and saves new settings. Model ids are trimmed and de-duplicated in order.</summary>
+    /// <summary>Validates and saves new settings. Duplicate image models are removed, keeping the order.</summary>
     public async Task<Session> UpdateSettingsAsync(Guid sessionId, SessionSettings settings, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentOutOfRangeException.ThrowIfLessThan(settings.RunsPerModel, SessionSettings.MinRunsPerModel);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(settings.RunsPerModel, SessionSettings.MaxRunsPerModel);
-        ArgumentException.ThrowIfNullOrWhiteSpace(settings.AssistantModelId);
+        ArgumentNullException.ThrowIfNull(settings.AssistantModel);
 
         var session = await sessions.GetAsync(sessionId, cancellationToken)
             ?? throw new InvalidOperationException($"Session {sessionId} not found.");
         session.Settings = new SessionSettings
         {
-            ImageModelIds = settings.ImageModelIds
-                .Where(id => !string.IsNullOrWhiteSpace(id))
-                .Select(id => id.Trim())
-                .Distinct(StringComparer.Ordinal)
+            ImageModels = settings.ImageModels
+                .Where(model => model is not null)
+                .Distinct()
                 .ToList(),
             RunsPerModel = settings.RunsPerModel,
-            AssistantModelId = settings.AssistantModelId.Trim(),
+            AssistantModel = settings.AssistantModel,
         };
         session.UpdatedAt = timeProvider.GetUtcNow();
         await sessions.UpdateAsync(session, cancellationToken);

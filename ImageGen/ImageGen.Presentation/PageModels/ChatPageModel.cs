@@ -82,7 +82,7 @@ public sealed partial class ChatPageModel(
             ModelsButtonText = string.Format(
                 CultureInfo.CurrentCulture,
                 AppResources.ModelsButtonFormat,
-                settings.ImageModelIds.Count,
+                settings.ImageModels.Count,
                 settings.RunsPerModel);
 
             Items.Clear();

@@ -8,6 +8,10 @@ public sealed class Generation
 
     public required Guid SessionId { get; set; }
 
+    /// <summary>Id of the provider that serves the model.</summary>
+    public required string ProviderId { get; set; }
+
+    /// <summary>Model id without the provider prefix.</summary>
     public required string ModelId { get; set; }
 
     /// <summary>Exact prompt sent to the model.</summary>

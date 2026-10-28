@@ -1,7 +1,7 @@
 using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
-using ImageGen.Core.OpenRouter;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
@@ -21,10 +21,11 @@ public class AssistantServiceTests
     private readonly IChatMessageRepository _messages = Substitute.For<IChatMessageRepository>();
     private readonly IRunRepository _runs = Substitute.For<IRunRepository>();
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
-    private readonly IImageGenerator _generator = Substitute.For<IImageGenerator>();
+    private readonly IModelProvider _generator = Substitute.For<IModelProvider>();
+    private readonly IProviderRouter _providers = Substitute.For<IProviderRouter>();
     private readonly ISeedSource _seeds = Substitute.For<ISeedSource>();
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
-    private readonly IOpenRouterChatClient _chat = Substitute.For<IOpenRouterChatClient>();
+    private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
     private readonly List<ChatMessage> _stored = [];
     private readonly List<Run> _storedRuns = [];
     private readonly Session _session;
@@ -36,9 +37,12 @@ public class AssistantServiceTests
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
 
-        _modelRepository.ListAsync(Arg.Any<CancellationToken>()).Returns(
+        _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(
             [ModelCatalogServiceTests.Model(ImageModel, "Image")]);
-        var catalog = new ModelCatalogService(Substitute.For<IModelProvider>(), _modelRepository);
+        _providers.ImageProviderIds.Returns([ProviderIds.OpenRouter]);
+        _providers.GetImageProvider(ProviderIds.OpenRouter).Returns(_generator);
+        _providers.GetChatClient(ProviderIds.OpenRouter).Returns(_chat);
+        var catalog = new ModelCatalogService(_providers, _modelRepository);
         _seeds.NextSeed().Returns(7L);
         _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>())
             .Returns(new ImageGenerationResult(Image, "image/png", 0.01m));
@@ -53,9 +57,9 @@ public class AssistantServiceTests
             UpdatedAt = Now,
             Settings = new SessionSettings
             {
-                ImageModelIds = [ImageModel],
+                ImageModels = [new ModelRef(ProviderIds.OpenRouter, ImageModel)],
                 RunsPerModel = 1,
-                AssistantModelId = AssistantModel,
+                AssistantModel = new ModelRef(ProviderIds.OpenRouter, AssistantModel),
             },
         };
         _sessions.GetAsync(_session.Id, Arg.Any<CancellationToken>()).Returns(_session);
@@ -79,27 +83,27 @@ public class AssistantServiceTests
 
         var sessionService = new SessionService(_sessions, _messages, _runs, _files, time);
         _generations = new GenerationService(
-            _sessions, _runs, _generator, _files, catalog, _seeds, time, NullLogger<GenerationService>.Instance);
+            _sessions, _runs, _providers, _files, catalog, _seeds, time, NullLogger<GenerationService>.Instance);
         _service = new AssistantService(
-            sessionService, _messages, _runs, _chat, _generations, time, NullLogger<AssistantService>.Instance);
+            sessionService, _messages, _runs, _providers, _generations, time, NullLogger<AssistantService>.Instance);
     }
 
     private ChatMessage AssistantMessage => _stored.Last();
 
-    private OpenRouterChatRequest LastRequest =>
-        (OpenRouterChatRequest)_chat.ReceivedCalls().Last().GetArguments()[0]!;
+    private AssistantChatRequest LastRequest =>
+        (AssistantChatRequest)_chat.ReceivedCalls().Last().GetArguments()[0]!;
 
-    private void ReplyWith(OpenRouterChatResult reply) =>
-        _chat.CompleteChatAsync(Arg.Any<OpenRouterChatRequest>(), Arg.Any<CancellationToken>())
+    private void ReplyWith(AssistantChatResult reply) =>
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
             .Returns(reply);
 
     private void ReplyWithToolCall(string argumentsJson, string? text = null) =>
-        ReplyWith(new OpenRouterChatResult(text, [new OpenRouterToolCall(GenerateImages, argumentsJson)], 0.001m));
+        ReplyWith(new AssistantChatResult(text, [new AssistantToolCall(GenerateImages, argumentsJson)], 0.001m));
 
     [Fact]
     public async Task SendUserMessageAsync_TextReply_SavesUserAndAssistantWithoutRun()
     {
-        ReplyWith(new OpenRouterChatResult("  Which style do you want?  ", [], null));
+        ReplyWith(new AssistantChatResult("  Which style do you want?  ", [], null));
 
         var result = await _service.SendUserMessageAsync(_session.Id, "  a fox  ", TestContext.Current.CancellationToken);
 
@@ -117,7 +121,7 @@ public class AssistantServiceTests
     [Fact]
     public async Task SendUserMessageAsync_FirstMessage_SetsSessionTitle()
     {
-        ReplyWith(new OpenRouterChatResult("Hi", [], null));
+        ReplyWith(new AssistantChatResult("Hi", [], null));
 
         await _service.SendUserMessageAsync(_session.Id, "  a fox  ", TestContext.Current.CancellationToken);
 
@@ -127,16 +131,16 @@ public class AssistantServiceTests
     [Fact]
     public async Task SendUserMessageAsync_Request_UsesAssistantModelPromptsAndTool()
     {
-        ReplyWith(new OpenRouterChatResult("Hi", [], null));
+        ReplyWith(new AssistantChatResult("Hi", [], null));
 
         await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
 
         var request = LastRequest;
         Assert.Equal(AssistantModel, request.Model);
         Assert.Equal(AssistantPrompts.System, request.Messages[0].Text);
-        Assert.Equal(OpenRouterChatMessage.SystemRole, request.Messages[0].Role);
+        Assert.Equal(AssistantChatMessage.SystemRole, request.Messages[0].Role);
         Assert.Equal(AssistantPrompts.NoCurrentPrompt, request.Messages[1].Text);
-        Assert.Equal(OpenRouterChatMessage.UserRole, request.Messages[2].Role);
+        Assert.Equal(AssistantChatMessage.UserRole, request.Messages[2].Role);
         Assert.Equal("a fox", request.Messages[2].Text);
         var tool = Assert.Single(request.Tools);
         Assert.Equal(GenerateImages, tool.Name);
@@ -155,7 +159,7 @@ public class AssistantServiceTests
             Origin = RunOrigin.Assistant,
             CreatedAt = Now.AddMinutes(-5),
         });
-        ReplyWith(new OpenRouterChatResult("Hi", [], null));
+        ReplyWith(new AssistantChatResult("Hi", [], null));
 
         await _service.SendUserMessageAsync(_session.Id, "make it red", TestContext.Current.CancellationToken);
 
@@ -177,7 +181,7 @@ public class AssistantServiceTests
                 IsError = i % 5 == 0,
             });
         }
-        ReplyWith(new OpenRouterChatResult("Hi", [], null));
+        ReplyWith(new AssistantChatResult("Hi", [], null));
 
         await _service.SendUserMessageAsync(_session.Id, "new", TestContext.Current.CancellationToken);
 
@@ -236,7 +240,7 @@ public class AssistantServiceTests
     [Fact]
     public async Task SendUserMessageAsync_EmptyReply_SavesError()
     {
-        ReplyWith(new OpenRouterChatResult("  ", [], null));
+        ReplyWith(new AssistantChatResult("  ", [], null));
 
         var result = await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
 
@@ -247,7 +251,7 @@ public class AssistantServiceTests
     [Fact]
     public async Task SendUserMessageAsync_NoImageModels_SavesErrorAndKeepsUserMessage()
     {
-        _session.Settings.ImageModelIds = [];
+        _session.Settings.ImageModels = [];
         ReplyWithToolCall("""{"prompt":"a fox"}""");
 
         var result = await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
@@ -262,8 +266,8 @@ public class AssistantServiceTests
     [Fact]
     public async Task SendUserMessageAsync_ProviderRateLimited_SavesUserAndErrorMessage()
     {
-        _chat.CompleteChatAsync(Arg.Any<OpenRouterChatRequest>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromException<OpenRouterChatResult>(
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<AssistantChatResult>(
                 new ProviderException(ErrorKind.RateLimited, "Rate limit exceeded")));
 
         var result = await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);

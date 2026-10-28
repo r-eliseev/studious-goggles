@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ImageGen.Core.Domain.Keys;
+using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
@@ -43,7 +44,7 @@ public sealed partial class ApiKeyPageModel(
         StatusText = AppResources.ApiKeyChecking;
         try
         {
-            var status = await apiKeyService.SaveAsync(ApiKey, CancellationToken.None);
+            var status = await apiKeyService.SaveAsync(ProviderIds.OpenRouter, ApiKey, CancellationToken.None);
             if (status == ApiKeyStatus.Valid)
             {
                 ApiKey = "";

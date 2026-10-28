@@ -18,6 +18,7 @@ public class GenerationTests
             Id = Guid.NewGuid(),
             RunId = Guid.NewGuid(),
             SessionId = Guid.NewGuid(),
+            ProviderId = "openrouter",
             ModelId = "m",
             Prompt = "p",
             Seed = 1,

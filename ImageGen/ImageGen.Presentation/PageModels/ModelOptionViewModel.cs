@@ -9,6 +9,9 @@ public sealed partial class ModelOptionViewModel(ImageModel model, bool isSelect
 {
     public string Id { get; } = model.Id;
 
+    /// <summary>Provider and model id: the key of the selection in a session.</summary>
+    public ModelRef Reference { get; } = new(model.ProviderId, model.Id);
+
     public string Name { get; } = model.Name;
 
     /// <summary>Model id and whether it accepts a seed, for example "vendor/model · seed".</summary>

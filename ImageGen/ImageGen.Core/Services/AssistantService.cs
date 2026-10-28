@@ -2,7 +2,6 @@ using System.Text.Json;
 using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Sessions;
-using ImageGen.Core.OpenRouter;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Storage;
 using Microsoft.Extensions.Logging;
@@ -17,7 +16,7 @@ public sealed class AssistantService(
     SessionService sessions,
     IChatMessageRepository messages,
     IRunRepository runs,
-    IOpenRouterChatClient chatClient,
+    IProviderRouter providers,
     GenerationService generations,
     TimeProvider timeProvider,
     ILogger<AssistantService> logger)
@@ -41,6 +40,7 @@ public sealed class AssistantService(
         var isError = false;
         try
         {
+            var chatClient = providers.GetChatClient(session.Settings.AssistantModel.ProviderId);
             var reply = await chatClient.CompleteChatAsync(
                 await BuildRequestAsync(session, cancellationToken), cancellationToken);
             var call = reply.ToolCalls.FirstOrDefault(c => c.Name == AssistantPrompts.GenerateImagesToolName);
@@ -127,30 +127,30 @@ public sealed class AssistantService(
         }
     }
 
-    private async Task<OpenRouterChatRequest> BuildRequestAsync(Session session, CancellationToken cancellationToken)
+    private async Task<AssistantChatRequest> BuildRequestAsync(Session session, CancellationToken cancellationToken)
     {
         var history = await messages.ListBySessionAsync(session.Id, cancellationToken);
         var lastRun = (await runs.ListRunsBySessionAsync(session.Id, cancellationToken)).LastOrDefault();
 
-        var chat = new List<OpenRouterChatMessage>
+        var chat = new List<AssistantChatMessage>
         {
-            OpenRouterChatMessage.System(AssistantPrompts.System),
-            OpenRouterChatMessage.System(lastRun is null
+            AssistantChatMessage.System(AssistantPrompts.System),
+            AssistantChatMessage.System(lastRun is null
                 ? AssistantPrompts.NoCurrentPrompt
                 : AssistantPrompts.CurrentPrompt(lastRun.Prompt)),
         };
         foreach (var message in history.Where(m => !m.IsError).TakeLast(AssistantPrompts.HistoryMessageCount))
         {
             chat.Add(message.Role == ChatRole.User
-                ? OpenRouterChatMessage.User(message.Text)
-                : OpenRouterChatMessage.Assistant(message.Text));
+                ? AssistantChatMessage.User(message.Text)
+                : AssistantChatMessage.Assistant(message.Text));
         }
 
-        var tool = new OpenRouterTool(
+        var tool = new AssistantTool(
             AssistantPrompts.GenerateImagesToolName,
             AssistantPrompts.GenerateImagesToolDescription,
             AssistantPrompts.GenerateImagesToolSchema);
-        return new OpenRouterChatRequest(session.Settings.AssistantModelId, chat, [tool]);
+        return new AssistantChatRequest(session.Settings.AssistantModel.ModelId, chat, [tool]);
     }
 
     private ChatMessage NewMessage(Guid sessionId, ChatRole role, string text) => new()

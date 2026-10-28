@@ -6,8 +6,8 @@ using ImageGen.Avalonia.Services;
 using ImageGen.Avalonia.Services.Navigation;
 using ImageGen.Avalonia.Views;
 using ImageGen.Core;
-using ImageGen.Core.OpenRouter;
 using ImageGen.Core.Platform;
+using ImageGen.Core.Providers;
 using ImageGen.Data;
 using ImageGen.Presentation;
 using ImageGen.Presentation.PageModels;
@@ -43,7 +43,7 @@ public static class AppServices
         services.AddImageGenData();
         if (openRouterHandler is not null)
         {
-            services.AddHttpClient<OpenRouterClient>().ConfigurePrimaryHttpMessageHandler(() => openRouterHandler);
+            services.AddHttpClient(ProviderIds.OpenRouter).ConfigurePrimaryHttpMessageHandler(() => openRouterHandler);
         }
 
         services.AddSingleton<AppInitializer>();

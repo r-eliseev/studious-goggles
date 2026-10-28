@@ -4,15 +4,18 @@ using ImageGen.Core.Storage;
 
 namespace ImageGen.Core.Services;
 
-public sealed class ModelCatalogService(IModelProvider client, IImageModelRepository repository)
+public sealed class ModelCatalogService(IProviderRouter providers, IImageModelRepository repository)
 {
     /// <summary>
-    /// Returns image models sorted by name. Uses the cache unless it is empty or <paramref name="forceRefresh"/> is true.
-    /// If loading fails and the cache is not empty, returns the cache.
+    /// Returns the image models of one provider sorted by name. Uses the cache unless it is empty or
+    /// <paramref name="forceRefresh"/> is true. If loading fails and the cache is not empty, returns the cache.
     /// </summary>
-    public async Task<IReadOnlyList<ImageModel>> GetImageModelsAsync(bool forceRefresh, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<ImageModel>> GetImageModelsAsync(
+        string providerId,
+        bool forceRefresh,
+        CancellationToken cancellationToken)
     {
-        var cached = await repository.ListAsync(cancellationToken);
+        var cached = await repository.ListAsync(providerId, cancellationToken);
         if (!forceRefresh && cached.Count > 0)
         {
             return cached;
@@ -21,21 +24,33 @@ public sealed class ModelCatalogService(IModelProvider client, IImageModelReposi
         IReadOnlyList<ImageModel> loaded;
         try
         {
-            loaded = await client.ListImageModelsAsync(cancellationToken);
+            loaded = await providers.GetImageProvider(providerId).ListImageModelsAsync(cancellationToken);
         }
         catch (ProviderException) when (cached.Count > 0)
         {
             return cached;
         }
 
-        await repository.ReplaceAllAsync(loaded, cancellationToken);
+        await repository.ReplaceAllAsync(providerId, loaded, cancellationToken);
         return loaded.OrderBy(m => m.Name, StringComparer.Ordinal).ToList();
     }
 
-    /// <summary>Finds a model by id using the cache (loads it when empty). Returns null when unknown.</summary>
-    public async Task<ImageModel?> FindAsync(string modelId, CancellationToken cancellationToken)
+    /// <summary>Image models of every provider that generates images, sorted by name.</summary>
+    public async Task<IReadOnlyList<ImageModel>> GetAllImageModelsAsync(bool forceRefresh, CancellationToken cancellationToken)
     {
-        var models = await GetImageModelsAsync(forceRefresh: false, cancellationToken);
-        return models.FirstOrDefault(m => m.Id == modelId);
+        var all = new List<ImageModel>();
+        foreach (var providerId in providers.ImageProviderIds)
+        {
+            all.AddRange(await GetImageModelsAsync(providerId, forceRefresh, cancellationToken));
+        }
+
+        return all.OrderBy(m => m.Name, StringComparer.Ordinal).ThenBy(m => m.ProviderId, StringComparer.Ordinal).ToList();
+    }
+
+    /// <summary>Finds a model by reference using the cache (loads it when empty). Returns null when unknown.</summary>
+    public async Task<ImageModel?> FindAsync(ModelRef reference, CancellationToken cancellationToken)
+    {
+        var models = await GetImageModelsAsync(reference.ProviderId, forceRefresh: false, cancellationToken);
+        return models.FirstOrDefault(m => m.Id == reference.ModelId);
     }
 }
