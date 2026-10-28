@@ -57,3 +57,6 @@ scripts/check.sh
 
 ### 2026-10-28, планирование (claude)
 Вопрос владельцу: на одной Windows-машине MAUI и Avalonia хранят данные в разных папках (MAUI — `%LOCALAPPDATA%\User Name\com.companyname.imagegen.maui\Data`, Avalonia — `%LOCALAPPDATA%\ImageGen`), то есть сессии и ключ у них разные. Это нормально или нужна общая база? Допущение плана: разные папки.
+
+### 2026-10-28, владелец (в чате, записал ревью)
+Разные папки данных у MAUI и Avalonia — подтверждено.
