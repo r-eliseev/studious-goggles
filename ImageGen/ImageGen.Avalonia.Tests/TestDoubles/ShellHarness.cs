@@ -1,0 +1,79 @@
+using System.Net;
+using Avalonia.Threading;
+using ImageGen.Avalonia.Composition;
+using ImageGen.Avalonia.Services.Navigation;
+using ImageGen.Avalonia.Services.Secrets;
+using ImageGen.Avalonia.Views;
+using ImageGen.Core.Domain.Keys;
+using ImageGen.Presentation;
+using ImageGen.Presentation.Services;
+using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
+
+namespace ImageGen.Avalonia.Tests.TestDoubles;
+
+/// <summary>
+/// The app as the real composition builds it, with the outside world replaced: OpenRouter answers from a stub, the
+/// data folder is temporary, secrets stay in memory and dialogs are substitutes. Not started until StartAsync.
+/// </summary>
+public sealed class ShellHarness : IDisposable
+{
+    public ShellHarness(
+        StubHttpMessageHandler? openRouter = null,
+        IDialogService? dialogs = null)
+    {
+        Paths = new TempAppPaths();
+        Secrets = new DesktopSecretStore(backend: null);
+        OpenRouter = openRouter ?? StubHttpMessageHandler.Status(HttpStatusCode.OK);
+        Dialogs = dialogs ?? Substitute.For<IDialogService>();
+        Provider = AppServices.Create(Paths, Secrets, Secrets, OpenRouter, Dialogs);
+        Window = new MainWindow();
+        Navigation = Provider.GetRequiredService<AvaloniaNavigationService>();
+        Navigation.AttachHost(Window.PageArea);
+    }
+
+    public TempAppPaths Paths { get; }
+
+    public DesktopSecretStore Secrets { get; }
+
+    public StubHttpMessageHandler OpenRouter { get; }
+
+    public IDialogService Dialogs { get; }
+
+    public ServiceProvider Provider { get; }
+
+    public MainWindow Window { get; }
+
+    public AvaloniaNavigationService Navigation { get; }
+
+    /// <summary>Opens the root page the same way App does at startup.</summary>
+    public Task StartAsync() => Navigation.GoToAsync(Routes.Sessions);
+
+    /// <summary>Creates the database, as the sessions page does on its first appearance.</summary>
+    public Task InitializeDatabaseAsync() =>
+        Provider.GetRequiredService<ImageGen.Presentation.Services.AppInitializer>().EnsureInitializedAsync();
+
+    public Task SaveKeyAsync(string key) => Secrets.SetAsync(SecretNames.OpenRouterApiKey, key, CancellationToken.None);
+
+    /// <summary>Runs the UI loop and waits until the condition holds (background work resumes on the UI thread).</summary>
+    public async Task WaitUntilAsync(Func<bool> condition, string description)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (!condition())
+        {
+            if (DateTime.UtcNow > deadline)
+            {
+                throw new TimeoutException("Условие не выполнилось: " + description);
+            }
+
+            Dispatcher.UIThread.RunJobs();
+            await Task.Delay(10);
+        }
+    }
+
+    public void Dispose()
+    {
+        Provider.Dispose();
+        Paths.Dispose();
+    }
+}

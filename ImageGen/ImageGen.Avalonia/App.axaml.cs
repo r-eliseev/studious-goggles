@@ -3,8 +3,11 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using ImageGen.Avalonia.Composition;
 using ImageGen.Avalonia.Platform;
+using ImageGen.Avalonia.Services.Navigation;
 using ImageGen.Avalonia.Services.Secrets;
 using ImageGen.Avalonia.Views;
+using ImageGen.Presentation;
+using ImageGen.Presentation.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ImageGen.Avalonia;
@@ -25,6 +28,10 @@ public partial class App : Application
         var secrets = DesktopSecretStore.ForCurrentPlatform(paths);
         Services = AppServices.Create(paths, secrets, secrets);
         MainWindow = new MainWindow();
+
+        var navigation = Services.GetRequiredService<AvaloniaNavigationService>();
+        navigation.AttachHost(MainWindow.PageArea);
+        navigation.GoToAsync(Routes.Sessions).FireAndForgetSafeAsync();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {

@@ -3,5 +3,5 @@
         x:Class="ImageGen.Avalonia.Views.MainWindow"
         Width="960" Height="640">
     <!-- Pages are shown in this host by the navigation service (task 041). -->
-    <ContentControl x:Name="PageHost" />
+    <ContentControl Name="PageHost" />
 </Window>
