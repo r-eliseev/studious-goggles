@@ -1,6 +1,8 @@
 using ImageGen.Core.Domain.Chat;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Resources.Strings;
+using ImageGen.Presentation.Services;
+using NSubstitute;
 
 namespace ImageGen.Presentation.Tests.PageModels;
 
@@ -18,10 +20,13 @@ public class MessageItemViewModelTests
         IsError = isError,
     };
 
+    private static MessageItemViewModel Item(ChatMessage message) =>
+        new(message, message.Text, new CopyTextAction(Substitute.For<IClipboardService>(), Substitute.For<IMainThread>(), message.Text));
+
     [Fact]
     public void UserMessage_IsUserAndShowsUserRole()
     {
-        var item = new MessageItemViewModel(Make(ChatRole.User));
+        var item = Item(Make(ChatRole.User));
 
         Assert.True(item.IsUser);
         Assert.Equal(AppResources.UserRole, item.RoleText);
@@ -30,7 +35,7 @@ public class MessageItemViewModelTests
     [Fact]
     public void AssistantMessage_IsNotUserAndShowsAssistantRole()
     {
-        var item = new MessageItemViewModel(Make(ChatRole.Assistant));
+        var item = Item(Make(ChatRole.Assistant));
 
         Assert.False(item.IsUser);
         Assert.Equal(AppResources.AssistantRole, item.RoleText);
@@ -41,7 +46,7 @@ public class MessageItemViewModelTests
     {
         var message = Make(ChatRole.User, text: "draw a red fox");
 
-        var item = new MessageItemViewModel(message);
+        var item = Item(message);
 
         Assert.Equal(message.Id, item.Id);
         Assert.Equal("draw a red fox", item.Text);
@@ -50,7 +55,7 @@ public class MessageItemViewModelTests
     [Fact]
     public void ErrorMessage_IsError()
     {
-        var item = new MessageItemViewModel(Make(ChatRole.Assistant, isError: true));
+        var item = Item(Make(ChatRole.Assistant, isError: true));
 
         Assert.True(item.IsError);
     }
@@ -58,6 +63,6 @@ public class MessageItemViewModelTests
     [Fact]
     public void Constructor_NullMessage_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() => new MessageItemViewModel(null!));
+        Assert.Throws<ArgumentNullException>(() => new MessageItemViewModel(null!, "text", new CopyTextAction(Substitute.For<IClipboardService>(), Substitute.For<IMainThread>(), "text")));
     }
 }

@@ -35,15 +35,26 @@
                     <DataTemplate DataType="pm:MessageItemViewModel" x:DataType="pm:MessageItemViewModel">
                         <StackPanel Spacing="2" Margin="0,4">
                             <TextBlock Text="{Binding RoleText}" FontWeight="Bold" FontSize="12" />
-                            <TextBlock Text="{Binding Text}"
-                                       TextWrapping="Wrap"
-                                       Classes.error="{Binding IsError}" />
+                            <SelectableTextBlock Text="{Binding Text}"
+                                                 TextWrapping="Wrap"
+                                                 Classes.error="{Binding IsError}" />
+                            <Button Command="{Binding Copy.CopyCommand}"
+                                    Content="{markup:Res Copy}"
+                                    IsVisible="{Binding !IsUser}"
+                                    HorizontalAlignment="Left"
+                                    AutomationProperties.Name="{markup:Res Copy}" />
+                            <TextBlock Text="{markup:Res Copied}" FontSize="12" IsVisible="{Binding Copy.IsCopied}" />
                         </StackPanel>
                     </DataTemplate>
 
                     <DataTemplate DataType="pm:RunItemViewModel" x:DataType="pm:RunItemViewModel">
                         <StackPanel Spacing="8" Margin="0,4">
-                            <TextBlock Text="{Binding PromptText}" FontStyle="Italic" TextWrapping="Wrap" />
+                            <SelectableTextBlock Text="{Binding PromptText}" FontStyle="Italic" TextWrapping="Wrap" />
+                            <Button Command="{Binding Copy.CopyCommand}"
+                                    Content="{markup:Res Copy}"
+                                    HorizontalAlignment="Left"
+                                    AutomationProperties.Name="{markup:Res Copy}" />
+                            <TextBlock Text="{markup:Res Copied}" FontSize="12" IsVisible="{Binding Copy.IsCopied}" />
                             <ItemsControl ItemsSource="{Binding Generations}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>

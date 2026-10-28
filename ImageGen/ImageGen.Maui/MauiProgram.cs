@@ -76,6 +76,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IFilePickerService, MauiFilePickerService>();
         builder.Services.AddSingleton<AppearanceService>();
         builder.Services.AddSingleton<MauiAppearanceApplier>();
+        builder.Services.AddSingleton<IClipboardService, MauiClipboardService>();
 
         // Pages and page models
         builder.Services.AddSingleton<SessionsPageModel>();

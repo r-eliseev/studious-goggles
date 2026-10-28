@@ -2,6 +2,8 @@ using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Storage;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Resources.Strings;
+using ImageGen.Presentation.Services;
+using NSubstitute;
 
 namespace ImageGen.Presentation.Tests.PageModels;
 
@@ -38,10 +40,13 @@ public class RunItemViewModelTests
         return new GenerationItemViewModel(generation, files, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, (_, _) => Task.CompletedTask);
     }
 
+    private static CopyTextAction Copy() =>
+        new(Substitute.For<IClipboardService>(), Substitute.For<IMainThread>(), "text");
+
     [Fact]
     public void PromptText_UsesRunPromptFormat()
     {
-        var item = new RunItemViewModel(MakeRun("red fox"), []);
+        var item = new RunItemViewModel(MakeRun("red fox"), [], Copy());
 
         Assert.Equal(string.Format(AppResources.RunPromptFormat, "red fox"), item.PromptText);
     }
@@ -53,7 +58,7 @@ public class RunItemViewModelTests
         var first = MakeCard(0);
         var second = MakeCard(1);
 
-        var item = new RunItemViewModel(run, [first, second]);
+        var item = new RunItemViewModel(run, [first, second], Copy());
 
         Assert.Equal(run.Id, item.Id);
         Assert.Equal(2, item.Generations.Count);
@@ -64,12 +69,12 @@ public class RunItemViewModelTests
     [Fact]
     public void Constructor_NullRun_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() => new RunItemViewModel(null!, []));
+        Assert.Throws<ArgumentNullException>(() => new RunItemViewModel(null!, [], Copy()));
     }
 
     [Fact]
     public void Constructor_NullGenerations_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() => new RunItemViewModel(MakeRun(), null!));
+        Assert.Throws<ArgumentNullException>(() => new RunItemViewModel(MakeRun(), null!, Copy()));
     }
 }

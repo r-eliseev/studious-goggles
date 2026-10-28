@@ -1,6 +1,8 @@
 using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Presentation.PageModels;
+using ImageGen.Presentation.Services;
+using NSubstitute;
 
 namespace ImageGen.Presentation.Tests.PageModels;
 
@@ -8,14 +10,20 @@ public class ChatItemTemplateChoiceTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 27, 12, 0, 0, TimeSpan.Zero);
 
-    private static MessageItemViewModel Message() => new(new ChatMessage
-    {
-        Id = Guid.NewGuid(),
-        SessionId = Guid.NewGuid(),
-        Role = ChatRole.User,
-        Text = "hi",
-        CreatedAt = Now,
-    });
+    private static CopyTextAction Copy() =>
+        new(Substitute.For<IClipboardService>(), Substitute.For<IMainThread>(), "text");
+
+    private static MessageItemViewModel Message() => new(
+        new ChatMessage
+        {
+            Id = Guid.NewGuid(),
+            SessionId = Guid.NewGuid(),
+            Role = ChatRole.User,
+            Text = "hi",
+            CreatedAt = Now,
+        },
+        "hi",
+        Copy());
 
     private static RunItemViewModel Run() => new(new Run
     {
@@ -24,7 +32,7 @@ public class ChatItemTemplateChoiceTests
         Prompt = "fox",
         Origin = RunOrigin.Assistant,
         CreatedAt = Now,
-    }, []);
+    }, [], Copy());
 
     [Fact]
     public void Pick_MessageItem_ReturnsMessageTemplate()

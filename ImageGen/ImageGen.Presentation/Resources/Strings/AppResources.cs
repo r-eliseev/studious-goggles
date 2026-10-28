@@ -81,6 +81,10 @@ public static class AppResources
 
     public static string Repeat => Get(nameof(Repeat));
 
+    public static string Copy => Get(nameof(Copy));
+
+    public static string Copied => Get(nameof(Copied));
+
     public static string NewSeed => Get(nameof(NewSeed));
 
     public static string Edit => Get(nameof(Edit));

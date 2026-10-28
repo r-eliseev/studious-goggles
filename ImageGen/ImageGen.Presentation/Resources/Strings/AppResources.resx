@@ -114,6 +114,12 @@
   <data name="Repeat" xml:space="preserve">
     <value>Repeat</value>
   </data>
+  <data name="Copy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="Copied" xml:space="preserve">
+    <value>Copied</value>
+  </data>
   <data name="NewSeed" xml:space="preserve">
     <value>New seed</value>
   </data>

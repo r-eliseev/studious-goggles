@@ -25,6 +25,17 @@
                                     </DataTrigger>
                                 </Label.Triggers>
                             </Label>
+                            <Button Text="{x:Static strings:AppResources.Copy}"
+                                    Command="{Binding Copy.CopyCommand}"
+                                    HorizontalOptions="Start"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.Copy}">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsUser}" Value="True">
+                                        <Setter Property="IsVisible" Value="False" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Label Text="{x:Static strings:AppResources.Copied}" FontSize="12" IsVisible="{Binding Copy.IsCopied}" />
                         </VerticalStackLayout>
                     </DataTemplate>
                 </pmui:ChatItemTemplateSelector.MessageTemplate>
@@ -33,6 +44,11 @@
                     <DataTemplate x:DataType="pm:RunItemViewModel">
                         <VerticalStackLayout Spacing="8" Padding="0,4" SemanticProperties.Description="{Binding PromptText}">
                             <Label Text="{Binding PromptText}" FontAttributes="Italic" LineBreakMode="WordWrap" />
+                            <Button Text="{x:Static strings:AppResources.Copy}"
+                                    Command="{Binding Copy.CopyCommand}"
+                                    HorizontalOptions="Start"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.Copy}" />
+                            <Label Text="{x:Static strings:AppResources.Copied}" FontSize="12" IsVisible="{Binding Copy.IsCopied}" />
                             <FlexLayout Wrap="Wrap" Direction="Row" JustifyContent="Start" AlignItems="Start"
                                         BindableLayout.ItemsSource="{Binding Generations}">
                                 <BindableLayout.ItemTemplate>

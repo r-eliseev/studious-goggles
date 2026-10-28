@@ -1,6 +1,6 @@
 ---
 id: 055
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -46,6 +46,20 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Presentation/Services/IClipboardService.cs` (новый), `ImageGen/ImageGen.Presentation/PageModels/MessageItemViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/RunItemViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.*`, `ImageGen/ImageGen.Maui/Services/MauiClipboardService.cs` (новый), `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Maui/MauiProgram.cs`, `ImageGen/ImageGen.Avalonia/Services/AvaloniaClipboardService.cs` (новый), `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`, `ImageGen/ImageGen.Avalonia/Composition/AppServices.cs`, тесты, `docs/knowledge/maui.md`, `tasks/v0.1/016-skeleton-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`
 
 ## Отчёт
+
+Сделано:
+- Presentation: `Services/IClipboardService` (`SetTextAsync`); `PageModels/CopyTextAction` — команда `CopyCommand` (копирует фиксированный текст), `IsCopied` на две секунды; `MessageItemViewModel` и `RunItemViewModel` получают `Copy` (у промпта — без «Prompt:»); `ChatPageModel` получает `IClipboardService`. Строки `Copy` и `Copied` в `AppResources`.
+- Avalonia: `Services/AvaloniaClipboardService` (через `TopLevel.Clipboard` окна), регистрация в `AppServices`; `ChatView.axaml`: текст сообщений и промпта — `SelectableTextBlock` (выделение и Ctrl+C), у сообщений ассистента и промпта — кнопка «Copy» и «Copied».
+- MAUI: `Services/MauiClipboardService` (`Clipboard.Default`), регистрация в `MauiProgram`; `ChatPage.xaml`: кнопка «Copy» у сообщений ассистента (скрыта для пользователя через `DataTrigger`) и у промпта, «Copied» через `IsVisible`.
+- Пункты ручной проверки: 016 (Windows, Android) и 046 (Avalonia).
+
+Отличия от плана:
+- Долгое нажатие на Android не сделано: у `Label` нет выделения, а жест-распознаватель в этой задаче не добавлялся. Копирование на Android — кнопкой «Copy» (решение записано в `docs/knowledge/maui.md`).
+- Сброс «Copied» через `Task.Delay` и `IMainThread`, а не через `TimeProvider`: подмена времени в тесте не сделана. Тест проверяет сброс с задержкой 20 мс.
+- Нет headless-теста «кнопка Copy вызывает буфер обмена»: `AppServices.Create` не принимает подмену буфера, поэтому проверено модульным тестом `CopyTextAction` с заглушкой.
+- Кнопка «Copy» у сообщений пользователя не показывается (в Avalonia текст пользователя копируется выделением).
+
+Проверка: `ImageGen.Presentation.Tests` 181/181; `ImageGen.Avalonia.Tests` 68/68 без падений; сборка Avalonia и MAUI для `net10.0-android` — успешно; `dotnet format --verify-no-changes` для Presentation, Presentation.Tests, Avalonia, MAUI — без изменений. Поведение в окнах не проверено (016, 046).
 
 ## Комментарии
 

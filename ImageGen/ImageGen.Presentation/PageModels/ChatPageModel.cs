@@ -26,7 +26,8 @@ public sealed partial class ChatPageModel(
     IMainThread mainThread,
     AttachmentService attachments,
     IFilePickerService filePicker,
-    ImageDescriptionService descriptions) : ObservableObject
+    ImageDescriptionService descriptions,
+    IClipboardService clipboard) : ObservableObject
 {
     private readonly Dictionary<Guid, GenerationItemViewModel> _cards = [];
     private bool _imageConsentGiven;
@@ -109,18 +110,18 @@ public sealed partial class ChatPageModel(
                         var text = RunMessageText.Visible(message.Text, runPrompt);
                         if (text.Length > 0)
                         {
-                            Items.Add(new MessageItemViewModel(message, text));
+                            Items.Add(new MessageItemViewModel(message, text, new CopyTextAction(clipboard, mainThread, text)));
                         }
                     }
                     else
                     {
-                        Items.Add(new MessageItemViewModel(message));
+                        Items.Add(new MessageItemViewModel(message, message.Text, new CopyTextAction(clipboard, mainThread, message.Text)));
                     }
                 }
                 else if (entry.Run is { } run)
                 {
                     var cards = entry.Generations.Select(CreateCard).ToList();
-                    Items.Add(new RunItemViewModel(run, cards));
+                    Items.Add(new RunItemViewModel(run, cards, new CopyTextAction(clipboard, mainThread, run.Prompt)));
                 }
             }
         }
