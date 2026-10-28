@@ -62,6 +62,12 @@ SQLite-файл `imagegen.db` в `IAppPaths.DataDirectory`, схема в `Image
 ```
 ImageGen.Core       + Providers/Fal, Providers/Replicate за контрактом ADR 0003; Catalog с фильтрами; расходы
 ImageGen.Data       + таблица расходов, теги, коллекции
+ImageGen.Presentation    net10.0, CommunityToolkit.Mvvm: модели страниц и строк, INavigationService, IDialogService,
+                    IMainThread, Routes, AppInitializer, строки .resx (ADR 0006); без типов MAUI и Avalonia
+ImageGen.Presentation.Tests
+ImageGen.Avalonia   десктоп Linux, Windows, macOS: Views/, свой маршрутизатор по Routes, диалоговые окна,
+                    ключи в DPAPI / Keychain / Secret Service, без них в памяти (ADR 0006)
+ImageGen.Avalonia.Tests  headless (Avalonia.Headless.XUnit), идут на Linux
 ImageGen.Maui       + Галерея, Сравнение, Расходы, Настройки; сохранение в галерею Android и iOS; ru-локализация
 ImageGen.Web        ASP.NET Core: вход по паролю из переменной окружения, Data Protection для секретов,
                     фоновое выполнение прогонов, поток событий браузеру
@@ -73,18 +79,19 @@ Dockerfile, docker-compose.yml   том /data
 - События: для Web подписка через `Channel` вместо события .NET.
 - Web: однопользовательский, пароль из переменной окружения, cookie-сессия; секреты в файле под Data Protection; ключи шифрования и данные в томе Docker.
 - MAUI: на телефоне вкладки внизу, на широком экране боковая панель.
+- Оболочки MAUI и Avalonia: логика экранов одна (`Presentation`), разметка своя в каждой; каждая экранная фича делается в обеих. Зависимости: `Maui → Presentation → Data → Core`, `Avalonia → Presentation`.
 
 ## Правила слоёв
 - `Core` не знает про MAUI, ASP.NET Core, SQLite и UI-типы (`Brush`, `Color`, `Shell`, `Preferences`, `FileSystem`). Платформенное — через `Core/Platform`.
 - Код вне `Providers/` и `OpenRouter/` не знает, какой провайдер рисует картинки (исключение скелета: ассистент работает только через OpenRouter, `AssistantService` использует `IOpenRouterChatClient`).
-- Ядро не формирует тексты интерфейса: ошибки и состояния отдаёт кодами (`ErrorKind`, `GenerationStatus`), тексты в `.resx` оболочки.
+- Ядро не формирует тексты интерфейса: ошибки и состояния отдаёт кодами (`ErrorKind`, `GenerationStatus`), тексты в `.resx` слоя представления (`Presentation`, общий для MAUI и Avalonia).
 - Страницы MAUI знают только свой `PageModel`; `PageModel` знает сервисы ядра.
 
 ## Внешние системы
 OpenRouter (HTTP API: `/api/v1/key`, `/api/v1/images/models`, `/api/v1/images`, `/api/v1/chat/completions`). Позже fal.ai и Replicate.
 
 ## Ограничения
-- Платформы: у MAUI нет цели Linux; Linux как платформу пользователя обслуживает будущая Web-оболочка. Цель Windows у MAUI собирается только на Windows (`docs/knowledge/dev-environment.md`).
+- Платформы: у MAUI нет цели Linux; Linux-десктоп обслуживает Avalonia-оболочка (ADR 0006), браузер и Docker — Web-оболочка. Цель Windows у MAUI собирается только на Windows (`docs/knowledge/dev-environment.md`).
 - Безопасность: ключ только в шифрованном хранилище; ключи и пароли не попадают в журналы, экспорт и репозиторий.
 - Производительность: генерации идут параллельно, UI-поток не блокируется.
 - Ссылки провайдеров истекают, поэтому файл сохраняется сразу (у OpenRouter картинка приходит в ответе).
