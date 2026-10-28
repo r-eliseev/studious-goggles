@@ -1,6 +1,6 @@
 # Avalonia: неочевидные факты
 
-Факты, найденные при работе с `ImageGen.Avalonia` (задача 039). Проверено 2026-10-28 в облачной сессии (Linux), Avalonia 12.1.4, .NET 10.0.403. Общий обзор сред: `docs/knowledge/dev-environment.md`.
+Факты, найденные при работе с `ImageGen.Avalonia` (задача 039). Проверено 2026-10-28 в облачной сессии (Linux), Avalonia 12.1.4, .NET 10.0.403. Общий обзор сред: `docs/knowledge/dev-environment.md`. Запуск MAUI-кода через Avalonia (Avalonia MAUI Backend) — отдельный разбор: `docs/knowledge/avalonia-maui-backend.md`.
 
 ## Тесты
 - `Avalonia.Headless.XUnit` 12.1.4 не работает с `xunit.v3` 4.0.2: при обнаружении тестов `MissingMethodException`. Решение и обход — `docs/decisions/0007-avalonia-tests-xunit-3-2.md` (`VersionOverride` 3.2.2 только в `ImageGen.Avalonia.Tests`).

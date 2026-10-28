@@ -10,7 +10,7 @@
 | tasks.md | правила работы с задачами | перед любой задачей |
 | audit.md | аудит: сверка документации с кодом | при аудите (раз в неделю или перед релизом) |
 | subagents.md | правила для вспомогательных агентов | когда делегируешь часть работы |
-| knowledge/ | база знаний: `csharp.md`, `maui.md`, `avalonia.md` (неочевидные факты Avalonia), `dev-environment.md` (что где собирается), `windows-machine.md` (Windows-машина), `claude-cloud-session.md` (облачная сессия), `kiro-web-session.md` (Kiro Web), `vps-session.md` (VPS) | перед написанием C#/MAUI/Avalonia-кода |
+| knowledge/ | база знаний: `csharp.md`, `maui.md`, `avalonia.md` (неочевидные факты Avalonia), `avalonia-maui-backend.md` (оценка Avalonia MAUI Backend: MAUI-код на Linux и в браузере), `dev-environment.md` (что где собирается), `windows-machine.md` (Windows-машина), `claude-cloud-session.md` (облачная сессия), `kiro-web-session.md` (Kiro Web), `vps-session.md` (VPS) | перед написанием C#/MAUI/Avalonia-кода |
 | design/ | дизайн: рекомендации платформ (`research.md`), направления и макеты, дизайн-система (`README.md`) | перед вёрсткой экранов и изменением стилей |
 | decisions/ | ADR, шаблон `_template.md` | перед спорными изменениями |
 | specs/ | спецификации фич (`image-client.md`, `chat-sessions.md` — сессии и скелет, `assistant-context.md` — контекст ассистента), шаблон `_template.md` | при работе над фичей |
