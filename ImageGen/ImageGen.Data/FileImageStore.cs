@@ -71,7 +71,9 @@ public sealed class FileImageStore(IAppPaths appPaths, ILogger<FileImageStore> l
     public string GetFullPath(string relativePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
-        return Path.Combine(appPaths.DataDirectory, relativePath);
+        // Stored paths use "/"; image loaders get the separators of the system (WinRT does not open "/" paths).
+        var systemRelative = relativePath.Replace('/', Path.DirectorySeparatorChar);
+        return Path.Combine(appPaths.DataDirectory, systemRelative);
     }
 
     public Task DeleteSessionFilesAsync(Guid sessionId, CancellationToken cancellationToken)

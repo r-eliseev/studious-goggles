@@ -26,6 +26,20 @@ public sealed class FileImageStoreTests : IDisposable
     }
 
     [Fact]
+    public void GetFullPath_StoredRelativePath_UsesSeparatorsOfTheSystem()
+    {
+        // The database keeps "/" on every platform; the full path goes to platform image loaders.
+        // WinRT StorageFile.GetFileFromPathAsync (MAUI on Windows) does not find a file whose path contains "/".
+        var full = _store.GetFullPath("images/abc/def.jpg");
+
+        Assert.Equal(Path.Combine(_directory, "images", "abc", "def.jpg"), full);
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.DoesNotContain('/', full);
+        }
+    }
+
+    [Fact]
     public async Task SaveAttachmentAsync_WritesIntoSessionAttachmentFolder()
     {
         var ct = TestContext.Current.CancellationToken;
