@@ -554,4 +554,41 @@ public class GenerationServiceTests
         Assert.Equal(3, count);
         await _runs.Received(1).MarkUnfinishedAsInterruptedAsync(Now, Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task RecoverInterruptedAsync_QueuedJob_FollowsSavedHandleWithoutSubmitting()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var handle = new ProviderJobHandle("fal", "req-1", "https://q/s", "https://q/r", "https://q/c");
+        var generation = new Generation
+        {
+            Id = Guid.NewGuid(),
+            RunId = Guid.NewGuid(),
+            SessionId = _session.Id,
+            ProviderId = "fal",
+            ModelId = "fal-ai/flux/dev",
+            Prompt = "fox",
+            Seed = 1,
+            SeedApplied = true,
+            Status = GenerationStatus.Running,
+            CreatedAt = Now,
+            SortOrder = 0,
+            JobJson = System.Text.Json.JsonSerializer.Serialize(handle),
+        };
+        _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns([generation]);
+        var connection = Substitute.For<IProviderConnection, IQueuedImageProvider>();
+        var queued = (IQueuedImageProvider)connection;
+        queued.PollAsync(handle, Arg.Any<CancellationToken>()).Returns(
+            new JobUpdate(JobState.Succeeded, Result: new ImageGenerationResult([1, 2], "image/png", null)));
+        _providers.GetConnection("fal").Returns(connection);
+        _files.SaveAsync(_session.Id, generation.Id, Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>())
+            .Returns("images/fox.png");
+
+        await _service.RecoverInterruptedAsync(ct);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal(GenerationStatus.Succeeded, generation.Status);
+        Assert.Equal("images/fox.png", generation.ImagePath);
+        await queued.DidNotReceive().SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+    }
 }

@@ -22,5 +22,8 @@ public interface IRunRepository
 
     /// <summary>Marks every Queued or Running generation as Failed with <see cref="ErrorKind.Interrupted"/>.</summary>
     /// <returns>Number of updated generations.</returns>
+    /// <summary>Generations that are queued at a provider and unfinished: their jobs are followed again after a restart.</summary>
+    Task<IReadOnlyList<Generation>> ListResumableJobsAsync(CancellationToken cancellationToken);
+
     Task<int> MarkUnfinishedAsInterruptedAsync(DateTimeOffset completedAt, CancellationToken cancellationToken);
 }
