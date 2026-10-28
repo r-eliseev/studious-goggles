@@ -22,9 +22,12 @@ public sealed partial class ChatPageModel(
     IImageFileStore files,
     INavigationService navigation,
     IDialogService dialogs,
-    IMainThread mainThread) : ObservableObject
+    IMainThread mainThread,
+    AttachmentService attachments,
+    IFilePickerService filePicker) : ObservableObject
 {
     private readonly Dictionary<Guid, GenerationItemViewModel> _cards = [];
+    private bool _imageConsentGiven;
     private Guid _sessionId;
     private bool _subscribed;
 
@@ -42,6 +45,7 @@ public sealed partial class ChatPageModel(
     public partial string InputText { get; set; } = "";
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AttachImageCommand))]
     [NotifyCanExecuteChangedFor(nameof(SendCommand))]
     public partial bool IsBusy { get; set; }
 
@@ -106,21 +110,106 @@ public sealed partial class ChatPageModel(
         }
     }
 
+    /// <summary>Images attached to the message being written (up to 4). They are sent with the message.</summary>
+    public ObservableCollection<PendingAttachment> PendingAttachments { get; } = [];
+
+    [ObservableProperty]
+    public partial string AttachmentsText { get; set; } = "";
+
+    [RelayCommand(CanExecute = nameof(CanAttach))]
+    private async Task AttachImageAsync()
+    {
+        try
+        {
+            if (PendingAttachments.Count >= AttachmentService.MaxAttachmentsPerMessage)
+            {
+                await dialogs.AlertAsync(
+                    AppResources.ErrorTitle,
+                    string.Format(CultureInfo.CurrentCulture, AppResources.AttachmentLimitMessage, AttachmentService.MaxAttachmentsPerMessage));
+                return;
+            }
+
+            // The provider sees the images, so the user confirms once before the first one goes out (F10.6).
+            if (!_imageConsentGiven)
+            {
+                var accepted = await dialogs.ConfirmAsync(
+                    AppResources.ImageConsentTitle, AppResources.ImageConsentMessage, AppResources.ImageConsentAccept, AppResources.Cancel);
+                if (!accepted)
+                {
+                    return;
+                }
+
+                _imageConsentGiven = true;
+            }
+
+            var picked = await filePicker.PickImageAsync(CancellationToken.None);
+            if (picked is null)
+            {
+                return;
+            }
+
+            var attachment = await attachments.AddImageAsync(_sessionId, picked.Content, picked.MediaType, CancellationToken.None);
+            PendingAttachments.Add(new PendingAttachment(attachment.Id, picked.FileName, RemoveAttachmentCommand));
+            RefreshAttachments();
+        }
+        catch (Exception ex)
+        {
+            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    private void RemoveAttachment(PendingAttachment? attachment)
+    {
+        if (attachment is not null && PendingAttachments.Remove(attachment))
+        {
+            RefreshAttachments();
+        }
+    }
+
+    private bool CanAttach() => !IsBusy;
+
+    private void RefreshAttachments()
+    {
+        AttachmentsText = PendingAttachments.Count == 0
+            ? ""
+            : string.Format(
+                CultureInfo.CurrentCulture,
+                AppResources.AttachmentsCountFormat,
+                PendingAttachments.Count,
+                AttachmentService.MaxAttachmentsPerMessage);
+        SendCommand.NotifyCanExecuteChanged();
+        AttachImageCommand.NotifyCanExecuteChanged();
+    }
+
     [RelayCommand(CanExecute = nameof(CanSend))]
     private async Task SendAsync()
     {
         var text = InputText;
+        var pending = PendingAttachments.ToList();
         InputText = "";
+        PendingAttachments.Clear();
+        RefreshAttachments();
         IsBusy = true;
         try
         {
-            await assistant.SendUserMessageAsync(_sessionId, text, CancellationToken.None);
+            await assistant.SendUserMessageAsync(_sessionId, text, pending.Select(a => a.Id).ToList(), CancellationToken.None);
         }
         catch (Exception ex)
         {
             if (InputText.Length == 0)
             {
                 InputText = text;
+            }
+
+            if (PendingAttachments.Count == 0)
+            {
+                foreach (var attachment in pending)
+                {
+                    PendingAttachments.Add(attachment);
+                }
+
+                RefreshAttachments();
             }
 
             await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
@@ -133,7 +222,7 @@ public sealed partial class ChatPageModel(
         await ReloadAsync();
     }
 
-    private bool CanSend() => !IsBusy && !string.IsNullOrWhiteSpace(InputText);
+    private bool CanSend() => !IsBusy && (!string.IsNullOrWhiteSpace(InputText) || PendingAttachments.Count > 0);
 
     [RelayCommand]
     private async Task OpenParametersAsync()

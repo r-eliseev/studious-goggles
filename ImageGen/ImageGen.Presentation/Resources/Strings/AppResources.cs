@@ -133,6 +133,22 @@ public static class AppResources
 
     public static string ChatParametersButton => Get(nameof(ChatParametersButton));
 
+    public static string AttachImageButton => Get(nameof(AttachImageButton));
+
+    public static string AttachmentsCountFormat => Get(nameof(AttachmentsCountFormat));
+
+    public static string AttachmentLimitMessage => Get(nameof(AttachmentLimitMessage));
+
+    public static string ImageConsentTitle => Get(nameof(ImageConsentTitle));
+
+    public static string ImageConsentMessage => Get(nameof(ImageConsentMessage));
+
+    public static string ImageConsentAccept => Get(nameof(ImageConsentAccept));
+
+    public static string ReferenceFormat => Get(nameof(ReferenceFormat));
+
+    public static string RemoveAttachment => Get(nameof(RemoveAttachment));
+
     private static string Get(string name) =>
         ResourceManager.GetString(name, CultureInfo.CurrentUICulture)
         ?? throw new InvalidOperationException($"Missing string resource '{name}'.");

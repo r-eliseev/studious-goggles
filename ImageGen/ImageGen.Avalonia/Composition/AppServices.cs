@@ -52,6 +52,7 @@ public static class AppServices
         services.AddSingleton<AppInitializer>();
         services.AddSingleton<IMainThread, AvaloniaMainThread>();
         services.AddSingleton<IDialogService>(dialogs ?? new AvaloniaDialogService(MainWindowOwner));
+        services.AddSingleton<IFilePickerService>(new AvaloniaFilePickerService(MainWindowOwner));
 
         services.AddSingleton(sp => new PageRoutes()
             .Add(Routes.Sessions, _ => new SessionsView { DataContext = sp.GetRequiredService<SessionsPageModel>() })

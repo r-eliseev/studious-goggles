@@ -20,15 +20,39 @@ public sealed class AssistantService(
     GenerationService generations,
     ChatModelCatalogService chatModels,
     IImageFileStore files,
+    AttachmentService attachments,
     TimeProvider timeProvider,
     ILogger<AssistantService> logger)
 {
     private const string EmptyResponseText = "The assistant returned an empty response.";
     private const string InvalidToolCallText = "The assistant returned an invalid tool call.";
 
-    public async Task<AssistantTurnResult> SendUserMessageAsync(Guid sessionId, string text, CancellationToken cancellationToken)
+    public Task<AssistantTurnResult> SendUserMessageAsync(Guid sessionId, string text, CancellationToken cancellationToken) =>
+        SendUserMessageAsync(sessionId, text, [], cancellationToken);
+
+    /// <summary>
+    /// Sends the user's message with its attached images (task 018). The text may be empty when images are attached.
+    /// The images go to the assistant (when its model takes images) and become reference images of a run it starts.
+    /// </summary>
+    public async Task<AssistantTurnResult> SendUserMessageAsync(
+        Guid sessionId,
+        string text,
+        IReadOnlyList<Guid> attachmentIds,
+        CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+        ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(attachmentIds);
+        if (attachmentIds.Count > AttachmentService.MaxAttachmentsPerMessage)
+        {
+            throw new ArgumentException(
+                $"At most {AttachmentService.MaxAttachmentsPerMessage} images can be attached to a message.", nameof(attachmentIds));
+        }
+
+        if (attachmentIds.Count == 0)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(text);
+        }
+
         var session = await sessions.GetAsync(sessionId, cancellationToken)
             ?? throw new InvalidOperationException($"Session {sessionId} not found.");
 
@@ -41,7 +65,11 @@ public sealed class AssistantService(
         logger.LogDebug("User message in session {SessionId}: {Text}", sessionId, trimmed);
         var userMessage = NewMessage(sessionId, ChatRole.User, trimmed);
         await messages.AddAsync(userMessage, cancellationToken);
-        await sessions.SetTitleFromFirstMessageAsync(sessionId, trimmed, cancellationToken);
+        await attachments.LinkToMessageAsync(attachmentIds, userMessage.Id, cancellationToken);
+        if (trimmed.Length > 0)
+        {
+            await sessions.SetTitleFromFirstMessageAsync(sessionId, trimmed, cancellationToken);
+        }
 
         Run? run = null;
         string replyText;
@@ -51,7 +79,13 @@ public sealed class AssistantService(
         try
         {
             var chatClient = providers.GetChatClient(session.Settings.AssistantModel.ProviderId);
-            var request = await BuildRequestAsync(session, cancellationToken);
+            var userImages = new List<string>(attachmentIds.Count);
+            foreach (var attachmentId in attachmentIds)
+            {
+                userImages.Add(await attachments.ReadDataUrlAsync(attachmentId, cancellationToken));
+            }
+
+            var request = await BuildRequestAsync(session, userImages, cancellationToken);
             messageCount = request.Messages.Count;
             var reply = await chatClient.CompleteChatAsync(request, cancellationToken);
             toolCallCount = reply.ToolCalls.Count;
@@ -67,7 +101,7 @@ public sealed class AssistantService(
                 }
                 else
                 {
-                    (run, replyText, isError) = await StartRunReplyAsync(sessionId, reply.Text, prompt, cancellationToken);
+                    (run, replyText, isError) = await StartRunReplyAsync(sessionId, reply.Text, prompt, attachmentIds, cancellationToken);
                 }
             }
             else if (string.IsNullOrWhiteSpace(reply.Text))
@@ -84,6 +118,12 @@ public sealed class AssistantService(
         {
             logger.LogWarning("Assistant request failed with error kind {ErrorKind}.", ex.Kind);
             replyText = $"Assistant error ({ex.Kind}): {ex.Message}";
+            isError = true;
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException && attachmentIds.Count > 0)
+        {
+            logger.LogWarning(ex, "An attached image of session {SessionId} could not be read.", sessionId);
+            replyText = "An attached image could not be read.";
             isError = true;
         }
 
@@ -133,12 +173,30 @@ public sealed class AssistantService(
         Guid sessionId,
         string? assistantText,
         string prompt,
+        IReadOnlyList<Guid> attachmentIds,
         CancellationToken cancellationToken)
     {
         try
         {
-            var run = await generations.StartRunAsync(sessionId, prompt, cancellationToken);
-            return (run, AssistantPrompts.RunMessage(assistantText, prompt), false);
+            var result = await generations.StartRunWithAttachmentsAsync(sessionId, prompt, attachmentIds, cancellationToken);
+            if (result.Run is null)
+            {
+                return (null, SkippedText(result.SkippedModels), true);
+            }
+
+            var notes = new List<string>();
+            if (result.SkippedModels.Count > 0)
+            {
+                notes.Add(SkippedText(result.SkippedModels));
+            }
+
+            if (result.ReferencesNotSent > 0)
+            {
+                notes.Add($"{result.ReferencesNotSent} attached image(s) were not sent: over the model's reference limit.");
+            }
+
+            var text = AssistantPrompts.RunMessage(assistantText, prompt);
+            return (result.Run, string.Join(" ", [text, .. notes]), false);
         }
         catch (InvalidOperationException ex)
         {
@@ -147,7 +205,11 @@ public sealed class AssistantService(
         }
     }
 
-    private async Task<AssistantChatRequest> BuildRequestAsync(Session session, CancellationToken cancellationToken)
+    private static string SkippedText(IReadOnlyList<SkippedModel> skipped) =>
+        "No run was started for " + string.Join(", ", skipped.Select(s => s.Model.ModelId))
+        + ": the model does not take reference images.";
+
+    private async Task<AssistantChatRequest> BuildRequestAsync(Session session, IReadOnlyList<string> userImages, CancellationToken cancellationToken)
     {
         var history = await messages.ListBySessionAsync(session.Id, cancellationToken);
         var lastRun = (await runs.ListRunsBySessionAsync(session.Id, cancellationToken)).LastOrDefault();
@@ -166,11 +228,22 @@ public sealed class AssistantService(
                 : AssistantChatMessage.Assistant(message.Text));
         }
 
-        var images = await LastRunImagesAsync(session, lastRun, cancellationToken);
+        // Images reach the assistant only when its model takes them: the user's own images first, then the last run's.
+        var images = new List<string>();
+        if (userImages.Count > 0 || lastRun is not null)
+        {
+            if (await chatModels.IsImageInputAsync(session.Settings.AssistantModel, cancellationToken))
+            {
+                images.AddRange(userImages);
+                images.AddRange(await LastRunImagesAsync(session, lastRun, cancellationToken));
+            }
+        }
+
         var currentUser = chat.FindLastIndex(m => m.Role == AssistantChatMessage.UserRole);
         if (images.Count > 0 && currentUser >= 0)
         {
-            chat[currentUser] = new AssistantChatMessage(AssistantChatMessage.UserRole, chat[currentUser].Text, images);
+            var attached = images.Take(AttachmentService.MaxAttachmentsPerMessage).ToList();
+            chat[currentUser] = new AssistantChatMessage(AssistantChatMessage.UserRole, chat[currentUser].Text, attached);
         }
 
         var tool = new AssistantTool(
@@ -187,8 +260,7 @@ public sealed class AssistantService(
     private async Task<List<string>> LastRunImagesAsync(Session session, Run? lastRun, CancellationToken cancellationToken)
     {
         var images = new List<string>();
-        if (lastRun is null
-            || !await chatModels.IsImageInputAsync(session.Settings.AssistantModel, cancellationToken))
+        if (lastRun is null)
         {
             return images;
         }

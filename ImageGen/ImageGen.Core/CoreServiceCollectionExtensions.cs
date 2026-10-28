@@ -42,6 +42,7 @@ public static class CoreServiceCollectionExtensions
         services.AddSingleton<ApiKeyService>();
         services.AddSingleton<ModelCatalogService>();
         services.AddSingleton<SessionService>();
+        services.AddSingleton<AttachmentService>();
         services.AddSingleton<GenerationService>();
         services.AddSingleton<ChatModelCatalogService>();
         services.AddSingleton<AssistantService>();

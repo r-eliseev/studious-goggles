@@ -136,6 +136,45 @@ public class GenerationParameterStorageTests
         Assert.Equal(ParameterDropReason.NoAllowedValue, outcomes[1].Reason);
     }
 
+    [Fact]
+    public async Task RunRepository_SavesAndReturnsReferenceAttachmentIdsInOrder()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var session = new Session
+        {
+            Id = Guid.NewGuid(),
+            Title = "S",
+            CreatedAt = Now,
+            UpdatedAt = Now,
+            Settings = SessionSettings.CreateDefault(),
+        };
+        await new SessionRepository(test.Database).AddAsync(session, ct);
+        var repository = new RunRepository(test.Database);
+        var run = new Run { Id = Guid.NewGuid(), SessionId = session.Id, Prompt = "fox", Origin = RunOrigin.Assistant, CreatedAt = Now };
+        var first = Guid.NewGuid();
+        var second = Guid.NewGuid();
+        var generation = new Generation
+        {
+            Id = Guid.NewGuid(),
+            RunId = run.Id,
+            SessionId = session.Id,
+            ProviderId = ProviderIds.OpenRouter,
+            ModelId = "vendor/a",
+            Prompt = "fox",
+            Seed = 1,
+            SeedApplied = true,
+            Status = GenerationStatus.Queued,
+            CreatedAt = Now,
+            SortOrder = 0,
+            ReferenceAttachmentIds = [first, second],
+        };
+
+        await repository.AddRunAsync(run, [generation], ct);
+
+        Assert.Equal([first, second], (await repository.GetGenerationAsync(generation.Id, ct))!.ReferenceAttachmentIds);
+    }
+
     private static ImageModel Model(string id, IReadOnlyList<ModelParameter>? parameters) => new()
     {
         ProviderId = ProviderIds.OpenRouter,

@@ -199,6 +199,7 @@ public class SessionsPageModelTests : IDisposable
             Substitute.For<IImageFileStore>(),
             catalog,
             Substitute.For<ISeedSource>(),
+            new AttachmentService(Substitute.For<IChatAttachmentRepository>(), Substitute.For<IImageFileStore>(), TimeProvider.System),
             TimeProvider.System,
             NullLogger<GenerationService>.Instance);
         return new AppInitializer(_database, generation, ProviderDoubles.BuiltInRegistry());

@@ -140,6 +140,11 @@ public sealed partial class GenerationItemViewModel : ObservableObject
             parts.Add(string.Format(CultureInfo.InvariantCulture, AppResources.CostFormat, price));
         }
 
+        if (generation.ReferenceAttachmentIds.Count > 0)
+        {
+            parts.Add(string.Format(CultureInfo.CurrentCulture, AppResources.ReferenceFormat, generation.ReferenceAttachmentIds.Count));
+        }
+
         parts.AddRange(ParameterLines(generation.Outcomes));
         return string.Join(" · ", parts);
     }

@@ -55,6 +55,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IDialogService, ShellDialogService>();
         builder.Services.AddSingleton<INavigationService, ShellNavigationService>();
         builder.Services.AddSingleton<IMainThread, MauiMainThread>();
+        builder.Services.AddSingleton<IFilePickerService, MauiFilePickerService>();
 
         // Pages and page models
         builder.Services.AddSingleton<SessionsPageModel>();

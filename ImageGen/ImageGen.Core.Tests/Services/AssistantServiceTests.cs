@@ -31,6 +31,7 @@ public class AssistantServiceTests
     private readonly List<ChatMessage> _stored = [];
     private readonly List<Run> _storedRuns = [];
     private readonly List<Generation> _storedGenerations = [];
+    private readonly IChatAttachmentRepository _chatAttachments = Substitute.For<IChatAttachmentRepository>();
     private readonly Session _session;
     private readonly GenerationService _generations;
     private readonly CapturingLogger<AssistantService> _logger = new();
@@ -90,11 +91,12 @@ public class AssistantServiceTests
         _files.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns([1, 2, 3]);
 
         var sessionService = new SessionService(_sessions, _messages, _runs, _files, time);
+        var attachments = new AttachmentService(_chatAttachments, _files, time);
         _generations = new GenerationService(
-            _sessions, _runs, _providers, _files, catalog, _seeds, time, NullLogger<GenerationService>.Instance);
+            _sessions, _runs, _providers, _files, catalog, _seeds, attachments, time, NullLogger<GenerationService>.Instance);
         var chatModels = new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance);
         _service = new AssistantService(
-            sessionService, _messages, _runs, _providers, _generations, chatModels, _files, time, _logger);
+            sessionService, _messages, _runs, _providers, _generations, chatModels, _files, attachments, time, _logger);
     }
 
     private ChatMessage AssistantMessage => _stored.Last();
@@ -134,6 +136,79 @@ public class AssistantServiceTests
     private void AssistantAcceptsImages() =>
         _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ChatModel>>(
             [new ChatModel(AssistantModel, "Assistant", SupportsImageInput: true, ContextLength: 1000)]));
+
+    private ChatAttachment UserAttachment()
+    {
+        var attachment = new ChatAttachment
+        {
+            Id = Guid.NewGuid(),
+            SessionId = _session.Id,
+            RelativePath = $"images/{_session.Id:N}/attachments/{Guid.NewGuid():N}.png",
+            MediaType = "image/png",
+            CreatedAt = ImagesNow,
+        };
+        _chatAttachments.GetAsync(attachment.Id, Arg.Any<CancellationToken>()).Returns(attachment);
+        _files.ReadAsync(attachment.RelativePath, Arg.Any<CancellationToken>()).Returns([7, 7]);
+        return attachment;
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_WithAttachment_LinksItAndSendsItToAssistantThatTakesImages()
+    {
+        AssistantAcceptsImages();
+        var attachment = UserAttachment();
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "look at this", [attachment.Id], TestContext.Current.CancellationToken);
+
+        await _chatAttachments.Received(1).LinkToMessageAsync(
+            Arg.Is<IReadOnlyList<Guid>>(ids => ids.SequenceEqual(new[] { attachment.Id })),
+            result.UserMessage.Id,
+            Arg.Any<CancellationToken>());
+        var user = LastRequest.Messages.Last(m => m.Role == AssistantChatMessage.UserRole);
+        Assert.Equal("data:image/png;base64,Bwc=", Assert.Single(user.ImageDataUrls));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_OnlyAttachmentAndNoText_IsAccepted()
+    {
+        AssistantAcceptsImages();
+        var attachment = UserAttachment();
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, " ", [attachment.Id], TestContext.Current.CancellationToken);
+
+        Assert.Equal(string.Empty, result.UserMessage.Text);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_NoTextAndNoAttachment_Throws()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.SendUserMessageAsync(_session.Id, " ", [], TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_MoreThanFourAttachments_Throws()
+    {
+        var ids = Enumerable.Range(0, 5).Select(_ => Guid.NewGuid()).ToList();
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.SendUserMessageAsync(_session.Id, "x", ids, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_GenerateWithAttachmentsAndNoReferenceModel_ReplyIsErrorWithReason()
+    {
+        var attachment = UserAttachment();
+        ReplyWithToolCall("{\"prompt\":\"a fox\"}");
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "draw", [attachment.Id], TestContext.Current.CancellationToken);
+
+        Assert.Null(result.Run);
+        Assert.True(result.AssistantMessage.IsError);
+        Assert.Contains("does not take reference images", result.AssistantMessage.Text, StringComparison.Ordinal);
+    }
 
     [Fact]
     public async Task SendUserMessageAsync_AssistantAcceptsImages_AttachesRunImagesToCurrentUserMessage()

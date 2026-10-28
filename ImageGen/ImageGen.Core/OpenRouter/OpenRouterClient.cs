@@ -81,6 +81,11 @@ public sealed class OpenRouterClient(
         SetIfNotNull(body, GenerationParameterPlanner.ResolutionName, request.Resolution);
         SetIfNotNull(body, GenerationParameterPlanner.OutputFormatName, request.OutputFormat);
         SetIfNotNull(body, GenerationParameterPlanner.QualityName, request.Quality);
+        if (request.ReferenceImageDataUrls is { Count: > 0 } references)
+        {
+            // Form assumed, not yet checked against the live API (task 018, owner decision).
+            body[ReferenceImageLimit.ParameterName] = new JsonArray(references.Select(url => (JsonNode)JsonValue.Create(url)!).ToArray());
+        }
 
         using var message = await CreateAuthorizedRequestAsync(HttpMethod.Post, "images", body, cancellationToken);
         var root = await SendJsonAsync(message, cancellationToken);

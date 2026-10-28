@@ -27,6 +27,13 @@ internal static class ParameterJson
         JsonSerializer.Serialize(outcomes.ToList(), CoreJsonContext.Default.ListParameterOutcome);
 
     /// <summary>NULL (an old generation) reads as no outcomes.</summary>
+    public static string References(IReadOnlyList<Guid> ids) =>
+        JsonSerializer.Serialize(ids.ToList(), CoreJsonContext.Default.ListGuid);
+
+    /// <summary>NULL (a generation before reference images) reads as no references.</summary>
+    public static IReadOnlyList<Guid> ReadReferences(string? json) =>
+        json is null ? [] : JsonSerializer.Deserialize(json, CoreJsonContext.Default.ListGuid) ?? [];
+
     public static IReadOnlyList<ParameterOutcome> ReadOutcomes(string? json) =>
         json is null ? [] : JsonSerializer.Deserialize(json, CoreJsonContext.Default.ListParameterOutcome) ?? [];
 }

@@ -36,6 +36,14 @@ public class GenerationItemViewModelTests
     }
 
     [Fact]
+    public void Details_ReferenceImages_ShowsTheirCount()
+    {
+        var card = Card(referenceCount: 2);
+
+        Assert.Contains("Reference images: 2", card.DetailsText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Details_NoOutcomes_TextUnchanged()
     {
         var card = Card();
@@ -43,7 +51,11 @@ public class GenerationItemViewModelTests
         Assert.DoesNotContain("→", card.DetailsText, StringComparison.Ordinal);
     }
 
-    private static GenerationItemViewModel Card(params ParameterOutcome[] outcomes) => new(
+    private static GenerationItemViewModel Card(params ParameterOutcome[] outcomes) => Card(outcomes, 0);
+
+    private static GenerationItemViewModel Card(int referenceCount) => Card([], referenceCount);
+
+    private static GenerationItemViewModel Card(ParameterOutcome[] outcomes, int referenceCount) => new(
         new Generation
         {
             Id = Guid.NewGuid(),
@@ -58,6 +70,7 @@ public class GenerationItemViewModelTests
             CreatedAt = Now,
             SortOrder = 0,
             Outcomes = outcomes,
+            ReferenceAttachmentIds = Enumerable.Range(0, referenceCount).Select(_ => Guid.NewGuid()).ToList(),
         },
         Substitute.For<IImageFileStore>(),
         _ => Task.CompletedTask,
