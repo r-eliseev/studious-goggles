@@ -36,3 +36,5 @@
 - 049 | backlog | done | 2026-10-28 | Модель ассистента: платная по умолчанию и выбор в настройках сессии | `tasks/backlog/049-assistant-model-picker.md`
 - 052 | backlog | done | 2026-10-28 | Журнал: не писать ответ проверки ключа целиком | `tasks/backlog/052-log-redaction-key-info.md`
 - 053 | backlog | done | 2026-10-28 | Тесты падают на Windows: культура цен и блокировка временной базы | `tasks/backlog/053-windows-test-failures.md`
+- 054 | backlog | done | 2026-10-28 | MAUI на Windows: картинка на карточке не показывается | `tasks/backlog/054-maui-image-not-shown.md`
+- 056 | backlog | done | 2026-10-28 | Отправка по Enter в MAUI под Windows | `tasks/backlog/056-enter-to-send-maui-windows.md`
