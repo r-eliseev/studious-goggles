@@ -1,8 +1,8 @@
 ---
 id: 050
-status: in-progress
-assignee: claude-07d6
-claimed: 2026-10-28T13:27:19Z
+status: approved
+assignee:
+claimed:
 created: 2026-10-28
 ---
 
