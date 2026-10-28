@@ -1,8 +1,8 @@
 ---
 id: 039
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: claude-qnrqyt
+claimed: 2026-10-28T00:00:00Z
 created: 2026-10-28
 ---
 
@@ -52,6 +52,26 @@ scripts/check.sh
 Файлы: `ImageGen/Directory.Packages.props`, `ImageGen/ImageGen.Avalonia/**` (новый), `ImageGen/ImageGen.Avalonia.Tests/**` (новый), `ImageGen/ImageGen.slnx`, `.github/workflows/build.yml`, `AGENTS.md`, `docs/architecture.md`, `docs/knowledge/dev-environment.md`, `docs/knowledge/avalonia.md` (новый), `docs/index.md`
 
 ## Отчёт
+- Новые проекты: `ImageGen.Avalonia` (WinExe, `net10.0`, Avalonia 12.1.4, Fluent, `AvaloniaUseCompiledBindingsByDefault`; ссылки на Core, Data, Presentation) и `ImageGen.Avalonia.Tests` (headless, Exe).
+- `ImageGen/Directory.Packages.props`: Avalonia, Avalonia.Desktop, Avalonia.Themes.Fluent, Avalonia.Headless.XUnit (12.1.4). `Avalonia.Fonts.Inter` добавлен в список версий, но в проект не подключён (см. отклонения).
+- Состав: `Program` (`UsePlatformDetect`, classic desktop lifetime), `App` (собирает контейнер и создаёт `MainWindow`), `Views/MainWindow` (пустой `PageHost` под навигацию 041), `Composition/AppServices` (`AddImageGenCore`, `AddImageGenData`, `AppInitializer`, page models; `ValidateOnBuild`, `ValidateScopes`), `Platform/DesktopAppPaths` (`%LOCALAPPDATA%/ImageGen`, как в плане), `Platform/InMemorySecretStore` (до 040), `Services/AvaloniaMainThread` (`Dispatcher.UIThread.Post`), `Services/NotYetAvailable` (заглушки `INavigationService` и `IDialogService`: любой вызов бросает `NotSupportedException`, до 041).
+- TDD: тесты написаны первыми; до создания проекта сборка падала (CS0234/CS0246 на `ImageGen.Avalonia`), после реализации тесты прошли.
+- Тесты (4/4): `AppServicesTests.Create_ValidateOnBuild_ResolvesPageModels`; `MainWindowTests.Show_Window_HasAppTitleAndIsVisible`; `AvaloniaMainThreadTests.BeginInvokeOnMainThread_RunsActionOnUiThread`; `AppStartupTests.Startup_BuildsContainerAndMainWindow`.
+- Отклонения от плана:
+  - `xunit.v3` в `ImageGen.Avalonia.Tests` закреплён на 3.2.2 (`VersionOverride`): `Avalonia.Headless.XUnit` 12.1.4 не работает с xunit v3 4.0.2. Решение и обход — ADR 0007 и комментарий ниже.
+  - `MainWindow.Title` задаётся в коде (`AppResources.AppTitle`), а не через `x:Static`: компилятор XAML Avalonia не разрешает `x:Static` на тип из `ImageGen.Presentation` (AVLN2000).
+  - `App.MainWindow` создаётся всегда: в headless `ApplicationLifetime` равен `null`, окно через lifetime в тестах не появлялось.
+  - `Avalonia.Fonts.Inter` не подключён: в плане не указано, какой URI шрифта; Inter добавляем вместе с настройкой шрифтов, пока не нужен.
+- Результаты (Linux, облачная сессия):
+  - `dotnet build -c Release ImageGen.Avalonia.Tests`: 0 предупреждений, 0 ошибок (предупреждения считаются с `TreatWarningsAsErrors`).
+  - `dotnet test --no-build` (Release): 4/4.
+  - `dotnet format --verify-no-changes` для `ImageGen.Avalonia` и `ImageGen.Avalonia.Tests`: код 0.
+  - Запуск `ImageGen.Avalonia` под Xvfb (`xvfb-run`): процесс работает 25 с без исключений; снимок экрана показывает окно 960×640 (белая область) — `tmp/avalonia-startup.png`.
+  - `scripts/check.sh`: пройден.
+- Добавлено в CI: задача `avalonia` (ubuntu-latest): format обоих проектов, build и test (Release).
+- Документация: `AGENTS.md` (команды Avalonia и Presentation-тестов), `docs/architecture.md` (текущая раскладка, зависимости), `docs/knowledge/dev-environment.md` (строка таблицы), `docs/knowledge/avalonia.md` (новый, неочевидные факты), `docs/index.md`, `docs/decisions/0007-avalonia-tests-xunit-3-2.md` (новый ADR о версии xunit).
+- Не проверено: сборка и запуск на Windows и macOS (нет машин; Windows-часть — отдельная проверка); задача `avalonia` в GitHub Actions (локально повторены её шаги). Поэтому статус `in-progress`.
+- Среда: Linux (облачная сессия) с Xvfb.
 
 ## Комментарии
 
@@ -63,3 +83,6 @@ scripts/check.sh
 
 ### 2026-10-28, владелец (в чате, записал ревью)
 План одобрен.
+
+### 2026-10-28, claude-qnrqyt (несовместимость xunit)
+Проверка сборкой (шаг 1 плана) выявила несовместимость: `Avalonia.Headless.XUnit` 12.1.4 при обнаружении тестов падает с `MissingMethodException` (`TestIntrospectionHelper.GetTestCaseDetails`) под `xunit.v3` 4.0.2 из центрального списка. Обход, который принят: `VersionOverride="3.2.2"` для `xunit.v3` только в `ImageGen.Avalonia.Tests` (ADR 0007). Если владелец против, варианты в ADR 0007: общая версия xunit для всего решения или тесты без `Avalonia.Headless.XUnit`.

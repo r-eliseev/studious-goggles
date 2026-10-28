@@ -1,5 +1,5 @@
 using System.ComponentModel;
-using ImageGen.Maui.PageModels;
+using ImageGen.Presentation.PageModels;
 
 namespace ImageGen.Maui.Pages;
 

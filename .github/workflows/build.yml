@@ -20,6 +20,22 @@ jobs:
       - run: dotnet format ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj --verify-no-changes
       - run: dotnet build ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj -c Release
       - run: dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj -c Release --no-build
+      - run: dotnet format ImageGen/ImageGen.Presentation/ImageGen.Presentation.csproj --verify-no-changes
+      - run: dotnet format ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj --verify-no-changes
+      - run: dotnet build ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj -c Release
+      - run: dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj -c Release --no-build
+
+  avalonia:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet format ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj --verify-no-changes
+      - run: dotnet format ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj --verify-no-changes
+      - run: dotnet build ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj -c Release
+      - run: dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj -c Release --no-build
 
   # Android собирается на Windows: установка maui-android на ubuntu-latest падала с «Disk quota exceeded».
   maui:

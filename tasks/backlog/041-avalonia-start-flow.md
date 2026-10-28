@@ -1,8 +1,8 @@
 ---
 id: 041
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: claude-qnrqyt
+claimed: 2026-10-28T00:00:00Z
 created: 2026-10-28
 ---
 
@@ -51,6 +51,18 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Avalonia/Services/AvaloniaNavigationService.cs`, `ImageGen/ImageGen.Avalonia/Services/AvaloniaDialogService.cs`, `ImageGen/ImageGen.Avalonia/Views/**`, `ImageGen/ImageGen.Avalonia/App.axaml.cs`, `ImageGen/ImageGen.Avalonia/MainWindow.axaml*`, `ImageGen/ImageGen.Avalonia.Tests/**`, `docs/knowledge/avalonia.md`, `docs/architecture.md`
 
 ## Отчёт
+- Навигация: `Services/Navigation/AvaloniaNavigationService` (стек страниц в `PageArea` главного окна), `PageRoutes` (маршрут → фабрика страницы, в композиции), `RouteParser` (`chat?sessionId=…`), `IAppearing` (вызывается при показе, в том числе при возврате назад). Неизвестный маршрут — `InvalidOperationException`; без окна — тоже.
+- Диалоги: `Services/AvaloniaDialogService` (alert, confirm, prompt; окно собрано в коде, у каждого контрола `AutomationProperties.Name`; окно немодальное, владелец — главное окно). Вместо отдельного `DialogWindow.axaml` (план) — код в сервисе: окно короткое, разметка не нужна.
+- Страницы (`Views/`): `ApiKeyView` (поле с маскировкой, «Check and save», индикатор, статус, предупреждение о хранилище из `ApiKeyPageModel.PersistenceWarning`), `SessionsView` (кнопка «New session», список: название — кнопка «открыть», дата, «Delete»), `ComingSoonView` (заглушка для чата и моделей до 042). Тексты — через расширение `{markup:Res Ключ}` (`Markup/ResExtension`), потому что `x:Static` на `AppResources` компилятор Avalonia не разрешает.
+- Композиция (`AppServices.Create`): новые опциональные параметры `openRouterHandler` и `dialogs` (для тестов); маршруты, навигация, страницы; `App` ставит страницу `sessions` при запуске.
+- Presentation: `Routes.Sessions = "sessions"`; строка `ComingSoon` (`AppResources.resx` и аксессор).
+- Отклонения от плана: диалоговое окно — в коде (см. выше); `Avalonia.Fonts.Inter` по-прежнему не подключён; заглушки `NotYetAvailable` удалены (навигация и диалоги реальные).
+- TDD: красные тесты (сборка падала на отсутствующих типах `Services.Navigation`, `PageRoutes`, `Routes.Sessions`), затем код.
+- Тесты (Avalonia, 29 + 2 пропуска): `RouteParserTests` (2), `AvaloniaNavigationServiceTests` (5), `ViewsAccessibilityTests` (1: у всех кнопок и полей есть имя доступности), `StartFlowTests` (7: старт без ключа → страница ключа; верный ключ (подмена HTTP 200) → список и ключ в хранилище; неверный (401) → остаётся на странице с текстом; «New session» → сессия в БД и маршрут чата; «открыть» → маршрут `chat?sessionId=`; удаление с подтверждением «да» и «нет»), `AppStartupTests` (1), остальные из 039–040.
+- Результаты (Linux, облачная сессия): Release-сборка Avalonia-тестов — 0 предупреждений; `dotnet test` (Release) — 29/29, пропущены 2 (Secret Service без сессии D-Bus, DPAPI не Windows); `dotnet format --verify-no-changes` для `ImageGen.Avalonia`, `ImageGen.Avalonia.Tests`, `ImageGen.Presentation`, `ImageGen.Presentation.Tests` — 0; `ImageGen.Presentation.Tests` 114/114; MAUI `net10.0-android` — 0 ошибок, 0 предупреждений; `scripts/check.sh` — пройден.
+- Ручная проверка на Linux (Xvfb, снимок экрана `tmp/shot/no-key.png`): запуск без ключа показывает страницу ключа с описанием, полем, неактивной кнопкой и предупреждением о хранилище (в контейнере Secret Service без коллекции `default`, поэтому ключ «только в памяти»).
+- Не проверено: список сессий на экране в реальном окне (нужен сохранённый ключ: в контейнере он не сохраняется, тесты проверяют список на уровне моделей и разметки); диалоги на экране; Windows (запуск, диалоги, шрифты); Linux-рабочий стол с gnome-keyring. Поэтому статус `in-progress`.
+- Среда: Linux (облачная сессия) с Xvfb.
 
 ## Комментарии
 

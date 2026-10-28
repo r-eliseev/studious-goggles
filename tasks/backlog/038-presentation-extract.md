@@ -1,8 +1,8 @@
 ---
 id: 038
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: claude-qnrqyt
+claimed: 2026-10-28T00:00:00Z
 created: 2026-10-28
 ---
 
@@ -60,6 +60,25 @@ Windows-цель MAUI — CI (задача `maui`) или Windows-машина: 
 Файлы: `ImageGen/ImageGen.Presentation/**` (новый), `ImageGen/ImageGen.Presentation.Tests/**` (новый), `ImageGen/ImageGen.Maui/**` (перенос и `using`/`xmlns`), `ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`, `ImageGen/ImageGen.Core.Tests/MauiLinked/**` (перенос), `ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj`, `ImageGen/ImageGen.Data.Tests/MauiLinked/**` (перенос), `ImageGen/ImageGen.slnx`, `.github/workflows/build.yml`, `docs/architecture.md`, `docs/conventions.md`, `docs/knowledge/dev-environment.md`
 
 ## Отчёт
+- Новый проект `ImageGen.Presentation` (`net10.0`, `CommunityToolkit.Mvvm`, ссылки на `Core` и `Data`): `PageModels/` (кроме селектора), `Services/` (`AppInitializer`, `IDialogService`, `INavigationService`, `IMainThread`), `Routes.cs`, `Utilities/TaskExtensions.cs`, `Resources/Strings/AppResources.cs` и `.resx` (логическое имя `ImageGen.Presentation.Resources.Strings.AppResources.resources`). Переносы через `git mv`.
+- Новый проект `ImageGen.Presentation.Tests` (xUnit v3, NSubstitute, `Exe`): 14 файлов тестов перенесены из `Core.Tests/MauiLinked` и `Data.Tests/MauiLinked`, каталоги по типу, пространства имён обновлены. Добавлен `Architecture/PresentationDependencyTests` (нет `Microsoft.Maui*`, `Avalonia*`, `Microsoft.AspNetCore*`).
+- TDD: сначала тесты переехали в новый проект (сборка падала на отсутствующих типах и пространствах имён `ImageGen.Presentation`, ошибки CS0246/CS0234), затем код.
+- `ImageGen.Core.Tests` и `ImageGen.Data.Tests`: убраны `Compile Link`, `EmbeddedResource` на `.resx` и `CommunityToolkit.Mvvm` (в `Core.Tests`).
+- `ImageGen.Maui`: ссылка на `Presentation`; `xmlns`/`using` переведены на `ImageGen.Presentation.*`; `EmbeddedResource Update` для `.resx` убран (файл переехал). Сервисы MAUI (`MauiMainThread`, `ShellDialogService`, `ShellNavigationService`) реализуют интерфейсы из `Presentation`.
+- Решение `ImageGen.slnx`: оба новых проекта. CI (`.github/workflows/build.yml`, задача `core`): format, build Release и test для `Presentation` и `Presentation.Tests` (по образцу Data).
+- Документация: `docs/architecture.md` (раскладка, зависимости, абзац про тесты вместо `MauiLinked`), `docs/conventions.md` (правило про модели страниц), `docs/knowledge/dev-environment.md` (строка таблицы для Presentation).
+- Отклонения от плана:
+  - `ChatItemTemplateSelector` остался в `ImageGen.Maui/PageModels/` с пространством `ImageGen.Maui.PageModels` (как в плане). В `ChatPage.xaml` он адресуется отдельным префиксом `pmui`, остальные модели страниц — `pm` (`ImageGen.Presentation.PageModels`).
+  - `Core.Tests` и `Presentation.Tests` не могут ссылаться друг на друга (`Core.Tests` — `Exe`), поэтому фабрика `ModelCatalogServiceTests.Model` продублирована в `ImageGen.Presentation.Tests/TestDoubles/TestModels.cs` (9 строк, та же форма).
+  - `TestDatabase` и `TestData` не понадобились: перенесённые тесты используют `SqliteDatabase` напрямую.
+- Результаты (Linux, облачная сессия):
+  - `dotnet build -c Release` для `Presentation.Tests`, `Core.Tests`, `Data.Tests`: 0 предупреждений, 0 ошибок.
+  - `dotnet test`: `Presentation.Tests` 112/112 (включая архитектурный тест); `Core.Tests` 94/94; `Data.Tests` 37/37. Счёт до задачи: Core 193 и Data 49 (всего 242); после: 94 + 37 + 112 = 243, число не уменьшилось.
+  - `dotnet format --verify-no-changes` для `Presentation`, `Presentation.Tests`, `Core.Tests`, `Data.Tests`, `Maui` — код 0 (в `Presentation.Tests` при первом прогоне была правка порядка `using`, применена).
+  - `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android`: 0 ошибок, 0 предупреждений (базовая сборка до задачи тоже 0/0).
+  - `scripts/check.sh`: пройден.
+- Не проверено: сборка цели `net10.0-windows10.0.19041.0` (CI, задача `maui`, и Windows-машина; на Linux не собирается); job `core` в GitHub Actions (локально повторены его шаги). Поэтому статус `in-progress`.
+- Среда: Linux (облачная сессия) с Android SDK.
 
 ## Комментарии
 

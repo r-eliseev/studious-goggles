@@ -1,4 +1,5 @@
-using ImageGen.Maui.Resources.Strings;
+using ImageGen.Presentation.Resources.Strings;
+using ImageGen.Presentation.Services;
 
 namespace ImageGen.Maui.Services;
 

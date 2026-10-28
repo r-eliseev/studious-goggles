@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:markup="clr-namespace:ImageGen.Avalonia.Markup"
+             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels;assembly=ImageGen.Presentation"
+             x:Class="ImageGen.Avalonia.Views.ApiKeyView"
+             x:DataType="pm:ApiKeyPageModel">
+    <ScrollViewer>
+        <StackPanel Margin="16" Spacing="12" MaxWidth="600" HorizontalAlignment="Center">
+            <TextBlock Text="{markup:Res ApiKeyDescription}" TextWrapping="Wrap" />
+
+            <TextBox Text="{Binding ApiKey, Mode=TwoWay}"
+                     PasswordChar="*"
+                     PlaceholderText="{markup:Res ApiKeyPlaceholder}"
+                     MinHeight="44"
+                     AutomationProperties.Name="{markup:Res ApiKeyTitle}"
+                     AutomationProperties.HelpText="{markup:Res ApiKeyDescription}" />
+
+            <Button Content="{markup:Res ApiKeySave}"
+                    Command="{Binding SaveCommand}"
+                    HorizontalAlignment="Stretch"
+                    MinHeight="44"
+                    AutomationProperties.Name="{markup:Res ApiKeySave}" />
+
+            <ProgressBar IsIndeterminate="True"
+                         IsVisible="{Binding IsBusy}"
+                         AutomationProperties.Name="{markup:Res ApiKeyChecking}" />
+
+            <TextBlock Text="{Binding PersistenceWarning}" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

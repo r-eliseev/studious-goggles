@@ -1,3 +1,5 @@
+using ImageGen.Presentation.Services;
+
 namespace ImageGen.Maui.Services;
 
 public sealed class ShellNavigationService : INavigationService

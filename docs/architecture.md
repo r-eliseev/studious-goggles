@@ -32,14 +32,25 @@ ImageGen/
     CoreServiceCollectionExtensions.cs   AddImageGenCore()
   ImageGen.Data/                   net10.0, Microsoft.Data.Sqlite: SqliteDatabase, Migrations, репозитории, FileImageStore,
                                    DataServiceCollectionExtensions (AddImageGenData())
-  ImageGen.Core.Tests/             xUnit v3 + NSubstitute; MauiLinked/ — тесты модели страниц MAUI
-  ImageGen.Data.Tests/             xUnit v3, временная БД в файле; MauiLinked/ — то же для моделей, которым нужна БД
-  ImageGen.Maui/                   MAUI: Pages/, PageModels/, Services/ (MauiSecretStore, MauiAppPaths), Converters/, Resources/Strings/
+  ImageGen.Core.Tests/             xUnit v3 + NSubstitute
+  ImageGen.Data.Tests/             xUnit v3, временная БД в файле
+  ImageGen.Presentation/           net10.0, CommunityToolkit.Mvvm: PageModels/, Services/ (INavigationService, IDialogService,
+                                   IMainThread, ISecretPersistence, AppInitializer), Routes, Utilities/, Resources/Strings/ (AppResources.resx)
+  ImageGen.Presentation.Tests/     xUnit v3 + NSubstitute: модели страниц, маршруты, строки, архитектурный тест
+  ImageGen.Avalonia/               десктоп (Avalonia 12.1, WinExe): App, Views/ (MainWindow, SessionsView, ApiKeyView,
+                                   ChatView, SessionModelsView), Composition/AppServices, Converters/ (FilePathToBitmap),
+                                   Markup/ (расширение строк), Platform/ (DesktopAppPaths, InMemorySecretStore), Services/
+                                   (AvaloniaMainThread, AvaloniaDialogService, Navigation/ — стек страниц и маршруты),
+                                   Services/Secrets/ (DesktopSecretStore и бэкенды: SecretServiceBackend для Linux,
+                                   DpapiSecretBackend для Windows, KeychainSecretBackend для macOS; ADR 0008)
+  ImageGen.Avalonia.Tests/         headless (Avalonia.Headless.XUnit), xunit.v3 3.2.2 (ADR 0007)
+  ImageGen.Maui/                   MAUI: Pages/, PageModels/ (только ChatItemTemplateSelector), Services/ (MauiSecretStore,
+                                   MauiAppPaths, MauiMainThread, Shell-реализации), Converters/
 ```
 
-Зависимости: `Maui → Data → Core`, `Maui → Core`. `Core` ссылается только на `Microsoft.Extensions.Http`, `Microsoft.Extensions.Logging.Abstractions`, `Microsoft.Extensions.DependencyInjection.Abstractions`. Архитектурный тест в `ImageGen.Core.Tests` проверяет, что `Core` не ссылается на `Microsoft.Maui*`, `Microsoft.AspNetCore*`, `Microsoft.Data.Sqlite*`.
+Зависимости: `Maui → Presentation → Data → Core`; `Maui` ссылается также на `Core` и `Data` (регистрация в `MauiProgram`); `Avalonia → Presentation → Data → Core` (также ссылается на `Core` и `Data`, регистрация в `AppServices`); `Presentation → Core`. `Core` ссылается только на `Microsoft.Extensions.Http`, `Microsoft.Extensions.Logging.Abstractions`, `Microsoft.Extensions.DependencyInjection.Abstractions`. Архитектурный тест в `ImageGen.Core.Tests` проверяет, что `Core` не ссылается на `Microsoft.Maui*`, `Microsoft.AspNetCore*`, `Microsoft.Data.Sqlite*`; тест в `ImageGen.Presentation.Tests` проверяет, что `Presentation` не ссылается на `Microsoft.Maui*`, `Avalonia*`, `Microsoft.AspNetCore*`.
 
-Логика страниц MAUI (PageModels, маршруты, строки, `AppInitializer`) не использует типы MAUI и тестируется без него: тестовые проекты подключают эти файлы из `ImageGen.Maui` через `<Compile Include=... Link=...>` (и `.resx` через `EmbeddedResource`), поэтому тесты идут на Linux. Типы MAUI (`IQueryAttributable`, `MainThread`, `ImageSource`) остаются в страницах, конвертерах и обёртках (`IMainThread`).
+Логика страниц (PageModels, маршруты, строки, `AppInitializer`) живёт в `ImageGen.Presentation` и не использует типы UI-фреймворков: тестируется обычными тестами на Linux, без ссылок на файлы MAUI. Типы MAUI (`IQueryAttributable`, `MainThread`, `ImageSource`) остаются в страницах, конвертерах и реализациях интерфейсов (`IMainThread`, `INavigationService`, `IDialogService`) в `ImageGen.Maui`.
 
 ## Скелет v0.1: потоки
 **Первый запуск.** `App` инициализирует БД (`SqliteDatabase.InitializeAsync`), помечает незавершённые генерации «Interrupted» (`GenerationService.RecoverInterruptedAsync`). Если ключа OpenRouter нет (`ApiKeyService.HasKeyAsync`), открывается страница ключа; ключ проверяется `GET /api/v1/key` и сохраняется в `SecureStorage` (`ISecretStore`).
@@ -54,7 +65,7 @@ ImageGen/
 **Обновление экрана.** `ChatPageModel` после каждого своего действия перечитывает ленту сессии (`SessionService.GetTimelineAsync`), а событие `GenerationUpdated` обновляет одну карточку в UI-потоке (`MainThread.BeginInvokeOnMainThread`).
 
 ## Скелет v0.1: хранение
-SQLite-файл `imagegen.db` в `IAppPaths.DataDirectory`, схема в `ImageGen.Data/Migrations/*.sql` — встроенные ресурсы, подключаются через `Migrations.cs` (ADR 0002). Картинки: `images/<sessionId>/<generationId>.<ext>` в той же папке; в БД хранится относительный путь. Ключ OpenRouter — только `SecureStorage`.
+SQLite-файл `imagegen.db` в `IAppPaths.DataDirectory`, схема в `ImageGen.Data/Migrations/NNNN_имя.sql` — встроенные ресурсы, применяются по номеру без списка в коде (`Migrations.cs`, ADR 0002). Картинки: `images/<sessionId>/<generationId>.<ext>` в той же папке; в БД хранится относительный путь. Ключ OpenRouter — только `SecureStorage`.
 
 Известное упрощение скелета: удаление сессии удаляет её генерации вместе с ценами. Правило ADR 0002 «удаление картинки не удаляет запись о расходах» вводится вместе с учётом расходов (backlog).
 

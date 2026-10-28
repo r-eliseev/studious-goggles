@@ -57,27 +57,35 @@ public sealed class SqliteDatabase
 
             await using var connection = await OpenAsync(cancellationToken);
 
+            var version = await GetSchemaVersionAsync(connection, cancellationToken);
+            if (version > Migrations.All.Count)
+            {
+                // Downgrade is not supported (ADR 0002): refuse to touch a schema this build does not know.
+                throw new InvalidOperationException(
+                    $"База создана более новой версией приложения (версия схемы {version}, известно {Migrations.All.Count}). Обновите приложение.");
+            }
+
             await using (var wal = connection.CreateCommand())
             {
                 wal.CommandText = "PRAGMA journal_mode = WAL;";
                 await wal.ExecuteNonQueryAsync(cancellationToken);
             }
 
-            var version = await GetSchemaVersionAsync(connection, cancellationToken);
             for (var index = version; index < Migrations.All.Count; index++)
             {
+                var migration = Migrations.All[index];
                 await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
                 await using (var command = connection.CreateCommand())
                 {
                     command.Transaction = transaction;
-                    command.CommandText = Migrations.All[index];
+                    command.CommandText = migration.Script;
                     await command.ExecuteNonQueryAsync(cancellationToken);
                 }
 
                 await using (var command = connection.CreateCommand())
                 {
                     command.Transaction = transaction;
-                    command.CommandText = $"PRAGMA user_version = {index + 1};";
+                    command.CommandText = $"PRAGMA user_version = {migration.Number};";
                     await command.ExecuteNonQueryAsync(cancellationToken);
                 }
 

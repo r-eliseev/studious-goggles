@@ -53,6 +53,28 @@ public class SqliteDatabaseTests
     }
 
     [Fact]
+    public async Task InitializeAsync_SchemaNewerThanApp_ThrowsAndKeepsVersion()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var testDatabase = await TestDatabase.CreateAsync(cancellationToken);
+        var newerVersion = Migrations.All.Count + 2;
+        await using (var connection = await testDatabase.Database.OpenAsync(cancellationToken))
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = $"PRAGMA user_version = {newerVersion};";
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        var olderApp = new SqliteDatabase(testDatabase.Database.DatabasePath);
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => olderApp.InitializeAsync(cancellationToken));
+
+        Assert.Contains(newerVersion.ToString(System.Globalization.CultureInfo.InvariantCulture), exception.Message);
+        await using var check = await olderApp.OpenAsync(cancellationToken);
+        Assert.Equal(newerVersion, await SqliteDatabase.GetSchemaVersionAsync(check, cancellationToken));
+    }
+
+    [Fact]
     public async Task OpenAsync_ForeignKeys_AreEnabled()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
