@@ -23,6 +23,8 @@ namespace ImageGen.Avalonia.Tests.TestDoubles;
 /// </summary>
 public sealed class ShellHarness : IDisposable
 {
+    private readonly GenerationService _generations;
+
     /// <param name="fileLogging">Writes the log to the data folder at Debug, as the app does in a debug build.</param>
     public ShellHarness(
         StubHttpMessageHandler? openRouter = null,
@@ -44,6 +46,7 @@ public sealed class ShellHarness : IDisposable
         Window = new MainWindow();
         Navigation = Provider.GetRequiredService<AvaloniaNavigationService>();
         Navigation.AttachHost(Window.PageArea);
+        _generations = Provider.GetRequiredService<GenerationService>();
     }
 
     public TempAppPaths Paths { get; }
@@ -101,7 +104,28 @@ public sealed class ShellHarness : IDisposable
 
     public void Dispose()
     {
+        WaitForBackgroundGenerations();
         Provider.Dispose();
         Paths.Dispose();
+    }
+
+    /// <summary>
+    /// Runs started by the test keep writing to the database and the image folder after the test body ends. On Windows
+    /// an open file cannot be deleted, so the temporary folder is removed only after they finish.
+    /// </summary>
+    private void WaitForBackgroundGenerations()
+    {
+        // Taken in the constructor: some tests dispose the container themselves before the harness.
+        var idle = _generations.WhenIdleAsync();
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (!idle.Wait(10))
+        {
+            if (DateTime.UtcNow > deadline)
+            {
+                throw new TimeoutException("Фоновые генерации теста не завершились за 10 секунд.");
+            }
+
+            Dispatcher.UIThread.RunJobs();
+        }
     }
 }
