@@ -74,6 +74,12 @@
 
 	<ItemGroup>
 		<ProjectReference Include="../ImageGen.Core/ImageGen.Core.csproj" />
+		<ProjectReference Include="../ImageGen.Data/ImageGen.Data.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Fixed logical name: the string class reads it through ResourceManager (see Resources/Strings/AppResources.cs). -->
+		<EmbeddedResource Update="Resources/Strings/AppResources.resx" LogicalName="ImageGen.Maui.Resources.Strings.AppResources.resources" />
 	</ItemGroup>
 
 </Project>

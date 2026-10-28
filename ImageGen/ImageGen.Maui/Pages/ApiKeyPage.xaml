@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pm="clr-namespace:ImageGen.Maui.PageModels"
+             xmlns:strings="clr-namespace:ImageGen.Maui.Resources.Strings"
+             x:Class="ImageGen.Maui.Pages.ApiKeyPage"
+             x:DataType="pm:ApiKeyPageModel"
+             Title="{x:Static strings:AppResources.ApiKeyTitle}">
+    <ScrollView>
+        <VerticalStackLayout Padding="16"
+                             Spacing="12"
+                             MaximumWidthRequest="600"
+                             HorizontalOptions="Center">
+            <Label Text="{x:Static strings:AppResources.ApiKeyDescription}" />
+
+            <Entry Text="{Binding ApiKey}"
+                   Placeholder="{x:Static strings:AppResources.ApiKeyPlaceholder}"
+                   IsPassword="True"
+                   MinimumHeightRequest="44"
+                   SemanticProperties.Description="{x:Static strings:AppResources.ApiKeyTitle}"
+                   SemanticProperties.Hint="{x:Static strings:AppResources.ApiKeyDescription}" />
+
+            <Button Text="{x:Static strings:AppResources.ApiKeySave}"
+                    Command="{Binding SaveCommand}"
+                    MinimumHeightRequest="44"
+                    HorizontalOptions="Fill"
+                    SemanticProperties.Description="{x:Static strings:AppResources.ApiKeySave}" />
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               SemanticProperties.Description="{x:Static strings:AppResources.ApiKeyChecking}" />
+
+            <Label Text="{Binding StatusText}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
