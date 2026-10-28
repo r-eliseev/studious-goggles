@@ -32,3 +32,6 @@
 - 026 | backlog | cancelled | 2026-10-28 | Провайдер Replicate | `tasks/backlog/026-provider-replicate.md`
 - 036 | backlog | done | 2026-10-28 | Провайдер моделей: адрес и тип API в конфиге | `tasks/backlog/036-provider-config-compatible-api.md`
 - 045 | backlog | done | 2026-10-28 | Подробное логирование всего приложения | `tasks/backlog/045-detailed-logging.md`
+- 048 | backlog | done | 2026-10-28 | Headless-тесты Avalonia трогают настоящую папку данных пользователя | `tasks/backlog/048-test-isolation-data-dir.md`
+- 049 | backlog | done | 2026-10-28 | Модель ассистента: платная по умолчанию и выбор в настройках сессии | `tasks/backlog/049-assistant-model-picker.md`
+- 052 | backlog | done | 2026-10-28 | Журнал: не писать ответ проверки ключа целиком | `tasks/backlog/052-log-redaction-key-info.md`
