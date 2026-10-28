@@ -180,8 +180,9 @@ public static class ProviderConfigLoader
         "openRouter" => ProviderKind.OpenRouter,
         "openAiCompatible" => ProviderKind.OpenAiCompatible,
         "anthropicCompatible" => ProviderKind.AnthropicCompatible,
+        "fal" => ProviderKind.Fal,
         _ => throw new ProviderConfigException(
-            $"Provider {label}: unknown kind '{text}'. Known kinds: openRouter, openAiCompatible, anthropicCompatible."),
+            $"Provider {label}: unknown kind '{text}'. Known kinds: openRouter, openAiCompatible, anthropicCompatible, fal."),
     };
 
     private static string ReadString(JsonElement element, string name, string label)

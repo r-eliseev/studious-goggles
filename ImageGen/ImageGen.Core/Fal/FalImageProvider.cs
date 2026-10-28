@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json.Nodes;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Keys;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 
@@ -14,7 +15,7 @@ namespace ImageGen.Core.Fal;
 /// the fields of the image result (<c>images</c>, <c>has_nsfw_concepts</c>) are the planned ones (task 025, not verified
 /// with a live key).
 /// </summary>
-public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider
+public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider, IModelProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
 
@@ -28,9 +29,81 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider
         _httpClientFactory = httpClientFactory;
     }
 
+    /// <summary>
+    /// Checks the key with the model list. The list is open without a key in fal's documentation, so an invalid key may
+    /// still answer 200: this check is an assumption until a live key is tried (task 025).
+    /// </summary>
     public override Task<ApiKeyStatus> CheckKeyAsync(string apiKey, CancellationToken cancellationToken) =>
-        // The key check address of fal is not in the documentation read for task 025 (open question 2 in the task).
-        throw new ProviderException(ErrorKind.ModelUnavailable, "Checking a fal key is not supported yet.");
+        ProbeKeyAsync(HttpMethod.Get, ModelsAddress + "?limit=1", apiKey, cancellationToken);
+
+    /// <summary>
+    /// Lists the text-to-image models of fal, following the cursor. The seed support and the price are not in the list
+    /// response, so they are not claimed: the seed is unsupported, the price is unknown (task 025 open questions).
+    /// </summary>
+    public async Task<IReadOnlyList<ImageModel>> ListImageModelsAsync(CancellationToken cancellationToken)
+    {
+        var fetchedAt = TimeProvider.GetUtcNow();
+        var result = new List<ImageModel>();
+        string? cursor = null;
+        do
+        {
+            var address = ModelsAddress + "?category=text-to-image&limit=100" + (cursor is null ? "" : "&cursor=" + Uri.EscapeDataString(cursor));
+            var message = await CreateAuthorizedRequestAsync(HttpMethod.Get, address, null, cancellationToken);
+            var page = await SendFalJsonAsync(message, cancellationToken);
+            foreach (var model in page["models"] as JsonArray ?? [])
+            {
+                var id = model?["endpoint_id"]?.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    continue;
+                }
+
+                result.Add(new ImageModel
+                {
+                    ProviderId = Config.Id,
+                    Id = id,
+                    Name = model?["metadata"]?["display_name"]?.GetValue<string>() ?? id,
+                    SupportsSeed = false,
+                    SupportsImageInput = false,
+                    MaxImagesPerRequest = 1,
+                    FetchedAt = fetchedAt,
+                });
+            }
+
+            cursor = page["has_more"]?.GetValue<bool>() == true ? page["next_cursor"]?.GetValue<string>() : null;
+        }
+        while (cursor is not null);
+
+        return result;
+    }
+
+    /// <summary>Submit, then wait for the job and return its image; a filtered or failed job throws like the other providers.</summary>
+    public async Task<ImageGenerationResult> GenerateAsync(ImageGenerationRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var handle = await SubmitAsync(request, cancellationToken);
+        await foreach (var update in ProviderJobPoller.WatchAsync(this, handle, PollMinInterval, PollMaxInterval, MaxNetworkFailures, cancellationToken))
+        {
+            switch (update.State)
+            {
+                case JobState.Succeeded:
+                    return update.Result!;
+                case JobState.Filtered:
+                    throw new ProviderException(ErrorKind.Moderated, update.ErrorMessage ?? "The provider filtered this image.");
+                case JobState.Failed:
+                    throw new ProviderException(update.ErrorKind ?? ErrorKind.Unknown, update.ErrorMessage ?? "fal failed the job.");
+                case JobState.Cancelled:
+                    throw new ProviderException(ErrorKind.Unknown, "The fal job was cancelled.");
+            }
+        }
+
+        throw new ProviderException(ErrorKind.EmptyResponse, "fal ended the job without a result.");
+    }
+
+    private const string ModelsAddress = "https://api.fal.ai/v1/models";
+    private static readonly TimeSpan PollMinInterval = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan PollMaxInterval = TimeSpan.FromSeconds(5);
+    private const int MaxNetworkFailures = 5;
 
     protected override void Authenticate(HttpRequestMessage request, string apiKey) =>
         request.Headers.TryAddWithoutValidation("Authorization", "Key " + apiKey);

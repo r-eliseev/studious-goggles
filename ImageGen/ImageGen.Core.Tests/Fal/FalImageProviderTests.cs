@@ -190,4 +190,87 @@ public class FalImageProviderTests
         Assert.Equal(HttpMethod.Put, handler.Requests.Single().Method);
         Assert.Equal(Handle.CancelUrl, handler.Requests.Single().RequestUri!.ToString());
     }
+
+    [Fact]
+    public async Task ListImageModels_FollowsCursorAndMapsEndpoints()
+    {
+        var handler = new StubHttpMessageHandler(req => req.RequestUri!.Query.Contains("cursor=c2", StringComparison.Ordinal)
+            ? Json(HttpStatusCode.OK, """{"models":[{"endpoint_id":"fal-ai/b","metadata":{"display_name":"B"}}],"has_more":false,"next_cursor":null}""")
+            : Json(HttpStatusCode.OK, """{"models":[{"endpoint_id":"fal-ai/a","metadata":{"display_name":"A"}}],"has_more":true,"next_cursor":"c2"}"""));
+        var provider = CreateProvider(handler);
+
+        var models = await provider.ListImageModelsAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["fal-ai/a", "fal-ai/b"], models.Select(m => m.Id));
+        Assert.Equal(["A", "B"], models.Select(m => m.Name));
+        Assert.All(models, m => Assert.Equal(ProviderIds.Fal, m.ProviderId));
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.StartsWith("https://api.fal.ai/v1/models", handler.Requests[0].RequestUri!.ToString(), StringComparison.Ordinal);
+        Assert.Contains("category=text-to-image", handler.Requests[0].RequestUri!.Query, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.OK, ApiKeyStatus.Valid)]
+    [InlineData(HttpStatusCode.Unauthorized, ApiKeyStatus.Invalid)]
+    public async Task CheckKey_MapsStatusToKeyStatus(HttpStatusCode status, ApiKeyStatus expected)
+    {
+        var handler = new StubHttpMessageHandler(_ => Json(status, "{}"));
+        var provider = CreateProvider(handler);
+
+        var result = await provider.CheckKeyAsync(Key, TestContext.Current.CancellationToken);
+
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_SubmitsAndWaitsForTheImage()
+    {
+        var handler = new StubHttpMessageHandler(req =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (req.RequestUri.Host == "cdn")
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent([5, 6]) };
+            }
+
+            if (req.Method == HttpMethod.Post)
+            {
+                return Json(HttpStatusCode.OK, SubmitJson);
+            }
+
+            if (url.Contains("/status", StringComparison.Ordinal))
+            {
+                return Json(HttpStatusCode.OK, """{"status":"COMPLETED"}""");
+            }
+
+            return Json(HttpStatusCode.OK, """{"images":[{"url":"https://cdn/x.png","content_type":"image/png"}],"has_nsfw_concepts":[false]}""");
+        });
+        var provider = CreateProvider(handler);
+
+        var result = await provider.GenerateAsync(Request(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(new byte[] { 5, 6 }, result.Content);
+        Assert.Equal("image/png", result.MediaType);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_Filtered_ThrowsModerated()
+    {
+        var handler = new StubHttpMessageHandler(req =>
+        {
+            if (req.Method == HttpMethod.Post)
+            {
+                return Json(HttpStatusCode.OK, SubmitJson);
+            }
+
+            return req.RequestUri!.ToString().Contains("/status", StringComparison.Ordinal)
+                ? Json(HttpStatusCode.OK, """{"status":"COMPLETED"}""")
+                : Json(HttpStatusCode.OK, """{"images":[{"url":"https://cdn/x.png"}],"has_nsfw_concepts":[true]}""");
+        });
+        var provider = CreateProvider(handler);
+
+        var ex = await Assert.ThrowsAsync<ProviderException>(() => provider.GenerateAsync(Request(), TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Moderated, ex.Kind);
+    }
 }
