@@ -142,7 +142,10 @@ public class ChatPageModelTests
         _mainThread.When(m => m.BeginInvokeOnMainThread(Arg.Any<Action>()))
             .Do(ci => ci.Arg<Action>().Invoke());
 
-        _sessionService = new SessionService(_sessionRepository, _messageRepository, _runRepository, _files, time);
+        _sessionService = new SessionService(
+            _sessionRepository, _messageRepository, _runRepository, _files,
+            new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),
+            time);
         _attachments = new AttachmentService(_chatAttachments, _files, time);
         _descriptions = new ImageDescriptionService(
             _sessionRepository, _runRepository, ProviderDoubles.Router(chat: _chat),

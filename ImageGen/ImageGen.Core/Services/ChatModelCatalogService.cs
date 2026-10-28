@@ -17,18 +17,41 @@ public sealed class ChatModelCatalogService(IProviderRouter providers, ILogger<C
     public async Task<bool> IsImageInputAsync(ModelRef model, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(model);
-        IReadOnlyList<ChatModel> models;
-        try
+        var models = await FindModelsAsync(model.ProviderId, cancellationToken);
+        if (models is null)
         {
-            models = await LoadAsync(model.ProviderId, cancellationToken);
-        }
-        catch (ProviderException ex)
-        {
-            logger.LogWarning(ex, "Chat model catalog of provider {ProviderId} is not available; images are not sent.", model.ProviderId);
+            logger.LogWarning("Chat model catalog of provider {ProviderId} is not available; images are not sent.", model.ProviderId);
             return false;
         }
 
         return models.Any(m => m.Id == model.ModelId && m.SupportsImageInput);
+    }
+
+    /// <summary>Chat models of a provider that can run the assistant (they list tools), sorted by name.</summary>
+    public async Task<IReadOnlyList<ChatModel>> ListAssistantModelsAsync(string providerId, CancellationToken cancellationToken)
+    {
+        var models = await FindModelsAsync(providerId, cancellationToken) ?? [];
+        return models
+            .Where(m => m.SupportsTools)
+            .OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Chat models of a provider, or null when the list cannot be loaded. The caller decides what to do without it;
+    /// the failure is logged here.
+    /// </summary>
+    public async Task<IReadOnlyList<ChatModel>?> FindModelsAsync(string providerId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await LoadAsync(providerId, cancellationToken);
+        }
+        catch (ProviderException ex)
+        {
+            logger.LogWarning(ex, "Chat model catalog of provider {ProviderId} failed to load.", providerId);
+            return null;
+        }
     }
 
     private async Task<IReadOnlyList<ChatModel>> LoadAsync(string providerId, CancellationToken cancellationToken)

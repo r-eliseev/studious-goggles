@@ -6,7 +6,7 @@
              x:Class="ImageGen.Maui.Pages.SessionModelsPage"
              x:DataType="pm:SessionModelsPageModel"
              Title="{x:Static strings:AppResources.ModelsTitle}">
-    <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="16" RowSpacing="8">
+    <Grid RowDefinitions="Auto,Auto,*,Auto,*,Auto" Padding="16" RowSpacing="8">
         <SearchBar Text="{Binding SearchText, Mode=TwoWay}"
                    Placeholder="{x:Static strings:AppResources.ModelsSearchPlaceholder}"
                    SemanticProperties.Description="{x:Static strings:AppResources.ModelsSearchPlaceholder}" />
@@ -39,7 +39,22 @@
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
-        <Button Grid.Row="3"
+        <Label Grid.Row="3"
+               Text="{x:Static strings:AppResources.AssistantModelTitle}"
+               FontAttributes="Bold"
+               Margin="0,8,0,0" />
+        <CollectionView Grid.Row="4" ItemsSource="{Binding AssistantModels}" SelectionMode="None">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="pm:AssistantModelOptionViewModel">
+                    <Button Text="{Binding DisplayName}"
+                            Command="{Binding SelectCommand}"
+                            HorizontalOptions="Fill"
+                            Margin="0,2"
+                            SemanticProperties.Description="{Binding AutomationName}" />
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+        <Button Grid.Row="5"
                 Text="{x:Static strings:AppResources.Save}"
                 Command="{Binding SaveCommand}"
                 SemanticProperties.Description="{x:Static strings:AppResources.Save}" />

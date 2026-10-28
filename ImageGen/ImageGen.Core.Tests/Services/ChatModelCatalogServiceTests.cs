@@ -52,6 +52,33 @@ public class ChatModelCatalogServiceTests
     }
 
     [Fact]
+    public async Task ListAssistantModelsAsync_ReturnsOnlyModelsWithToolsSortedByName()
+    {
+        _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ChatModel>>(
+        [
+            new ChatModel("vendor/zeta", "zeta", SupportsImageInput: false, ContextLength: 1000, SupportsTools: true),
+            new ChatModel("vendor/no-tools", "Alpha", SupportsImageInput: false, ContextLength: 1000),
+            new ChatModel("vendor/alpha", "Alpha Two", SupportsImageInput: true, ContextLength: 1000, SupportsTools: true),
+        ]));
+        var service = new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance);
+
+        var models = await service.ListAssistantModelsAsync(ProviderIds.OpenRouter, TestContext.Current.CancellationToken);
+
+        Assert.Equal(["vendor/alpha", "vendor/zeta"], models.Select(m => m.Id));
+    }
+
+    [Fact]
+    public async Task ListAssistantModelsAsync_CatalogFails_EmptyList()
+    {
+        _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns<Task<IReadOnlyList<ChatModel>>>(_ => throw new ProviderException(ErrorKind.Network, "down"));
+        var service = new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance);
+
+        var models = await service.ListAssistantModelsAsync(ProviderIds.OpenRouter, TestContext.Current.CancellationToken);
+
+        Assert.Empty(models);
+    }
+
+    [Fact]
     public async Task IsImageInputAsync_CalledTwice_LoadsCatalogOnce()
     {
         var ct = TestContext.Current.CancellationToken;

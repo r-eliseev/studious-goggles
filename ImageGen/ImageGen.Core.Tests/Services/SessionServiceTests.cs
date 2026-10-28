@@ -1,8 +1,10 @@
+using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Core.Tests.Services;
 
@@ -14,13 +16,26 @@ public class SessionServiceTests
     private readonly IChatMessageRepository _messages = Substitute.For<IChatMessageRepository>();
     private readonly IRunRepository _runs = Substitute.For<IRunRepository>();
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
+    private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
     private readonly SessionService _service;
 
     public SessionServiceTests()
     {
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
-        _service = new SessionService(_sessions, _messages, _runs, _files, time);
+        _service = new SessionService(_sessions, _messages, _runs, _files, Catalog(AssistantWithTools), time);
+    }
+
+    private static readonly ChatModel AssistantWithTools = new(
+        SessionSettings.DefaultAssistantModelId, "Assistant", SupportsImageInput: true, ContextLength: 1000, SupportsTools: true);
+
+    private ChatModelCatalogService Catalog(params ChatModel[] models)
+    {
+        _chat.ListChatModelsAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<ChatModel>>(models));
+        var providers = Substitute.For<IProviderRouter>();
+        providers.GetChatClient(ProviderIds.OpenRouter).Returns(_chat);
+        return new ChatModelCatalogService(providers, NullLogger<ChatModelCatalogService>.Instance);
     }
 
     private static Session ExistingSession(string title = Session.NewSessionTitle) => new()
@@ -41,6 +56,73 @@ public class SessionServiceTests
         Assert.Equal(Now, session.CreatedAt);
         Assert.Equal([new ModelRef(ProviderIds.OpenRouter, SessionSettings.DefaultImageModelId)], session.Settings.ImageModels);
         await _sessions.Received(1).AddAsync(session, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateAsync_NewSession_UsesClaudeHaikuAsAssistant()
+    {
+        var session = await _service.CreateAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(new ModelRef(ProviderIds.OpenRouter, "anthropic/claude-haiku-5.5"), session.Settings.AssistantModel);
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_AssistantWithoutTools_ThrowsAndKeepsSettings()
+    {
+        var session = ExistingSession();
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        var service = new SessionService(
+            _sessions, _messages, _runs, _files,
+            Catalog(new ChatModel("vendor/plain", "Plain", SupportsImageInput: false, ContextLength: 1000)),
+            TimeProvider.System);
+        var settings = new SessionSettings
+        {
+            ImageModels = session.Settings.ImageModels,
+            RunsPerModel = 1,
+            AssistantModel = new ModelRef(ProviderIds.OpenRouter, "vendor/plain"),
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.UpdateSettingsAsync(session.Id, settings, TestContext.Current.CancellationToken));
+
+        await _sessions.DidNotReceive().UpdateAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_AssistantNotInCatalog_Throws()
+    {
+        var session = ExistingSession();
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        var settings = new SessionSettings
+        {
+            ImageModels = session.Settings.ImageModels,
+            RunsPerModel = 1,
+            AssistantModel = new ModelRef(ProviderIds.OpenRouter, "vendor/unknown"),
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.UpdateSettingsAsync(session.Id, settings, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_CatalogUnavailable_SavesWithoutCheck()
+    {
+        var session = ExistingSession();
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        var catalog = Catalog();
+        _chat.ListChatModelsAsync(Arg.Any<CancellationToken>())
+            .Returns<Task<IReadOnlyList<ChatModel>>>(_ => throw new ProviderException(ErrorKind.Network, "down"));
+        var service = new SessionService(_sessions, _messages, _runs, _files, catalog, TimeProvider.System);
+        var settings = new SessionSettings
+        {
+            ImageModels = session.Settings.ImageModels,
+            RunsPerModel = 1,
+            AssistantModel = new ModelRef(ProviderIds.OpenRouter, "vendor/offline"),
+        };
+
+        var updated = await service.UpdateSettingsAsync(session.Id, settings, TestContext.Current.CancellationToken);
+
+        Assert.Equal("vendor/offline", updated.Settings.AssistantModel.ModelId);
     }
 
     [Fact]

@@ -30,21 +30,42 @@
                      AutomationProperties.Name="{markup:Res ModelsTitle}" />
 
         <ScrollViewer Grid.Row="3">
-            <ItemsControl ItemsSource="{Binding Models}">
-                <ItemsControl.DataTemplates>
-                    <DataTemplate DataType="pm:ModelOptionViewModel" x:DataType="pm:ModelOptionViewModel">
-                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                  MinHeight="44"
-                                  Margin="0,2"
-                                  AutomationProperties.Name="{Binding Name}">
-                            <StackPanel>
-                                <TextBlock Text="{Binding Name}" />
-                                <TextBlock Text="{Binding DetailsText}" FontSize="12" />
-                            </StackPanel>
-                        </CheckBox>
-                    </DataTemplate>
-                </ItemsControl.DataTemplates>
-            </ItemsControl>
+            <StackPanel Spacing="8">
+                <ItemsControl ItemsSource="{Binding Models}">
+                    <ItemsControl.DataTemplates>
+                        <DataTemplate DataType="pm:ModelOptionViewModel" x:DataType="pm:ModelOptionViewModel">
+                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                      MinHeight="44"
+                                      Margin="0,2"
+                                      AutomationProperties.Name="{Binding Name}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" />
+                                    <TextBlock Text="{Binding DetailsText}" FontSize="12" />
+                                </StackPanel>
+                            </CheckBox>
+                        </DataTemplate>
+                    </ItemsControl.DataTemplates>
+                </ItemsControl>
+
+                <TextBlock Text="{markup:Res AssistantModelTitle}" FontWeight="Bold" Margin="0,8,0,0" />
+                <ItemsControl ItemsSource="{Binding AssistantModels}">
+                    <ItemsControl.DataTemplates>
+                        <DataTemplate DataType="pm:AssistantModelOptionViewModel" x:DataType="pm:AssistantModelOptionViewModel">
+                            <Button Command="{Binding SelectCommand}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left"
+                                    MinHeight="44"
+                                    Margin="0,2"
+                                    AutomationProperties.Name="{Binding AutomationName}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                    <TextBlock Text="{Binding DetailsText}" FontSize="12" />
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.DataTemplates>
+                </ItemsControl>
+            </StackPanel>
         </ScrollViewer>
 
         <Button Grid.Row="4"
