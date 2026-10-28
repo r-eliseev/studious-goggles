@@ -1,5 +1,8 @@
+using System.Diagnostics;
 using ImageGen.Core.Platform;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Data;
 
@@ -8,17 +11,19 @@ public sealed class SqliteDatabase
     public const string FileName = "imagegen.db";
 
     private readonly SemaphoreSlim _initLock = new(1, 1);
+    private readonly ILogger<SqliteDatabase> _logger;
     private bool _initialized;
 
-    public SqliteDatabase(IAppPaths appPaths)
-        : this(Path.Combine(appPaths.DataDirectory, FileName))
+    public SqliteDatabase(IAppPaths appPaths, ILogger<SqliteDatabase> logger)
+        : this(Path.Combine(appPaths.DataDirectory, FileName), logger)
     {
     }
 
-    public SqliteDatabase(string databasePath)
+    public SqliteDatabase(string databasePath, ILogger<SqliteDatabase>? logger = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
         DatabasePath = databasePath;
+        _logger = logger ?? NullLogger<SqliteDatabase>.Instance;
         ConnectionString = new SqliteConnectionStringBuilder
         {
             DataSource = databasePath,
@@ -57,6 +62,7 @@ public sealed class SqliteDatabase
 
             await using var connection = await OpenAsync(cancellationToken);
 
+            var started = Stopwatch.GetTimestamp();
             var version = await GetSchemaVersionAsync(connection, cancellationToken);
             if (version > Migrations.All.Count)
             {
@@ -92,6 +98,11 @@ public sealed class SqliteDatabase
                 await transaction.CommitAsync(cancellationToken);
             }
 
+            _logger.LogInformation(
+                "Database ready: schema version {SchemaVersion} (was {PreviousVersion}), {ElapsedMs} ms.",
+                Migrations.All.Count,
+                version,
+                (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds);
             _initialized = true;
         }
         finally

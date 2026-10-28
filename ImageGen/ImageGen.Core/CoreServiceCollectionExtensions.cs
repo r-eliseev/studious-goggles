@@ -1,3 +1,4 @@
+using ImageGen.Core.Http;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
@@ -23,8 +24,10 @@ public static class CoreServiceCollectionExtensions
         // Clients take HttpClient from IHttpClientFactory per request. The timeout is set per provider
         // in the request itself, so the default HttpClient timeout must not cut it short.
         services.AddHttpClient();
-        services.ConfigureHttpClientDefaults(builder =>
-            builder.ConfigureHttpClient(client => client.Timeout = Timeout.InfiniteTimeSpan));
+        services.AddTransient<LoggingHttpHandler>();
+        services.ConfigureHttpClientDefaults(builder => builder
+            .ConfigureHttpClient(client => client.Timeout = Timeout.InfiniteTimeSpan)
+            .AddHttpMessageHandler<LoggingHttpHandler>());
 
         services.AddSingleton(sp =>
         {

@@ -1,6 +1,6 @@
 ---
 id: 045
-status: planned
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -81,4 +81,39 @@ scripts/check.sh
 
 ## Отчёт
 
+Исполнитель: claude-07d6. Ветка: `ccr-07d63c19-ma1lxw` (назначена сессией; `task/045-…` не создавалась). База: `origin/main` (`d5c5c91`, с 036).
+
+### Что сделано
+- **Ядро:** `LoggingHttpHandler` (`Core/Http/`) подключён ко всем HTTP-клиентам через `ConfigureHttpClientDefaults`. Пишет метод, путь без query, код, длительность, размер; заголовки не пишет; на Debug — тела, с заменой base64 и обрезкой до 4 КБ (`BodyRedactor`). Таймаут и сетевая ошибка — Warning. `GenerationService`: создание прогона, каждый переход статуса с id генерации (Queued → Running → Succeeded/Filtered/Failed); Filtered — Information, Failed — Warning; промпт в Information не попадает. `AssistantService`: начало и конец хода (модель, число сообщений, вызовы инструментов, run, ошибка); текст пользователя и ответ — только Debug. `ApiKeyService`: результат проверки и сохранения без ключа. `ModelCatalogService`: из кеша или от провайдера, число моделей.
+- **Хранилище:** `SqliteDatabase` — версия схемы до и после, длительность. `FileImageStore` — путь и размер файла (Debug).
+- **Presentation** (`Logging/`): `LogLevelSettings` (переменная `IMAGEGEN_LOG_LEVEL`, затем `logging.json`, затем значение по сборке; неверное значение — предупреждение), `ImageGenLogging.AddImageGenFileLogging` (Serilog, файл по дням, 14 файлов, 10 МБ), `StartupLog` (первая строка запуска), `CrashLog` (AppDomain и TaskScheduler). `FireAndForgetSafeAsync` пишет Error через `TaskExtensions.Logger`; `Debug.WriteLine` в коде приложения не осталось.
+- **Avalonia:** `App` — файл, строка старта, предупреждение об уровне, исключения UI-потока, закрытие файла при выходе (`Exit`); `AppServices.Create` получил параметр `configureLogging`; `AvaloniaNavigationService` логирует переходы.
+- **MAUI:** `MauiProgram` — файл + `AddDebug`, старт, `CrashLog`; `ShellNavigationService` логирует переходы.
+- **Документация:** ADR 0010 (Serilog только в `Presentation/Logging`, решение и альтернативы); `docs/architecture.md` (абзац о журнале); `docs/conventions.md` (правило журнала); `AGENTS.md` (где логи); `docs/knowledge/dev-environment.md` (пути логов по ОС, уровни); `docs/knowledge/csharp.md` (формат `lj` у Serilog, конфликт `TaskExtensions`, `TryComputeLength`).
+
+### Проверка
+- `dotnet test`: Core 171/171, Data 46/46, Presentation 122/122, Avalonia 46 (2 пропущены — Secret Service, как и до задачи).
+- Интеграция (`Avalonia.Tests/Flows/LoggingFlowTests.cs`): чат с ассистентом и генерацией в headless-окне; файл лога содержит навигацию, HTTP-запросы, ход ассистента, статусы генерации и сохранение файла, и не содержит ключа.
+- `dotnet build ImageGen.Maui -f net10.0-android`: успешно (Android SDK 36 и нагрузка `maui-android` установлены по `docs/knowledge/claude-cloud-session.md`).
+- `dotnet format --verify-no-changes`: Core, Data, Presentation, Avalonia, Maui и четыре тестовых проекта — без изменений.
+
+### Отличия от плана
+1. Хранение исправлено по замечанию владельца: Serilog удаляет файлы старше 14 дней (`retainedFileTimeLimit`), а не держит 14 файлов. Тест `AddImageGenFileLogging_FileOlderThan14Days_IsDeletedAtStart`.
+2. Внутренние предупреждения и ошибки Avalonia идут в тот же файл через `AvaloniaLogSink` (`Logger.Sink`), уровень от Warning. Тесты `AvaloniaLogSinkTests`. Сообщения до старта `App` остаются в трассировке.
+3. Ключ в интеграционном тесте сохраняется через `ShellHarness.SaveKeyAsync`, а не через `ApiKeyService.SaveAsync`. Отдельный тест `ApiKeyServiceTests.SaveAsync_ValidKey_LogsResultWithoutTheKey` проверяет, что ключ не попадает в лог проверки.
+4. Android- и Windows-обработчики исключений (`AndroidEnvironment.UnhandledExceptionRaiser`, `Application.UnhandledException` WinUI) не добавлены: общие `AppDomain` и `TaskScheduler` их покрывают, но не проверены на устройствах. `CrashLog` без теста (исключение AppDomain в тесте не вызвать).
+5. Команды страниц (начало и конец с длительностью на Debug) не логируются отдельно; ошибки команд доходят через `FireAndForgetSafeAsync`.
+6. `CapturingLogger` скопирован в четыре тестовых проекта: общего тестового проекта в репозитории нет.
+7. Serilog подключён в `Presentation` (не в оболочках, как в плане). Одно место для библиотеки записи; решение в ADR 0010.
+
+### Не проверено в этой среде
+- Запуск окна Avalonia на Linux-рабочем столе с логом: нет дисплея. Пункт добавлен в ручную проверку 046.
+- Запуск MAUI под Windows и на Android (нет эмулятора): путь папки логов и строка старта не видны глазами. Пункт добавлен в 016.
+- Путь логов на Windows (Avalonia) и macOS: не проверен (`docs/knowledge/dev-environment.md`, «Логи»).
+- Ротация по размеру 10 МБ на реальном объёме: не измерялась.
+
 ## Комментарии
+
+### 2026-10-28, владелец (ответы в чате)
+План одобрен как есть. Библиотека записи в файл — Serilog (`Serilog.Extensions.Logging` + `Serilog.Sinks.File`), решение оформить ADR в этой задаче.
+Ветка: вместо `task/045-…` работаю в designated-ветке `ccr-07d63c19-ma1lxw` (по инструкции сессии), от `origin/main` (`d5c5c91`, с 036).

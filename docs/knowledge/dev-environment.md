@@ -32,3 +32,11 @@
 - **человек у экрана** — ручные сценарии (задачи 016, 046).
 
 Задача с MAUI-разметкой по умолчанию идёт на Linux: логика экранов в `Presentation`, их интерфейс можно увидеть и потыкать в Avalonia на Linux (тот же сценарий), а MAUI-разметка проверяется сборкой Android и CI. Если в такой задаче осталась только проверка, недоступная в среде (Windows-запуск, macOS, ручной экран), её не держат в `in-progress`: см. `docs/tasks.md`, «Завершение».
+
+## Логи
+Журнал приложения пишется в файлы `imagegen-yyyyMMdd.log` в папке `logs` внутри папки данных (ADR 0010). Первая строка каждого запуска называет версию, оболочку, ОС и путь к папке.
+- **Avalonia, Linux:** `~/.local/share/ImageGen/logs` (проверено, `Environment.SpecialFolder.LocalApplicationData`, headless-тесты).
+- **Avalonia, Windows:** `%LOCALAPPDATA%\ImageGen\logs` (не проверено в этой задаче).
+- **Avalonia, macOS:** неизвестно, путь не проверен (нет macOS-машины).
+- **MAUI:** папка `AppDataDirectory` приложения (`FileSystem.Current.AppDataDirectory`), подпапка `logs`. Android: не проверено на устройстве (эмулятора нет). Сообщения пишутся и в `Debug`-вывод (logcat).
+- Уровень: `IMAGEGEN_LOG_LEVEL=Trace|Debug|Information|Warning|Error` или `logging.json` `{"level": "Debug"}` в папке данных; по умолчанию Debug в Debug-сборке, Information в Release.

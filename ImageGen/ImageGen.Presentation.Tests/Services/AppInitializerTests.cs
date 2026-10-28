@@ -72,7 +72,7 @@ public class AppInitializerTests : IDisposable
 
     private AppInitializer CreateInitializer()
     {
-        var catalog = new ModelCatalogService(ProviderDoubles.Router(), Substitute.For<IImageModelRepository>());
+        var catalog = new ModelCatalogService(ProviderDoubles.Router(), Substitute.For<IImageModelRepository>(), NullLogger<ModelCatalogService>.Instance);
         var generation = new GenerationService(
             Substitute.For<ISessionRepository>(),
             _runs,

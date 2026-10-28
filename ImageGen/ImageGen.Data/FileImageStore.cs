@@ -1,10 +1,11 @@
 using ImageGen.Core.Platform;
 using ImageGen.Core.Storage;
+using Microsoft.Extensions.Logging;
 
 namespace ImageGen.Data;
 
 /// <summary>Stores images as files under <c>{DataDirectory}/images/{sessionId}/{generationId}.{ext}</c>.</summary>
-public sealed class FileImageStore(IAppPaths appPaths) : IImageFileStore
+public sealed class FileImageStore(IAppPaths appPaths, ILogger<FileImageStore> logger) : IImageFileStore
 {
     public const string ImagesFolder = "images";
 
@@ -23,6 +24,7 @@ public sealed class FileImageStore(IAppPaths appPaths) : IImageFileStore
         var fullPath = GetFullPath(relativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         await File.WriteAllBytesAsync(fullPath, content, cancellationToken);
+        logger.LogDebug("Image saved: {Path} ({Bytes} bytes, {MediaType}).", relativePath, content.Length, mediaType);
         return relativePath;
     }
 

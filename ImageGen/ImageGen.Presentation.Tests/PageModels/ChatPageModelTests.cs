@@ -54,7 +54,7 @@ public class ChatPageModelTests
 
         _modelRepository.ListAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(
             [TestModels.Model(ImageModel, "Image")]);
-        var catalog = new ModelCatalogService(ProviderDoubles.Router(), _modelRepository);
+        var catalog = new ModelCatalogService(ProviderDoubles.Router(), _modelRepository, NullLogger<ModelCatalogService>.Instance);
 
         _session = NewSession("Red fox", runsPerModel: 2);
         _otherSession = NewSession("Other", runsPerModel: 1);

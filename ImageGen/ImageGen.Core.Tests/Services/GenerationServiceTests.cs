@@ -5,6 +5,8 @@ using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
+using ImageGen.Core.Tests.TestDoubles;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Core.Tests.Services;
@@ -24,6 +26,7 @@ public class GenerationServiceTests
     private readonly ISeedSource _seeds = Substitute.For<ISeedSource>();
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
     private readonly ConcurrentQueue<Generation> _events = new();
+    private readonly CapturingLogger<GenerationService> _logger = new();
     private readonly GenerationService _service;
     private readonly Session _session;
     private IReadOnlyList<Generation> _added = [];
@@ -37,7 +40,7 @@ public class GenerationServiceTests
                 ModelCatalogServiceTests.Model(Seeded, "Seeded"),
                 ModelCatalogServiceTests.Model(Unseeded, "Unseeded", supportsSeed: false),
             ]);
-        var catalog = new ModelCatalogService(_providers, _modelRepository);
+        var catalog = new ModelCatalogService(_providers, _modelRepository, NullLogger<ModelCatalogService>.Instance);
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
 
@@ -65,7 +68,7 @@ public class GenerationServiceTests
         _sessions.GetAsync(_session.Id, Arg.Any<CancellationToken>()).Returns(_session);
 
         _service = new GenerationService(
-            _sessions, _runs, _providers, _files, catalog, _seeds, time, NullLogger<GenerationService>.Instance);
+            _sessions, _runs, _providers, _files, catalog, _seeds, time, _logger);
         _service.GenerationUpdated += (_, e) => _events.Enqueue(e.Generation);
     }
 
@@ -121,6 +124,48 @@ public class GenerationServiceTests
             Assert.Equal(Now, g.CompletedAt);
         });
         await _files.Received(4).SaveAsync(_session.Id, Arg.Any<Guid>(), Image, "image/png", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StartRunAsync_Succeeds_LogsQueuedRunningSucceededForEachGeneration()
+    {
+        var ct = TestContext.Current.CancellationToken;
+
+        await _service.StartRunAsync(_session.Id, "a fox", ct);
+        await _service.WhenIdleAsync();
+
+        var first = _added[0];
+        var messages = _logger.Entries
+            .Where(e => e.Message.Contains(first.Id.ToString(), StringComparison.Ordinal))
+            .Select(e => e.Message)
+            .ToList();
+        Assert.Contains("is Queued", messages[0], StringComparison.Ordinal);
+        Assert.Contains("is Running", messages[1], StringComparison.Ordinal);
+        Assert.Contains("is Succeeded", messages[2], StringComparison.Ordinal);
+        Assert.Equal(3, messages.Count);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_Moderated_LogsFilteredAtInformationNotWarning()
+    {
+        _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromException<ImageGenerationResult>(new ProviderException(ErrorKind.Moderated, "blocked")));
+
+        await _service.StartRunAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        var filtered = _logger.Entries.Where(e => e.Message.Contains("is Filtered", StringComparison.Ordinal)).ToList();
+        Assert.NotEmpty(filtered);
+        Assert.All(filtered, e => Assert.Equal(LogLevel.Information, e.Level));
+    }
+
+    [Fact]
+    public async Task StartRunAsync_Succeeds_DoesNotLogPromptAtInformation()
+    {
+        await _service.StartRunAsync(_session.Id, "a secret fox prompt", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        Assert.DoesNotContain(_logger.Entries, e => e.Message.Contains("secret fox prompt", StringComparison.Ordinal));
     }
 
     [Fact]

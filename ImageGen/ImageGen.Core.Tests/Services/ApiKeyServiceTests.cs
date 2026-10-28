@@ -2,6 +2,7 @@ using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
+using ImageGen.Core.Tests.TestDoubles;
 
 namespace ImageGen.Core.Tests.Services;
 
@@ -10,12 +11,13 @@ public class ApiKeyServiceTests
     private readonly ISecretStore _secrets = Substitute.For<ISecretStore>();
     private readonly IProviderRouter _providers = Substitute.For<IProviderRouter>();
     private readonly IProviderConnection _connection = Substitute.For<IProviderConnection>();
+    private readonly CapturingLogger<ApiKeyService> _logger = new();
     private readonly ApiKeyService _service;
 
     public ApiKeyServiceTests()
     {
         _providers.GetConnection(ProviderIds.OpenRouter).Returns(_connection);
-        _service = new ApiKeyService(_providers, _secrets);
+        _service = new ApiKeyService(_providers, _secrets, _logger);
     }
 
     [Fact]
@@ -28,6 +30,18 @@ public class ApiKeyServiceTests
 
         Assert.Equal(ApiKeyStatus.Valid, status);
         await _secrets.Received(1).SetAsync(SecretNames.OpenRouterApiKey, "sk-1", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SaveAsync_ValidKey_LogsResultWithoutTheKey()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        _connection.CheckKeyAsync("sk-secret-1", Arg.Any<CancellationToken>()).Returns(ApiKeyStatus.Valid);
+
+        await _service.SaveAsync(ProviderIds.OpenRouter, "sk-secret-1", ct);
+
+        Assert.Contains("API key check for provider openrouter: Valid", _logger.AllText, StringComparison.Ordinal);
+        Assert.DoesNotContain("sk-secret-1", _logger.AllText, StringComparison.Ordinal);
     }
 
     [Theory]

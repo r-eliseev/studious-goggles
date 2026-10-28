@@ -1,17 +1,20 @@
 using ImageGen.Core.Platform;
+using ImageGen.Data.Tests.TestDoubles;
+using Microsoft.Extensions.Logging;
 
 namespace ImageGen.Data.Tests;
 
 public sealed class FileImageStoreTests : IDisposable
 {
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "imagegen-tests", Guid.NewGuid().ToString("N"));
+    private readonly CapturingLogger<FileImageStore> _logger = new();
     private readonly FileImageStore _store;
 
     public FileImageStoreTests()
     {
         var paths = Substitute.For<IAppPaths>();
         paths.DataDirectory.Returns(_directory);
-        _store = new FileImageStore(paths);
+        _store = new FileImageStore(paths, _logger);
     }
 
     public void Dispose()
@@ -20,6 +23,20 @@ public sealed class FileImageStoreTests : IDisposable
         {
             Directory.Delete(_directory, recursive: true);
         }
+    }
+
+    [Fact]
+    public async Task SaveAsync_Png_LogsDebugWithSizeAndNoContent()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var generationId = Guid.NewGuid();
+
+        await _store.SaveAsync(Guid.NewGuid(), generationId, [1, 2, 3, 4], "image/png", ct);
+
+        var entry = Assert.Single(_logger.Entries, e => e.Message.StartsWith("Image saved", StringComparison.Ordinal));
+        Assert.Equal(LogLevel.Debug, entry.Level);
+        Assert.Contains("4 bytes", entry.Message, StringComparison.Ordinal);
+        Assert.Contains(generationId.ToString("N"), entry.Message, StringComparison.Ordinal);
     }
 
     [Fact]
