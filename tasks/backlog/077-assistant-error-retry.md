@@ -13,7 +13,7 @@ created: 2026-10-28
 
 Справочник: `docs/design/implementation.md`; макеты: `docs/design/prototype.html` (https://claude.ai/artifact/M9QzPf39KLkRFTnYBtCi6F); решения владельца — задача 074 и «Комментарии» этой задачи.
 
-Зависит от: 068 (вид сообщений), 076 (те же файлы чата).
+Зависит от: 068 (вид сообщений), 076 (те же файлы чата), 083 (тот же `AssistantService`: рефакторинг `CompleteTurnAsync` делать поверх сборки запроса со сводкой).
 Среда: Linux или Windows (Avalonia — headless-тесты на Linux; MAUI — сборка Android на Linux с Android SDK, Windows-цель собирает CI; ручные проверки — 016 и 046).
 
 ## Критерии готовности
