@@ -54,6 +54,8 @@
 - `FilePicker`, `MediaPicker` (референсные картинки: выбрать из галереи, снять, вставка из буфера), `Share`, `Clipboard`, `Launcher`, `Connectivity`, `DeviceInfo`, `DeviceDisplay`, `MainThread`, `SemanticScreenReader`, `Vibration`/`Haptic`.
 - Разрешения (`Permissions.RequestAsync<...>`) и их записи в манифестах нужны для камеры, чтения и записи фото.
 
+- **Картинка из файла на Windows (проверено 2026-10-28, задача 054):** `ImageSource.FromFile` с абсолютным путём, в котором есть `/` (`C:\…\Data\images/…/x.jpg`), картинку молча не показывает; тот же путь с `\` — показывает (проверено запуском у владельца). WinRT `StorageFile.GetFileFromPathAsync` ведёт себя так же: с `/` — 0x80070002 «файл не найден», с `\` — открывает (проверено в PowerShell). Использует ли MAUI именно этот вызов — не проверялось по исходникам. Вывод: путь к файлу для оболочки собирать с разделителями ОС (`FileImageStore.GetFullPath`), даже если в БД он хранится с `/`.
+
 ## Сохранение изображения в галерею (из заметок: Android)
 - Android 10 (API 29) и выше: вставка через `MediaStore.Images.Media` с `ContentValues` (`DisplayName`, `MimeType`, `RelativePath = "Pictures/ImageGen"`, `IsPending`) и запись в `ContentResolver.OpenOutputStream` — разрешение записи не нужно. Android 9 и ниже: нужно разрешение `WRITE_EXTERNAL_STORAGE` и запись в публичную папку с запросом `MediaScanner` (проверить). Android 13 и выше для чтения чужих фото — `READ_MEDIA_IMAGES`; для сохранения собственных не требуется.
 - Код в `Platforms/Android` за интерфейсом ядра (например `IGallerySaver`), на других платформах свои реализации: iOS — `PHPhotoLibrary` (+ ключ `NSPhotoLibraryAddUsageDescription` в `Info.plist`), Mac Catalyst — `NSSavePanel`/Photos, Windows — `FileSavePicker` или копирование в `Pictures`.

@@ -1,8 +1,8 @@
 ---
 id: 054
-status: in-progress
-assignee: claude-win
-claimed: 2026-10-28T15:48:22Z
+status: done
+assignee:
+claimed:
 created: 2026-10-28
 ---
 
@@ -46,6 +46,24 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Maui/Converters/FilePathToImageSourceConverter.cs`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Data/FileImageStore.cs` (если причина в пути), `ImageGen/ImageGen.Data.Tests/FileImageStoreTests.cs`, `docs/knowledge/maui.md`, `tasks/v0.1/016-skeleton-manual-check.md`
 
 ## Отчёт
+Исполнитель: claude-win (Windows 11, SDK 10.0.402). Ветка: `task/054-maui-image-not-shown`.
+
+### Причина
+Гипотеза 1. `FileImageStore.GetFullPath` склеивал папку данных (с `\`) и относительный путь из БД (с `/`): `C:\Users\elise\AppData\Local\User Name\…\Data\images/cb3a…/f364….jpg`. Такой путь MAUI под Windows не показывает. Проверено на файле владельца в PowerShell: WinRT `StorageFile.GetFileFromPathAsync` со смешанным путём отвечает 0x80070002 «файл не найден», с `\` — открывает. Пробел в «User Name» не мешает.
+
+### Что сделано
+- `FileImageStore.GetFullPath`: `/` в относительном пути заменяется на `Path.DirectorySeparatorChar`; в БД путь по-прежнему хранится с `/`. Конвертер и разметка MAUI не менялись.
+- Тест `FileImageStoreTests.GetFullPath_StoredRelativePath_UsesSeparatorsOfTheSystem` (на Windows сначала падал: `images/abc/def.jpg`).
+- `docs/knowledge/maui.md` («Платформенные API»): факт про `/` в пути картинки на Windows.
+
+### Проверка
+- `dotnet test` ImageGen.Data.Tests — 60 из 60; `dotnet format --verify-no-changes` для `ImageGen.Data` и `ImageGen.Data.Tests`; MAUI `net10.0-windows10.0.19041.0` — 0 предупреждений.
+- Ручная проверка владельцем 2026-10-28 (сборка 054 + 056 вместе): картинка готовой генерации видна на карточке; новая генерация показывает картинку сразу.
+- Не проверено: Android и Avalonia вживую (там разделитель `/` и так системный, поведение не менялось).
+
+### Отличия от плана
+- Шаги 1–2 (временная диагностика в конвертере, `FromStream`) не понадобились: причину подтвердил отдельный вызов WinRT на файле владельца.
+- Обрезка кнопок исключена из задачи (уточнение владельца: кнопки видны при прокрутке).
 
 ## Комментарии
 
