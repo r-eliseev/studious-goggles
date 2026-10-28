@@ -35,3 +35,4 @@
 - 048 | backlog | done | 2026-10-28 | Headless-тесты Avalonia трогают настоящую папку данных пользователя | `tasks/backlog/048-test-isolation-data-dir.md`
 - 049 | backlog | done | 2026-10-28 | Модель ассистента: платная по умолчанию и выбор в настройках сессии | `tasks/backlog/049-assistant-model-picker.md`
 - 052 | backlog | done | 2026-10-28 | Журнал: не писать ответ проверки ключа целиком | `tasks/backlog/052-log-redaction-key-info.md`
+- 053 | backlog | done | 2026-10-28 | Тесты падают на Windows: культура цен и блокировка временной базы | `tasks/backlog/053-windows-test-failures.md`
