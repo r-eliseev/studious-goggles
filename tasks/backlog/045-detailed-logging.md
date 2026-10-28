@@ -1,8 +1,8 @@
 ---
 id: 045
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: claude-07d6
+claimed: 2026-10-28T11:08:10Z
 created: 2026-10-28
 ---
 
