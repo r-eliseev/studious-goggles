@@ -184,6 +184,16 @@ public class SessionsPageModelTests : IDisposable
     }
 
     [Fact]
+    public async Task OpenSettings_NavigatesToSettings()
+    {
+        var model = CreateModel();
+
+        await model.OpenSettingsCommand.ExecuteAsync(null);
+
+        await _navigation.Received(1).GoToAsync(Routes.Settings);
+    }
+
+    [Fact]
     public async Task Delete_AsksDestructiveConfirm()
     {
         var session = NewSession("Delete me", DateTimeOffset.UtcNow);

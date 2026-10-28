@@ -14,7 +14,7 @@
             <Setter Property="Opacity" Value="1" />
         </Style>
     </UserControl.Styles>
-    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
             <Button Classes="primary"
                     Command="{Binding NewSessionCommand}"
                     HorizontalAlignment="Stretch"
@@ -87,5 +87,13 @@
                     </ItemsControl>
                 </StackPanel>
             </ScrollViewer>
+
+            <Button Grid.Row="3"
+                    Classes="ghost icon"
+                    Command="{Binding OpenSettingsCommand}"
+                    HorizontalAlignment="Left"
+                    AutomationProperties.Name="{markup:Res SettingsTitle}">
+                <TextBlock Classes="icon" Text="{x:Static glyphs:IconGlyphs.Settings}" />
+            </Button>
         </Grid>
 </UserControl>

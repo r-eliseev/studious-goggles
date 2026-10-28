@@ -83,6 +83,9 @@ public sealed partial class SessionsPageModel(
     }
 
     [RelayCommand]
+    private Task OpenSettingsAsync() => navigation.GoToAsync(Routes.Settings);
+
+    [RelayCommand]
     private async Task NewSessionAsync()
     {
         try

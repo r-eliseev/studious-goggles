@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels"
+             xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
+             x:Class="ImageGen.Maui.Pages.SettingsPage"
+             x:DataType="pm:SettingsPageModel"
+             Title="{x:Static strings:AppResources.SettingsTitle}">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="20">
+            <VerticalStackLayout Spacing="8">
+                <Label StyleClass="section" Text="{x:Static strings:AppResources.SettingsOpenRouter}" />
+                <Label Text="{x:Static strings:AppResources.SettingsApiKey}" />
+                <Label StyleClass="meta" Text="{Binding KeyText}" />
+                <Button StyleClass="ghost"
+                        Text="{x:Static strings:AppResources.SettingsChangeKey}"
+                        Command="{Binding ChangeKeyCommand}"
+                        HorizontalOptions="Start"
+                        SemanticProperties.Description="{x:Static strings:AppResources.SettingsChangeKey}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="8">
+                <Label StyleClass="section" Text="{x:Static strings:AppResources.SettingsAppearance}" />
+                <Label Text="{x:Static strings:AppResources.SettingsStyle}" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Styles}" Spacing="8">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="pm:StyleOptionViewModel">
+                            <Border StyleClass="card" Padding="12" StrokeThickness="1">
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                        <Setter Property="Stroke" Value="{DynamicResource IgAccentColor}" />
+                                        <Setter Property="StrokeThickness" Value="2" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <Button StyleClass="ghost"
+                                        Command="{Binding SelectCommand}"
+                                        HorizontalOptions="Fill"
+                                        Text="{Binding Name}"
+                                        SemanticProperties.Description="{Binding Name}" />
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
+                <Label Text="{x:Static strings:AppResources.SettingsTheme}" />
+                <HorizontalStackLayout Spacing="12">
+                    <RadioButton x:Name="ThemeSystem" GroupName="theme" Content="{x:Static strings:AppResources.ThemeSystem}" CheckedChanged="OnThemeChecked" SemanticProperties.Description="{x:Static strings:AppResources.ThemeSystem}" />
+                    <RadioButton x:Name="ThemeLight" GroupName="theme" Content="{x:Static strings:AppResources.ThemeLight}" CheckedChanged="OnThemeChecked" SemanticProperties.Description="{x:Static strings:AppResources.ThemeLight}" />
+                    <RadioButton x:Name="ThemeDark" GroupName="theme" Content="{x:Static strings:AppResources.ThemeDark}" CheckedChanged="OnThemeChecked" SemanticProperties.Description="{x:Static strings:AppResources.ThemeDark}" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="8">
+                <Label StyleClass="section" Text="{x:Static strings:AppResources.SettingsAbout}" />
+                <Label Text="{x:Static strings:AppResources.SettingsLogs}" />
+                <Label StyleClass="meta" Text="{Binding LogsFolder}" LineBreakMode="CharacterWrap" />
+                <Button StyleClass="ghost"
+                        Text="{x:Static strings:AppResources.SettingsOpenLogs}"
+                        Command="{Binding OpenLogsCommand}"
+                        IsVisible="{Binding CanOpenLogs}"
+                        HorizontalOptions="Start"
+                        SemanticProperties.Description="{x:Static strings:AppResources.SettingsOpenLogs}" />
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -1,0 +1,93 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:markup="clr-namespace:ImageGen.Avalonia.Markup"
+             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels;assembly=ImageGen.Presentation"
+             xmlns:glyphs="clr-namespace:ImageGen.Presentation.Appearance;assembly=ImageGen.Presentation"
+             xmlns:appearance="clr-namespace:ImageGen.Presentation.Appearance;assembly=ImageGen.Presentation"
+             x:Class="ImageGen.Avalonia.Views.SettingsView"
+             x:DataType="pm:SettingsPageModel">
+    <UserControl.Styles>
+        <!-- The chosen style card has the accent border (ADR 0014). -->
+        <Style Selector="Button.selected">
+            <Setter Property="BorderBrush" Value="{DynamicResource IgAccentBrush}" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+    </UserControl.Styles>
+    <ScrollViewer>
+        <StackPanel Margin="16" Spacing="20" MaxWidth="640" HorizontalAlignment="Stretch">
+            <TextBlock Classes="heading" Text="{markup:Res SettingsTitle}" />
+
+            <StackPanel Spacing="8">
+                <TextBlock Classes="section" Text="{markup:Res SettingsOpenRouter}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <StackPanel>
+                        <TextBlock Text="{markup:Res SettingsApiKey}" />
+                        <TextBlock Classes="meta" Text="{Binding KeyText}" />
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Classes="ghost"
+                            Content="{markup:Res SettingsChangeKey}"
+                            Command="{Binding ChangeKeyCommand}"
+                            AutomationProperties.Name="{markup:Res SettingsChangeKey}" />
+                </Grid>
+            </StackPanel>
+
+            <StackPanel Spacing="8">
+                <TextBlock Classes="section" Text="{markup:Res SettingsAppearance}" />
+                <TextBlock Text="{markup:Res SettingsStyle}" />
+                <ItemsControl ItemsSource="{Binding Styles}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Columns="3" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.DataTemplates>
+                        <DataTemplate DataType="pm:StyleOptionViewModel" x:DataType="pm:StyleOptionViewModel">
+                            <Button Classes.selected="{Binding IsSelected}"
+                                    Command="{Binding SelectCommand}"
+                                    Margin="0,0,8,0"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left"
+                                    AutomationProperties.Name="{Binding Name}">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                    <TextBlock Classes="meta" Text="{Binding Hint}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.DataTemplates>
+                </ItemsControl>
+
+                <TextBlock Text="{markup:Res SettingsTheme}" Margin="0,8,0,0" />
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <RadioButton GroupName="theme"
+                                 Content="{markup:Res ThemeSystem}" AutomationProperties.Name="{markup:Res ThemeSystem}"
+                                 IsChecked="{Binding IsSystemTheme}"
+                                 Command="{Binding SelectThemeCommand}"
+                                 CommandParameter="{x:Static appearance:AppearanceTheme.System}" />
+                    <RadioButton GroupName="theme"
+                                 Content="{markup:Res ThemeLight}" AutomationProperties.Name="{markup:Res ThemeLight}"
+                                 IsChecked="{Binding IsLightTheme}"
+                                 Command="{Binding SelectThemeCommand}"
+                                 CommandParameter="{x:Static appearance:AppearanceTheme.Light}" />
+                    <RadioButton GroupName="theme"
+                                 Content="{markup:Res ThemeDark}" AutomationProperties.Name="{markup:Res ThemeDark}"
+                                 IsChecked="{Binding IsDarkTheme}"
+                                 Command="{Binding SelectThemeCommand}"
+                                 CommandParameter="{x:Static appearance:AppearanceTheme.Dark}" />
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Spacing="8">
+                <TextBlock Classes="section" Text="{markup:Res SettingsAbout}" />
+                <TextBlock Text="{markup:Res SettingsLogs}" />
+                <TextBlock Classes="meta" Text="{Binding LogsFolder}" TextWrapping="Wrap" />
+                <Button Classes="ghost"
+                        Content="{markup:Res SettingsOpenLogs}"
+                        Command="{Binding OpenLogsCommand}"
+                        IsVisible="{Binding CanOpenLogs}"
+                        AutomationProperties.Name="{markup:Res SettingsOpenLogs}" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

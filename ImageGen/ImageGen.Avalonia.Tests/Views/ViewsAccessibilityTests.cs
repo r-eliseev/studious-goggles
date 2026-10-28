@@ -30,6 +30,9 @@ public class ViewsAccessibilityTests
 
         await shell.Navigation.GoToAsync(Routes.Sessions);
         AssertNamed(shell, "сессии");
+
+        await shell.Navigation.GoToAsync(Routes.Settings);
+        AssertNamed(shell, "настройки");
     }
 
     private static void AssertNamed(ShellHarness shell, string page)

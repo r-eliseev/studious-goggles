@@ -6,7 +6,7 @@
              xmlns:appearance="clr-namespace:ImageGen.Presentation.Appearance"
              x:Class="ImageGen.Maui.Controls.SessionsListView"
              x:DataType="pm:SessionsPageModel">
-    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
         <Button StyleClass="primary"
                 Command="{Binding NewSessionCommand}"
                 Text="{x:Static strings:AppResources.NewSession}"
@@ -92,5 +92,15 @@
                 </VerticalStackLayout>
             </VerticalStackLayout>
         </ScrollView>
+
+        <Button Grid.Row="3"
+                StyleClass="ghost"
+                Command="{Binding OpenSettingsCommand}"
+                HorizontalOptions="Start"
+                SemanticProperties.Description="{x:Static strings:AppResources.SettingsTitle}">
+            <Button.ImageSource>
+                <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Settings}" Color="{DynamicResource IgMutedColor}" Size="16" />
+            </Button.ImageSource>
+        </Button>
     </Grid>
 </ContentView>

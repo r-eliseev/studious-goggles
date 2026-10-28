@@ -63,13 +63,16 @@ public static class AppServices
             .Add(Routes.ApiKey, _ => new ApiKeyView { DataContext = sp.GetRequiredService<ApiKeyPageModel>() })
             .Add(Routes.Chat, query => Page(sp.GetRequiredService<ChatPageModel>(), query, model => new ChatView { DataContext = model, SessionPicker = sp.GetRequiredService<SessionsPageModel>() }))
             .Add(Routes.SessionModels, query => Page(sp.GetRequiredService<SessionModelsPageModel>(), query, model => new SessionModelsView { DataContext = model }))
-            .Add(Routes.SessionParameters, query => Page(sp.GetRequiredService<SessionParametersPageModel>(), query, model => new SessionParametersView { DataContext = model })));
+            .Add(Routes.SessionParameters, query => Page(sp.GetRequiredService<SessionParametersPageModel>(), query, model => new SessionParametersView { DataContext = model }))
+            .Add(Routes.Settings, _ => Page(sp.GetRequiredService<SettingsPageModel>(), new Dictionary<string, string>(), model => new SettingsView { DataContext = model })));
         services.AddSingleton<AvaloniaNavigationService>();
         services.AddSingleton<INavigationService>(sp => sp.GetRequiredService<AvaloniaNavigationService>());
 
         services.AddSingleton<SessionsPageModel>();
         services.AddTransient<ApiKeyPageModel>();
         services.AddTransient<ChatPageModel>();
+        services.AddTransient<SettingsPageModel>();
+        services.AddSingleton<IFolderLauncher>(new AvaloniaFolderLauncher(MainWindowOwner));
         services.AddTransient<SessionModelsPageModel>();
         services.AddTransient<SessionParametersPageModel>();
 

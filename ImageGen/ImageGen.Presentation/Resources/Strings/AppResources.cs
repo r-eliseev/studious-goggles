@@ -87,6 +87,48 @@ public static class AppResources
 
     public static string ImageModelsSelectedFormat => Get(nameof(ImageModelsSelectedFormat));
 
+    public static string SettingsTitle => Get(nameof(SettingsTitle));
+
+    public static string SettingsOpenRouter => Get(nameof(SettingsOpenRouter));
+
+    public static string SettingsApiKey => Get(nameof(SettingsApiKey));
+
+    public static string SettingsKeyConnectedFormat => Get(nameof(SettingsKeyConnectedFormat));
+
+    public static string SettingsKeyMissing => Get(nameof(SettingsKeyMissing));
+
+    public static string SettingsChangeKey => Get(nameof(SettingsChangeKey));
+
+    public static string SettingsAppearance => Get(nameof(SettingsAppearance));
+
+    public static string SettingsStyle => Get(nameof(SettingsStyle));
+
+    public static string SettingsTheme => Get(nameof(SettingsTheme));
+
+    public static string StyleQuiet => Get(nameof(StyleQuiet));
+
+    public static string StyleQuietHint => Get(nameof(StyleQuietHint));
+
+    public static string StyleGallery => Get(nameof(StyleGallery));
+
+    public static string StyleGalleryHint => Get(nameof(StyleGalleryHint));
+
+    public static string StyleNotebook => Get(nameof(StyleNotebook));
+
+    public static string StyleNotebookHint => Get(nameof(StyleNotebookHint));
+
+    public static string ThemeSystem => Get(nameof(ThemeSystem));
+
+    public static string ThemeLight => Get(nameof(ThemeLight));
+
+    public static string ThemeDark => Get(nameof(ThemeDark));
+
+    public static string SettingsAbout => Get(nameof(SettingsAbout));
+
+    public static string SettingsLogs => Get(nameof(SettingsLogs));
+
+    public static string SettingsOpenLogs => Get(nameof(SettingsOpenLogs));
+
     public static string SessionsToday => Get(nameof(SessionsToday));
 
     public static string SessionsEarlier => Get(nameof(SessionsEarlier));

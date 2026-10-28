@@ -84,6 +84,8 @@ public static class MauiProgram
         builder.Services.AddTransientWithShellRoute<ChatPage, ChatPageModel>(Routes.Chat);
         builder.Services.AddTransientWithShellRoute<SessionModelsPage, SessionModelsPageModel>(Routes.SessionModels);
         builder.Services.AddTransientWithShellRoute<SessionParametersPage, SessionParametersPageModel>(Routes.SessionParameters);
+        builder.Services.AddTransientWithShellRoute<SettingsPage, SettingsPageModel>(Routes.Settings);
+        builder.Services.AddSingleton<IFolderLauncher, MauiFolderLauncher>();
 
         var app = builder.Build();
         var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ImageGen.Startup");
