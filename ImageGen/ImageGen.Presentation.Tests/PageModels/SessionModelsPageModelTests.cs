@@ -1,3 +1,4 @@
+using System.Globalization;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Providers;
@@ -74,6 +75,31 @@ public class SessionModelsPageModelTests
         _sessions.UpdateAsync(Arg.Do<Session>(saved => _saved = saved), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
         _modelRepository.ListAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns([Alpha, Beta, Gamma]);
         _provider.ListImageModelsAsync(Arg.Any<CancellationToken>()).Returns([Gamma, Alpha, Beta]);
+    }
+
+    [Fact]
+    public async Task ToggleModel_UpdatesSelectedCount()
+    {
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        model.Models[0].IsSelected = !model.Models[0].IsSelected;
+
+        var expected = string.Format(CultureInfo.CurrentCulture, AppResources.ImageModelsSelectedFormat, model.Models.Count(m => m.IsSelected));
+        Assert.Equal(expected, model.SelectedCountText);
+    }
+
+    [Fact]
+    public async Task Cancel_GoesBackWithoutSaving()
+    {
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+        model.Models[0].IsSelected = true;
+
+        await model.CancelCommand.ExecuteAsync(null);
+
+        await _navigation.Received(1).GoBackAsync();
+        Assert.Null(_saved);
     }
 
     private SessionModelsPageModel CreateModel()

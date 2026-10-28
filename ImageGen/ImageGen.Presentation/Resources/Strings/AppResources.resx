@@ -288,4 +288,7 @@
   <data name="ApiKeyHeading" xml:space="preserve">
     <value>Connect OpenRouter</value>
   </data>
+  <data name="ImageModelsSelectedFormat" xml:space="preserve">
+    <value>Image models · {0} selected</value>
+  </data>
 </root>

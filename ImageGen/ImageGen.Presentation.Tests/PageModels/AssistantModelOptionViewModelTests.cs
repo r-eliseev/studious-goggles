@@ -2,6 +2,7 @@ using System.Globalization;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Providers;
 using ImageGen.Presentation.PageModels;
+using ImageGen.Presentation.Resources.Strings;
 
 namespace ImageGen.Presentation.Tests.PageModels;
 
@@ -31,5 +32,16 @@ public class AssistantModelOptionViewModelTests
         {
             CultureInfo.CurrentCulture = previous;
         }
+    }
+
+    [Fact]
+    public void AssistantOption_Tags_ContainTakesImages()
+    {
+        var model = new ChatModel("vendor/assistant", "Assistant", SupportsImageInput: true, ContextLength: 1000, SupportsTools: true);
+
+        var option = new AssistantModelOptionViewModel(
+            new ModelRef(ProviderIds.OpenRouter, model.Id), model, isSelected: false, select: _ => { });
+
+        Assert.Contains(AppResources.AssistantTakesImages, option.Tags);
     }
 }

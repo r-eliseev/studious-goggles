@@ -52,6 +52,10 @@ public sealed partial class SessionModelsPageModel(
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     public partial bool IsBusy { get; set; }
 
+    /// <summary>"Image models · N selected" for the section header; updated when a row is checked or unchecked.</summary>
+    public string SelectedCountText =>
+        string.Format(CultureInfo.CurrentCulture, AppResources.ImageModelsSelectedFormat, _all.Count(m => m.IsSelected));
+
     public string RunsPerModelText =>
         string.Format(CultureInfo.CurrentCulture, AppResources.RunsPerModelFormat, (int)Math.Round(RunsPerModel));
 
@@ -105,6 +109,10 @@ public sealed partial class SessionModelsPageModel(
         }
     }
 
+    /// <summary>Leaves the screen without saving: the session keeps its settings.</summary>
+    [RelayCommand]
+    private Task CancelAsync() => navigation.GoBackAsync();
+
     private bool CanRun() => !IsBusy;
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
@@ -133,6 +141,17 @@ public sealed partial class SessionModelsPageModel(
             var models = await catalog.GetAllImageModelsAsync(forceRefresh, CancellationToken.None);
             _all.Clear();
             _all.AddRange(models.Select(m => new ModelOptionViewModel(m, selected.Contains(new ModelRef(m.ProviderId, m.Id)))));
+            foreach (var row in _all)
+            {
+                row.PropertyChanged += (_, e) =>
+                {
+                    if (e.PropertyName == nameof(ModelOptionViewModel.IsSelected))
+                    {
+                        OnPropertyChanged(nameof(SelectedCountText));
+                    }
+                };
+            }
+            OnPropertyChanged(nameof(SelectedCountText));
 
             var assistants = await chatModels.ListAssistantModelsAsync(ProviderIds.OpenRouter, CancellationToken.None);
             _assistants.Clear();

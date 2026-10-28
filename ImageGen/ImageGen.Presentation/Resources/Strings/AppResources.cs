@@ -85,6 +85,8 @@ public static class AppResources
 
     public static string Copied => Get(nameof(Copied));
 
+    public static string ImageModelsSelectedFormat => Get(nameof(ImageModelsSelectedFormat));
+
     public static string SessionsToday => Get(nameof(SessionsToday));
 
     public static string SessionsEarlier => Get(nameof(SessionsEarlier));

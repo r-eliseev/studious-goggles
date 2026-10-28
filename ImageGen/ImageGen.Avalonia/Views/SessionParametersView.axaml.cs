@@ -12,6 +12,7 @@ public partial class SessionParametersView : UserControl, IAppearing
     public SessionParametersView()
     {
         AvaloniaXamlLoader.Load(this);
+        DialogButtonOrder.Apply(this.FindControl<Panel>("ButtonRow")!, this.FindControl<Button>("SaveButton")!, this.FindControl<Button>("CancelButton")!);
     }
 
     public void OnAppearing() => (DataContext as SessionParametersPageModel)?.OnAppearingAsync().FireAndForgetSafeAsync();

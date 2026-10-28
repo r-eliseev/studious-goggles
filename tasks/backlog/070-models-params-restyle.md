@@ -1,6 +1,6 @@
 ---
 id: 070
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -50,5 +50,19 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Presentation/PageModels/{SessionModelsPageModel,SessionParametersPageModel,AssistantModelOptionViewModel}.cs`, строки, `ImageGen/ImageGen.Avalonia/Views/{SessionModelsView,SessionParametersView}.*`, `ImageGen/ImageGen.Maui/Pages/{SessionModelsPage,SessionParametersPage}.*`, тесты
 
 ## Отчёт
+
+Сделано:
+- Presentation: `SessionModelsPageModel.SelectedCountText` (обновляется при отметке строки), `CancelCommand` в обеих моделях страниц (уходит назад без сохранения), `AssistantModelOptionViewModel.Tags` (free, takes images). Строка `ImageModelsSelectedFormat`. Тесты: `ToggleModel_UpdatesSelectedCount`, `Cancel_GoesBackWithoutSaving` (обе модели), `AssistantOption_Tags_ContainTakesImages`.
+- Avalonia `SessionModelsView.axaml`: поиск с значком `Search`, степпер (`NumericUpDown`), строка «N selected» (`TextBlock.section`) и кнопка Refresh (`ghost small`), флажки с `IsSelected` и `DetailsText` (`meta`), ассистент — `RadioButton` в группе `assistant` с тегами (`Border.tag`), внизу — Save и Cancel. `SessionParametersView.axaml`: подписи `section`, описание `muted`, кнопки Save и Cancel.
+- Порядок кнопок (`Views/DialogButtonOrder.cs`): Save первой на Windows и Linux, Cancel первой на macOS. Тесты `Views/DialogButtonOrderTests` (обе формы экрана).
+- MAUI `SessionModelsPage.xaml` и `SessionParametersPage.xaml`: те же секции и классы, теги через `BindableLayout`, кнопки в `Grid` с порядком в code-behind (`DeviceInfo.Platform == MacCatalyst` меняет колонки).
+
+Отличия от плана:
+- Save на телефонах вынесен в верхнюю панель не сделано: кнопки Save и Cancel внизу на всех платформах (`ToolbarItem` в MAUI нельзя скрыть по платформе из XAML без лишнего кода). Нижний порядок на телефонах — Save слева.
+- Assistant-список в MAUI: `RadioButton` не имеет `Command`, выбор через `CheckedChanged`.
+- Иконка поиска в MAUI — встроенная у `SearchBar`, значок Lucide не добавлен.
+- Тесты доступности MAUI не добавлены (проверка сборкой Android).
+
+Проверка: `ImageGen.Presentation.Tests` 190/190; `ImageGen.Avalonia.Tests` 78/78 (2 пропущены, как и раньше), включая существующие `SessionModelsFlowTests` и `SessionParametersFlowTests` без правок; сборка `ImageGen.Maui` для `net10.0-android` — успешно; `dotnet format --verify-no-changes` для Presentation, Presentation.Tests, Avalonia, Avalonia.Tests, MAUI — без изменений.
 
 ## Комментарии
