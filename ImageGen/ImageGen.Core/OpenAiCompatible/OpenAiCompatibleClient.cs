@@ -84,6 +84,6 @@ public sealed class OpenAiCompatibleClient(
             HttpMethod.Post, "chat/completions", OpenAiChatWire.BuildBody(request), cancellationToken);
         var root = await SendJsonAsync(httpRequest, cancellationToken);
         var (text, toolCalls) = OpenAiChatWire.ReadReply(root, Config.DisplayName);
-        return new AssistantChatResult(text, toolCalls, null);
+        return new AssistantChatResult(text, toolCalls, null, root["usage"]?["prompt_tokens"] is JsonValue tokens && tokens.TryGetValue<int>(out var count) ? count : null);
     }
 }

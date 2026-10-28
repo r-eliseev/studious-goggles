@@ -415,4 +415,17 @@ public class OpenRouterClientTests
         Assert.Equal("data:image/png;base64,AQID", content[1]!["image_url"]!["url"]!.GetValue<string>());
         Assert.False(body.AsObject().ContainsKey("tools"));
     }
+
+    [Fact]
+    public async Task CompleteChatAsync_ReadsPromptTokens()
+    {
+        const string json = """{"choices":[{"message":{"content":"ok"}}],"usage":{"prompt_tokens":1234,"cost":0.01}}""";
+        var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, json));
+
+        var result = await client.CompleteChatAsync(
+            new AssistantChatRequest("m", [AssistantChatMessage.User("hi")], []),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(1234, result.PromptTokens);
+    }
 }

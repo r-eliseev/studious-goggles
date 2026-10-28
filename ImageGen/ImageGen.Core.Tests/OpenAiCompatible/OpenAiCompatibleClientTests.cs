@@ -189,4 +189,17 @@ public class OpenAiCompatibleClientTests
             return new HttpResponseMessage(HttpStatusCode.OK);
         }
     }
+
+    [Fact]
+    public async Task CompleteChatAsync_ReadsPromptTokens()
+    {
+        const string json = """{"choices":[{"message":{"content":"ok"}}],"usage":{"prompt_tokens":321}}""";
+        var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, json));
+
+        var result = await client.CompleteChatAsync(
+            new AssistantChatRequest("m", [AssistantChatMessage.User("hi")], []),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(321, result.PromptTokens);
+    }
 }

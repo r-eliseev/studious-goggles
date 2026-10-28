@@ -135,4 +135,17 @@ public class AnthropicCompatibleClientTests
         Assert.Equal(ApiKeyStatus.Valid, status);
         Assert.Equal("new-key", handler.Requests[0].Headers.GetValues("x-api-key").Single());
     }
+
+    [Fact]
+    public async Task CompleteChatAsync_ReadsInputTokens()
+    {
+        const string json = """{"content":[{"type":"text","text":"ok"}],"usage":{"input_tokens":77}}""";
+        var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, json));
+
+        var result = await client.CompleteChatAsync(
+            new AssistantChatRequest("m", [AssistantChatMessage.User("hi")], []),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(77, result.PromptTokens);
+    }
 }

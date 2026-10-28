@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ImageGen.Core.Context;
 using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Sessions;
@@ -22,7 +23,8 @@ public sealed class AssistantService(
     IImageFileStore files,
     AttachmentService attachments,
     TimeProvider timeProvider,
-    ILogger<AssistantService> logger)
+    ILogger<AssistantService> logger,
+    TokenCorrection correction)
 {
     private const string EmptyResponseText = "The assistant returned an empty response.";
     private const string InvalidToolCallText = "The assistant returned an invalid tool call.";
@@ -85,9 +87,15 @@ public sealed class AssistantService(
                 userImages.Add(await attachments.ReadDataUrlAsync(attachmentId, cancellationToken));
             }
 
-            var request = await BuildRequestAsync(session, userImages, cancellationToken);
+            var built = await BuildRequestAsync(session, userImages, cancellationToken);
+            var request = built.Request;
             messageCount = request.Messages.Count;
             var reply = await chatClient.CompleteChatAsync(request, cancellationToken);
+            if (reply.PromptTokens is { } promptTokens)
+            {
+                // C2.1: the next request of this model is estimated with the factor this reply gives.
+                correction.Record(session.Settings.AssistantModel, built.EstimatedTokens, promptTokens);
+            }
             toolCallCount = reply.ToolCalls.Count;
             logger.LogDebug("Assistant reply in session {SessionId}: {Text}", sessionId, reply.Text);
             var call = reply.ToolCalls.FirstOrDefault(c => c.Name == AssistantPrompts.GenerateImagesToolName);
@@ -209,48 +217,62 @@ public sealed class AssistantService(
         "No run was started for " + string.Join(", ", skipped.Select(s => s.Model.ModelId))
         + ": the model does not take reference images.";
 
-    private async Task<AssistantChatRequest> BuildRequestAsync(Session session, IReadOnlyList<string> userImages, CancellationToken cancellationToken)
+    /// <summary>The request and its estimated size before the correction (for <see cref="TokenCorrection"/>).</summary>
+    private sealed record BuiltRequest(AssistantChatRequest Request, int EstimatedTokens);
+
+    private async Task<BuiltRequest> BuildRequestAsync(Session session, IReadOnlyList<string> userImages, CancellationToken cancellationToken)
     {
         var history = await messages.ListBySessionAsync(session.Id, cancellationToken);
         var lastRun = (await runs.ListRunsBySessionAsync(session.Id, cancellationToken)).LastOrDefault();
-
-        var chat = new List<AssistantChatMessage>
-        {
-            AssistantChatMessage.System(AssistantPrompts.System),
-            AssistantChatMessage.System(lastRun is null
-                ? AssistantPrompts.NoCurrentPrompt
-                : AssistantPrompts.CurrentPrompt(lastRun.Prompt)),
-        };
-        foreach (var message in history.Where(m => !m.IsError).TakeLast(AssistantPrompts.HistoryMessageCount))
-        {
-            chat.Add(message.Role == ChatRole.User
-                ? AssistantChatMessage.User(message.Text)
-                : AssistantChatMessage.Assistant(message.Text));
-        }
+        var assistantModel = session.Settings.AssistantModel;
+        var currentLine = lastRun is null ? AssistantPrompts.NoCurrentPrompt : AssistantPrompts.CurrentPrompt(lastRun.Prompt);
 
         // Images reach the assistant only when its model takes them: the user's own images first, then the last run's.
         var images = new List<string>();
         if (userImages.Count > 0 || lastRun is not null)
         {
-            if (await chatModels.IsImageInputAsync(session.Settings.AssistantModel, cancellationToken))
+            if (await chatModels.IsImageInputAsync(assistantModel, cancellationToken))
             {
                 images.AddRange(userImages);
                 images.AddRange(await LastRunImagesAsync(session, lastRun, cancellationToken));
             }
         }
 
-        var currentUser = chat.FindLastIndex(m => m.Role == AssistantChatMessage.UserRole);
-        if (images.Count > 0 && currentUser >= 0)
+        // C1.1: the history gets what the model's context leaves after the fixed part, the pictures and the reserve.
+        var attachedImages = images.Take(AttachmentService.MaxAttachmentsPerMessage).ToList();
+        var fixedTokens = TokenEstimator.Estimate(AssistantPrompts.System) + TokenEstimator.Estimate(currentLine)
+            + TokenEstimator.Estimate(AssistantPrompts.GenerateImagesToolDescription)
+            + TokenEstimator.Estimate(AssistantPrompts.GenerateImagesToolSchema);
+        var contextLength = await chatModels.ContextLengthAsync(assistantModel, cancellationToken);
+        var budget = new ContextBudget(contextLength, fixedTokens, TokenEstimator.EstimateImages(attachedImages.Count), SummaryTokens: 0);
+        var selected = ContextBuilder.Select(history, budget.HistoryBudget, correction.FactorFor(assistantModel));
+
+        var chat = new List<AssistantChatMessage>
         {
-            var attached = images.Take(AttachmentService.MaxAttachmentsPerMessage).ToList();
-            chat[currentUser] = new AssistantChatMessage(AssistantChatMessage.UserRole, chat[currentUser].Text, attached);
+            AssistantChatMessage.System(AssistantPrompts.System),
+            AssistantChatMessage.System(currentLine),
+        };
+        foreach (var message in selected)
+        {
+            chat.Add(message.Role == ChatRole.User
+                ? AssistantChatMessage.User(message.Text)
+                : AssistantChatMessage.Assistant(message.Text));
+        }
+
+        var currentUser = chat.FindLastIndex(m => m.Role == AssistantChatMessage.UserRole);
+        if (attachedImages.Count > 0 && currentUser >= 0)
+        {
+            chat[currentUser] = new AssistantChatMessage(AssistantChatMessage.UserRole, chat[currentUser].Text, attachedImages);
         }
 
         var tool = new AssistantTool(
             AssistantPrompts.GenerateImagesToolName,
             AssistantPrompts.GenerateImagesToolDescription,
             AssistantPrompts.GenerateImagesToolSchema);
-        return new AssistantChatRequest(session.Settings.AssistantModel.ModelId, chat, [tool]);
+        var estimated = fixedTokens
+            + selected.Sum(m => TokenEstimator.Estimate(m.Text))
+            + TokenEstimator.EstimateImages(attachedImages.Count);
+        return new BuiltRequest(new AssistantChatRequest(assistantModel.ModelId, chat, [tool]), estimated);
     }
 
     /// <summary>

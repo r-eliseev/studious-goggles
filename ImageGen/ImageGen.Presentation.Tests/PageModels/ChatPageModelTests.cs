@@ -160,7 +160,7 @@ public class ChatPageModelTests
         _assistant = new AssistantService(
             _sessionService, _messageRepository, _runRepository, ProviderDoubles.Router(chat: _chat), _generationService,
             new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),
-            _files, _attachments, time, NullLogger<AssistantService>.Instance);
+            _files, _attachments, time, NullLogger<AssistantService>.Instance, new ImageGen.Core.Context.TokenCorrection());
 
         _model = CreateModel(_session.Id);
     }

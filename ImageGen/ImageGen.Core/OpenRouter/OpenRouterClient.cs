@@ -144,8 +144,11 @@ public sealed class OpenRouterClient(
             HttpMethod.Post, "chat/completions", OpenAiChatWire.BuildBody(request), cancellationToken);
         var root = await SendJsonAsync(httpRequest, cancellationToken);
         var (text, toolCalls) = OpenAiChatWire.ReadReply(root, Config.DisplayName);
-        return new AssistantChatResult(text, toolCalls, ReadCost(root));
+        return new AssistantChatResult(text, toolCalls, ReadCost(root), ReadPromptTokens(root));
     }
+
+    private static int? ReadPromptTokens(JsonNode root) =>
+        root["usage"]?["prompt_tokens"] is JsonValue tokens && tokens.TryGetValue<int>(out var count) ? count : null;
 
     private static decimal? ReadCost(JsonNode root)
     {

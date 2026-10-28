@@ -1,3 +1,4 @@
+using ImageGen.Core.Context;
 using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Models;
@@ -97,7 +98,7 @@ public class AssistantServiceTests
             _sessions, _runs, _providers, _files, catalog, _seeds, attachments, time, NullLogger<GenerationService>.Instance);
         var chatModels = new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance);
         _service = new AssistantService(
-            sessionService, _messages, _runs, _providers, _generations, chatModels, _files, attachments, time, _logger);
+            sessionService, _messages, _runs, _providers, _generations, chatModels, _files, attachments, time, _logger, new TokenCorrection());
     }
 
     private ChatMessage AssistantMessage => _stored.Last();
@@ -390,6 +391,47 @@ public class AssistantServiceTests
     }
 
     [Fact]
+    public async Task SendUserMessageAsync_LongSession_RequestFitsContextOfModel()
+    {
+        _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ChatModel>>(
+            [new ChatModel(AssistantModel, "Assistant", SupportsImageInput: false, ContextLength: 8000)]));
+        SeedLongHistory(500);
+        ReplyWith(new AssistantChatResult("ok", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
+
+        var request = LastRequest;
+        Assert.True(request.Messages.Count < 500);
+        Assert.True(request.Messages.Sum(m => TokenEstimator.Estimate(m.Text)) <= 8000 - TokenEstimator.ReserveForOutput);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_UnknownContext_UsesDefaultContextLength()
+    {
+        SeedLongHistory(500);
+        ReplyWith(new AssistantChatResult("ok", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
+
+        Assert.True(LastRequest.Messages.Sum(m => TokenEstimator.Estimate(m.Text)) <= TokenEstimator.UnknownContextLength - TokenEstimator.ReserveForOutput);
+    }
+
+    private void SeedLongHistory(int count)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            _stored.Add(new ChatMessage
+            {
+                Id = Guid.NewGuid(),
+                SessionId = _session.Id,
+                Role = i % 2 == 0 ? ChatRole.User : ChatRole.Assistant,
+                Text = new string('x', 400),
+                CreatedAt = Now.AddSeconds(i),
+            });
+        }
+    }
+
+    [Fact]
     public async Task SendUserMessageAsync_Request_UsesAssistantModelPromptsAndTool()
     {
         ReplyWith(new AssistantChatResult("Hi", [], null));
@@ -428,7 +470,7 @@ public class AssistantServiceTests
     }
 
     [Fact]
-    public async Task SendUserMessageAsync_LongHistory_SendsLastTwentyNonErrorMessages()
+    public async Task SendUserMessageAsync_ShortHistory_SendsAllNonErrorMessagesInOrder()
     {
         for (var i = 0; i < 25; i++)
         {
@@ -446,9 +488,10 @@ public class AssistantServiceTests
 
         await _service.SendUserMessageAsync(_session.Id, "new", TestContext.Current.CancellationToken);
 
+        // C1.4: everything that fits is sent (the 20 newest are a minimum, not a maximum): all 21 non-error messages fit.
         var history = LastRequest.Messages.Skip(2).ToList();
-        Assert.Equal(AssistantPrompts.HistoryMessageCount, history.Count);
-        Assert.Equal("m2", history[0].Text);
+        Assert.Equal(21, history.Count);
+        Assert.Equal("m1", history[0].Text);
         Assert.Equal("new", history[^1].Text);
         Assert.DoesNotContain(history, m => m.Text.StartsWith("error", StringComparison.Ordinal));
     }
