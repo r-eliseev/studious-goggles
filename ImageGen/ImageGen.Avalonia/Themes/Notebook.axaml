@@ -11,17 +11,18 @@
   <FontFamily x:Key="IgFontMeta">avares://ImageGen.Avalonia/Assets/Fonts#IBM Plex Mono</FontFamily>
   <Thickness x:Key="IgUserMessagePadding">0</Thickness>
   <CornerRadius x:Key="IgUserMessageCornerRadius">0</CornerRadius>
-  <x:String x:Key="IgUserMessageAlignment">Left</x:String>
+  <HorizontalAlignment x:Key="IgUserMessageAlignment">Left</HorizontalAlignment>
   <x:Boolean x:Key="IgUserMessageRoleVisible">True</x:Boolean>
   <FontFamily x:Key="IgRoleFont">avares://ImageGen.Avalonia/Assets/Fonts#IBM Plex Mono</FontFamily>
   <Thickness x:Key="IgRunBorderThickness">1</Thickness>
   <Thickness x:Key="IgRunPadding">12</Thickness>
   <Thickness x:Key="IgPromptPadding">10,8</Thickness>
-  <x:String x:Key="IgPromptFontStyle">Normal</x:String>
+  <FontStyle x:Key="IgPromptFontStyle">Normal</FontStyle>
   <FontFamily x:Key="IgPromptFont">avares://ImageGen.Avalonia/Assets/Fonts#IBM Plex Mono</FontFamily>
   <Thickness x:Key="IgCardBorderThickness">1</Thickness>
   <CornerRadius x:Key="IgCardImageCornerRadius">0</CornerRadius>
   <x:Boolean x:Key="IgCardShowFullMeta">True</x:Boolean>
+  <x:Boolean x:Key="IgCardShowShortMeta">False</x:Boolean>
   <x:Boolean x:Key="IgCardShowOverlay">False</x:Boolean>
   <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">

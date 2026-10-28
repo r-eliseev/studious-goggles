@@ -11,17 +11,18 @@
   <FontFamily x:Key="IgFontMeta">avares://ImageGen.Avalonia/Assets/Fonts#Onest</FontFamily>
   <Thickness x:Key="IgUserMessagePadding">14,10</Thickness>
   <CornerRadius x:Key="IgUserMessageCornerRadius">18,18,6,18</CornerRadius>
-  <x:String x:Key="IgUserMessageAlignment">Right</x:String>
+  <HorizontalAlignment x:Key="IgUserMessageAlignment">Right</HorizontalAlignment>
   <x:Boolean x:Key="IgUserMessageRoleVisible">False</x:Boolean>
   <FontFamily x:Key="IgRoleFont">avares://ImageGen.Avalonia/Assets/Fonts#Onest</FontFamily>
   <Thickness x:Key="IgRunBorderThickness">0</Thickness>
   <Thickness x:Key="IgRunPadding">0</Thickness>
   <Thickness x:Key="IgPromptPadding">10,8</Thickness>
-  <x:String x:Key="IgPromptFontStyle">Normal</x:String>
+  <FontStyle x:Key="IgPromptFontStyle">Normal</FontStyle>
   <FontFamily x:Key="IgPromptFont">avares://ImageGen.Avalonia/Assets/Fonts#Onest</FontFamily>
   <Thickness x:Key="IgCardBorderThickness">0</Thickness>
   <CornerRadius x:Key="IgCardImageCornerRadius">18</CornerRadius>
   <x:Boolean x:Key="IgCardShowFullMeta">False</x:Boolean>
+  <x:Boolean x:Key="IgCardShowShortMeta">True</x:Boolean>
   <x:Boolean x:Key="IgCardShowOverlay">True</x:Boolean>
   <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">

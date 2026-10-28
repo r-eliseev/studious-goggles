@@ -11,17 +11,18 @@
   <FontFamily x:Key="IgFontMeta">$Default</FontFamily>
   <Thickness x:Key="IgUserMessagePadding">0</Thickness>
   <CornerRadius x:Key="IgUserMessageCornerRadius">0</CornerRadius>
-  <x:String x:Key="IgUserMessageAlignment">Left</x:String>
+  <HorizontalAlignment x:Key="IgUserMessageAlignment">Left</HorizontalAlignment>
   <x:Boolean x:Key="IgUserMessageRoleVisible">True</x:Boolean>
   <FontFamily x:Key="IgRoleFont">$Default</FontFamily>
   <Thickness x:Key="IgRunBorderThickness">0</Thickness>
   <Thickness x:Key="IgRunPadding">0</Thickness>
   <Thickness x:Key="IgPromptPadding">0</Thickness>
-  <x:String x:Key="IgPromptFontStyle">Italic</x:String>
+  <FontStyle x:Key="IgPromptFontStyle">Italic</FontStyle>
   <FontFamily x:Key="IgPromptFont">$Default</FontFamily>
   <Thickness x:Key="IgCardBorderThickness">1</Thickness>
   <CornerRadius x:Key="IgCardImageCornerRadius">0</CornerRadius>
   <x:Boolean x:Key="IgCardShowFullMeta">True</x:Boolean>
+  <x:Boolean x:Key="IgCardShowShortMeta">False</x:Boolean>
   <x:Boolean x:Key="IgCardShowOverlay">False</x:Boolean>
   <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">

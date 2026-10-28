@@ -85,7 +85,17 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     public partial GenerationStatusKind StatusKind { get; set; }
 
     [ObservableProperty]
+    public partial bool IsDone { get; set; }
+
+    [ObservableProperty]
     public partial bool IsQueued { get; set; }
+
+    /// <summary>True only while the generation is running (not queued), for the status badge class.</summary>
+    [ObservableProperty]
+    public partial bool IsActive { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsFailed { get; set; }
 
     [ObservableProperty]
     public partial bool IsFiltered { get; set; }
@@ -164,7 +174,10 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         NoticeText = NoticeOf(generation);
         HasNotice = NoticeText.Length > 0;
         CostUsd = generation.CostUsd;
+        IsDone = generation.Status == GenerationStatus.Succeeded;
         IsQueued = generation.Status == GenerationStatus.Queued;
+        IsActive = generation.Status == GenerationStatus.Running;
+        IsFailed = generation.Status == GenerationStatus.Failed;
         IsFiltered = generation.Status == GenerationStatus.Filtered;
         IsCancelled = generation.Status == GenerationStatus.Cancelled;
         ErrorText = generation.ErrorMessage?.Trim() ?? "";

@@ -82,7 +82,10 @@
 | `IgCardBackgroundBrush` | `IBrush` / `Brush` | = `IgSurfaceBrush` | `Transparent` | = `IgSurfaceBrush` |
 | `IgCardImageCornerRadius` | `CornerRadius` | 0 | = `IgRadiusMd` (18) | 0 |
 | `IgCardShowFullMeta` | `bool` / `x:Boolean` | True | False | True |
+| `IgCardShowShortMeta` | `bool` / `x:Boolean` | False | True | False |
 | `IgCardShowOverlay` | `bool` / `x:Boolean` | False | True | False |
+
+`IgCardShowShortMeta` — обратное значение `IgCardShowFullMeta`: под картинкой в Gallery короткий блок (модель и цена), в Quiet и Notebook он скрыт в пользу полного блока.
 
 «= Ключ» значит то же значение, что у названного ключа в этом же словаре (цвет зависит от темы). В Notebook подпись автора на макете строчными; в оболочках регистр не меняем (у текстовых элементов нет такого свойства), меняется только шрифт.
 

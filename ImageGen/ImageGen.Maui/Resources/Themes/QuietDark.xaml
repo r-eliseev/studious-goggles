@@ -61,5 +61,6 @@
   <SolidColorBrush x:Key="IgCardBackgroundBrush" Color="#1E2228" />
   <CornerRadius x:Key="IgCardImageCornerRadius">0</CornerRadius>
   <x:Boolean x:Key="IgCardShowFullMeta">True</x:Boolean>
+  <x:Boolean x:Key="IgCardShowShortMeta">False</x:Boolean>
   <x:Boolean x:Key="IgCardShowOverlay">False</x:Boolean>
 </ResourceDictionary>
