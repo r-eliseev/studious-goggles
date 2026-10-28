@@ -27,7 +27,8 @@ public sealed partial class ChatPageModel(
     AttachmentService attachments,
     IFilePickerService filePicker,
     ImageDescriptionService descriptions,
-    IClipboardService clipboard) : ObservableObject
+    IClipboardService clipboard,
+    ICurrentSessionTracker currentSession) : ObservableObject
 {
     private readonly Dictionary<Guid, GenerationItemViewModel> _cards = [];
     private bool _imageConsentGiven;
@@ -85,6 +86,7 @@ public sealed partial class ChatPageModel(
     /// <summary>Reads the whole timeline of the session and rebuilds the rows and cards.</summary>
     public async Task ReloadAsync()
     {
+        currentSession.CurrentId = _sessionId;
         try
         {
             var timeline = await sessions.GetTimelineAsync(_sessionId, CancellationToken.None);

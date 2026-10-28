@@ -1,11 +1,12 @@
 using System.Globalization;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ImageGen.Core.Domain.Sessions;
 
 namespace ImageGen.Presentation.PageModels;
 
 /// <summary>One row of the session list. The commands call the functions of the owning page model.</summary>
-public sealed partial class SessionItemViewModel
+public sealed partial class SessionItemViewModel : ObservableObject
 {
     private readonly Func<SessionItemViewModel, Task> _open;
     private readonly Func<SessionItemViewModel, Task> _delete;
@@ -27,6 +28,10 @@ public sealed partial class SessionItemViewModel
     public string Title { get; }
 
     public string UpdatedText { get; }
+
+    /// <summary>True for the session whose chat is on screen; the list marks it.</summary>
+    [ObservableProperty]
+    private bool _isCurrent;
 
     [RelayCommand]
     private Task OpenAsync() => _open(this);

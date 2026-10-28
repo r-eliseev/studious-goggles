@@ -97,7 +97,7 @@ public class StartFlowTests
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var dialogs = Substitute.For<IDialogService>();
-        dialogs.ConfirmAsync(default!, default!, default!, default!).ReturnsForAnyArgs(true);
+        dialogs.ConfirmAsync(default!, default!, default!, default!, default!).ReturnsForAnyArgs(true);
         using var shell = new ShellHarness(dialogs: dialogs);
         await shell.SaveKeyAsync("sk-or-test");
         await shell.InitializeDatabaseAsync();
@@ -118,7 +118,7 @@ public class StartFlowTests
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var dialogs = Substitute.For<IDialogService>();
-        dialogs.ConfirmAsync(default!, default!, default!, default!).ReturnsForAnyArgs(false);
+        dialogs.ConfirmAsync(default!, default!, default!, default!, default!).ReturnsForAnyArgs(false);
         using var shell = new ShellHarness(dialogs: dialogs);
         await shell.SaveKeyAsync("sk-or-test");
         await shell.InitializeDatabaseAsync();

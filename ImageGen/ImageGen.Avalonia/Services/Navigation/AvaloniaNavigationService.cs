@@ -44,6 +44,25 @@ public sealed class AvaloniaNavigationService(PageRoutes routes, ILogger<Avaloni
         return Task.CompletedTask;
     }
 
+    public Task ReplaceAsync(string route)
+    {
+        if (_stack.Count == 0)
+        {
+            return GoToAsync(route);
+        }
+
+        var (path, query) = RouteParser.Parse(route);
+        var create = routes.Find(path) ?? throw new InvalidOperationException($"Неизвестный маршрут: {path}");
+        var host = RequireHost();
+
+        var view = create(query);
+        Leave(_stack[^1].View);
+        _stack[^1] = (route, view);
+        _logger.LogInformation("Navigation replaces the current page with {Route}.", route);
+        Show(host, view);
+        return Task.CompletedTask;
+    }
+
     public Task GoBackAsync()
     {
         if (_stack.Count < 2)

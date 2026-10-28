@@ -20,6 +20,8 @@ public partial class SessionsPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        // Opening a session from this page goes to its chat; the chat page is the one that replaces.
+        _model.ReplaceOnOpen = false;
         _model.OnAppearingAsync().FireAndForgetSafeAsync();
     }
 

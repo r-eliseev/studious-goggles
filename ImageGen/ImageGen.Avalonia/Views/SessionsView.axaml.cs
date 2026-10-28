@@ -17,7 +17,15 @@ public partial class SessionsView : UserControl, IAppearing
         SizeChanged += (_, e) => ApplyWidth(e.NewSize.Width);
     }
 
-    public void OnAppearing() => (DataContext as SessionsPageModel)?.OnAppearingAsync().FireAndForgetSafeAsync();
+    public void OnAppearing()
+    {
+        if (DataContext is SessionsPageModel model)
+        {
+            // Opening a session from this page goes to its chat; the chat page is the one that replaces.
+            model.ReplaceOnOpen = false;
+            model.OnAppearingAsync().FireAndForgetSafeAsync();
+        }
+    }
 
     private void ApplyWidth(double width)
     {

@@ -171,7 +171,7 @@ public class SessionsPageModelTests : IDisposable
     {
         var session = NewSession("Delete me", DateTimeOffset.UtcNow);
         _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
-        _dialogs.ConfirmAsync(AppResources.DeleteSessionTitle, AppResources.DeleteSessionMessage, AppResources.DeleteSession, AppResources.Cancel)
+        _dialogs.ConfirmAsync(AppResources.DeleteSessionTitle, AppResources.DeleteSessionMessage, AppResources.DeleteSession, AppResources.Cancel, true)
             .Returns(true);
         var model = CreateModel();
         await model.OnAppearingAsync();
@@ -184,11 +184,59 @@ public class SessionsPageModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Delete_AsksDestructiveConfirm()
+    {
+        var session = NewSession("Delete me", DateTimeOffset.UtcNow);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(false);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        await model.Sessions[0].DeleteCommand.ExecuteAsync(null);
+
+        await _dialogs.Received(1).ConfirmAsync(
+            AppResources.DeleteSessionTitle, AppResources.DeleteSessionMessage, AppResources.DeleteSession, AppResources.Cancel, true);
+    }
+
+    [Fact]
+    public async Task OpenChat_MarksSessionCurrentAndAnotherChatMovesMark()
+    {
+        var first = NewSession("First", DateTimeOffset.UtcNow);
+        var second = NewSession("Second", DateTimeOffset.UtcNow.AddMinutes(-1));
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([first, second]);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        _tracker.CurrentId = first.Id;
+        Assert.True(model.Sessions[0].IsCurrent);
+        Assert.False(model.Sessions[1].IsCurrent);
+
+        _tracker.CurrentId = second.Id;
+        Assert.False(model.Sessions[0].IsCurrent);
+        Assert.True(model.Sessions[1].IsCurrent);
+    }
+
+    [Fact]
+    public async Task OpenSession_ReplaceOnOpen_ReplacesInsteadOfPushing()
+    {
+        var session = NewSession("Replace me", DateTimeOffset.UtcNow);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+        model.ReplaceOnOpen = true;
+
+        await model.Sessions[0].OpenCommand.ExecuteAsync(null);
+
+        await _navigation.Received(1).ReplaceAsync(Routes.ChatFor(session.Id));
+        await _navigation.DidNotReceive().GoToAsync(Routes.ChatFor(session.Id));
+    }
+
+    [Fact]
     public async Task DeleteSession_Cancelled_KeepsSessionAndRow()
     {
         var session = NewSession("Keep me", DateTimeOffset.UtcNow);
         _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
-        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(false);
         var model = CreateModel();
         await model.OnAppearingAsync();
 
@@ -198,12 +246,14 @@ public class SessionsPageModelTests : IDisposable
         Assert.Single(model.Sessions);
     }
 
+    private readonly CurrentSessionTracker _tracker = new();
+
     private SessionsPageModel CreateModel(TimeProvider? time = null)
     {
         var catalog = new ChatModelCatalogService(ProviderDoubles.Router(), NullLogger<ChatModelCatalogService>.Instance);
         var sessions = new SessionService(_sessionRepository, Substitute.For<IChatMessageRepository>(), _runs, _files, catalog, TimeProvider.System);
         var apiKeys = new ApiKeyService(ProviderDoubles.Router(_provider), _secrets, NullLogger<ApiKeyService>.Instance);
-        return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs, time ?? TimeProvider.System);
+        return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs, time ?? TimeProvider.System, _tracker);
     }
 
     private static Session NewSession(string title, DateTimeOffset updatedAt) => new()

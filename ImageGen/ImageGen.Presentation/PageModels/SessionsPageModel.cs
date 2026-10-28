@@ -14,7 +14,8 @@ public sealed partial class SessionsPageModel(
     SessionService sessionService,
     INavigationService navigation,
     IDialogService dialogs,
-    TimeProvider timeProvider) : ObservableObject
+    TimeProvider timeProvider,
+    ICurrentSessionTracker tracker) : ObservableObject
 {
     public ObservableCollection<SessionItemViewModel> Sessions { get; } = [];
 
@@ -24,12 +25,28 @@ public sealed partial class SessionsPageModel(
     /// <summary>Sessions last changed on earlier days, newest first.</summary>
     public ObservableCollection<SessionItemViewModel> Earlier { get; } = [];
 
+    /// <summary>
+    /// True while the list sits beside a chat: opening a session replaces that chat, so going back returns to the list.
+    /// The views set it when they appear.
+    /// </summary>
+    public bool ReplaceOnOpen { get; set; }
+
     [ObservableProperty]
     public partial bool IsBusy { get; set; }
+
+    private void OnCurrentSessionChanged(Guid? current)
+    {
+        foreach (var item in Sessions)
+        {
+            item.IsCurrent = item.Id == current;
+        }
+    }
 
     /// <summary>Called by the page on every appearance: initializes the app once, then lists the sessions.</summary>
     public async Task OnAppearingAsync()
     {
+        tracker.Changed -= OnCurrentSessionChanged;
+        tracker.Changed += OnCurrentSessionChanged;
         IsBusy = true;
         try
         {
@@ -47,7 +64,10 @@ public sealed partial class SessionsPageModel(
             Earlier.Clear();
             foreach (var session in sessions.OrderByDescending(session => session.UpdatedAt))
             {
-                var item = new SessionItemViewModel(session, OpenSessionAsync, DeleteSessionAsync);
+                var item = new SessionItemViewModel(session, OpenSessionAsync, DeleteSessionAsync)
+                {
+                    IsCurrent = session.Id == tracker.CurrentId,
+                };
                 Sessions.Add(item);
                 (session.UpdatedAt.ToLocalTime().Date == today ? Today : Earlier).Add(item);
             }
@@ -80,7 +100,14 @@ public sealed partial class SessionsPageModel(
     {
         try
         {
-            await navigation.GoToAsync(Routes.ChatFor(item.Id));
+            if (ReplaceOnOpen)
+            {
+                await navigation.ReplaceAsync(Routes.ChatFor(item.Id));
+            }
+            else
+            {
+                await navigation.GoToAsync(Routes.ChatFor(item.Id));
+            }
         }
         catch (Exception ex)
         {
@@ -94,7 +121,8 @@ public sealed partial class SessionsPageModel(
             AppResources.DeleteSessionTitle,
             AppResources.DeleteSessionMessage,
             AppResources.DeleteSession,
-            AppResources.Cancel);
+            AppResources.Cancel,
+            destructive: true);
         if (!confirmed)
         {
             return;

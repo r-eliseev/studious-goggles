@@ -116,7 +116,11 @@
         </ResourceDictionary>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="Auto,*,Auto,Auto" Padding="16" RowSpacing="12">
+    <Grid x:Name="ChatLayout" ColumnDefinitions="272,*" ColumnSpacing="16" Padding="16">
+        <!-- Wide layout only: the session list beside the chat (ChatPage.xaml.cs). -->
+        <controls:SessionsListView x:Name="SessionList" Grid.Column="0" />
+
+        <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12">
         <HorizontalStackLayout Spacing="8" HorizontalOptions="Start">
             <Button Text="{Binding ModelsButtonText}"
                     Command="{Binding OpenModelsCommand}"
@@ -182,5 +186,6 @@
                         SemanticProperties.Description="{x:Static strings:AppResources.Send}" />
             </Grid>
         </VerticalStackLayout>
+        </Grid>
     </Grid>
 </ContentPage>

@@ -75,6 +75,41 @@ public class AvaloniaNavigationServiceTests
     }
 
     [AvaloniaFact]
+    public async Task ReplaceAsync_ShowsNewPageInPlaceOfCurrentOne()
+    {
+        var host = new ContentControl();
+        var navigation = new AvaloniaNavigationService(Routes());
+        navigation.AttachHost(host);
+        await navigation.GoToAsync("first");
+        var first = Assert.IsType<CountingPage>(host.Content);
+        await navigation.GoToAsync("second");
+        var second = Assert.IsType<CountingPage>(host.Content);
+
+        await navigation.ReplaceAsync("second");
+
+        Assert.NotSame(second, host.Content);
+        Assert.Equal("second", navigation.CurrentRoute);
+        Assert.Equal(1, second.Disappearances);
+    }
+
+    [AvaloniaFact]
+    public async Task ReplaceAsync_ThenGoBack_ReturnsToPageBeforeReplacedOne()
+    {
+        var host = new ContentControl();
+        var navigation = new AvaloniaNavigationService(Routes());
+        navigation.AttachHost(host);
+        await navigation.GoToAsync("first");
+        var first = Assert.IsType<CountingPage>(host.Content);
+        await navigation.GoToAsync("second");
+
+        await navigation.ReplaceAsync("second");
+        await navigation.GoBackAsync();
+
+        Assert.Same(first, host.Content);
+        Assert.Equal("first", navigation.CurrentRoute);
+    }
+
+    [AvaloniaFact]
     public async Task GoToAsync_UnknownRoute_Throws()
     {
         var navigation = new AvaloniaNavigationService(Routes());
@@ -131,10 +166,14 @@ public class AvaloniaNavigationServiceTests
         public void OnDisappearing() => Disappearances++;
     }
 
-    private sealed class CountingPage : UserControl, IAppearing
+    private sealed class CountingPage : UserControl, IAppearing, IDisappearing
     {
         public int Appearances { get; private set; }
 
+        public int Disappearances { get; private set; }
+
         public void OnAppearing() => Appearances++;
+
+        public void OnDisappearing() => Disappearances++;
     }
 }

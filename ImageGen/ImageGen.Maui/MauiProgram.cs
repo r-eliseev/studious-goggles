@@ -75,6 +75,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<AppearanceService>();
         builder.Services.AddSingleton<MauiAppearanceApplier>();
         builder.Services.AddSingleton<IClipboardService, MauiClipboardService>();
+        builder.Services.AddSingleton<ICurrentSessionTracker, CurrentSessionTracker>();
 
         // Pages and page models
         builder.Services.AddSingleton<SessionsPageModel>();

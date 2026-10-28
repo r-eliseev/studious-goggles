@@ -56,11 +56,12 @@ public static class AppServices
         services.AddSingleton<IFilePickerService>(new AvaloniaFilePickerService(MainWindowOwner));
         services.AddSingleton<AppearanceService>();
         services.AddSingleton<IClipboardService>(new AvaloniaClipboardService(MainWindowOwner));
+        services.AddSingleton<ICurrentSessionTracker, CurrentSessionTracker>();
 
         services.AddSingleton(sp => new PageRoutes()
             .Add(Routes.Sessions, _ => new SessionsView { DataContext = sp.GetRequiredService<SessionsPageModel>() })
             .Add(Routes.ApiKey, _ => new ApiKeyView { DataContext = sp.GetRequiredService<ApiKeyPageModel>() })
-            .Add(Routes.Chat, query => Page(sp.GetRequiredService<ChatPageModel>(), query, model => new ChatView { DataContext = model }))
+            .Add(Routes.Chat, query => Page(sp.GetRequiredService<ChatPageModel>(), query, model => new ChatView { DataContext = model, SessionPicker = sp.GetRequiredService<SessionsPageModel>() }))
             .Add(Routes.SessionModels, query => Page(sp.GetRequiredService<SessionModelsPageModel>(), query, model => new SessionModelsView { DataContext = model }))
             .Add(Routes.SessionParameters, query => Page(sp.GetRequiredService<SessionParametersPageModel>(), query, model => new SessionParametersView { DataContext = model })));
         services.AddSingleton<AvaloniaNavigationService>();

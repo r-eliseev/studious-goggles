@@ -2,94 +2,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:markup="clr-namespace:ImageGen.Avalonia.Markup"
              xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels;assembly=ImageGen.Presentation"
-             xmlns:glyphs="clr-namespace:ImageGen.Presentation.Appearance;assembly=ImageGen.Presentation"
+             xmlns:views="clr-namespace:ImageGen.Avalonia.Views"
              x:Class="ImageGen.Avalonia.Views.SessionsView"
              x:DataType="pm:SessionsPageModel">
-    <UserControl.Styles>
-        <!-- The delete icon of a row shows while the pointer is over the row. -->
-        <Style Selector="Button.row-delete">
-            <Setter Property="Opacity" Value="0" />
-        </Style>
-        <Style Selector="Grid.session-row:pointerover Button.row-delete">
-            <Setter Property="Opacity" Value="1" />
-        </Style>
-    </UserControl.Styles>
 
     <Grid x:Name="Layout" ColumnDefinitions="272,*" ColumnSpacing="16" Margin="16">
-        <Grid Grid.Column="0" RowDefinitions="Auto,Auto,*" RowSpacing="12">
-            <Button Classes="primary"
-                    Command="{Binding NewSessionCommand}"
-                    HorizontalAlignment="Stretch"
-                    AutomationProperties.Name="{markup:Res NewSession}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <TextBlock Classes="icon" Text="{x:Static glyphs:IconGlyphs.Plus}" />
-                    <TextBlock Text="{markup:Res NewSession}" />
-                </StackPanel>
-            </Button>
-
-            <ProgressBar Grid.Row="1"
-                         IsIndeterminate="True"
-                         IsVisible="{Binding IsBusy}"
-                         AutomationProperties.Name="{markup:Res SessionsTitle}" />
-
-            <ScrollViewer Grid.Row="2">
-                <StackPanel Spacing="6">
-                    <TextBlock Classes="section" Text="{markup:Res SessionsToday}" Margin="4,8,0,0" />
-                    <ItemsControl ItemsSource="{Binding Today}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="pm:SessionItemViewModel">
-                                <Grid Classes="session-row" ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                                    <Button Classes="ghost"
-                                            Command="{Binding OpenCommand}"
-                                            HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Left"
-                                            AutomationProperties.Name="{Binding Title}">
-                                        <StackPanel Spacing="2">
-                                            <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Classes="meta" Text="{Binding UpdatedText}" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Grid.Column="1"
-                                            Classes="ghost icon row-delete"
-                                            Command="{Binding DeleteCommand}"
-                                            VerticalAlignment="Center"
-                                            AutomationProperties.Name="{markup:Res DeleteSession}">
-                                        <TextBlock Classes="icon" Text="{x:Static glyphs:IconGlyphs.Delete}" />
-                                    </Button>
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <TextBlock Classes="section" Text="{markup:Res SessionsEarlier}" Margin="4,8,0,0" />
-                    <ItemsControl ItemsSource="{Binding Earlier}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="pm:SessionItemViewModel">
-                                <Grid Classes="session-row" ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                                    <Button Classes="ghost"
-                                            Command="{Binding OpenCommand}"
-                                            HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Left"
-                                            AutomationProperties.Name="{Binding Title}">
-                                        <StackPanel Spacing="2">
-                                            <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Classes="meta" Text="{Binding UpdatedText}" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Grid.Column="1"
-                                            Classes="ghost icon row-delete"
-                                            Command="{Binding DeleteCommand}"
-                                            VerticalAlignment="Center"
-                                            AutomationProperties.Name="{markup:Res DeleteSession}">
-                                        <TextBlock Classes="icon" Text="{x:Static glyphs:IconGlyphs.Delete}" />
-                                    </Button>
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </ScrollViewer>
-        </Grid>
+        <views:SessionsListView Grid.Column="0" />
 
         <!-- Shown only in the wide layout (SessionsView.axaml.cs). -->
         <Border x:Name="EmptyState" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">

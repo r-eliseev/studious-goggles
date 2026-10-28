@@ -179,6 +179,8 @@ public class ChatPageModelTests
         },
     };
 
+    private readonly CurrentSessionTracker _tracker = new();
+
     private ChatPageModel CreateModel(Guid sessionId)
     {
         var model = new ChatPageModel(
@@ -192,7 +194,8 @@ public class ChatPageModelTests
             _attachments,
             _filePicker,
             _descriptions,
-            _clipboard);
+            _clipboard,
+            _tracker);
         model.ApplyQueryAttributes(new Dictionary<string, object>
         {
             [Routes.SessionIdParameter] = sessionId.ToString("D"),
@@ -293,6 +296,14 @@ public class ChatPageModelTests
     }
 
     [Fact]
+    public async Task OnAppearingAsync_SetsCurrentSession()
+    {
+        await _model.OnAppearingAsync();
+
+        Assert.Equal(_session.Id, _tracker.CurrentId);
+    }
+
+    [Fact]
     public async Task OnAppearingAsync_LegacyRunMessageWithoutOwnText_ShowsPromptOnceInRun()
     {
         var run = NewRun(_session.Id, "red fox");
@@ -334,7 +345,7 @@ public class ChatPageModelTests
     public void ApplyQueryAttributes_MissingSessionId_Throws()
     {
         var model = new ChatPageModel(
-            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard);
+            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard, _tracker);
 
         Assert.Throws<ArgumentException>(() => model.ApplyQueryAttributes(new Dictionary<string, object>()));
     }
