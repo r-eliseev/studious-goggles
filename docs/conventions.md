@@ -40,6 +40,7 @@
 - Имена тестов: `Метод_Условие_Результат`. Запуск: `dotnet test --project <путь к тестовому csproj>` (см. `docs/knowledge/csharp.md`, раздел «Тесты»).
 - Библиотеки: xUnit v3 и NSubstitute (ADR 0004). Тестовые проекты заводятся задачами 001 и 003.
 - Модели страниц пишутся в `ImageGen.Presentation` без типов UI-фреймворков (`IQueryAttributable`, `MainThread`, `ImageSource`, `Shell`, Avalonia): такие типы остаются в странице или в реализации интерфейса (`IMainThread`, `INavigationService`, `IDialogService`) в оболочке. Тесты — в `ImageGen.Presentation.Tests` (`docs/architecture.md`).
+- Тесты не зависят от культуры и ОС машины: числа и цены в интерфейсе до локализации (задача 028) форматируются `CultureInfo.InvariantCulture`; где культура важна, тест задаёт её сам (`CultureInfo.CurrentCulture = new CultureInfo("pl-PL")` в `try`/`finally`). Тесты, которые удаляют временную папку с базой, сначала дожидаются фоновой работы (`GenerationService.WhenIdleAsync`): на Windows открытый файл не удалить. CI гоняет тесты и на `windows-latest` (задача `windows-tests`).
 
 ## Правила для задач скелета v0.1
 Обязательны для каждой задачи в `tasks/v0.1/`. Если текст задачи расходится с этим разделом, побеждает задача; если задача молчит, действует этот раздел. Если не подходит ни то ни другое, не придумывай: напиши комментарий в задачу и поставь `blocked`.
