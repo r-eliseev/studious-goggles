@@ -1,0 +1,467 @@
+<title>Направления дизайна ImageGen</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Onest:wght@400;500;600;700&display=swap">
+<style>
+/* Page: a long review sheet. Each direction is a band with its own tokens; the page chrome stays neutral. */
+:root {
+  --page-bg: #F6F7F8; --page-card: #FFFFFF; --page-fg: #1A1D21; --page-muted: #586069; --page-line: #DADFE4; --page-accent: #2B5FB8;
+  --sys: system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", Roboto, "Noto Sans", Ubuntu, Cantarell, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --page-bg: #111315; --page-card: #1A1D20; --page-fg: #E7EAED; --page-muted: #9BA4AD; --page-line: #2D3237; --page-accent: #8DB0F2; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --page-bg: #111315; --page-card: #1A1D20; --page-fg: #E7EAED; --page-muted: #9BA4AD; --page-line: #2D3237; --page-accent: #8DB0F2; color-scheme: dark }
+
+/* Direction tokens. A: quiet tool, B: gallery, C: lab notebook. */
+.dir-a { --bg:#F7F8FA; --surface:#FFFFFF; --sunken:#EEF1F5; --fg:#1B1F24; --muted:#5B6470; --line:#DDE2E8; --accent:#2563C9; --on-accent:#FFFFFF; --accent-soft:#E3ECFA;
+  --ok:#18794E; --err:#B42318; --err-soft:#FDECEA; --warn:#8A5A00; --warn-soft:#FBF1DC; --ph:#E9EDF2;
+  --r:8px; --r-sm:6px; --r-pill:6px; --font: var(--sys); --meta: var(--sys); --body:14px; --gap:12px; }
+.dir-b { --bg:#FAFAF9; --surface:#FFFFFF; --sunken:#F1F1EF; --fg:#171717; --muted:#5E5E5B; --line:#E4E4E1; --accent:#0F766E; --on-accent:#FFFFFF; --accent-soft:#DDF1EE;
+  --ok:#18794E; --err:#B42318; --err-soft:#FCEBE9; --warn:#8A5A00; --warn-soft:#FAF0DA; --ph:#ECECE9;
+  --r:18px; --r-sm:12px; --r-pill:999px; --font: "Onest", var(--sys); --meta: "Onest", var(--sys); --body:15px; --gap:16px; }
+.dir-c { --bg:#F5F5F8; --surface:#FFFFFF; --sunken:#ECEBF1; --fg:#1D1B26; --muted:#5F5C6B; --line:#D9D7E1; --accent:#4F46E5; --on-accent:#FFFFFF; --accent-soft:#E7E6FC;
+  --ok:#17784D; --err:#B42318; --err-soft:#FBEAE8; --warn:#8A5A00; --warn-soft:#F8EFD9; --ph:#E8E7EE;
+  --r:4px; --r-sm:3px; --r-pill:3px; --font: "IBM Plex Sans", var(--sys); --meta: var(--mono); --body:14px; --gap:10px; }
+
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dir-a {
+  --bg:#16191D; --surface:#1E2228; --sunken:#121417; --fg:#E6E9ED; --muted:#9AA3AE; --line:#2E343C; --accent:#79A6F2; --on-accent:#0B1424; --accent-soft:#1F2D45;
+  --ok:#4CC38A; --err:#F97066; --err-soft:#3A1F1E; --warn:#E8B34B; --warn-soft:#382C16; --ph:#262B32; } }
+:root[data-theme="dark"] .dir-a {
+  --bg:#16191D; --surface:#1E2228; --sunken:#121417; --fg:#E6E9ED; --muted:#9AA3AE; --line:#2E343C; --accent:#79A6F2; --on-accent:#0B1424; --accent-soft:#1F2D45;
+  --ok:#4CC38A; --err:#F97066; --err-soft:#3A1F1E; --warn:#E8B34B; --warn-soft:#382C16; --ph:#262B32; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dir-b {
+  --bg:#0E0F10; --surface:#18191B; --sunken:#131416; --fg:#EDEDEC; --muted:#A3A39F; --line:#2A2B2E; --accent:#5EC2B5; --on-accent:#05211E; --accent-soft:#163430;
+  --ok:#4CC38A; --err:#F97066; --err-soft:#371D1C; --warn:#E8B34B; --warn-soft:#352A15; --ph:#222326; } }
+:root[data-theme="dark"] .dir-b {
+  --bg:#0E0F10; --surface:#18191B; --sunken:#131416; --fg:#EDEDEC; --muted:#A3A39F; --line:#2A2B2E; --accent:#5EC2B5; --on-accent:#05211E; --accent-soft:#163430;
+  --ok:#4CC38A; --err:#F97066; --err-soft:#371D1C; --warn:#E8B34B; --warn-soft:#352A15; --ph:#222326; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dir-c {
+  --bg:#15141B; --surface:#1D1C25; --sunken:#111017; --fg:#E8E6F0; --muted:#A3A0B2; --line:#302E3B; --accent:#A29DFF; --on-accent:#14123A; --accent-soft:#2A2850;
+  --ok:#4CC38A; --err:#F97066; --err-soft:#381E22; --warn:#E3B341; --warn-soft:#352B17; --ph:#26252F; } }
+:root[data-theme="dark"] .dir-c {
+  --bg:#15141B; --surface:#1D1C25; --sunken:#111017; --fg:#E8E6F0; --muted:#A3A0B2; --line:#302E3B; --accent:#A29DFF; --on-accent:#14123A; --accent-soft:#2A2850;
+  --ok:#4CC38A; --err:#F97066; --err-soft:#381E22; --warn:#E3B341; --warn-soft:#352B17; --ph:#26252F; }
+
+* { box-sizing: border-box }
+body { background: var(--page-bg); color: var(--page-fg); font: 15px/1.55 var(--sys); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 64px }
+.wrap { max-width: 1480px; margin: 0 auto }
+.prose { max-width: 68ch }
+h1, h2, h3 { text-wrap: balance; line-height: 1.2; margin: 0 }
+h1 { font-size: 30px; font-weight: 650 }
+h2 { font-size: 24px; font-weight: 650 }
+h3 { font-size: 15px; font-weight: 600 }
+p { margin: 0 }
+a { color: var(--page-accent) }
+.top { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: end; justify-content: space-between; padding-block: 32px 24px; border-bottom: 1px solid var(--page-line) }
+.top .prose { display: grid; gap: 10px }
+.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--page-muted) }
+.muted { color: var(--page-muted) }
+.theme { display: inline-flex; border: 1px solid var(--page-line); border-radius: 8px; overflow: hidden; background: var(--page-card) }
+.theme button { font: inherit; font-size: 13px; padding: 6px 12px; min-height: 32px; border: 0; background: transparent; color: var(--page-fg); cursor: pointer }
+.theme button[aria-pressed="true"] { background: var(--page-fg); color: var(--page-bg) }
+.theme button:focus-visible, .chip:focus-visible { outline: 2px solid var(--page-accent); outline-offset: 2px }
+
+.basis { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; padding-block: 24px }
+.basis div { background: var(--page-card); border: 1px solid var(--page-line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 4px; min-width: 0 }
+.basis p { font-size: 14px; color: var(--page-muted) }
+
+.dir { border-top: 1px solid var(--page-line); padding-block: 40px 8px; display: grid; gap: 24px }
+.dir-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 24px 48px; align-items: start }
+@media (max-width: 900px) { .dir-head { grid-template-columns: minmax(0, 1fr) } }
+.dir-head .prose { display: grid; gap: 10px }
+.letter { font-family: var(--mono); font-size: 13px; color: var(--page-muted) }
+.spec { display: grid; gap: 14px; min-width: 0 }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px }
+.sw { display: grid; gap: 4px; font-size: 11px; color: var(--page-muted); width: 72px }
+.sw i { display: block; height: 36px; border-radius: 6px; border: 1px solid var(--page-line) }
+.sw code { font-family: var(--mono); font-size: 10.5px }
+.typo { background: var(--bg); color: var(--fg); border: 1px solid var(--page-line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 4px; font-family: var(--font) }
+.typo .t1 { font-size: 20px; font-weight: 600 }
+.typo .t2 { font-size: var(--body) }
+.typo .t3 { font-family: var(--meta); font-size: 12px; color: var(--muted) }
+.pros { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 14px }
+.pros ul { margin: 4px 0 0; padding-left: 18px; color: var(--page-muted) }
+@media (max-width: 560px) { .pros { grid-template-columns: 1fr } }
+
+.dir > * { min-width: 0 }
+.stage { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start }
+.stage > * { min-width: 0; max-width: 100% }
+.scroller { overflow-x: auto; max-width: 100%; min-width: 0; padding-bottom: 6px }
+.cap { font-size: 12px; color: var(--page-muted); margin-top: 8px }
+
+/* ---------- Mock app, styled by direction tokens ---------- */
+.app { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: var(--body); line-height: 1.45; border: 1px solid var(--page-line); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 2px rgb(0 0 0 / .06), 0 8px 24px rgb(0 0 0 / .06) }
+.desk { width: 1040px; height: 1000px; display: grid; grid-template-rows: 32px 1fr }
+.titlebar { background: var(--sunken); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--muted); position: relative }
+.titlebar .ctl { position: absolute; right: 10px; display: flex; gap: 14px; color: var(--muted) }
+.cols { display: grid; grid-template-columns: 264px 1fr; min-height: 0 }
+.side { background: var(--sunken); border-right: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 10px; min-height: 0 }
+.dir-b .side { background: var(--bg) }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font: inherit; font-size: 13px; font-weight: 500; border-radius: var(--r-sm); min-height: 32px; padding: 0 12px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); white-space: nowrap }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent) }
+.dir-b .btn { border-radius: var(--r-pill) }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--muted) }
+.btn.icon { padding: 0; width: 32px }
+.search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); min-height: 32px; padding: 0 10px; color: var(--muted); font-size: 13px }
+.dir-b .search { border-radius: var(--r-pill) }
+.slist { display: grid; gap: 2px; overflow: hidden }
+.sitem { padding: 8px 10px; border-radius: var(--r-sm); display: grid; gap: 1px }
+.sitem b { font-weight: 500; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.sitem span { font-size: 12px; color: var(--muted); font-family: var(--meta) }
+.sitem.on { background: var(--accent-soft) }
+.dir-c .sitem.on { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line) }
+.sgroup { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 8px 10px 2px }
+.keyrow { margin-top: auto; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); padding: 8px 10px; border-top: 1px solid var(--line) }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none }
+
+.main { display: grid; grid-template-rows: auto 1fr auto; min-height: 0; background: var(--bg) }
+.dir-a .main, .dir-c .main { background: var(--surface) }
+.mhead { display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--line); min-width: 0 }
+.dir-b .mhead { border-bottom-color: transparent }
+.mhead h4 { margin: 0 auto 0 0; font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0 }
+.chip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 10px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--surface); font-size: 12.5px; color: var(--fg); white-space: nowrap; font-family: var(--font) }
+.chip em { font-style: normal; color: var(--muted); font-family: var(--meta) }
+.feed { overflow: hidden; padding: 20px 24px 8px; display: flex; flex-direction: column; justify-content: flex-end; gap: 18px; min-height: 0 }
+.col { max-width: 780px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 18px }
+.msg { display: grid; gap: 3px; max-width: 640px }
+.msg .who { font-size: 12px; font-weight: 600; color: var(--muted) }
+.dir-b .msg.user { align-self: flex-end; background: var(--sunken); padding: 10px 14px; border-radius: 18px 18px 6px 18px }
+.dir-b .msg.user .who { display: none }
+.dir-c .msg .who { font-family: var(--meta); font-weight: 500; font-size: 11.5px; text-transform: lowercase }
+.dir-c .msg.user { border-left: 0 }
+.att { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-top: 4px }
+.att i { width: 28px; height: 28px; border-radius: var(--r-sm); display: block; overflow: hidden }
+
+.run { display: grid; gap: 10px }
+.dir-c .run { border: 1px solid var(--line); border-radius: var(--r); padding: 12px }
+.runhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; font-size: 12.5px; color: var(--muted); font-family: var(--meta) }
+.runhead b { color: var(--fg); font-weight: 600; font-family: var(--font) }
+.prompt { font-size: 13px; color: var(--fg); background: var(--sunken); border-radius: var(--r-sm); padding: 8px 10px; display: flex; gap: 8px; align-items: flex-start }
+.dir-a .prompt { background: transparent; padding: 0; color: var(--muted); font-style: italic }
+.dir-c .prompt { font-family: var(--mono); font-size: 12px }
+.prompt .cp { margin-left: auto; color: var(--muted); flex: none }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap) }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; display: grid; position: relative; min-width: 0 }
+.dir-b .card { border: 0; background: transparent }
+.img { aspect-ratio: 3 / 2; display: block; position: relative; background: var(--ph); overflow: hidden }
+.img svg { width: 100%; height: 100%; display: block }
+.dir-b .img { border-radius: var(--r) }
+.meta { padding: 8px 10px 10px; display: grid; gap: 4px; font-size: 12px; min-width: 0 }
+.dir-b .meta { padding: 8px 4px 0 }
+.mrow { display: flex; align-items: center; gap: 6px; min-width: 0 }
+.mname { font-weight: 600; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.mnum { color: var(--muted); font-family: var(--meta); font-variant-numeric: tabular-nums; white-space: nowrap }
+.st { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 500; padding: 1px 7px; border-radius: var(--r-pill); white-space: nowrap; margin-left: auto }
+.st::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor }
+.st.done { color: var(--ok) } .st.run { color: var(--accent) } .st.queue { color: var(--muted) }
+.st.err { color: var(--err); background: var(--err-soft) } .st.filt { color: var(--warn); background: var(--warn-soft) }
+.dir-c .st { font-family: var(--mono); font-weight: 400; text-transform: lowercase }
+.acts { display: flex; gap: 2px; margin-top: 2px }
+.acts .btn { min-height: 28px; height: 28px; font-size: 12px; padding: 0 8px }
+.acts .btn.icon { width: 28px; padding: 0 }
+.hover-note { position: absolute; top: 8px; left: 8px; font-size: 11px; background: rgb(0 0 0 / .62); color: #fff; padding: 2px 7px; border-radius: 4px }
+.dir-b .over { position: absolute; inset: auto 0 0 0; padding: 22px 10px 8px; background: linear-gradient(transparent, rgb(0 0 0 / .62)); color: #fff; display: flex; gap: 6px; align-items: center; font-size: 12px; border-radius: 0 0 var(--r) var(--r) }
+.dir-b .over .btn { background: rgb(255 255 255 / .16); border-color: transparent; color: #fff; min-height: 28px; height: 28px; font-size: 12px; backdrop-filter: blur(6px) }
+.state { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 6px; padding: 12px; text-align: center; font-size: 12px; color: var(--muted) }
+.state svg { width: 20px; height: 20px }
+.img.err { background: var(--err-soft) } .img.err .state { color: var(--err) }
+.img.filt { background: var(--warn-soft) } .img.filt .state { color: var(--warn) }
+.img.run::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--surface) 55%, transparent) 50%, transparent 70%); background-size: 220% 100%; animation: sh 1.6s linear infinite }
+.bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: color-mix(in srgb, var(--accent) 20%, transparent); overflow: hidden }
+.bar::after { content: ""; position: absolute; inset: 0; width: 40%; background: var(--accent); animation: bar 1.4s ease-in-out infinite }
+@keyframes sh { from { background-position: 120% 0 } to { background-position: -120% 0 } }
+@keyframes bar { from { transform: translateX(-100%) } to { transform: translateX(260%) } }
+@media (prefers-reduced-motion: reduce) { .img.run::after, .bar::after { animation: none } }
+.small-link { font-size: 12px; color: var(--accent); font-weight: 500 }
+
+.composer { padding: 10px 24px 16px }
+.box { max-width: 780px; margin: 0 auto; border: 1px solid var(--line); border-radius: calc(var(--r) + 4px); background: var(--surface); padding: 10px 10px 8px 14px; display: grid; gap: 8px; box-shadow: 0 1px 2px rgb(0 0 0 / .04) }
+.dir-b .box { border-radius: 24px; background: var(--sunken); border-color: transparent }
+.dir-c .box { border-radius: var(--r) }
+.box .ph { color: var(--muted); min-height: 22px }
+.boxrow { display: flex; align-items: center; gap: 6px }
+.boxrow .sp { flex: 1 }
+.hint { font-size: 11.5px; color: var(--muted); font-family: var(--meta) }
+.pend { display: flex; gap: 6px }
+.pend span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 4px 3px 3px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--bg) }
+.pend i { width: 22px; height: 22px; border-radius: 3px; overflow: hidden; display: block }
+
+/* Phone */
+.phone { width: 360px; height: 740px; display: grid; grid-template-rows: 44px auto 1fr auto; border-radius: 36px; border: 1px solid var(--page-line); flex: none }
+.sbar { display: flex; justify-content: space-between; align-items: center; padding: 0 26px; font-size: 12.5px; font-weight: 600 }
+.pnav { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; padding: 2px 8px 8px; gap: 4px; border-bottom: 1px solid var(--line) }
+.dir-b .pnav { border-bottom-color: transparent }
+.pnav .back { width: 44px; height: 44px; display: grid; place-items: center; color: var(--accent) }
+.pnav .tt { display: grid; min-width: 0; justify-items: center }
+.pnav .tt b { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100% }
+.pnav .tt span { font-size: 11.5px; color: var(--muted); font-family: var(--meta) }
+.pnav .tune { width: 44px; height: 44px; display: grid; place-items: center; color: var(--fg) }
+.phone .feed { padding: 14px 14px 6px; gap: 14px }
+.phone .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px }
+.phone .meta { padding: 6px 8px 8px }
+.phone .dir-b .meta, .dir-b .phone .meta { padding: 6px 2px 0 }
+.more { margin-left: auto; color: var(--muted); display: grid; place-items: center; width: 28px; height: 28px }
+.phone .composer { padding: 8px 10px 0 }
+.pbox { display: flex; align-items: flex-end; gap: 6px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); padding: 4px }
+.dir-b .pbox { background: var(--sunken); border-color: transparent }
+.dir-c .pbox { border-radius: var(--r) }
+.pbox .ph { flex: 1; color: var(--muted); padding: 9px 4px; font-size: 14.5px }
+.round { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); flex: none }
+.round.send { background: var(--accent); color: var(--on-accent) }
+.dir-c .round { border-radius: var(--r) }
+.home { height: 30px; display: grid; place-items: center }
+.home i { width: 120px; height: 5px; border-radius: 3px; background: var(--fg); opacity: .8; display: block }
+svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
+.pnav svg.i, .round svg.i { width: 20px; height: 20px }
+
+.compare { border-top: 1px solid var(--page-line); padding-block: 40px 0; display: grid; gap: 16px }
+.tbl { overflow-x: auto; border: 1px solid var(--page-line); border-radius: 10px; background: var(--page-card) }
+table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 14px }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--page-line); vertical-align: top }
+tr:last-child td { border-bottom: 0 }
+th { font-weight: 600; font-size: 13px; color: var(--page-muted) }
+.next { display: grid; gap: 8px }
+.next ol { margin: 0; padding-left: 20px; display: grid; gap: 4px }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="prose">
+      <span class="eyebrow">ImageGen · задача 051 · шаг 2 из 5</span>
+      <h1>Три направления дизайна</h1>
+      <p class="muted">Выберите одно направление, можно с оговорками («B, но плотнее, как A»). По выбранному я сделаю дизайн-систему и все экраны из задачи: список сессий, чат во всех состояниях, модели, параметры, ключ, диалоги, в обеих темах. Здесь у всех трёх одинаковые данные: чат на десктопе (1040 px) и на телефоне (360 px). Модели, сиды и цены — примеры.</p>
+    </div>
+    <div class="theme" role="group" aria-label="Тема страницы">
+      <button type="button" id="th-system" data-t="">Как в системе</button>
+      <button type="button" id="th-light" data-t="light">Светлая</button>
+      <button type="button" id="th-dark" data-t="dark">Тёмная</button>
+    </div>
+  </header>
+
+  <section class="basis" aria-label="Общее для всех направлений">
+    <div><h3>Раскладка по ширине</h3><p>Классы ширины Material 3: до 600, 600–839, от 840. Список сессий и чат стоят рядом от 840 px, на телефоне — по одному экрану.</p></div>
+    <div><h3>Ввод важнее размера</h3><p>На десктопе действия карточки показываются при наведении. На телефоне их открывает «…» или долгое нажатие. На сенсорном экране кнопки 44 pt (iOS) и 48 dp (Android).</p></div>
+    <div><h3>Своё у каждой платформы</h3><p>Возврат назад, строка меню на macOS, ⌘ или Ctrl, порядок кнопок в диалогах, системный шрифт. Общие у всех только токены.</p></div>
+    <div><h3>Состояния карточки</h3><p>Готово, идёт, в очереди, ошибка, отфильтровано. «Отфильтровано» показано янтарным, не красным: это решение провайдера, а не ошибка.</p></div>
+  </section>
+
+  <div id="dirs"></div>
+
+  <section class="compare">
+    <h2>Сравнение</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th></th><th>A. Тихий инструмент</th><th>B. Галерея</th><th>C. Журнал опытов</th></tr></thead>
+        <tbody>
+          <tr><th>Главное на экране</th><td>Порядок и плотность, привычный вид настольного приложения</td><td>Картинки; интерфейс отходит на второй план</td><td>Прозрачность: промпт, сид, цена, время видны всегда</td></tr>
+          <tr><th>Шрифт</th><td>Системный: SF, Segoe UI, Roboto; на Linux — запасной</td><td>Onest на всех платформах (OFL, кириллица)</td><td>IBM Plex Sans и Plex Mono (OFL, кириллица)</td></tr>
+          <tr><th>Акцент и радиусы</th><td>Синий, 6–8 px</td><td>Бирюзовый, 12–18 px, кнопки-«пилюли»</td><td>Индиго, 3–4 px</td></tr>
+          <tr><th>Сообщения</th><td>Без пузырей, подпись автора</td><td>Пузырь у пользователя, ассистент без фона</td><td>Подпись строчными моноширинным, прогон в рамке</td></tr>
+          <tr><th>Данные на карточке</th><td>Под картинкой: модель, сид, цена, время</td><td>Поверх картинки при наведении; под ней — модель и цена</td><td>Под картинкой, моноширинным, всё сразу</td></tr>
+          <tr><th>Риски</th><td>Может выглядеть безлико</td><td>Свой шрифт на iOS хуже работает с Dynamic Type; данные о прогоне прячутся</td><td>Моноширинный текст утомляет, если его много; выглядит «для инженеров»</td></tr>
+          <tr><th>Вёрстка MAUI и Avalonia</th><td>Проще всего: близко к Fluent по умолчанию</td><td>Средне: своя подложка под данными, шрифт в комплекте</td><td>Средне: два шрифта в комплекте</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="next prose">
+      <h3>Что дальше</h3>
+      <ol>
+        <li>Вы выбираете направление (в чате или комментарием к этой странице).</li>
+        <li>Дизайн-система: токены в обеих темах, шкала шрифтов, отступы, состояния кнопок и полей, значки (Lucide, ISC — кандидат), правила доступности.</li>
+        <li>Все экраны на десктопе и телефоне, светлая и тёмная тема, затем утверждение.</li>
+        <li>Задачи на вёрстку в MAUI и Avalonia: сначала общие ресурсы темы, потом экраны.</li>
+      </ol>
+      <p class="muted">Открытый вопрос: в задаче написано «касание не меньше 44 px». Я предлагаю 44 pt на iOS, 48 dp на Android, а на десктопе с мышью 28–32 px (не меньше 24, WCAG 2.2 AA). На макетах десктопа уже так.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  // Theme switch: stored per viewer, page works without storage.
+  var root = document.documentElement;
+  function setTheme(t) {
+    if (t) root.setAttribute('data-theme', t); else root.removeAttribute('data-theme');
+    document.querySelectorAll('.theme button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.t === (t || ''))); });
+    try { localStorage.setItem('ig-theme', t || ''); } catch (e) {}
+  }
+  var saved = ''; try { saved = localStorage.getItem('ig-theme') || ''; } catch (e) {}
+  setTheme(saved);
+  document.querySelectorAll('.theme button').forEach(function (b) { b.addEventListener('click', function () { setTheme(b.dataset.t); }); });
+
+  // Lucide-style icons (ISC), hand-drawn subset.
+  var P = {
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+    send: '<path d="M12 19V5M5 12l7-7 7 7"/>',
+    clip: '<path d="m21 11-8.6 8.6a5 5 0 0 1-7-7l8.5-8.6a3.3 3.3 0 0 1 4.7 4.7l-8.6 8.6a1.7 1.7 0 0 1-2.4-2.4L15 7"/>',
+    sliders: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+    layers: '<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/>',
+    more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+    repeat: '<path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+    dice: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r=".8"/><circle cx="15.5" cy="15.5" r=".8"/><circle cx="15.5" cy="8.5" r=".8"/><circle cx="8.5" cy="15.5" r=".8"/>',
+    pencil: '<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+    chev: '<path d="m15 18-6-6 6-6"/>',
+    key: '<circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.5 12.5 9-9M16 6l3 3M14 8l2 2"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    alert: '<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h0"/>',
+    shield: '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z"/><path d="M9 12h6"/>',
+    copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+    min: '<path d="M5 12h14"/>', sq: '<rect x="5" y="5" width="14" height="14" rx="1"/>', x: '<path d="M6 6l12 12M18 6 6 18"/>'
+  };
+  function ic(n) { return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">' + P[n] + '</svg>'; }
+
+  // Generated-image stand-in: watercolor lighthouse, palette varies by seed.
+  var uid = 0;
+  function art(v) {
+    var pal = [
+      ['#F2B48A', '#B67AA8', '#5E6FA8', '#2F4A7A', '#3B3344'],
+      ['#F6D29A', '#E58F7A', '#7B79B8', '#3E5A8E', '#2E2B3A'],
+      ['#C9D8E6', '#9DB1D1', '#6A7FB0', '#34507F', '#2A2F3D']
+    ][v % 3];
+    var id = 'g' + (uid++);
+    return '<svg viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
+      '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + pal[2] + '"/><stop offset=".55" stop-color="' + pal[1] + '"/><stop offset="1" stop-color="' + pal[0] + '"/></linearGradient></defs>' +
+      '<rect width="300" height="200" fill="url(#' + id + ')"/>' +
+      '<circle cx="' + (70 + v * 40) + '" cy="112" r="16" fill="' + pal[0] + '" opacity=".9"/>' +
+      '<path d="M0 130 C60 122 120 136 180 128 S280 124 300 130 V200 H0Z" fill="' + pal[3] + '" opacity=".92"/>' +
+      '<path d="M0 150 C50 144 110 156 170 150 S270 146 300 152 V200 H0Z" fill="' + pal[2] + '" opacity=".55"/>' +
+      '<path d="M170 200 L190 150 L214 138 L238 146 L262 132 L300 150 V200Z" fill="' + pal[4] + '"/>' +
+      '<rect x="222" y="78" width="12" height="62" fill="#F4F1EC"/><rect x="222" y="96" width="12" height="7" fill="#C2564B"/><rect x="222" y="116" width="12" height="7" fill="#C2564B"/>' +
+      '<rect x="219" y="68" width="18" height="11" fill="' + pal[4] + '"/><circle cx="228" cy="73" r="4" fill="#FFE6A6"/>' +
+      '<path d="M232 73 L300 ' + (52 + v * 6) + ' L300 ' + (88 - v * 4) + 'Z" fill="#FFE6A6" opacity=".28"/>' +
+      '</svg>';
+  }
+
+  var RUN = {
+    prompt: 'Loose watercolor painting of a white lighthouse on a rocky coast at dusk, warm light from the lamp, cool blue-violet sea, soft paper texture',
+    gens: [
+      { model: 'flux.2-klein-4b', seed: '1840213377', st: 'done', cost: '$0.014', time: '5.8 s', v: 0 },
+      { model: 'flux.2-klein-4b', seed: '92011845', st: 'done', cost: '$0.014', time: '6.1 s', v: 1 },
+      { model: 'flux.2-klein-4b', seed: '664200731', st: 'run' },
+      { model: 'flux.2-pro', seed: '1840213377', st: 'queue' },
+      { model: 'flux.2-pro', seed: '92011845', st: 'err', msg: 'The provider did not answer in time.' },
+      { model: 'flux.2-pro', seed: '664200731', st: 'filt' }
+    ]
+  };
+  var ST = { done: 'Done', run: 'Generating', queue: 'Queued', err: 'Error', filt: 'Filtered' };
+
+  function imgBox(g) {
+    if (g.st === 'done') return '<div class="img">' + art(g.v) + '</div>';
+    if (g.st === 'run') return '<div class="img run"><div class="state">Generating…</div><div class="bar"></div></div>';
+    if (g.st === 'queue') return '<div class="img"><div class="state">' + ic('clock') + 'Queued</div></div>';
+    if (g.st === 'err') return '<div class="img err"><div class="state">' + ic('alert') + g.msg + '<span class="small-link">Details</span></div></div>';
+    return '<div class="img filt"><div class="state">' + ic('shield') + 'Filtered by the provider.<br>This is the provider\'s decision.</div></div>';
+  }
+
+  function card(g, dir, phone, hovered) {
+    var nums = g.st === 'done'
+      ? '<span class="mnum">seed ' + g.seed + '</span>'
+      : '<span class="mnum">seed ' + g.seed + '</span>';
+    var tail = g.st === 'done' ? '<span class="mnum">' + g.cost + ' · ' + g.time + '</span>' : '';
+    var acts = '';
+    if (!phone) {
+      if (g.st === 'done' && hovered) acts = '<div class="acts"><span class="btn ghost icon" title="Repeat">' + ic('repeat') + '</span><span class="btn ghost icon" title="New seed">' + ic('dice') + '</span><span class="btn ghost icon" title="Edit">' + ic('pencil') + '</span><span class="btn ghost icon" title="Describe">' + ic('eye') + '</span><span class="btn ghost icon" title="More">' + ic('more') + '</span></div>';
+      if (g.st === 'err' || g.st === 'filt') acts = '<div class="acts"><span class="btn ghost">' + ic('repeat') + 'Repeat</span></div>';
+    }
+    var over = '';
+    if (dir === 'b' && g.st === 'done' && !phone && hovered) {
+      over = '<div class="over"><span>seed ' + g.seed + '</span><span style="margin-left:auto" class="btn icon">' + ic('repeat') + '</span><span class="btn icon">' + ic('dice') + '</span><span class="btn icon">' + ic('pencil') + '</span><span class="btn icon">' + ic('more') + '</span></div>';
+      acts = '';
+    }
+    var img = imgBox(g);
+    if (over) img = img.replace(/<\/div>$/, over + '</div>');
+    var more = phone && g.st !== 'run' && g.st !== 'queue' ? '<span class="more">' + ic('more') + '</span>' : '';
+    var meta;
+    if (dir === 'c') {
+      meta = '<div class="mrow"><span class="mname">' + g.model + '</span><span class="st ' + g.st + '">' + ST[g.st] + '</span></div>' +
+        '<div class="mrow">' + nums + more + '</div>' + (tail ? '<div class="mrow">' + tail + '</div>' : '') + acts;
+    } else if (dir === 'b') {
+      meta = '<div class="mrow"><span class="mname">' + g.model + '</span>' + (g.st === 'done' ? '<span class="mnum" style="margin-left:auto">' + g.cost + '</span>' : '<span class="st ' + g.st + '">' + ST[g.st] + '</span>') + more + '</div>' + acts;
+    } else {
+      meta = '<div class="mrow"><span class="mname">' + g.model + '</span><span class="st ' + g.st + '">' + ST[g.st] + '</span></div>' +
+        '<div class="mrow">' + nums + (tail && !phone ? '<span class="mnum" style="margin-left:auto">' + g.cost + ' · ' + g.time + '</span>' : '') + more + '</div>' + acts;
+    }
+    var note = hovered && !phone ? '<span class="hover-note">при наведении</span>' : '';
+    return '<div class="card">' + img + '<div class="meta">' + meta + '</div>' + note + '</div>';
+  }
+
+  function runBlock(dir, phone) {
+    var gens = phone ? [RUN.gens[0], RUN.gens[1], RUN.gens[2], RUN.gens[5]] : RUN.gens;
+    var head = dir === 'c'
+      ? '<div class="runhead"><b>run 2</b><span>2 models × 3 seeds</span><span>3:2</span><span>2 of 6 done</span><span>$0.028</span></div>'
+      : '<div class="runhead"><b>Run</b><span>2 models × 3 · 3:2</span><span>2 of 6 done · $0.028</span></div>';
+    var prompt = '<div class="prompt"><span>' + (phone ? RUN.prompt.slice(0, 92) + '…' : RUN.prompt) + '</span>' + (phone ? '' : '<span class="cp" title="Copy prompt">' + ic('copy') + '</span>') + '</div>';
+    return '<div class="run">' + head + prompt + '<div class="grid">' + gens.map(function (g, i) { return card(g, dir, phone, !phone && i === 0); }).join('') + '</div></div>';
+  }
+
+  function messages(dir, phone) {
+    var you = dir === 'c' ? 'you' : 'You', asst = dir === 'c' ? 'assistant · claude-haiku-5.5' : 'Assistant';
+    return '<div class="msg user"><span class="who">' + you + '</span><span>A lighthouse on a rocky coast at dusk, watercolor. Like this sketch, but calmer.</span>' +
+      '<span class="att"><i>' + art(2) + '</i>sketch.png · reference</span></div>' +
+      '<div class="msg"><span class="who">' + asst + '</span><span>Here is a first take: loose watercolor, warm lamp light, a cool sea. I kept your composition with the lighthouse on the right.</span></div>' +
+      runBlock(dir, phone);
+  }
+
+  function desktop(dir) {
+    var sessions = [['Lighthouse at dusk, watercolor', '2 min', true], ['Logo for a coffee roastery', '1 h'], ['Cat astronaut sticker set', 'Yesterday'], ['Isometric tiny office', 'Yesterday'], ['Forest cabin in fog', 'Oct 24'], ['Poster: jazz night in Lisbon', 'Oct 22']];
+    var list = '<div class="sgroup">Today</div>' + sessions.slice(0, 2).map(si).join('') + '<div class="sgroup">Earlier</div>' + sessions.slice(2).map(si).join('');
+    function si(s) { return '<div class="sitem' + (s[2] ? ' on' : '') + '"><b>' + s[0] + '</b><span>' + s[1] + '</span></div>'; }
+    return '<div class="app desk" role="img" aria-label="Макет: чат на десктопе">' +
+      '<div class="titlebar">ImageGen<span class="ctl">' + ic('min') + ic('sq') + ic('x') + '</span></div>' +
+      '<div class="cols"><aside class="side"><span class="btn primary">' + ic('plus') + 'New session</span><div class="search">' + ic('search') + 'Search sessions</div><div class="slist">' + list + '</div>' +
+      '<div class="keyrow"><span class="dot"></span>OpenRouter key · ' + ic('key') + '</div></aside>' +
+      '<section class="main"><div class="mhead"><h4>Lighthouse at dusk, watercolor</h4>' +
+      '<span class="chip">' + ic('layers') + 'Models <em>2 × 3</em></span><span class="chip">Assistant <em>claude-haiku-5.5</em></span><span class="chip">' + ic('sliders') + 'Parameters <em>3:2</em></span></div>' +
+      '<div class="feed"><div class="col">' + messages(dir, false) + '</div></div>' +
+      '<div class="composer"><div class="box"><div class="pend"><span><i>' + art(1) + '</i>coast-photo.jpg ' + ic('x') + '</span></div><div class="ph">Describe the image you want</div>' +
+      '<div class="boxrow"><span class="btn ghost icon" title="Attach image">' + ic('clip') + '</span><span class="hint">1 of 4 images · Enter to send, Shift+Enter for a new line</span><span class="sp"></span><span class="btn primary icon" title="Send">' + ic('send') + '</span></div></div></div>' +
+      '</section></div></div>';
+  }
+
+  function phone(dir) {
+    return '<div class="app phone" role="img" aria-label="Макет: чат на телефоне">' +
+      '<div class="sbar"><span>9:41</span><span>●●● 5G ▮</span></div>' +
+      '<div class="pnav"><span class="back">' + ic('chev') + '</span><span class="tt"><b>Lighthouse at dusk</b><span>2 × 3 · claude-haiku-5.5</span></span><span class="tune">' + ic('sliders') + '</span></div>' +
+      '<div class="feed">' + messages(dir, true) + '</div>' +
+      '<div><div class="composer"><div class="pbox"><span class="round">' + ic('plus') + '</span><span class="ph">Describe the image</span><span class="round send">' + ic('send') + '</span></div></div><div class="home"><i></i></div></div>' +
+      '</div>';
+  }
+
+  var DIRS = [
+    { k: 'a', name: 'A. Тихий инструмент', lead: 'Привычное настольное приложение: системный шрифт, нейтральные серые, один синий акцент, плотная сетка. Похоже на почту или заметки на Mac и Windows: ничего не спорит с картинками, но и характера мало.',
+      sw: [['bg', '#F7F8FA', '#16191D'], ['surface', '#FFFFFF', '#1E2228'], ['fg', '#1B1F24', '#E6E9ED'], ['muted', '#5B6470', '#9AA3AE'], ['accent', '#2563C9', '#79A6F2'], ['filtered', '#8A5A00', '#E8B34B']],
+      type: ['SF Pro / Segoe UI Variable / Roboto', 'Основной текст 14 (десктоп), 17 pt на iOS', 'seed 1840213377 · $0.014 · 5.8 s'],
+      plus: ['Выглядит родным на каждой платформе', 'Проще всего сверстать в MAUI и Avalonia', 'Dynamic Type на iOS работает сам'],
+      minus: ['Безликий: похож на любой шаблон', 'На Linux шрифт зависит от среды'] },
+    { k: 'b', name: 'B. Галерея', lead: 'Главное — картинки: крупные скругления, интерфейс без рамок, данные поверх картинки при наведении. Пользователь пишет в пузыре, ассистент — без фона, как в чат-ассистентах. Один шрифт (Onest) везде.',
+      sw: [['bg', '#FAFAF9', '#0E0F10'], ['surface', '#FFFFFF', '#18191B'], ['fg', '#171717', '#EDEDEC'], ['muted', '#5E5E5B', '#A3A39F'], ['accent', '#0F766E', '#5EC2B5'], ['filtered', '#8A5A00', '#E8B34B']],
+      type: ['Onest — свой шрифт на всех платформах', 'Основной текст 15, заголовки 600', '$0.014'],
+      plus: ['Картинки выглядят лучше всего', 'Близко к ChatGPT и Claude, знакомо', 'Тёмная тема хорошо подходит для просмотра'],
+      minus: ['Сид и время спрятаны: прозрачность хуже', 'Свой шрифт: Dynamic Type на iOS настраивать отдельно'] },
+    { k: 'c', name: 'C. Журнал опытов', lead: 'Каждый прогон — запись опыта: промпт, модели, сиды, цена и время видны сразу, моноширинным шрифтом. Острые углы, индиго-акцент. Удобно сравнивать результаты и повторять генерации с тем же сидом.',
+      sw: [['bg', '#F5F5F8', '#15141B'], ['surface', '#FFFFFF', '#1D1C25'], ['fg', '#1D1B26', '#E8E6F0'], ['muted', '#5F5C6B', '#A3A0B2'], ['accent', '#4F46E5', '#A29DFF'], ['filtered', '#8A5A00', '#E3B341']],
+      type: ['IBM Plex Sans + IBM Plex Mono', 'Основной текст 14, данные — Plex Mono 12', 'seed 1840213377 · $0.014 · 5.8 s'],
+      plus: ['Лучше всего показывает принцип «всё видно»', 'Удобно сравнивать модели и сиды', 'Сильный характер'],
+      minus: ['Моноширинный текст утомляет, если его много', 'Может выглядеть слишком «для инженеров»'] }
+  ];
+
+  var out = DIRS.map(function (d) {
+    var sw = d.sw.map(function (s) { return '<div class="sw"><i style="background:' + s[1] + '"></i><i style="background:' + s[2] + '"></i>' + s[0] + '<code>' + s[1] + '</code></div>'; }).join('');
+    return '<section class="dir dir-' + d.k + '" id="dir-' + d.k + '" aria-labelledby="h-' + d.k + '">' +
+      '<div class="dir-head"><div class="prose"><span class="letter">направление ' + d.k.toUpperCase() + '</span><h2 id="h-' + d.k + '">' + d.name + '</h2><p>' + d.lead + '</p>' +
+      '<div class="pros"><div><h3>Сильные стороны</h3><ul>' + d.plus.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul></div><div><h3>Слабые стороны</h3><ul>' + d.minus.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul></div></div></div>' +
+      '<div class="spec"><div class="swatches" aria-label="Палитра: светлая и тёмная">' + sw + '</div>' +
+      '<div class="typo"><span class="t1">Lighthouse at dusk, watercolor</span><span class="t2">' + d.type[0] + '. ' + d.type[1] + '.</span><span class="t3">' + d.type[2] + '</span></div></div></div>' +
+      '<div class="stage"><div class="scroller">' + desktop(d.k) + '<p class="cap">Десктоп, 1040 px. Первая карточка показана в состоянии наведения.</p></div>' +
+      '<div>' + phone(d.k) + '<p class="cap">Телефон, 360 px. Действия открываются через «…» или долгим нажатием.</p></div></div>' +
+      '</section>';
+  }).join('');
+  document.getElementById('dirs').innerHTML = out;
+})();
+</script>

@@ -36,6 +36,17 @@ created: 2026-10-28
    - MAUI: модульных тестов нет (платформенный код); сборка Android и CI для Windows; ручные пункты — в 016.
 5. Документация: `docs/knowledge/avalonia.md` и `docs/knowledge/maui.md` — как перехвачен Enter; пункт в 016 и 046.
 
+### Остаток работы — только Android (уточнение 2026-10-28, claude-cloud-t9wd)
+Avalonia и подсказка сделаны (см. «Отчёт»), MAUI Windows сделала задача 056 (`Controls/ChatEditor.cs`, `Platforms/Windows/ChatEditorKeyHandling.cs`, регистрация в `MauiProgram.cs` под `#if WINDOWS`). Шаги 2 и 3 (Windows) выше не выполнять. Осталось:
+1. `ImageGen/ImageGen.Maui/Platforms/Android/ChatEditorImeHandling.cs` — `public static class ChatEditorImeHandling` по образцу `ChatEditorKeyHandling`: `Register()` → `EditorHandler.Mapper.AppendToMapping("ChatEditorImeSend", (handler, view) => ...)`; для `view is ChatEditor editor`: `handler.PlatformView.ImeOptions = Android.Views.InputMethods.ImeAction.Send`; `handler.PlatformView.SetRawInputType(Android.Text.InputTypes.ClassText | Android.Text.InputTypes.TextFlagCapSentences)` (без `TextFlagMultiLine`: иначе клавиатура показывает перевод строки вместо «Отправить»; длинный текст всё равно переносится визуально); подписка на `EditorAction`: при `ImeAction.Send` — `args.Handled = true`, затем `editor.SendCommand?.CanExecute(null) == true` → `Execute(null)`.
+2. Аппаратный Enter на Android (клавиатура Bluetooth): в той же подписке `KeyPress` нативного `EditText` — `Keycode.Enter` без Shift при `KeyEventActions.Down` → то же, что п. 1; с Shift — не трогать.
+3. `MauiProgram.cs`: `#if ANDROID` → `ImageGen.Maui.Platforms.Android.ChatEditorImeHandling.Register();` рядом с Windows-регистрацией.
+4. Решение «перевод строки на экранной клавиатуре»: на Android его нет (поле однострочного ввода с переносом); записать в «Отчёт» и в `docs/knowledge/maui.md`.
+5. Проверка: сборка Android (`-p:AndroidSdkDirectory=$ANDROID_HOME`), `dotnet format` MAUI, `scripts/check.sh`; ручные пункты — в 016 («Android: на экранной клавиатуре кнопка „Отправить“ отправляет сообщение; пустое поле не отправляется»).
+6. После этого статус `done`.
+
+Файлы (остаток): `ImageGen/ImageGen.Maui/Platforms/Android/ChatEditorImeHandling.cs` (новый), `ImageGen/ImageGen.Maui/MauiProgram.cs`, `docs/knowledge/maui.md`, `tasks/v0.1/016-skeleton-manual-check.md`
+
 ### Команды проверки
 ```
 dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj
