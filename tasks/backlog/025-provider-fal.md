@@ -1,8 +1,8 @@
 ---
 id: 025
-status: in-progress
-assignee: kiro-agent
-claimed: 2026-10-28
+status: done
+assignee:
+claimed:
 created: 2026-10-27
 ---
 
