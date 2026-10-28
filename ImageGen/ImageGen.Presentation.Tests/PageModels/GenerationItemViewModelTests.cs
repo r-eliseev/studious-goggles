@@ -103,6 +103,88 @@ public class GenerationItemViewModelTests
         Assert.DoesNotContain("→", card.DetailsText, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Update_Succeeded_FillsModelSeedCostTime()
+    {
+        var generation = BaseGeneration();
+        generation.Status = GenerationStatus.Succeeded;
+        generation.ModelId = "vendor/model";
+        generation.Seed = 42;
+        generation.SeedApplied = true;
+        generation.CostUsd = 0.014m;
+        generation.CompletedAt = generation.CreatedAt.AddSeconds(3);
+
+        var card = CardOf(generation);
+
+        Assert.Equal(GenerationStatusKind.Done, card.StatusKind);
+        Assert.Equal("vendor/model", card.ModelText);
+        Assert.Equal(string.Format(AppResources.SeedFormat, 42), card.SeedText);
+        Assert.Equal(string.Format(AppResources.CostFormat, "0.014"), card.CostText);
+        Assert.Equal(string.Format(AppResources.TimeFormat, "3"), card.TimeText);
+    }
+
+    [Fact]
+    public void Update_Filtered_SetsFilteredKind()
+    {
+        var generation = BaseGeneration();
+        generation.Status = GenerationStatus.Filtered;
+
+        var card = CardOf(generation);
+
+        Assert.Equal(GenerationStatusKind.Filtered, card.StatusKind);
+        Assert.True(card.IsFiltered);
+        Assert.False(card.IsQueued);
+        Assert.False(card.IsCancelled);
+        Assert.Equal(AppResources.FilteredNotice, card.NoticeText);
+    }
+
+    [Fact]
+    public void Update_SeedNotApplied_ShowsSeedNotSupported()
+    {
+        var generation = BaseGeneration();
+        generation.Status = GenerationStatus.Succeeded;
+        generation.SeedApplied = false;
+
+        var card = CardOf(generation);
+
+        Assert.Equal(AppResources.SeedNotSupported, card.SeedText);
+    }
+
+    [Fact]
+    public void Update_DroppedParameter_FillsNotice()
+    {
+        var generation = BaseGeneration();
+        generation.Status = GenerationStatus.Succeeded;
+        generation.Outcomes = [new ParameterOutcome("output_format", ParameterOutcomeKind.Dropped, "webp", null, ParameterDropReason.NotSupported)];
+
+        var card = CardOf(generation);
+
+        Assert.Contains("webp: not sent (the model does not support it)", card.NoticeText, StringComparison.Ordinal);
+    }
+
+    private static Generation BaseGeneration() => new()
+    {
+        Id = Guid.NewGuid(),
+        RunId = Guid.NewGuid(),
+        SessionId = Guid.NewGuid(),
+        ProviderId = "openrouter",
+        ModelId = "vendor/model",
+        Prompt = "fox",
+        Seed = 1,
+        SeedApplied = true,
+        Status = GenerationStatus.Succeeded,
+        CreatedAt = Now,
+        SortOrder = 0,
+    };
+
+    private static GenerationItemViewModel CardOf(Generation generation) => new(
+        generation,
+        Substitute.For<IImageFileStore>(),
+        _ => Task.CompletedTask,
+        _ => Task.CompletedTask,
+        _ => Task.CompletedTask,
+        (_, _) => Task.CompletedTask);
+
     private static GenerationItemViewModel Card(params ParameterOutcome[] outcomes) => Card(outcomes, 0);
 
     private static GenerationItemViewModel Card(int referenceCount) => Card([], referenceCount);

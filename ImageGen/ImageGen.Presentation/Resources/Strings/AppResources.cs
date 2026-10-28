@@ -73,6 +73,12 @@ public static class AppResources
 
     public static string StatusFiltered => Get(nameof(StatusFiltered));
 
+    public static string FilteredNotice => Get(nameof(FilteredNotice));
+
+    public static string TimeFormat => Get(nameof(TimeFormat));
+
+    public static string RunHeaderFormat => Get(nameof(RunHeaderFormat));
+
     public static string SeedFormat => Get(nameof(SeedFormat));
 
     public static string SeedNotSupported => Get(nameof(SeedNotSupported));

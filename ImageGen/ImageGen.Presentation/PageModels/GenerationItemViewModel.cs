@@ -56,6 +56,46 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     [ObservableProperty]
     public partial string DetailsText { get; set; } = "";
 
+    /// <summary>Model id of the generation.</summary>
+    [ObservableProperty]
+    public partial string ModelText { get; set; } = "";
+
+    /// <summary>Seed ("seed N") or "seed not supported".</summary>
+    [ObservableProperty]
+    public partial string SeedText { get; set; } = "";
+
+    /// <summary>Price ("$N") when known, otherwise empty.</summary>
+    [ObservableProperty]
+    public partial string CostText { get; set; } = "";
+
+    /// <summary>Generation time ("Ns") when both timestamps are known, otherwise empty.</summary>
+    [ObservableProperty]
+    public partial string TimeText { get; set; } = "";
+
+    /// <summary>Parameter lines (replaced or dropped) and the filtered explanation; empty when none.</summary>
+    [ObservableProperty]
+    public partial string NoticeText { get; set; } = "";
+
+    /// <summary>True when <see cref="NoticeText"/> is not empty.</summary>
+    [ObservableProperty]
+    public partial bool HasNotice { get; set; }
+
+    /// <summary>Status of the card: one placeholder and one status label per value.</summary>
+    [ObservableProperty]
+    public partial GenerationStatusKind StatusKind { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsQueued { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsFiltered { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsCancelled { get; set; }
+
+    /// <summary>Price in USD when known; used by the run header to total the cost.</summary>
+    public decimal? CostUsd { get; private set; }
+
     [ObservableProperty]
     public partial string ErrorText { get; set; } = "";
 
@@ -115,7 +155,18 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         }
 
         StatusText = StatusTextOf(generation.Status);
+        StatusKind = StatusKindOf(generation.Status);
         DetailsText = DetailsOf(generation);
+        ModelText = generation.ModelId;
+        SeedText = SeedTextOf(generation);
+        CostText = CostTextOf(generation);
+        TimeText = TimeTextOf(generation);
+        NoticeText = NoticeOf(generation);
+        HasNotice = NoticeText.Length > 0;
+        CostUsd = generation.CostUsd;
+        IsQueued = generation.Status == GenerationStatus.Queued;
+        IsFiltered = generation.Status == GenerationStatus.Filtered;
+        IsCancelled = generation.Status == GenerationStatus.Cancelled;
         ErrorText = generation.ErrorMessage?.Trim() ?? "";
         HasErrorText = ErrorText.Length > 0;
         HasError = generation.Status == GenerationStatus.Failed && HasErrorText;
@@ -124,6 +175,61 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         IsRunning = generation.Status is GenerationStatus.Queued or GenerationStatus.Running;
         IsFinished = generation.IsFinished;
         SummaryText = string.Join(". ", new[] { StatusText, DetailsText, ErrorText }.Where(text => text.Length > 0));
+    }
+
+    private static GenerationStatusKind StatusKindOf(GenerationStatus status) => status switch
+    {
+        GenerationStatus.Queued => GenerationStatusKind.Queued,
+        GenerationStatus.Running => GenerationStatusKind.Running,
+        GenerationStatus.Succeeded => GenerationStatusKind.Done,
+        GenerationStatus.Failed => GenerationStatusKind.Failed,
+        GenerationStatus.Cancelled => GenerationStatusKind.Cancelled,
+        GenerationStatus.Filtered => GenerationStatusKind.Filtered,
+        _ => throw new ArgumentOutOfRangeException(nameof(status), status, null),
+    };
+
+    private static string SeedTextOf(Generation generation) => generation.SeedApplied
+        ? string.Format(CultureInfo.InvariantCulture, AppResources.SeedFormat, generation.Seed)
+        : AppResources.SeedNotSupported;
+
+    private static string CostTextOf(Generation generation)
+    {
+        if (generation.CostUsd is not { } cost)
+        {
+            return "";
+        }
+
+        var price = cost.ToString("0.####", CultureInfo.InvariantCulture);
+        return string.Format(CultureInfo.InvariantCulture, AppResources.CostFormat, price);
+    }
+
+    private static string TimeTextOf(Generation generation)
+    {
+        if (generation.CompletedAt is not { } completed)
+        {
+            return "";
+        }
+
+        var seconds = (completed - generation.CreatedAt).TotalSeconds;
+        if (seconds <= 0)
+        {
+            return "";
+        }
+
+        var value = seconds.ToString("0.#", CultureInfo.InvariantCulture);
+        return string.Format(CultureInfo.InvariantCulture, AppResources.TimeFormat, value);
+    }
+
+    private static string NoticeOf(Generation generation)
+    {
+        var lines = new List<string>();
+        if (generation.Status == GenerationStatus.Filtered)
+        {
+            lines.Add(AppResources.FilteredNotice);
+        }
+
+        lines.AddRange(ParameterLines(generation.Outcomes));
+        return string.Join("\n", lines);
     }
 
     private static string StatusTextOf(GenerationStatus status) => status switch

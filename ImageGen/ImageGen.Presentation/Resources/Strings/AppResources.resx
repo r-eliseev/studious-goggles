@@ -102,6 +102,15 @@
   <data name="StatusFiltered" xml:space="preserve">
     <value>Filtered by the provider</value>
   </data>
+  <data name="FilteredNotice" xml:space="preserve">
+    <value>Filtered by the provider. This is the provider's decision, not an error.</value>
+  </data>
+  <data name="TimeFormat" xml:space="preserve">
+    <value>{0}s</value>
+  </data>
+  <data name="RunHeaderFormat" xml:space="preserve">
+    <value>{0} models × {1} · {2} of {3} done · ${4}</value>
+  </data>
   <data name="SeedFormat" xml:space="preserve">
     <value>seed {0}</value>
   </data>
