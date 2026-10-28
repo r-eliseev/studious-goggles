@@ -107,4 +107,58 @@ scripts/check.sh
 - Визуальная проверка на рабочем столе Avalonia и под Windows/телефонами — ручные
   задачи 046 и 016.
 
+### 2026-10-28, kiro-agent — фикс регресса MAUI XAML (StyleClass, IsClippedToBounds)
+
+CI-задача `maui` (Windows-цель `net10.0-windows10.0.19041.0`) падала с ошибками
+компиляции XAML в `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml` — регресс от
+предыдущего отчёта по 068 (MAUI локально не собирался, ошибки уехали на CI).
+
+Что было не так:
+- `MAUIX2002: No accessible property ... for "IsClippedToBounds"` на `<Border>`
+  области картинки 3:2 (строка 104). В MAUI у `Border` нет свойства
+  `IsClippedToBounds` — это свойство из Avalonia/Layout, по ошибке перенесённое из
+  Avalonia-разметки. В MAUI `Border` и так обрезает содержимое по заданному
+  `StrokeShape` (`RoundRectangle` с `IgCardImageCornerRadius` уже задан внутри).
+- Шесть `MAUIX2002: No accessible property ... for "StyleClass"` в блоке метки
+  статуса: внутри `DataTrigger` стояли `<Setter Property="StyleClass"
+  Value="meta,status-*" />`. В MAUI `StyleClass` не является `BindableProperty`,
+  поэтому его нельзя присвоить через `Setter` в `DataTrigger` (в отличие от классов
+  Avalonia). Эти сеттеры порождали вторичные CS0119/CS0120 в сгенерированном
+  `Pages_ChatPage.xaml.xsg.cs`.
+
+Как починено:
+- Убран атрибут `IsClippedToBounds="True"` у `<Border>` картинки. Обрезка по форме
+  обеспечивается самим `Border` по его `StrokeShape` (`RoundRectangle`), как и
+  задумано.
+- Вместо `Setter Property="StyleClass"` в шести `DataTrigger` метки статуса теперь
+  `Setter Property="TextColor"` с теми же `DynamicResource`, что и у классов
+  `status-*` в `Resources/Styles/Styles.xaml` (дословно): `IgOkColor` (done),
+  `IgAccentColor` (running), `IgMutedColor` (queued), `IgErrColor` (failed),
+  `IgWarnColor` (filtered), `IgMutedColor` (cancelled). Класс `meta` на `Label`
+  сохранён (шрифт/размер/spacing), текст метки по-прежнему
+  `Text="{Binding StatusText}"` — критерий 068 «статус не только цветом, у метки
+  всегда есть текст» соблюдён.
+
+Выбранный вариант для метки статуса: прямые `Setter`'ы конкретного свойства
+(`TextColor`) через `DynamicResource`. Этот вариант минимален, не меняет визуальный
+результат (классы `status-*` в MAUI задавали ровно один `TextColor` каждый),
+сохраняет текст метки и не трогает рабочую Avalonia-разметку (там классы работают
+иначе и компилируются). Проверено: других `Setter Property="StyleClass"` и
+`IsClippedToBounds` в MAUI-проекте нет.
+
+Как проверено (локально, .NET 10 SDK 10.0.403, MAUI android workload + Android SDK
+API 35/36, JDK 17):
+- `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android` —
+  **Build succeeded, 0 Warning(s), 0 Error(s)**. Генерация XAML включена
+  (`MauiXamlInflator=SourceGen`) — это тот же путь компиляции `ChatPage.xaml`, что
+  падал на CI, поэтому фикс подтверждён локально (Windows-цель собрать на Linux
+  нельзя, но ошибки MAUIX/SourceGen общие для всех целей).
+- `dotnet test` Presentation 208/208 и Avalonia 95/95 (2 пропуска) — зелёные.
+- `dotnet format --verify-no-changes` для `ImageGen.Avalonia` и `ImageGen.Maui` —
+  без изменений.
+- `scripts/check.sh` — пройден.
+
+Тем самым восполнено «Не проверено» из предыдущего отчёта: MAUI теперь собирается
+локально (Android-цель), а не только на CI.
+
 ## Комментарии

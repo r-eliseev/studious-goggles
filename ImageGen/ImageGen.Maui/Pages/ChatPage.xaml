@@ -101,7 +101,7 @@
                                                 <VerticalStackLayout Spacing="6">
                                                     <!-- Image area 3:2 with the per-status placeholder and the overlay strip. -->
                                                     <Border WidthRequest="264" HeightRequest="176"
-                                                            StrokeThickness="0" IsClippedToBounds="True">
+                                                            StrokeThickness="0">
                                                         <Border.StrokeShape>
                                                             <RoundRectangle CornerRadius="{DynamicResource IgCardImageCornerRadius}" />
                                                         </Border.StrokeShape>
@@ -168,22 +168,22 @@
                                                         <Label StyleClass="meta" Text="{Binding StatusText}">
                                                             <Label.Triggers>
                                                                 <DataTrigger TargetType="Label" Binding="{Binding IsDone}" Value="True">
-                                                                    <Setter Property="StyleClass" Value="meta,status-done" />
+                                                                    <Setter Property="TextColor" Value="{DynamicResource IgOkColor}" />
                                                                 </DataTrigger>
                                                                 <DataTrigger TargetType="Label" Binding="{Binding IsActive}" Value="True">
-                                                                    <Setter Property="StyleClass" Value="meta,status-running" />
+                                                                    <Setter Property="TextColor" Value="{DynamicResource IgAccentColor}" />
                                                                 </DataTrigger>
                                                                 <DataTrigger TargetType="Label" Binding="{Binding IsQueued}" Value="True">
-                                                                    <Setter Property="StyleClass" Value="meta,status-queued" />
+                                                                    <Setter Property="TextColor" Value="{DynamicResource IgMutedColor}" />
                                                                 </DataTrigger>
                                                                 <DataTrigger TargetType="Label" Binding="{Binding IsFailed}" Value="True">
-                                                                    <Setter Property="StyleClass" Value="meta,status-failed" />
+                                                                    <Setter Property="TextColor" Value="{DynamicResource IgErrColor}" />
                                                                 </DataTrigger>
                                                                 <DataTrigger TargetType="Label" Binding="{Binding IsFiltered}" Value="True">
-                                                                    <Setter Property="StyleClass" Value="meta,status-filtered" />
+                                                                    <Setter Property="TextColor" Value="{DynamicResource IgWarnColor}" />
                                                                 </DataTrigger>
                                                                 <DataTrigger TargetType="Label" Binding="{Binding IsCancelled}" Value="True">
-                                                                    <Setter Property="StyleClass" Value="meta,status-cancelled" />
+                                                                    <Setter Property="TextColor" Value="{DynamicResource IgMutedColor}" />
                                                                 </DataTrigger>
                                                             </Label.Triggers>
                                                         </Label>
