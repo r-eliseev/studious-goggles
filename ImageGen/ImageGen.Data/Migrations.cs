@@ -37,6 +37,12 @@ internal static class Migrations
             }
 
             var number = int.Parse(name.AsSpan(0, 4), CultureInfo.InvariantCulture);
+            if (number == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Неверный номер миграции в {name}: нумерация начинается с 0001.");
+            }
+
             parsed.Add(new Migration(number, name, script));
         }
 

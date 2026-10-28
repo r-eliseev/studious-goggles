@@ -65,6 +65,17 @@ public class MigrationsTests
     }
 
     [Fact]
+    public void Load_NumberZero_ThrowsNamingFile()
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() => Migrations.Load(
+        [
+            ("0000_a.sql", "A"),
+        ]));
+
+        Assert.Contains("0000_a.sql", exception.Message);
+    }
+
+    [Fact]
     public void Load_EmptySet_Throws()
     {
         Assert.Throws<InvalidOperationException>(() => Migrations.Load([]));

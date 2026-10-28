@@ -88,14 +88,16 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Data/ImageGen.Data.csproj`, `ImageGen/ImageGen.Data/Migrations.cs`, `ImageGen/ImageGen.Data/SqliteDatabase.cs`, `ImageGen/ImageGen.Data.Tests/MigrationsTests.cs` (новый), `ImageGen/ImageGen.Data.Tests/SqliteDatabaseTests.cs`, `docs/architecture.md`
 
 ## Отчёт
+- Реализация взята из WIP-коммита `d691615` (cherry-pick, родитель уже в `origin/main`) и проверена против плана.
 - Изменено: `ImageGen.Data.csproj` (префикс `Migrations.` у имён ресурсов), `Migrations.cs` (`Load` и ленивый `All` из ресурсов), `Migration.cs` (новый, запись `Migration`), `SqliteDatabase.cs` (версия по `Migration.Number`, проверка «база новее приложения»), `docs/architecture.md` (одна фраза про миграции).
-- Тесты: `ImageGen.Data.Tests/MigrationsTests.cs` (новый, 9 тестов: порядок, пропуск номера, повтор номера, неверное имя, пустой набор, текст скрипта, `All`), `SqliteDatabaseTests.cs` (+1: база с `user_version` больше числа миграций).
-- Порядок TDD: сначала тесты (сборка падала на `Migrations.Load`), затем код.
-- Результаты: `dotnet test ImageGen.Data.Tests` — 48/48 (было 38/38). `dotnet format --verify-no-changes` для `ImageGen.Data` и `ImageGen.Data.Tests` — код 0.
-- Отклонение: в `SqliteDatabase.InitializeAsync` проверка версии стоит до `PRAGMA journal_mode = WAL`, чтобы слишком новая база не менялась даже в режиме журнала (план такого порядка не фиксировал).
-- Миграции схемы: новых и изменённых нет (только `0001_initial.sql`, он без изменений).
-- Не проверено отдельным тестом: добавление `NNNN_имя.sql` без правки кода; обеспечено маской `Migrations/*.sql` в csproj.
-- Среда: Linux (облачная сессия). Windows-проверок у задачи нет.
+- Исправлено после сверки: номер `0000` (`0000_x.sql`) падал с `ArgumentOutOfRangeException` вместо понятной ошибки. Добавлен тест `Load_NumberZero_ThrowsNamingFile` (сначала падал по этой причине), в `Load` добавлена проверка «нумерация начинается с 0001».
+- Тесты: `MigrationsTests.cs` (10 тестов: порядок, пропуск номера, повтор номера, неверное имя, `0000`, пустой набор, текст скрипта, `All` с номером 1, `All` по числу файлов), `SqliteDatabaseTests.cs` (+1: база с `user_version` больше числа миграций, ошибка и версия не меняются).
+- Результаты: `dotnet test ImageGen.Data.Tests` — 49/49 (до задачи было 38/38; WIP-коммит дал 48/48; +1 тест на `0000`). `dotnet format --verify-no-changes` для `ImageGen.Data` и `ImageGen.Data.Tests` — код 0. `scripts/check.sh` — пройден.
+- Критерий «новая миграция одним файлом без правки C#» проверен пробой: временный `Migrations/0002_probe.sql` (`CREATE TABLE probe`) подхвачен без правок кода, 48 тестов прошли, в том числе `All`-счётчик и версии. Файл пробы удалён.
+- Замечание: пробная миграция, создающая таблицу, ломает существующий тест `InitializeAsync_NewFile_CreatesAllTables`, который сверяет точный список таблиц. Это не дефект механизма; следующие миграции (036, 020, 018, 019, 025, 027) будут обновлять этот тест вместе со своей таблицей.
+- Отклонения от плана: `Migration` вынесен в отдельный файл `Migration.cs` (правило «один тип на файл»); в `SqliteDatabase.InitializeAsync` проверка версии стоит до `PRAGMA journal_mode = WAL`, чтобы слишком новая база не менялась даже в режиме журнала.
+- Миграции схемы: новых и изменённых нет (`0001_initial.sql` без изменений).
+- Среда: Linux (облачная сессия). Windows-проверок у задачи нет, поэтому статус `done`.
 
 ## Комментарии
 
