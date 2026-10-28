@@ -1,8 +1,8 @@
 ---
 id: 025
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: kiro-agent
+claimed: 2026-10-28
 created: 2026-10-27
 ---
 
@@ -139,6 +139,51 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Providers/IImageProvider.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderJobPoller.cs` (новый), `ImageGen/ImageGen.Core/OpenRouter/OpenRouterJobRunner.cs` (новый), `ImageGen/ImageGen.Core/OpenRouter/OpenRouterImageProvider.cs` (новый), `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterImageProviderTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Providers/ProviderJobPollerTests.cs` (новый), `ImageGen/ImageGen.Core/Providers/IImageGenerator.cs` (удаляется), `ImageGen/ImageGen.Core/Providers/IModelProvider.cs` (удаляется), `ImageGen/ImageGen.Core/Providers/ProviderJobRequest.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderJobHandle.cs` (новый), `ImageGen/ImageGen.Core/Providers/JobUpdate.cs` (новый), `ImageGen/ImageGen.Core/Providers/CancelOutcome.cs` (новый), `ImageGen/ImageGen.Core/Providers/ImageDownload.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalImageProvider.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalQueueClient.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalJson.cs` (новый), `ImageGen/ImageGen.Core/Domain/Generations/GenerationStatus.cs`, `ImageGen/ImageGen.Core/Domain/Generations/Generation.cs`, `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Services/ApiKeyService.cs`, `ImageGen/ImageGen.Core/Storage/IRunRepository.cs`, `ImageGen/ImageGen.Core/Storage/IImageFileStore.cs`, `ImageGen/ImageGen.Core/Serialization/CoreJsonContext.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data/Migrations/NNNN_generation_jobs.sql` (новый), `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Data/FileImageStore.cs`, `ImageGen/ImageGen.Core.Tests/Fal/FalImageProviderTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/RunRepositoryTests.cs`, `ImageGen/ImageGen.Data.Tests/FileImageStoreTests.cs`, `ImageGen/ImageGen.Presentation/PageModels/GenerationItemViewModel.cs` (файл переехал из `ImageGen.Maui` в `ImageGen.Presentation`, ADR 0006), `docs/architecture.md` (раскладка провайдеров)
 
 ## Отчёт
+
+### 2026-10-28, kiro-agent — регистрация fal во встроенной конфигурации
+
+Части 1–3 задачи 025 (контракт очереди, `FalImageProvider`, `ProviderKind.Fal`,
+`ProviderIds.Fal`, миграция, восстановление опроса) уже в `main` из PR #31. Эта
+правка закрывает оставшийся пункт — регистрацию провайдера fal во встроенном
+реестре провайдеров.
+
+Что изменено:
+- `ImageGen/ImageGen.Core/Providers/builtin-providers.json`: добавлен блок
+  провайдера `fal` (`id "fal"`, `kind "fal"`, `displayName "fal.ai"`,
+  `baseAddress "https://queue.fal.run/"`, `timeoutSeconds 180`).
+- `ImageGen/ImageGen.Core.Tests/Providers/ProviderConfigLoaderTests.cs`: добавлен
+  тест `BuiltIn_RegistersFalProvider`, который читает реальный встроенный JSON
+  (`ReadBuiltInJson`) и проверяет, что реестр содержит провайдер `fal` с `kind`
+  `Fal`, именем `fal.ai`, адресом `https://queue.fal.run/`, таймаутом 180 с и
+  пустым списком `imageModels`.
+
+Выбор `baseAddress "https://queue.fal.run/"` сохранён как в задаче: submit идёт
+на `<base>/<endpoint-id>`, а адреса статуса, результата и отмены берутся
+абсолютными из ответа submit (так реализовано в `FalImageProvider`). Поля
+результата (`images[].url`, `content_type`, `has_nsfw_concepts` как массив bool)
+сверены с OpenAPI-схемой модели fal-ai/flux/schnell
+(`https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=fal-ai/flux/schnell`,
+проверено 2026-10-28) и совпадают с тем, что уже ожидает `FalImageProvider`.
+
+Процесс (ub-mode / TDD): сначала добавлен тест, проверяющий наличие fal во
+встроенном реестре (его не было — существующие тесты использовали inline-JSON
+только с OpenRouter); затем подтверждён проход на уже присутствующей записи json.
+
+Как проверено (локально, .NET 10 SDK 10.0.403, установлен в среду):
+- `dotnet test ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj` — 306/306
+  пройдено (305 было + 1 новый).
+- `dotnet format ImageGen/ImageGen.Core/ImageGen.Core.csproj --verify-no-changes`
+  и то же для `ImageGen.Core.Tests` — без изменений.
+- `scripts/check.sh` — все проверки пройдены.
+
+Отличий от плана нет: это финальная регистрация провайдера, остальные пункты
+плана реализованы ранее в `main`.
+
+Не проверено (нужен живой ключ fal, отдельная ручная проверка):
+- Проверка ключа через `https://api.fal.ai/v1/models` (`CheckKeyAsync`).
+- Реальная схема ответа конкретной модели и значения `has_nsfw_concepts`.
+- Цена генерации fal (`CostUsd` остаётся `null`, официального источника нет).
+- Фактическая генерация через очередь fal с реальным endpoint id.
 
 ## Комментарии
 
