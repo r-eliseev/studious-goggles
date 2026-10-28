@@ -76,3 +76,9 @@ dotnet user-secrets set <ключ> <значение> секреты для ра
 - Общий `Random`, `HttpClient` или `List` из нескольких потоков без синхронизации.
 - Сравнение денег и цен в `double`: для денег использовать `decimal` (цены провайдеров, суммы расходов).
 - Строки дат без часового пояса: хранить в UTC (`DateTimeOffset`).
+
+## Логирование и имена (проверено 2026-10-28)
+- Serilog (`Serilog.Sinks.File`) в шаблоне `{Message:lj}` берёт значения в JSON-форме: строки и перечисления выходят в кавычках (`is "Succeeded"`). Для читаемой строки использовать `{Message:l}`.
+- `TaskExtensions` в .NET 10 конфликтует с `System.Threading.Tasks.TaskExtensions` при `using ImageGen.Presentation.Utilities;` в тестах. Ссылаться через алиас (`using AppTaskExtensions = ImageGen.Presentation.Utilities.TaskExtensions;`).
+- `HttpContent.TryComputeLength` доступен только внутри сборки. Размер ответа в обработчике: `(await content.ReadAsByteArrayAsync()).Length`, после этого тело остаётся читаемым.
+

@@ -34,6 +34,7 @@ CI: `.github/workflows/build.yml` (задача `core` на Ubuntu: формат
 - Бесплатных моделей картинок у OpenRouter на 2026-10-27 нет; модель по умолчанию — `black-forest-labs/flux.2-klein-4b` ($0.014 за мегапиксель, есть seed). Бесплатная модель только у ассистента: `google/gemma-4-31b-it:free`.
 
 - Формы API, которые проверяются только на заглушках (задача 036): ответ `images/generations` у OpenAI-совместимых сервисов (берётся `data[0].b64_json`, ответ с URL не поддержан); заголовок `anthropic-version: 2023-06-01` и `GET /models` у Anthropic-совместимых сервисов. Неизвестно, совпадают ли они с реальными сервисами: проверить вручную на реальном ключе (`docs/decisions/0009-provider-config-and-model-ref.md`).
+- Журнал (задача 045): внутренние сообщения Avalonia (`LogToTrace`) не пишутся в файл журнала; путь папки логов Avalonia на Windows и macOS не проверен (`docs/knowledge/dev-environment.md`, «Логи»; ADR 0010).
 - Запуск приложения с неверным `providers.json` (сообщение об ошибке и остановка старта) проверен тестом композиции, но не в окне MAUI и Avalonia.
 
 ## Решения владельца (2026-10-27)
