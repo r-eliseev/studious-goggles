@@ -1,8 +1,8 @@
 ---
 id: 051
-status: in-progress
-assignee: claude-cloud-t9wd
-claimed: 2026-10-28T16:20:49Z
+status: done
+assignee:
+claimed:
 created: 2026-10-28
 ---
 
