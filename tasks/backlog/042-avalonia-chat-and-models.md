@@ -1,6 +1,6 @@
 ---
 id: 042
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-28
@@ -53,3 +53,6 @@ scripts/check.sh
 ## Отчёт
 
 ## Комментарии
+
+### 2026-10-28, владелец (в чате, записал ревью)
+План одобрен.

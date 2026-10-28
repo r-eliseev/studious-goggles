@@ -1,6 +1,6 @@
 ---
 id: 038
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-28
@@ -62,3 +62,6 @@ Windows-цель MAUI — CI (задача `maui`) или Windows-машина: 
 ## Отчёт
 
 ## Комментарии
+
+### 2026-10-28, владелец (в чате, записал ревью)
+План одобрен.
