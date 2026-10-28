@@ -7,6 +7,7 @@
              xmlns:appearance="clr-namespace:ImageGen.Presentation.Appearance"
              xmlns:converters="clr-namespace:ImageGen.Maui.Converters"
              xmlns:controls="clr-namespace:ImageGen.Maui.Controls"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="ImageGen.Maui.Pages.ChatPage"
              x:DataType="pm:ChatPageModel"
              Title="{Binding Title}">
@@ -98,6 +99,19 @@
                                                 <Border.StrokeShape>
                                                     <RoundRectangle CornerRadius="{DynamicResource IgRadiusMd}" />
                                                 </Border.StrokeShape>
+                                                <!-- Long press (phones) opens the actions sheet; right-click (Windows, Mac) opens the flyout. -->
+                                                <Border.Behaviors>
+                                                    <toolkit:TouchBehavior LongPressCommand="{Binding ShowActionsCommand}" />
+                                                </Border.Behaviors>
+                                                <FlyoutBase.ContextFlyout>
+                                                    <MenuFlyout>
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.Repeat}" Command="{Binding RepeatCommand}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.NewSeed}" Command="{Binding NewSeedCommand}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionEditPrompt}" Command="{Binding EditCommand}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionDescribeImage}" Command="{Binding DescribeCommand}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionPromptFromImage}" Command="{Binding DescribePromptCommand}" />
+                                                    </MenuFlyout>
+                                                </FlyoutBase.ContextFlyout>
                                                 <VerticalStackLayout Spacing="6">
                                                     <!-- Image area 3:2 with the per-status placeholder and the overlay strip. -->
                                                     <Border WidthRequest="264" HeightRequest="176"
@@ -222,23 +236,16 @@
                                                         </Label.Triggers>
                                                     </Label>
 
-                                                    <!-- Card actions: one row of icon buttons (menu and hover actions are task 069). -->
+                                                    <!-- Card actions: the "…" button opens the actions menu; long press and right-click do too (task 069). -->
                                                     <HorizontalStackLayout Spacing="4">
-                                                        <Button StyleClass="ghost,icon" Text="{x:Static appearance:IconGlyphs.Repeat}" FontFamily="LucideIcons"
+                                                        <Button StyleClass="ghost,small" Text="{x:Static strings:AppResources.Repeat}"
                                                                 Command="{Binding RepeatCommand}"
+                                                                IsVisible="{Binding IsFailedOrFiltered}"
+                                                                HorizontalOptions="Start"
                                                                 SemanticProperties.Description="{x:Static strings:AppResources.Repeat}" />
-                                                        <Button StyleClass="ghost,icon" Text="{x:Static appearance:IconGlyphs.NewSeed}" FontFamily="LucideIcons"
-                                                                Command="{Binding NewSeedCommand}"
-                                                                SemanticProperties.Description="{x:Static strings:AppResources.NewSeed}" />
-                                                        <Button StyleClass="ghost,icon" Text="{x:Static appearance:IconGlyphs.Edit}" FontFamily="LucideIcons"
-                                                                Command="{Binding EditCommand}"
-                                                                SemanticProperties.Description="{x:Static strings:AppResources.Edit}" />
-                                                        <Button StyleClass="ghost,icon" Text="{x:Static appearance:IconGlyphs.Describe}" FontFamily="LucideIcons"
-                                                                Command="{Binding DescribeCommand}"
-                                                                SemanticProperties.Description="{x:Static strings:AppResources.DescribeButton}" />
-                                                        <Button StyleClass="ghost,icon" Text="{x:Static appearance:IconGlyphs.PromptFromImage}" FontFamily="LucideIcons"
-                                                                Command="{Binding DescribePromptCommand}"
-                                                                SemanticProperties.Description="{x:Static strings:AppResources.DescribePromptButton}" />
+                                                        <Button StyleClass="ghost,icon" Text="{x:Static appearance:IconGlyphs.More}" FontFamily="LucideIcons"
+                                                                Command="{Binding ShowActionsCommand}"
+                                                                SemanticProperties.Description="{x:Static strings:AppResources.More}" />
                                                     </HorizontalStackLayout>
                                                 </VerticalStackLayout>
                                             </Border>

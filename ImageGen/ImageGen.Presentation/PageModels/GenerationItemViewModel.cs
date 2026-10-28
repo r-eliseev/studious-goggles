@@ -6,6 +6,7 @@ using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
 using ImageGen.Presentation.Resources.Strings;
+using ImageGen.Presentation.Services;
 
 namespace ImageGen.Presentation.PageModels;
 
@@ -16,6 +17,7 @@ namespace ImageGen.Presentation.PageModels;
 public sealed partial class GenerationItemViewModel : ObservableObject
 {
     private readonly IImageFileStore _files;
+    private readonly IDialogService _dialogs;
     private readonly Func<GenerationItemViewModel, Task> _repeat;
     private readonly Func<GenerationItemViewModel, Task> _newSeed;
     private readonly Func<GenerationItemViewModel, Task> _edit;
@@ -24,6 +26,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     public GenerationItemViewModel(
         Generation generation,
         IImageFileStore files,
+        IDialogService dialogs,
         Func<GenerationItemViewModel, Task> repeat,
         Func<GenerationItemViewModel, Task> newSeed,
         Func<GenerationItemViewModel, Task> edit,
@@ -31,10 +34,12 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(generation);
         ArgumentNullException.ThrowIfNull(files);
+        ArgumentNullException.ThrowIfNull(dialogs);
         ArgumentNullException.ThrowIfNull(repeat);
         ArgumentNullException.ThrowIfNull(newSeed);
         ArgumentNullException.ThrowIfNull(edit);
         _files = files;
+        _dialogs = dialogs;
         _repeat = repeat;
         _newSeed = newSeed;
         _edit = edit;
@@ -128,6 +133,10 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     [ObservableProperty]
     public partial bool HasError { get; set; }
 
+    /// <summary>True for a failed or filtered generation: the Repeat action stays visible even without hover (task 069).</summary>
+    [ObservableProperty]
+    public partial bool IsFailedOrFiltered { get; set; }
+
     [ObservableProperty]
     public partial bool IsRunning { get; set; }
 
@@ -137,6 +146,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(EditCommand))]
     [NotifyCanExecuteChangedFor(nameof(DescribeCommand))]
     [NotifyCanExecuteChangedFor(nameof(DescribePromptCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ShowActionsCommand))]
     public partial bool IsFinished { get; set; }
 
     [RelayCommand(CanExecute = nameof(IsFinished))]
@@ -154,6 +164,39 @@ public sealed partial class GenerationItemViewModel : ObservableObject
 
     [RelayCommand(CanExecute = nameof(IsFinished))]
     private Task DescribePromptAsync() => _describe(this, DescriptionMode.Prompt);
+
+    /// <summary>
+    /// Opens the actions menu (phone action sheet or right-click/"More" context menu). The title is the card meta line
+    /// (model, seed, cost, time), the options are the same actions as the icon row, and the chosen one runs.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(IsFinished))]
+    private async Task ShowActionsAsync()
+    {
+        var actions = new (string Label, Func<GenerationItemViewModel, Task> Run)[]
+        {
+            (AppResources.Repeat, _repeat),
+            (AppResources.NewSeed, _newSeed),
+            (AppResources.ActionEditPrompt, _edit),
+            (AppResources.ActionDescribeImage, card => _describe(card, DescriptionMode.Description)),
+            (AppResources.ActionPromptFromImage, card => _describe(card, DescriptionMode.Prompt)),
+        };
+
+        var title = string.Join(" · ", new[] { ModelText, SeedText, CostText, TimeText }.Where(text => text.Length > 0));
+        var chosen = await _dialogs.ChooseAsync(title, AppResources.Cancel, actions.Select(action => action.Label).ToList());
+        if (chosen is null)
+        {
+            return;
+        }
+
+        foreach (var action in actions)
+        {
+            if (string.Equals(action.Label, chosen, StringComparison.Ordinal))
+            {
+                await action.Run(this);
+                return;
+            }
+        }
+    }
 
     /// <summary>Recomputes every displayed value from the saved generation.</summary>
     public void Update(Generation generation)
@@ -179,6 +222,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         IsActive = generation.Status == GenerationStatus.Running;
         IsFailed = generation.Status == GenerationStatus.Failed;
         IsFiltered = generation.Status == GenerationStatus.Filtered;
+        IsFailedOrFiltered = IsFailed || IsFiltered;
         IsCancelled = generation.Status == GenerationStatus.Cancelled;
         ErrorText = generation.ErrorMessage?.Trim() ?? "";
         HasErrorText = ErrorText.Length > 0;

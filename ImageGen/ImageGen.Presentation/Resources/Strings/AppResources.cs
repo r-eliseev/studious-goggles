@@ -231,6 +231,14 @@ public static class AppResources
 
     public static string DescribePromptButton => Get(nameof(DescribePromptButton));
 
+    public static string More => Get(nameof(More));
+
+    public static string ActionEditPrompt => Get(nameof(ActionEditPrompt));
+
+    public static string ActionDescribeImage => Get(nameof(ActionDescribeImage));
+
+    public static string ActionPromptFromImage => Get(nameof(ActionPromptFromImage));
+
     public static string DescriptionTitle => Get(nameof(DescriptionTitle));
 
     public static string DescriptionCostUnknown => Get(nameof(DescriptionCostUnknown));

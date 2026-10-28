@@ -20,6 +20,16 @@
         <Style Selector="Border:pointerover Border.overlay">
             <Setter Property="Opacity" Value="1" />
         </Style>
+        <!-- Card actions: hidden until the card is hovered or has keyboard focus inside it (task 069). -->
+        <Style Selector="StackPanel.card-actions">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="Border.card:pointerover StackPanel.card-actions">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+        <Style Selector="Border.card:focus-within StackPanel.card-actions">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
     </UserControl.Styles>
 
     <Grid x:Name="Layout" ColumnDefinitions="272,*" ColumnSpacing="16" Margin="16">
@@ -112,13 +122,24 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.DataTemplates>
                                         <DataTemplate DataType="pm:GenerationItemViewModel" x:DataType="pm:GenerationItemViewModel">
-                                            <Border Width="280"
+                                            <Border Classes="card"
+                                                    Width="280"
                                                     Margin="0,0,8,8"
                                                     Padding="8"
                                                     CornerRadius="{DynamicResource IgRadiusMd}"
                                                     BorderThickness="{DynamicResource IgCardBorderThickness}"
                                                     BorderBrush="{DynamicResource IgLineBrush}"
                                                     Background="{DynamicResource IgCardBackgroundBrush}">
+                                                <!-- Right-click anywhere on the card opens the same actions menu as "More". -->
+                                                <Border.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="{markup:Res Repeat}" Command="{Binding RepeatCommand}" />
+                                                        <MenuItem Header="{markup:Res NewSeed}" Command="{Binding NewSeedCommand}" />
+                                                        <MenuItem Header="{markup:Res ActionEditPrompt}" Command="{Binding EditCommand}" />
+                                                        <MenuItem Header="{markup:Res ActionDescribeImage}" Command="{Binding DescribeCommand}" />
+                                                        <MenuItem Header="{markup:Res ActionPromptFromImage}" Command="{Binding DescribePromptCommand}" />
+                                                    </ContextMenu>
+                                                </Border.ContextMenu>
                                                 <StackPanel Spacing="6">
                                                     <!-- Image area, 3:2, with the per-status placeholder and the overlay strip. -->
                                                     <Panel>
@@ -230,27 +251,40 @@
                                                                TextWrapping="Wrap"
                                                                Classes.error="{Binding HasError}" />
 
-                                                    <!-- Card actions: one row of icon buttons (menu and hover actions are task 069). -->
-                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                        <Button Classes="ghost icon" Command="{Binding RepeatCommand}"
+                                                    <!-- A failed or filtered card keeps Repeat visible without hover. -->
+                                                    <Button Classes="ghost small"
+                                                            Command="{Binding RepeatCommand}"
+                                                            Content="{markup:Res Repeat}"
+                                                            IsVisible="{Binding IsFailedOrFiltered}"
+                                                            HorizontalAlignment="Left"
+                                                            AutomationProperties.Name="{markup:Res Repeat}" />
+
+                                                    <!-- Card actions: a row of icon buttons shown on hover or keyboard focus (desktop). -->
+                                                    <StackPanel Classes="card-actions" Orientation="Horizontal" Spacing="4">
+                                                        <Button Classes="ghost icon small" Command="{Binding RepeatCommand}"
+                                                                ToolTip.Tip="{markup:Res Repeat}"
                                                                 AutomationProperties.Name="{markup:Res Repeat}">
                                                             <TextBlock Classes="icon" Text="&#xE146;" />
                                                         </Button>
-                                                        <Button Classes="ghost icon" Command="{Binding NewSeedCommand}"
+                                                        <Button Classes="ghost icon small" Command="{Binding NewSeedCommand}"
+                                                                ToolTip.Tip="{markup:Res NewSeed}"
                                                                 AutomationProperties.Name="{markup:Res NewSeed}">
                                                             <TextBlock Classes="icon" Text="&#xE2C5;" />
                                                         </Button>
-                                                        <Button Classes="ghost icon" Command="{Binding EditCommand}"
+                                                        <Button Classes="ghost icon small" Command="{Binding EditCommand}"
+                                                                ToolTip.Tip="{markup:Res Edit}"
                                                                 AutomationProperties.Name="{markup:Res Edit}">
                                                             <TextBlock Classes="icon" Text="&#xE1F9;" />
                                                         </Button>
-                                                        <Button Classes="ghost icon" Command="{Binding DescribeCommand}"
+                                                        <Button Classes="ghost icon small" Command="{Binding DescribeCommand}"
+                                                                ToolTip.Tip="{markup:Res DescribeButton}"
                                                                 AutomationProperties.Name="{markup:Res DescribeButton}">
                                                             <TextBlock Classes="icon" Text="&#xE0BA;" />
                                                         </Button>
-                                                        <Button Classes="ghost icon" Command="{Binding DescribePromptCommand}"
-                                                                AutomationProperties.Name="{markup:Res DescribePromptButton}">
-                                                            <TextBlock Classes="icon" Text="&#xE198;" />
+                                                        <Button Classes="ghost icon small" Click="OnMoreClick"
+                                                                ToolTip.Tip="{markup:Res More}"
+                                                                AutomationProperties.Name="{markup:Res More}">
+                                                            <TextBlock Classes="icon" Text="&#xE0B6;" />
                                                         </Button>
                                                     </StackPanel>
                                                 </StackPanel>

@@ -237,6 +237,18 @@
   <data name="DescribePromptButton" xml:space="preserve">
     <value>Prompt</value>
   </data>
+  <data name="More" xml:space="preserve">
+    <value>More</value>
+  </data>
+  <data name="ActionEditPrompt" xml:space="preserve">
+    <value>Edit prompt…</value>
+  </data>
+  <data name="ActionDescribeImage" xml:space="preserve">
+    <value>Describe image</value>
+  </data>
+  <data name="ActionPromptFromImage" xml:space="preserve">
+    <value>Write a prompt from image</value>
+  </data>
   <data name="DescriptionTitle" xml:space="preserve">
     <value>Image description</value>
   </data>

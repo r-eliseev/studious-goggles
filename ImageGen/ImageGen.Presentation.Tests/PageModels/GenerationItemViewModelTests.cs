@@ -4,12 +4,76 @@ using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Storage;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Resources.Strings;
+using ImageGen.Presentation.Services;
 
 namespace ImageGen.Presentation.Tests.PageModels;
 
 public class GenerationItemViewModelTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 28, 12, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public async Task ShowActions_ChoosesRepeat_RunsRepeat()
+    {
+        var repeated = false;
+        var dialogs = Substitute.For<IDialogService>();
+        dialogs.ChooseAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>())
+            .Returns(AppResources.Repeat);
+        var card = CardWithActions(dialogs, repeat: _ => { repeated = true; return Task.CompletedTask; });
+
+        await card.ShowActionsCommand.ExecuteAsync(null);
+
+        Assert.True(repeated);
+    }
+
+    [Fact]
+    public async Task ShowActions_Cancel_DoesNothing()
+    {
+        var repeated = false;
+        var dialogs = Substitute.For<IDialogService>();
+        dialogs.ChooseAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>())
+            .Returns((string?)null);
+        var card = CardWithActions(dialogs, repeat: _ => { repeated = true; return Task.CompletedTask; });
+
+        await card.ShowActionsCommand.ExecuteAsync(null);
+
+        Assert.False(repeated);
+    }
+
+    [Fact]
+    public void ShowActions_NotFinished_CannotExecute()
+    {
+        var generation = BaseGeneration();
+        generation.Status = GenerationStatus.Running;
+
+        var card = CardOf(generation);
+
+        Assert.False(card.ShowActionsCommand.CanExecute(null));
+    }
+
+    private static GenerationItemViewModel CardWithActions(
+        IDialogService dialogs,
+        Func<GenerationItemViewModel, Task>? repeat = null) => new(
+        new Generation
+        {
+            Id = Guid.NewGuid(),
+            RunId = Guid.NewGuid(),
+            SessionId = Guid.NewGuid(),
+            ProviderId = "openrouter",
+            ModelId = "vendor/a",
+            Prompt = "fox",
+            Seed = 1,
+            SeedApplied = true,
+            Status = GenerationStatus.Succeeded,
+            CreatedAt = Now,
+            SortOrder = 0,
+        },
+        Substitute.For<IImageFileStore>(),
+        dialogs,
+        repeat ?? (_ => Task.CompletedTask),
+        _ => Task.CompletedTask,
+        _ => Task.CompletedTask,
+        (_, _) => Task.CompletedTask);
 
     [Fact]
     public void Details_ReplacedParameter_ShowsRequestedAndSentValues()
@@ -90,6 +154,7 @@ public class GenerationItemViewModelTests
             SortOrder = 0,
         },
         Substitute.For<IImageFileStore>(),
+        Substitute.For<IDialogService>(),
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,
@@ -180,6 +245,7 @@ public class GenerationItemViewModelTests
     private static GenerationItemViewModel CardOf(Generation generation) => new(
         generation,
         Substitute.For<IImageFileStore>(),
+        Substitute.For<IDialogService>(),
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,
@@ -207,6 +273,7 @@ public class GenerationItemViewModelTests
             ReferenceAttachmentIds = Enumerable.Range(0, referenceCount).Select(_ => Guid.NewGuid()).ToList(),
         },
         Substitute.For<IImageFileStore>(),
+        Substitute.For<IDialogService>(),
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,

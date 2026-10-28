@@ -1,9 +1,11 @@
 using System.Collections.Specialized;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using ImageGen.Avalonia.Services.Navigation;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Utilities;
@@ -58,6 +60,22 @@ public partial class ChatView : UserControl, IAppearing, IDisappearing
 
         model.Items.CollectionChanged -= OnItemsChanged;
         model.OnDisappearing();
+    }
+
+    /// <summary>The "More" icon opens the same context menu as a right-click on the card.</summary>
+    private void OnMoreClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Control control)
+        {
+            return;
+        }
+
+        var card = control.GetVisualAncestors().OfType<Border>()
+            .FirstOrDefault(border => border.Classes.Contains("card"));
+        if (card?.ContextMenu is { } menu)
+        {
+            menu.Open(card);
+        }
     }
 
     private void OnInputKeyDown(object? sender, KeyEventArgs e)

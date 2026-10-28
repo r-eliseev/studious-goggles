@@ -310,7 +310,7 @@ public sealed partial class ChatPageModel(
 
     private GenerationItemViewModel CreateCard(Generation generation)
     {
-        var card = new GenerationItemViewModel(generation, files, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync);
+        var card = new GenerationItemViewModel(generation, files, dialogs, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync);
         _cards[generation.Id] = card;
         return card;
     }

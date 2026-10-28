@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -32,6 +33,82 @@ public sealed class AvaloniaDialogService(Func<Window?> owner) : IDialogService
     {
         var outcome = await ShowAsync(title, message, accept, cancel, input: initialValue, multiline: true, destructive: false);
         return outcome.Accepted ? outcome.Text : null;
+    }
+
+    public async Task<string?> ChooseAsync(string title, string cancel, IReadOnlyList<string> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        var answer = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var window = new Window
+        {
+            Title = title,
+            Width = 420,
+            SizeToContent = SizeToContent.Height,
+            CanResize = false,
+        };
+
+        var stack = new StackPanel { Spacing = 12 };
+        if (title.Length > 0)
+        {
+            stack.Children.Add(new TextBlock
+            {
+                Text = title,
+                Classes = { "title" },
+                FontSize = 17,
+                FontWeight = FontWeight.SemiBold,
+                TextWrapping = TextWrapping.Wrap,
+            });
+        }
+
+        foreach (var option in options)
+        {
+            var button = new Button { Content = option, HorizontalAlignment = HorizontalAlignment.Stretch };
+            AutomationProperties.SetName(button, option);
+            button.Click += (_, _) =>
+            {
+                answer.TrySetResult(option);
+                window.Close();
+            };
+            stack.Children.Add(button);
+        }
+
+        var cancelButton = new Button { Content = cancel, HorizontalAlignment = HorizontalAlignment.Stretch };
+        AutomationProperties.SetName(cancelButton, cancel);
+        cancelButton.Click += (_, _) => window.Close();
+        stack.Children.Add(cancelButton);
+
+        var content = new Border
+        {
+            Padding = new Thickness(20),
+            CornerRadius = new CornerRadius(12),
+            Background = Application.Current?.TryFindResource("IgSurfaceBrush", out var brush) == true ? brush as IBrush : null,
+            Child = stack,
+        };
+
+        // Escape closes the window; it counts as a cancel, so the answer stays null.
+        window.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Escape)
+            {
+                window.Close();
+                e.Handled = true;
+            }
+        };
+
+        window.Content = content;
+        window.Closed += (_, _) => answer.TrySetResult(null);
+
+        var parent = owner();
+        if (parent is null)
+        {
+            window.Show();
+        }
+        else
+        {
+            window.Show(parent);
+        }
+
+        return await answer.Task;
     }
 
     private async Task<(bool Accepted, string? Text)> ShowAsync(

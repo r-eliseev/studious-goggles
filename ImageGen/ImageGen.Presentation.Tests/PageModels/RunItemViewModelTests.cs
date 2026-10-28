@@ -37,7 +37,7 @@ public class RunItemViewModelTests
             SortOrder = sortOrder,
         };
         var files = Substitute.For<IImageFileStore>();
-        return new GenerationItemViewModel(generation, files, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, (_, _) => Task.CompletedTask);
+        return new GenerationItemViewModel(generation, files, Substitute.For<IDialogService>(), _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, (_, _) => Task.CompletedTask);
     }
 
     private static CopyTextAction Copy() =>
@@ -81,7 +81,7 @@ public class RunItemViewModelTests
             SortOrder = 0,
         };
         var files = Substitute.For<IImageFileStore>();
-        return new GenerationItemViewModel(generation, files, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, (_, _) => Task.CompletedTask);
+        return new GenerationItemViewModel(generation, files, Substitute.For<IDialogService>(), _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, (_, _) => Task.CompletedTask);
     }
 
     [Fact]

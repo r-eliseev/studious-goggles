@@ -149,6 +149,7 @@ public class ChatViewStyleTests
         return new GenerationItemViewModel(
             generation,
             Substitute.For<IImageFileStore>(),
+            Substitute.For<IDialogService>(),
             _ => Task.CompletedTask,
             _ => Task.CompletedTask,
             _ => Task.CompletedTask,

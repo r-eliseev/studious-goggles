@@ -1,8 +1,8 @@
 ---
 id: 069
-status: approved
+status: done
 assignee:
-claimed:
+claimed: 2026-10-28T00:00:00Z
 created: 2026-10-28
 ---
 
@@ -50,5 +50,34 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Presentation/{Services/IDialogService.cs,PageModels/GenerationItemViewModel.cs}`, строки, `ImageGen/ImageGen.Avalonia/{Services/AvaloniaDialogService.cs,Views/ChatView.axaml}`, `ImageGen/ImageGen.Maui/{Services/ShellDialogService.cs,Pages/ChatPage.xaml}`, тестовые подмены `IDialogService`, тесты
 
 ## Отчёт
+
+Сделано по шагам плана (TDD).
+
+Изменённые файлы:
+- `ImageGen/ImageGen.Presentation/Services/IDialogService.cs` — добавлен `Task<string?> ChooseAsync(string title, string cancel, IReadOnlyList<string> options)`.
+- `ImageGen/ImageGen.Presentation/PageModels/GenerationItemViewModel.cs` — новый конструкторный параметр `IDialogService`; команда `ShowActionsCommand` (доступна при `IsFinished`): заголовок меню — `ModelText · SeedText · CostText · TimeText` (пустые пропускаются), опции — пять действий, выбранное выполняется. Добавлено свойство `IsFailedOrFiltered` (для всегда видимого Repeat у ошибки/фильтра).
+- `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs` — `CreateCard` передаёт `dialogs` в карточку.
+- `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx` и `.cs` — новые строки `More` = «More», `ActionEditPrompt` = «Edit prompt…», `ActionDescribeImage` = «Describe image», `ActionPromptFromImage` = «Write a prompt from image».
+- `ImageGen/ImageGen.Avalonia/Services/AvaloniaDialogService.cs` — реализация `ChooseAsync` окном со списком кнопок (как остальные диалоги), Escape = отмена.
+- `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml` — карточка получила `Classes="card"`; строка `StackPanel.card-actions` из пяти `Button.ghost.icon.small` (Repeat, New seed, Edit, Describe, More) с `ToolTip.Tip` и доступными именами; стили `Border.card:pointerover`/`Border.card:focus-within` → `IsVisible=True`; `ContextMenu` на карточке с пятью пунктами; кнопка «More» открывает тот же `ContextMenu` (код-behind `OnMoreClick`). Добавлена всегда видимая кнопка Repeat при `IsFailedOrFiltered`.
+- `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml.cs` — обработчик `OnMoreClick` (ищет Border.card среди предков и открывает `ContextMenu.Open`).
+- `ImageGen/ImageGen.Maui/Services/ShellDialogService.cs` — `ChooseAsync` через `Shell.Current.DisplayActionSheetAsync` (возврат `null` при отмене).
+- `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml` — кнопка «…» (`ghost,icon`, значок `More`) с `ShowActionsCommand`; `CommunityToolkit.Maui` `TouchBehavior` `LongPressCommand="{Binding ShowActionsCommand}"` на карточке (долгое нажатие); `FlyoutBase.ContextFlyout` → `MenuFlyout` с пятью `MenuFlyoutItem` (Windows/Mac, правый клик); всегда видимая кнопка Repeat при `IsFailedOrFiltered`.
+- Тесты: `GenerationItemViewModelTests` (`ShowActions_ChoosesRepeat_RunsRepeat`, `ShowActions_Cancel_DoesNothing`, `ShowActions_NotFinished_CannotExecute`), обновлены подмены `IDialogService` в `GenerationItemViewModelTests`, `RunItemViewModelTests`, `ChatViewStyleTests`; новый `ImageGen.Avalonia.Tests/Views/CardActionsTests.cs` (`Actions_HiddenWithoutPointer`, `Actions_VisibleOnFocusWithin`, `ContextMenu_HasAllActions`, `IconButtons_HaveAutomationNames`).
+
+Сборка и проверки (локально, .NET 10 SDK 10.0.403, MAUI android workload + Android SDK в `.tools`, JDK 21 из mise):
+- `dotnet build ImageGen.Maui -f net10.0-android` — успешно, 0 warnings / 0 errors (SourceGen XAML — тот же путь компиляции, что и у Windows-цели CI).
+- `ImageGen.Presentation.Tests` 211/211; `ImageGen.Avalonia.Tests` 99/99 (2 пропуска — DPAPI/Secret Service по платформе); Core 307/307; Data 63/63.
+- `dotnet format --verify-no-changes` для Presentation, Avalonia, Maui — без изменений.
+- `scripts/check.sh` — пройден.
+
+Автономные решения:
+- Подписи пунктов меню действий в `docs/design/implementation.md` не заданы дословно; взяты из макета `prototype.html` (строки 574/580): «Edit prompt…», «Describe image», «Write a prompt from image». Repeat и New seed переиспользуют существующие ресурсы `Repeat`/`NewSeed`. Это действия задачи (Copy prompt / Save image — задача 074 — не добавлены).
+- Иконка «More» = Lucide ellipsis (`IconGlyphs.More`, U+E0B6) по разделу 5 справочника.
+- «Repeat всегда виден у ошибки/отфильтрованной» (из «Описания» и «Критериев», вне нумерованных шагов плана) реализован отдельной кнопкой `Repeat` с видимостью по новому свойству `IsFailedOrFiltered` в обеих оболочках.
+- `CommunityToolkit.Maui` уже подключён (версия 15.0.1, инициализация `UseMauiCommunityToolkit` в `MauiProgram`); `TouchBehavior.LongPressCommand` присутствует в этой версии — новый пакет не добавлялся.
+- `DisplayActionSheet` помечен устаревшим в MAUI 10 — использован `DisplayActionSheetAsync` (как соседние `DisplayAlertAsync`/`DisplayPromptAsync`).
+
+Не проверено автоматически: фактическое открытие `DisplayActionSheet`/`MenuFlyout`/долгого нажатия на устройстве (ручная проверка 016/046); Windows-цель MAUI собирает CI.
 
 ## Комментарии
