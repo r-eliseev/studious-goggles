@@ -61,10 +61,11 @@ public sealed partial class AssistantModelOptionViewModel(
             return AppResources.AssistantPriceUnknown;
         }
 
+        // Prices use the invariant format, like the other prices on screen, until the UI is localized.
         return string.Format(
-            CultureInfo.CurrentCulture,
+            CultureInfo.InvariantCulture,
             AppResources.AssistantPriceFormat,
-            prompt.ToString("0.00##", CultureInfo.CurrentCulture),
-            completion.ToString("0.00##", CultureInfo.CurrentCulture));
+            prompt.ToString("0.00##", CultureInfo.InvariantCulture),
+            completion.ToString("0.00##", CultureInfo.InvariantCulture));
     }
 }
