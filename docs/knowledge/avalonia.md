@@ -12,5 +12,12 @@
 - `x:Static` на класс из другой сборки (`ImageGen.Presentation`) компилятор XAML Avalonia 12.1.4 не разрешает: ошибка `AVLN2000`, хотя класс публичный и сборка подключена. Заголовок окна задаётся в коде: `Title = AppResources.AppTitle`.
 - `AvaloniaUseCompiledBindingsByDefault=true` включён; привязки в разметке нужно снабжать `x:DataType`.
 
-## Сборка
-- `Avalonia.Desktop` подключает `UsePlatformDetect()`; на Linux без дисплея запуск окна не проверен (см. отчёт задачи 039).
+## Сборка и запуск
+- `Avalonia.Desktop` подключает `UsePlatformDetect()`. Запуск на Linux без дисплея: `xvfb-run -a <программа>`; окно можно снять `import -window root <файл.png>` (ImageMagick). Проверено 2026-10-28: окно 960×640 создаётся и показывается, процесс живёт без исключений.
+
+## Секреты на десктопе (ADR 0008)
+- Пакет `gnome-keyring` ставится через apt (Ubuntu 24.04). Служба `org.freedesktop.secrets` поднимается D-Bus-активацией внутри сессии `dbus-run-session`.
+- Коллекция `default` (алиас `login`) в контейнере не создаётся: демон запрашивает пароль через `org.gnome.keyring.SystemPrompter`, а для промпта нужен дисплей. Коллекция `session` доступна без промпта: её используют тесты `SecretServiceBackendTests`. На настоящем рабочем столе `default` есть.
+- В `Tmds.DBus` 0.95.1 вариант (`v`) передаётся как `object`, словари `a{ss}` и `a{sv}` — как `IDictionary<string, string>` и `IDictionary<string, object>`. Подключение: `Connection.Session` и `ConnectAsync()`.
+- Тесты Secret Service пропускаются без сессии D-Bus (`Assert.Skip`); в CI их нет. Внутри `dbus-run-session` с gnome-keyring все тесты проходят: 15 из 16, пропущен DPAPI (нужен Windows).
+- macOS-бэкенд и DPAPI на Windows не проверены: нет машин.

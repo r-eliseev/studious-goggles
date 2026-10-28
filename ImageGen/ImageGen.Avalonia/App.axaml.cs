@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using ImageGen.Avalonia.Composition;
 using ImageGen.Avalonia.Platform;
+using ImageGen.Avalonia.Services.Secrets;
 using ImageGen.Avalonia.Views;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,7 +21,9 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        Services = AppServices.Create(new DesktopAppPaths(), new InMemorySecretStore());
+        var paths = new DesktopAppPaths();
+        var secrets = DesktopSecretStore.ForCurrentPlatform(paths);
+        Services = AppServices.Create(paths, secrets, secrets);
         MainWindow = new MainWindow();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)

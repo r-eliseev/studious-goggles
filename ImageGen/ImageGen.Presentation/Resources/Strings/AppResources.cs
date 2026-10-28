@@ -35,6 +35,8 @@ public static class AppResources
 
     public static string ApiKeyNetworkError => Get(nameof(ApiKeyNetworkError));
 
+    public static string ApiKeyNotPersisted => Get(nameof(ApiKeyNotPersisted));
+
     public static string SessionsTitle => Get(nameof(SessionsTitle));
 
     public static string NewSession => Get(nameof(NewSession));

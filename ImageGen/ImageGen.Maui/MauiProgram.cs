@@ -31,6 +31,7 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<IAppPaths, MauiAppPaths>();
         builder.Services.AddSingleton<ISecretStore, MauiSecretStore>();
+        builder.Services.AddSingleton<ISecretPersistence, MauiSecretPersistence>();
         builder.Services.AddImageGenCore();
         builder.Services.AddImageGenData();
         builder.Services.AddSingleton<AppInitializer>();

@@ -35,11 +35,13 @@ ImageGen/
   ImageGen.Core.Tests/             xUnit v3 + NSubstitute
   ImageGen.Data.Tests/             xUnit v3, временная БД в файле
   ImageGen.Presentation/           net10.0, CommunityToolkit.Mvvm: PageModels/, Services/ (INavigationService, IDialogService,
-                                   IMainThread, AppInitializer), Routes, Utilities/, Resources/Strings/ (AppResources.resx)
+                                   IMainThread, ISecretPersistence, AppInitializer), Routes, Utilities/, Resources/Strings/ (AppResources.resx)
   ImageGen.Presentation.Tests/     xUnit v3 + NSubstitute: модели страниц, маршруты, строки, архитектурный тест
   ImageGen.Avalonia/               десктоп (Avalonia 12.1, WinExe): App, Views/MainWindow (PageHost), Composition/AppServices,
                                    Platform/ (DesktopAppPaths, InMemorySecretStore), Services/ (AvaloniaMainThread, заглушки
-                                   навигации и диалогов, пока нет экранов)
+                                   навигации и диалогов, пока нет экранов), Services/Secrets/ (DesktopSecretStore и бэкенды:
+                                   SecretServiceBackend для Linux, DpapiSecretBackend для Windows, KeychainSecretBackend для
+                                   macOS; ADR 0008)
   ImageGen.Avalonia.Tests/         headless (Avalonia.Headless.XUnit), xunit.v3 3.2.2 (ADR 0007)
   ImageGen.Maui/                   MAUI: Pages/, PageModels/ (только ChatItemTemplateSelector), Services/ (MauiSecretStore,
                                    MauiAppPaths, MauiMainThread, Shell-реализации), Converters/

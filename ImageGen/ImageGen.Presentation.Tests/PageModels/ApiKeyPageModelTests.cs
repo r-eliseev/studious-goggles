@@ -15,8 +15,32 @@ public class ApiKeyPageModelTests
     private readonly ISecretStore _secrets = Substitute.For<ISecretStore>();
     private readonly INavigationService _navigation = Substitute.For<INavigationService>();
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
+    private readonly ISecretPersistence _persistence = Substitute.For<ISecretPersistence>();
 
-    private ApiKeyPageModel CreateModel() => new(new ApiKeyService(_secrets, _provider), _navigation, _dialogs);
+    private ApiKeyPageModel CreateModel() =>
+        new(new ApiKeyService(_secrets, _provider), _navigation, _dialogs, _persistence);
+
+    [Fact]
+    public async Task OnAppearingAsync_NotPersistent_ShowsNotPersistedWarning()
+    {
+        _persistence.IsPersistentAsync(Arg.Any<CancellationToken>()).Returns(false);
+        var model = CreateModel();
+
+        await model.OnAppearingAsync();
+
+        Assert.Equal(AppResources.ApiKeyNotPersisted, model.PersistenceWarning);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_Persistent_NoWarning()
+    {
+        _persistence.IsPersistentAsync(Arg.Any<CancellationToken>()).Returns(true);
+        var model = CreateModel();
+
+        await model.OnAppearingAsync();
+
+        Assert.Equal("", model.PersistenceWarning);
+    }
 
     [Fact]
     public void SaveCommand_EmptyKey_CannotExecute()

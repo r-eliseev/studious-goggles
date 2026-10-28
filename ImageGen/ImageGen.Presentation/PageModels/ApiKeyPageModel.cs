@@ -10,7 +10,8 @@ namespace ImageGen.Presentation.PageModels;
 public sealed partial class ApiKeyPageModel(
     ApiKeyService apiKeyService,
     INavigationService navigation,
-    IDialogService dialogs) : ObservableObject
+    IDialogService dialogs,
+    ISecretPersistence persistence) : ObservableObject
 {
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
@@ -23,6 +24,17 @@ public sealed partial class ApiKeyPageModel(
     /// <summary>Result of the last check. The page announces changes to screen readers.</summary>
     [ObservableProperty]
     public partial string StatusText { get; set; } = "";
+
+    /// <summary>Shown when the key will not survive closing the app; empty otherwise.</summary>
+    [ObservableProperty]
+    public partial string PersistenceWarning { get; set; } = "";
+
+    /// <summary>Checks where the key would be kept. The page calls it when it appears.</summary>
+    public async Task OnAppearingAsync()
+    {
+        var persistent = await persistence.IsPersistentAsync(CancellationToken.None);
+        PersistenceWarning = persistent ? "" : AppResources.ApiKeyNotPersisted;
+    }
 
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync()

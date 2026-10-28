@@ -45,6 +45,9 @@
   <data name="ApiKeyNetworkError" xml:space="preserve">
     <value>Could not reach OpenRouter. Check the connection and try again.</value>
   </data>
+  <data name="ApiKeyNotPersisted" xml:space="preserve">
+    <value>The system secure storage is not available, so the key will be kept only until the app closes.</value>
+  </data>
   <data name="SessionsTitle" xml:space="preserve">
     <value>Sessions</value>
   </data>

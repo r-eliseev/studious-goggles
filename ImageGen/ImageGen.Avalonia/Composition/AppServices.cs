@@ -1,4 +1,3 @@
-using ImageGen.Avalonia.Platform;
 using ImageGen.Avalonia.Services;
 using ImageGen.Core;
 using ImageGen.Core.Platform;
@@ -15,14 +14,16 @@ public static class AppServices
     /// Builds the container of the desktop app: core, storage, the shared presentation layer and the Avalonia
     /// implementations of the platform services. Validates the registrations at build time.
     /// </summary>
-    public static ServiceProvider Create(IAppPaths paths, ISecretStore secrets)
+    public static ServiceProvider Create(IAppPaths paths, ISecretStore secrets, ISecretPersistence persistence)
     {
         ArgumentNullException.ThrowIfNull(paths);
         ArgumentNullException.ThrowIfNull(secrets);
+        ArgumentNullException.ThrowIfNull(persistence);
 
         var services = new ServiceCollection();
         services.AddSingleton(paths);
         services.AddSingleton(secrets);
+        services.AddSingleton(persistence);
         services.AddImageGenCore();
         services.AddImageGenData();
 
