@@ -65,3 +65,6 @@ scripts/check.sh
 
 ### 2026-10-28, владелец (в чате, записал ревью)
 План одобрен.
+
+### 2026-10-28, ревью (claude, Windows)
+Android-часть (действие «Отправить» у экранной клавиатуры) — не Windows-работа: цель Android собирается на Linux с Android SDK (`docs/knowledge/dev-environment.md`), её можно было сделать в той же сессии. Windows-часть (`Platforms/Windows`, `PreviewKeyDown` у WinUI `TextBox`) на Linux не собирается, но собирается в CI (задача `maui`) и на Windows-машине. Задача остаётся `approved`: оставшаяся работа — MAUI Windows и Android.
