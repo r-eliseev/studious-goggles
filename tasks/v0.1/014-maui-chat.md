@@ -1,8 +1,8 @@
 ---
 id: 014
-status: in-progress
-assignee: claude-qnrqyt
-claimed: 2026-10-27T00:00:00Z
+status: done
+assignee:
+claimed:
 created: 2026-10-27
 ---
 
@@ -121,5 +121,12 @@ scripts/check.sh
   - визуал: ширина карточки 280, высота картинки 256, касание 44, тёмная тема (`AppThemeBinding` в `Setter` внутри `DataTrigger`);
   - `SemanticProperties` на рантайме (голосовой вывод);
   - Android: только сборка, без запуска (эмулятор в облачной сессии недоступен, см. `docs/knowledge/claude-cloud-session.md`).
+
+**Проверено на Windows (2026-10-28, ревью после мерджа PR #14; Windows 11, SDK 10.0.402):**
+- `dotnet format --verify-no-changes` для ImageGen.Maui, Core, Core.Tests, Data, Data.Tests: без изменений.
+- `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0` и `-f net10.0-android`: 0 ошибок, 0 предупреждений.
+- `dotnet test`: ImageGen.Core.Tests 193 из 193 пять прогонов подряд (после c9d5ea9 гонки нет), ImageGen.Data.Tests 38 из 38.
+- Запуск `ImageGen.Maui.exe` (Debug): приложение стартует и работает без падения (контейнер DI и Shell собираются). Интерфейс и сценарий с ключом — задача 016.
+- Закрыто: строка «сборка под Windows» из критериев выполнена; ручные пункты критериев отнесены к 016.
 
 ## Комментарии

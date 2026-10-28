@@ -1,8 +1,8 @@
 ---
 id: 012
-status: in-progress
-assignee: claude-qnrqyt
-claimed: 2026-10-27T00:00:00Z
+status: done
+assignee:
+claimed:
 created: 2026-10-27
 ---
 
@@ -103,5 +103,12 @@ scripts/check.sh
 - Проверки здесь: `dotnet format --verify-no-changes` по ImageGen.Maui, ImageGen.Core, ImageGen.Core.Tests, ImageGen.Data, ImageGen.Data.Tests: все проходят (код выхода 0). `dotnet test` ImageGen.Core.Tests: 102 passed, 0 failed. `dotnet test` ImageGen.Data.Tests: 29 passed, 0 failed. `dotnet build ImageGen.Maui -f net10.0-android`: 0 Error(s), 0 Warning(s). `scripts/check.sh`: пройден.
 - Ограничение теста `FireAndForgetSafeAsync`: async void не наблюдаем, тест проверяет, что исключение не уходит вызывающему и не роняет процесс.
 - `docs/architecture.md` не менялся: раскладка совпадает с реализацией (Maui → Data → Core).
+
+**Проверено на Windows (2026-10-28, ревью после мерджа PR #14; Windows 11, SDK 10.0.402):**
+- `dotnet format --verify-no-changes` для ImageGen.Maui, Core, Core.Tests, Data, Data.Tests: без изменений.
+- `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0` и `-f net10.0-android`: 0 ошибок, 0 предупреждений.
+- `dotnet test`: ImageGen.Core.Tests 193 из 193 пять прогонов подряд (после c9d5ea9 гонки нет), ImageGen.Data.Tests 38 из 38.
+- Запуск `ImageGen.Maui.exe` (Debug): приложение стартует и работает без падения (контейнер DI и Shell собираются). Интерфейс и сценарий с ключом — задача 016.
+- Закрыто: строка «сборка под Windows» из критериев выполнена; ручные пункты критериев отнесены к 016.
 
 ## Комментарии

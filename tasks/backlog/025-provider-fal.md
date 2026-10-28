@@ -13,6 +13,8 @@ created: 2026-10-27
 
 Детализировать (точные файлы, код, тесты, как в задачах v0.1) после задачи 016, когда будет код скелета.
 
+Среда: Linux или Windows (в MAUI меняется только модель карточки, она тестируется в MauiLinked; сборку MAUI проверяет CI на Windows).
+
 ## Критерии готовности
 - Контракт ADR 0003 принят владельцем до начала работы.
 - Тесты на подменённом HTTP.
@@ -85,7 +87,7 @@ created: 2026-10-27
 - Генерации без handle (синхронный OpenRouter) помечаются `Interrupted`, как сейчас.
 - Если `ResponseUrl` больше не отдаёт результат, генерация `Failed` с текстом провайдера (срок хранения неизвестен, вопрос 4).
 
-### Миграция `0003_generation_jobs.sql`
+### Миграция `NNNN_generation_jobs.sql` (номер — следующий свободный при реализации)
 - `generations.job_json TEXT NULL` (сериализованный handle).
 - `generations.cancel_requested_at TEXT NULL` (нужен для состояния `CancelRequested` после перезапуска).
 
@@ -109,7 +111,7 @@ created: 2026-10-27
 - Ключ не задан → `InvalidKey` без HTTP-вызова.
 - Перезапуск с `Running` и handle → `WatchAsync` вызван с тем же handle, `SubmitAsync` не вызван (NSubstitute).
 - Перезапуск с `Running` без handle → `Interrupted`, как раньше.
-- Миграция `0003` на базе с данными: существующие строки `job_json = NULL`.
+- Новая миграция на базе с данными: существующие строки `job_json = NULL`.
 
 ### Команды проверки
 ```
@@ -120,7 +122,7 @@ dotnet format ImageGen/ImageGen.Data/ImageGen.Data.csproj --verify-no-changes
 scripts/check.sh
 ```
 
-Файлы: `ImageGen/ImageGen.Core/Providers/IImageProvider.cs` (новый), `ImageGen/ImageGen.Core/Providers/IImageGenerator.cs` (удаляется), `ImageGen/ImageGen.Core/Providers/IModelProvider.cs` (удаляется), `ImageGen/ImageGen.Core/Providers/ProviderJobRequest.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderJobHandle.cs` (новый), `ImageGen/ImageGen.Core/Providers/JobUpdate.cs` (новый), `ImageGen/ImageGen.Core/Providers/CancelOutcome.cs` (новый), `ImageGen/ImageGen.Core/Providers/ImageDownload.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalImageProvider.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalQueueClient.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalJson.cs` (новый), `ImageGen/ImageGen.Core/Domain/Generations/GenerationStatus.cs`, `ImageGen/ImageGen.Core/Domain/Generations/Generation.cs`, `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Services/ApiKeyService.cs`, `ImageGen/ImageGen.Core/Storage/IRunRepository.cs`, `ImageGen/ImageGen.Core/Storage/IImageFileStore.cs`, `ImageGen/ImageGen.Core/Serialization/CoreJsonContext.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data/Migrations/0003_generation_jobs.sql` (новый), `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Data/FileImageStore.cs`, `ImageGen/ImageGen.Core.Tests/Fal/FalImageProviderTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/RunRepositoryTests.cs`, `ImageGen/ImageGen.Data.Tests/FileImageStoreTests.cs`, `ImageGen/ImageGen.Maui/PageModels/GenerationItemViewModel.cs`, `docs/decisions/0003-provider-contract-and-jobs.md` (только статус после принятия владельцем)
+Файлы: `ImageGen/ImageGen.Core/Providers/IImageProvider.cs` (новый), `ImageGen/ImageGen.Core/Providers/IImageGenerator.cs` (удаляется), `ImageGen/ImageGen.Core/Providers/IModelProvider.cs` (удаляется), `ImageGen/ImageGen.Core/Providers/ProviderJobRequest.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderJobHandle.cs` (новый), `ImageGen/ImageGen.Core/Providers/JobUpdate.cs` (новый), `ImageGen/ImageGen.Core/Providers/CancelOutcome.cs` (новый), `ImageGen/ImageGen.Core/Providers/ImageDownload.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalImageProvider.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalQueueClient.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalJson.cs` (новый), `ImageGen/ImageGen.Core/Domain/Generations/GenerationStatus.cs`, `ImageGen/ImageGen.Core/Domain/Generations/Generation.cs`, `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Services/ApiKeyService.cs`, `ImageGen/ImageGen.Core/Storage/IRunRepository.cs`, `ImageGen/ImageGen.Core/Storage/IImageFileStore.cs`, `ImageGen/ImageGen.Core/Serialization/CoreJsonContext.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data/Migrations/NNNN_generation_jobs.sql` (новый), `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Data/FileImageStore.cs`, `ImageGen/ImageGen.Core.Tests/Fal/FalImageProviderTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/RunRepositoryTests.cs`, `ImageGen/ImageGen.Data.Tests/FileImageStoreTests.cs`, `ImageGen/ImageGen.Maui/PageModels/GenerationItemViewModel.cs`, `docs/decisions/0003-provider-contract-and-jobs.md` (только статус после принятия владельцем)
 
 ## Отчёт
 
@@ -138,3 +140,6 @@ scripts/check.sh
 7. fal сам повторяет запрос при 503/504 до 10 раз (документация). Ставить ли `X-Fal-No-Retry: 1`? Это влияет на расход.
 8. Опрос: план держит слот семафора только на отправку, опрос без слота. Нужен ли отдельный лимит одновременных опросов и какой интервал опроса (предлагаю от 1 с до 10 с)?
 9. Коды HTTP и `error_type` fal → `ErrorKind`: таблицы в документации не нашёл. Предлагаю сопоставление как у OpenRouter с пометкой «предположение», уточнить по реальным ответам.
+
+### 2026-10-28, ревью (claude, Windows)
+Общий порядок по пересечениям файлов и таблиц (предложение ревью, решает владелец): 035 → 036 → 020 → 017 → 018 → 019 → 027; 025 и 026 после 036 и принятия ADR 0003. Причины: 036 меняет `ImageModel`, `image_models` (ключ `(provider_id, id)`), `SessionSettings.ImageModelIds` (`ModelRef`) и `GenerationService`; 020 вводит полный список параметров модели, из которого 018 берёт лимит референсов; 017 вводит каталог чат-моделей, `IImageFileStore.ReadAsync` и `ImageDataUrl` для 018, 019 и 027. Номера миграций в планах заменены на `NNNN_<смысл>.sql` (правило в `docs/tasks.md`), строка «Среда» добавлена в «Описание».

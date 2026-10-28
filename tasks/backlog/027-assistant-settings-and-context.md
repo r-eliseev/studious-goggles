@@ -13,6 +13,8 @@ created: 2026-10-27
 
 Детализировать (точные файлы, код, тесты, как в задачах v0.1) после задачи 016, когда будет код скелета.
 
+Среда: только Windows (есть MAUI-часть: экран моделей сессии).
+
 ## Критерии готовности
 - Длинная сессия не превышает контекст модели ассистента.
 
@@ -92,7 +94,7 @@ created: 2026-10-27
 - Windows: `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0`; вручную: сменить модель ассистента, отправить сообщение, увидеть, что запрос уходит с новой моделью.
 - `scripts/check.sh`
 
-Файлы: `docs/specs/chat-sessions.md` (раздел S2.6, после подтверждения), `docs/decisions/NNNN-assistant-context.md` (новый ADR), `ImageGen/ImageGen.Core/Domain/Chat/ConversationSummary.cs` (новый), `ImageGen/ImageGen.Core/Storage/IConversationSummaryRepository.cs` (новый), `ImageGen/ImageGen.Core/Services/ContextBuilder.cs` (новый), `ImageGen/ImageGen.Core/Services/ConversationSummaryService.cs` (новый), `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core/Services/AssistantPrompts.cs`, `ImageGen/ImageGen.Core/Services/SessionService.cs`, `ImageGen/ImageGen.Core/Domain/Models/ChatModel.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterChatResult.cs`, `ImageGen/ImageGen.Data/Migrations/0004_chat_summaries.sql` (новый; номер — по порядку слияния), `ImageGen/ImageGen.Data/Repositories/ConversationSummaryRepository.cs` (новый), `ImageGen/ImageGen.Data/Migrations.cs`, `ImageGen/ImageGen.Maui/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Maui/Pages/SessionModelsPage.xaml`, `ImageGen/ImageGen.Maui/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Core.Tests/Services/ContextBuilderTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/SessionServiceTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/ConversationSummaryRepositoryTests.cs` (новый), `docs/architecture.md`
+Файлы: `docs/specs/chat-sessions.md` (раздел S2.6, после подтверждения), `docs/decisions/NNNN-assistant-context.md` (новый ADR), `ImageGen/ImageGen.Core/Domain/Chat/ConversationSummary.cs` (новый), `ImageGen/ImageGen.Core/Storage/IConversationSummaryRepository.cs` (новый), `ImageGen/ImageGen.Core/Services/ContextBuilder.cs` (новый), `ImageGen/ImageGen.Core/Services/ConversationSummaryService.cs` (новый), `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core/Services/AssistantPrompts.cs`, `ImageGen/ImageGen.Core/Services/SessionService.cs`, `ImageGen/ImageGen.Core/Domain/Models/ChatModel.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterChatResult.cs`, `ImageGen/ImageGen.Data/Migrations/NNNN_chat_summaries.sql` (новый; номер — следующий свободный), `ImageGen/ImageGen.Data/Repositories/ConversationSummaryRepository.cs` (новый), `ImageGen/ImageGen.Data/Migrations.cs`, `ImageGen/ImageGen.Maui/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Maui/Pages/SessionModelsPage.xaml`, `ImageGen/ImageGen.Maui/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Core.Tests/Services/ContextBuilderTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/SessionServiceTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/ConversationSummaryRepositoryTests.cs` (новый), `docs/architecture.md`
 
 ## Отчёт
 
@@ -111,3 +113,6 @@ created: 2026-10-27
 9. Поведение коротких сессий меняется: вместо «20 сообщений» действует бюджет. Это надо подтвердить в спецификации.
 10. ADR про стратегию сводки и схему хранения: нужен (предложено, `docs/decisions/`).
 
+
+### 2026-10-28, ревью (claude, Windows)
+Общий порядок по пересечениям файлов и таблиц (предложение ревью, решает владелец): 035 → 036 → 020 → 017 → 018 → 019 → 027; 025 и 026 после 036 и принятия ADR 0003. Причины: 036 меняет `ImageModel`, `image_models` (ключ `(provider_id, id)`), `SessionSettings.ImageModelIds` (`ModelRef`) и `GenerationService`; 020 вводит полный список параметров модели, из которого 018 берёт лимит референсов; 017 вводит каталог чат-моделей, `IImageFileStore.ReadAsync` и `ImageDataUrl` для 018, 019 и 027. Номера миграций в планах заменены на `NNNN_<смысл>.sql` (правило в `docs/tasks.md`), строка «Среда» добавлена в «Описание».

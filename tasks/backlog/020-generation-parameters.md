@@ -13,6 +13,8 @@ created: 2026-10-27
 
 Детализировать (точные файлы, код, тесты, как в задачах v0.1) после задачи 016, когда будет код скелета.
 
+Среда: только Windows (есть MAUI-часть: экран параметров). Ядро и хранилище проверяются и на Linux.
+
 ## Критерии готовности
 - Замены и отброшенные параметры видны на карточке генерации и сохраняются в записи генерации.
 
@@ -57,7 +59,7 @@ created: 2026-10-27
 
 ### Типы и их роли (Core)
 - `Domain/Models/ModelParameter` (record): `Name` (имя из каталога), `Kind` (`ParameterKind`: `Enum`, `Range`, `Boolean`), `Values` (только `Enum`, порядок каталога), `Min`, `Max` (только `Range`).
-- `Domain/Models/ImageModel`: новое поле `IReadOnlyList<ModelParameter>? Parameters`. `null` значит «неизвестно» (строка кеша до миграции 0002 или модель не найдена). Пустой список значит «провайдер не объявил параметров». Поля `SupportsSeed`, `SupportsImageInput`, `MaxImagesPerRequest` сохраняются и выводятся из того же ответа.
+- `Domain/Models/ImageModel`: новое поле `IReadOnlyList<ModelParameter>? Parameters`. `null` значит «неизвестно» (строка кеша до новой миграции или модель не найдена). Пустой список значит «провайдер не объявил параметров». Поля `SupportsSeed`, `SupportsImageInput`, `MaxImagesPerRequest` сохраняются и выводятся из того же ответа.
 - `Domain/Sessions/GenerationParameters` (record, все поля `string?`): `AspectRatio`, `Resolution`, `OutputFormat`. `null` значит «по умолчанию модели», такой параметр в план не попадает. Статическое `Empty`. Проверка при сохранении: `AspectRatio` — `W:H` (числа, допускается дробь) или `auto`; `Resolution` — непустая строка до 16 символов; `OutputFormat` — `png`, `jpeg` или `webp`.
 - `Domain/Sessions/SessionSettings`: новое поле `GenerationParameters Parameters { get; set; } = new()`. `CreateDefault()` не меняется (параметры пустые).
 - `Domain/Generations/ParameterOutcome` (record): `Name`, `Kind` (`ParameterOutcomeKind`: `Applied`, `Replaced`, `Dropped`), `Requested` (строка), `Sent` (строка или null при `Dropped`), `Reason` (`ParameterDropReason?`: `NotSupported`, `NoAllowedValue`, `CatalogUnknown`).
@@ -85,14 +87,14 @@ created: 2026-10-27
 - **OutputFormat:** только точное совпадение, замены нет (в спецификации «формат по умолчанию модели»). Иначе `Dropped(NoAllowedValue)`. Фактический формат пишется из ответа провайдера (`MediaType`, как сейчас).
 
 ### Хранение (Data)
-- Миграция `ImageGen.Data/Migrations/0002_generation_parameters.sql`, добавляется в `Migrations.All`. `0001` не менять.
+- Миграция `ImageGen.Data/Migrations/NNNN_generation_parameters.sql` (номер — следующий свободный при реализации), добавляется в `Migrations.All`. `0001` не менять.
   - `ALTER TABLE image_models ADD COLUMN supported_parameters_json TEXT NULL;`
   - `ALTER TABLE runs ADD COLUMN parameters_json TEXT NULL;`
   - `ALTER TABLE generations ADD COLUMN outcomes_json TEXT NULL;`
 - JSON только через `CoreJsonContext` (source generation). В контекст добавить `GenerationParameters`, `List<ModelParameter>`, `List<ParameterOutcome>`. Для `Parameters` NULL читается как `GenerationParameters.Empty`. Для `Outcomes` NULL читается как пустой список.
 - `ImageModelRepository`: читает и пишет `supported_parameters_json` (`null` сохраняется как NULL).
 - `RunRepository`: пишет `parameters_json` в `AddRunAsync`, читает в `GetRunAsync` и в списках. `outcomes_json` пишется в `AddRunAsync` и `UpdateGenerationAsync`, читается в обеих выборках генераций.
-- `SqliteDatabase` применяет миграции по `PRAGMA user_version`, поэтому 0002 встаёт поверх существующей БД без потери данных.
+- `SqliteDatabase` применяет миграции по `PRAGMA user_version`, поэтому новая миграция встаёт поверх существующей БД без потери данных.
 
 ### Каталог (Core, OpenRouter)
 - `OpenRouterClient.ListImageModelsAsync`: из `supported_parameters` строится `ModelParameter`-список (`enum` → `Values`, `range` → `Min`/`Max`, `boolean` → `Boolean`). Неизвестный тип пропускается. `SupportsSeed` остаётся как есть (ключ `seed` есть).
@@ -169,7 +171,7 @@ created: 2026-10-27
 25. `StartRunAsync` с тремя моделями → у каждой генерации свой `Outcomes`, сид у всех одинаковый (как сейчас).
 
 Данные (`ImageGen.Data.Tests`):
-26. БД версии 1 с сессией и генерацией → после миграции 0002 данные на месте, `outcomes_json` = NULL, `user_version` = 2.
+26. БД предыдущей версии с сессией и генерацией → после новой миграции данные на месте, `outcomes_json` = NULL, `user_version` увеличен на 1.
 27. `ImageModelRepository` сохраняет и возвращает `Parameters`; `null` возвращается как `null`.
 28. `RunRepository` сохраняет `Run.Parameters` и `Generation.Outcomes` и читает их обратно.
 
@@ -190,7 +192,7 @@ scripts/check.sh
 ```
 Ручная проверка на Windows: сессия с `aspect_ratio` 3:2 и `output_format` webp, модель без webp. Карточка показывает замену (если есть) и отброшенное, файл сохраняется, формат файла — тот, что вернул провайдер.
 
-Файлы: ImageGen/ImageGen.Core/Domain/Models/ModelParameter.cs, ImageGen/ImageGen.Core/Domain/Models/ImageModel.cs, ImageGen/ImageGen.Core/Domain/Sessions/GenerationParameters.cs, ImageGen/ImageGen.Core/Domain/Sessions/SessionSettings.cs, ImageGen/ImageGen.Core/Domain/Generations/ParameterOutcome.cs, ImageGen/ImageGen.Core/Domain/Generations/Run.cs, ImageGen/ImageGen.Core/Domain/Generations/Generation.cs, ImageGen/ImageGen.Core/Providers/ImageGenerationRequest.cs, ImageGen/ImageGen.Core/Services/GenerationParameterPlanner.cs, ImageGen/ImageGen.Core/Services/SessionService.cs, ImageGen/ImageGen.Core/Services/GenerationService.cs, ImageGen/ImageGen.Core/Services/ModelCatalogService.cs, ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs, ImageGen/ImageGen.Core/Serialization/CoreJsonContext.cs, ImageGen/ImageGen.Data/Migrations/0002_generation_parameters.sql, ImageGen/ImageGen.Data/Migrations.cs, ImageGen/ImageGen.Data/Repositories/ImageModelRepository.cs, ImageGen/ImageGen.Data/Repositories/RunRepository.cs, ImageGen/ImageGen.Maui/Pages/SessionParametersPage.xaml, ImageGen/ImageGen.Maui/Pages/SessionParametersPage.xaml.cs, ImageGen/ImageGen.Maui/PageModels/SessionParametersPageModel.cs, ImageGen/ImageGen.Maui/PageModels/ChatPageModel.cs, ImageGen/ImageGen.Maui/Pages/ChatPage.xaml, ImageGen/ImageGen.Maui/PageModels/GenerationItemViewModel.cs, ImageGen/ImageGen.Maui/Routes.cs, ImageGen/ImageGen.Maui/MauiProgram.cs, ImageGen/ImageGen.Maui/Resources/Strings/AppResources.resx
+Файлы: ImageGen/ImageGen.Core/Domain/Models/ModelParameter.cs, ImageGen/ImageGen.Core/Domain/Models/ImageModel.cs, ImageGen/ImageGen.Core/Domain/Sessions/GenerationParameters.cs, ImageGen/ImageGen.Core/Domain/Sessions/SessionSettings.cs, ImageGen/ImageGen.Core/Domain/Generations/ParameterOutcome.cs, ImageGen/ImageGen.Core/Domain/Generations/Run.cs, ImageGen/ImageGen.Core/Domain/Generations/Generation.cs, ImageGen/ImageGen.Core/Providers/ImageGenerationRequest.cs, ImageGen/ImageGen.Core/Services/GenerationParameterPlanner.cs, ImageGen/ImageGen.Core/Services/SessionService.cs, ImageGen/ImageGen.Core/Services/GenerationService.cs, ImageGen/ImageGen.Core/Services/ModelCatalogService.cs, ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs, ImageGen/ImageGen.Core/Serialization/CoreJsonContext.cs, ImageGen/ImageGen.Data/Migrations/NNNN_generation_parameters.sql, ImageGen/ImageGen.Data/Migrations.cs, ImageGen/ImageGen.Data/Repositories/ImageModelRepository.cs, ImageGen/ImageGen.Data/Repositories/RunRepository.cs, ImageGen/ImageGen.Maui/Pages/SessionParametersPage.xaml, ImageGen/ImageGen.Maui/Pages/SessionParametersPage.xaml.cs, ImageGen/ImageGen.Maui/PageModels/SessionParametersPageModel.cs, ImageGen/ImageGen.Maui/PageModels/ChatPageModel.cs, ImageGen/ImageGen.Maui/Pages/ChatPage.xaml, ImageGen/ImageGen.Maui/PageModels/GenerationItemViewModel.cs, ImageGen/ImageGen.Maui/Routes.cs, ImageGen/ImageGen.Maui/MauiProgram.cs, ImageGen/ImageGen.Maui/Resources/Strings/AppResources.resx
 
 ## Отчёт
 
@@ -207,3 +209,7 @@ scripts/check.sh
 7. **Зависимость от 016.** В описании сказано «детализировать после задачи 016». Задача 016 пока `planned`. План написан по коду `main` (f58be2d). Ждать 016 или одобрять сейчас?
 8. **Повтор и редактирование.** Repeat, New seed и Edit используют параметры прогона-источника, а не текущие настройки сессии. Подтвердить.
 9. **Пример в спецификации.** В `docs/specs/image-client.md` строка «1:1 → 1:1 (замена)» противоречива: 1:1 не заменяется. Исправить спецификацию в рамках 020 или отдельно? Не блокирует план.
+
+### 2026-10-28, ревью (claude, Windows)
+Общий порядок по пересечениям файлов и таблиц (предложение ревью, решает владелец): 035 → 036 → 020 → 017 → 018 → 019 → 027; 025 и 026 после 036 и принятия ADR 0003. Причины: 036 меняет `ImageModel`, `image_models` (ключ `(provider_id, id)`), `SessionSettings.ImageModelIds` (`ModelRef`) и `GenerationService`; 020 вводит полный список параметров модели, из которого 018 берёт лимит референсов; 017 вводит каталог чат-моделей, `IImageFileStore.ReadAsync` и `ImageDataUrl` для 018, 019 и 027. Номера миграций в планах заменены на `NNNN_<смысл>.sql` (правило в `docs/tasks.md`), строка «Среда» добавлена в «Описание».
+Пересечение с 036: обе меняют `ImageModel`, `ImageModelRepository`, `ModelCatalogService` и `GenerationService`. Если 036 сделана раньше, `supported_parameters_json` добавляется к пересозданной таблице `image_models` с ключом `(provider_id, id)`. Пересечение с 018: `ImageGenerationRequest` и тело `POST images` (референсы).

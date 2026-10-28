@@ -13,6 +13,8 @@ created: 2026-10-27
 
 Исходная точка: `IModelProvider` (`ImageGen/ImageGen.Core/Providers/IModelProvider.cs`) и `OpenRouterClient` (`ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`). Источник: ревью PR #1.
 
+Среда: Linux или Windows (в MAUI меняются только модели страниц, они тестируются в MauiLinked; сборку MAUI проверяет CI на Windows).
+
 ## Критерии готовности
 
 ## Анализ
@@ -62,7 +64,7 @@ created: 2026-10-27
 - `ImageModel.ProviderId` и `Generation.ProviderId`.
 - `SessionSettings.ImageModelIds`: список строк → список `ModelRef`. Строка без префикса читается как провайдер `openrouter`. Массово `settings_json` не переписывается: новая форма пишется при следующем сохранении сессии.
 - `SecretNames.For(providerId)`: для `openrouter` возвращает прежнее `openrouter_api_key`, чтобы сохранённый ключ не потерялся; для остальных — `provider.<id>.api_key`.
-- Миграция `0002_providers.sql`: `generations.provider_id TEXT NOT NULL DEFAULT 'openrouter'`; `image_models` пересоздаётся с первичным ключом `(provider_id, id)`; старые строки получают `openrouter`.
+- Миграция `NNNN_providers.sql` (номер — следующий свободный при реализации): `generations.provider_id TEXT NOT NULL DEFAULT 'openrouter'`; `image_models` пересоздаётся с первичным ключом `(provider_id, id)`; старые строки получают `openrouter`.
 
 ### Сервисы
 - `ApiKeyService(ProviderRegistry, ISecretStore, ProviderRouter)`: `HasKeyAsync(providerId)`, `SaveAsync(providerId, key)`, `RemoveAsync(providerId)`, `GetMaskedKeyAsync(providerId)`. Проверка ключа идёт через провайдера `providerId`.
@@ -100,7 +102,7 @@ created: 2026-10-27
 - Ключ `openrouter` читается по имени `openrouter_api_key` (сохранённый до миграции ключ работает).
 - Генерация с `ProviderId = X` вызывает провайдера X, второй провайдер не вызывается (подмены через NSubstitute).
 - Генерация с незнакомым `ProviderId` → `Failed`, `ModelUnavailable`, HTTP-подмена не вызвана.
-- Миграция `0002` на базе с данными: строки `image_models` и `generations` получают `openrouter`; два провайдера с одинаковым `id` модели уживаются.
+- Новая миграция на базе с данными: строки `image_models` и `generations` получают `openrouter`; два провайдера с одинаковым `id` модели уживаются.
 - Существующие тесты `OpenRouterClientTests` проходят; меняется только конструктор.
 
 ### Команды проверки
@@ -113,7 +115,7 @@ scripts/check.sh
 ```
 Оболочка MAUI (`ImageGen.Maui`) использует `ApiKeyService`, `SessionSettings` и `ModelCatalogService`: её собрать только на Windows (`dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0`).
 
-Файлы: `ImageGen/ImageGen.Core/Providers/ProviderKind.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderConfig.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderRegistry.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderRouter.cs` (новый), `ImageGen/ImageGen.Core/Domain/Models/ModelRef.cs` (новый), `ImageGen/ImageGen.Core/Domain/Models/ImageModel.cs`, `ImageGen/ImageGen.Core/Domain/Generations/Generation.cs`, `ImageGen/ImageGen.Core/Domain/Sessions/SessionSettings.cs`, `ImageGen/ImageGen.Core/Domain/Keys/SecretNames.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Services/ApiKeyService.cs`, `ImageGen/ImageGen.Core/Services/ModelCatalogService.cs`, `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/Storage/IImageModelRepository.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data/Migrations/0002_providers.sql` (новый), `ImageGen/ImageGen.Data/Repositories/ImageModelRepository.cs`, `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Data/DataServiceCollectionExtensions.cs` (если меняется регистрация), `ImageGen/ImageGen.Core.Tests/Providers/ProviderRegistryTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/ApiKeyServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/ModelCatalogServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `ImageGen/ImageGen.Core.Tests/Domain/SessionSettingsTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/ImageModelRepositoryTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/RunRepositoryTests.cs`, `ImageGen/ImageGen.Data.Tests/SqliteDatabaseTests.cs`, `ImageGen/ImageGen.Maui/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Maui/PageModels/ApiKeyPageModel.cs`, `docs/decisions/0005-provider-config-and-model-ref.md` (новый ADR, статус «предложено»), `docs/architecture.md` (раскладка: ProviderRegistry, ProviderRouter, ModelRef)
+Файлы: `ImageGen/ImageGen.Core/Providers/ProviderKind.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderConfig.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderRegistry.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderRouter.cs` (новый), `ImageGen/ImageGen.Core/Domain/Models/ModelRef.cs` (новый), `ImageGen/ImageGen.Core/Domain/Models/ImageModel.cs`, `ImageGen/ImageGen.Core/Domain/Generations/Generation.cs`, `ImageGen/ImageGen.Core/Domain/Sessions/SessionSettings.cs`, `ImageGen/ImageGen.Core/Domain/Keys/SecretNames.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Services/ApiKeyService.cs`, `ImageGen/ImageGen.Core/Services/ModelCatalogService.cs`, `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/Storage/IImageModelRepository.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data/Migrations/NNNN_providers.sql` (новый), `ImageGen/ImageGen.Data/Repositories/ImageModelRepository.cs`, `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Data/DataServiceCollectionExtensions.cs` (если меняется регистрация), `ImageGen/ImageGen.Core.Tests/Providers/ProviderRegistryTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/ApiKeyServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/ModelCatalogServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `ImageGen/ImageGen.Core.Tests/Domain/SessionSettingsTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/ImageModelRepositoryTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/RunRepositoryTests.cs`, `ImageGen/ImageGen.Data.Tests/SqliteDatabaseTests.cs`, `ImageGen/ImageGen.Maui/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Maui/PageModels/ApiKeyPageModel.cs`, `docs/decisions/0005-provider-config-and-model-ref.md` (новый ADR, статус «предложено»), `docs/architecture.md` (раскладка: ProviderRegistry, ProviderRouter, ModelRef)
 
 ## Отчёт
 
@@ -130,3 +132,7 @@ scripts/check.sh
 6. Строки «Среда» нет. Предлагаю `Среда: Linux или Windows (нужен .NET 10 SDK)`: задача касается только ядра и хранилища. Ок?
 7. Задача 016 в статусе `planned`, задачи 012–015 в `in-progress`. Описания велят детализировать после 016. Перепроверить план после 016, или владелец принимает план по коду main сейчас?
 8. «Критерии готовности» пустые. Предлагаю добавить: (а) `ProviderConfig` валидируется при старте, невалидный конфиг не запускает приложение; (б) генерация OpenRouter ведёт себя как до задачи (тесты `OpenRouterClientTests` проходят); (в) миграция старых сессий и каталога без потери данных. Раздел «Критерии» не трогаю: решение за владельцем.
+
+### 2026-10-28, ревью (claude, Windows)
+Общий порядок по пересечениям файлов и таблиц (предложение ревью, решает владелец): 035 → 036 → 020 → 017 → 018 → 019 → 027; 025 и 026 после 036 и принятия ADR 0003. Причины: 036 меняет `ImageModel`, `image_models` (ключ `(provider_id, id)`), `SessionSettings.ImageModelIds` (`ModelRef`) и `GenerationService`; 020 вводит полный список параметров модели, из которого 018 берёт лимит референсов; 017 вводит каталог чат-моделей, `IImageFileStore.ReadAsync` и `ImageDataUrl` для 018, 019 и 027. Номера миграций в планах заменены на `NNNN_<смысл>.sql` (правило в `docs/tasks.md`), строка «Среда» добавлена в «Описание».
+Задача 037 (время жизни `HttpClient`) действительно закрывается здесь, если клиент берётся из `IHttpClientFactory` на каждый запрос; тогда 037 стоит отменить при мердже 036.

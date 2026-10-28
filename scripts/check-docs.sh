@@ -36,11 +36,11 @@ while IFS= read -r f; do
     case "$link" in http*|mailto:*) continue ;; esac
     [ -e "$dir/$link" ] || { echo "ОШИБКА: битая ссылка в $f -> $link"; fail=1; }
   done < <(grep -oE '\]\([^)#[:space:]]+\.md(#[^)]*)?\)' "$f" | sed -E 's/^\]\(([^)#]+).*/\1/')
-done < <(find . -name '*.md' -not -path './.git/*' -not -path './node_modules/*' | sort)
+done < <(find . -name '*.md' -not -path './.git/*' -not -path './node_modules/*' -not -path './tmp/*' | sort)
 
 # 5. architecture.md описывает устройство, а не ход работ: без номеров задач, путей tasks/ и раздела о состоянии
 if [ -f docs/architecture.md ]; then
-  grep -nE '[Зз]адач[а-я]* +[0-9]{3}|tasks/|^#+ +Состояние' docs/architecture.md | while IFS= read -r line; do
+  grep -nE '[Зз]адач[^ ]* +[0-9]{3}|tasks/|^#+ +Состояние' docs/architecture.md | while IFS= read -r line; do
     echo "ОШИБКА: docs/architecture.md:${line%%:*}: ход работ (номер задачи, tasks/ или раздел «Состояние») — ему место в «Отчёте» задачи"
   done | grep . && fail=1
 fi

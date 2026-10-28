@@ -13,6 +13,8 @@ created: 2026-10-27
 
 Детализировать (точные файлы, код, тесты, как в задачах v0.1) после задачи 016, когда будет код скелета.
 
+Среда: только Windows (есть MAUI-часть: выбор файла и экран чата).
+
 ## Критерии готовности
 - Модели без поддержки референсов помечаются и пропускаются с причиной.
 
@@ -43,7 +45,7 @@ created: 2026-10-27
 
 Конфликты и порядок:
 - С 017: оба меняют `AssistantService.BuildRequestAsync` и добавляют чтение файлов и `ImageDataUrl`. Сначала 017, 018 переиспользует её помощники.
-- С 019: одна миграция `0002` (или отдельная `0003`), один и тот же компонент ввода картинки в `ChatPage`. Номер миграции согласовать при слиянии.
+- С 019: обе добавляют миграцию (номер — следующий свободный при реализации, `docs/tasks.md`) и меняют один и тот же компонент ввода картинки в `ChatPage`.
 - С 020 (параметры генерации): оба меняют `ImageGenerationRequest` и `OpenRouterClient.GenerateAsync`. Порядок слияния согласовать.
 
 ## План
@@ -55,7 +57,7 @@ created: 2026-10-27
 - `Storage/IImageFileStore` (дополнение): `SaveAttachmentAsync(sessionId, attachmentId, bytes, mediaType) → relativePath`, путь `images/<sessionId>/attachments/<attachmentId>.<ext>`. Чтение `ReadAsync` — из 017.
 - `Services/AttachmentService`: `AddImageAsync(sessionId, bytes, mediaType)`. Проверяет тип (PNG, JPEG, WebP), пустоту и лимит размера (лимит — вопрос), пишет файл, затем строку в БД (порядок ADR 0002). `ReadDataUrlAsync(attachmentId)` для ассистента и генерации.
 - `Domain/Models/ImageModel`: новое поле `MaxReferenceImages` (int, 0 если параметра нет). `OpenRouterClient.ListImageModelsAsync` читает `supported_parameters.input_references.max`.
-- Миграция `0002_*.sql`: колонка `image_models.max_reference_images` (по умолчанию 0), `DELETE FROM image_models` (кеш пересоберётся при следующем обращении), колонка `generations.reference_attachment_id` (NULL), таблица `chat_attachments`, индекс по `message_id`.
+- Миграция `NNNN_chat_attachments.sql` (номер — следующий свободный при реализации): колонка `image_models.max_reference_images` (по умолчанию 0), `DELETE FROM image_models` (кеш пересоберётся при следующем обращении), колонка `generations.reference_attachment_id` (NULL), таблица `chat_attachments`, индекс по `message_id`.
 - `Providers/ImageGenerationRequest`: новое поле `ReferenceImageDataUrls` (список, по умолчанию пустой). `OpenRouterClient.GenerateAsync` при непустом списке добавляет `input_references` (формат — вопрос).
 - `Services/GenerationService.StartRunAsync(sessionId, prompt, attachment?)`: для каждой модели сессии, если вложение есть и `MaxReferenceImages == 0`, модель пропускается с кодом причины `NoReferenceSupport`. Остальные модели получают генерации с `reference_attachment_id`. Результат: `StartRunResult(Run?, IReadOnlyList<SkippedModel>)`; `SkippedModel(ModelId, Reason)`. Если все модели пропущены, прогон не создаётся.
 - `Domain/Generations/Generation`: поле `ReferenceAttachmentId` (Guid?).
@@ -86,7 +88,7 @@ created: 2026-10-27
 - Вложение `image/gif` или текстовый файл → отказ до записи; файл не создан; строка в БД не добавлена.
 - Вложение сохраняется: файл лежит по пути `images/<sessionId>/attachments/`; при ошибке записи в БД файл удаляется (или помечается как осиротевший — вопрос).
 - Repeat генерации с референсом → новый прогон с тем же `ReferenceAttachmentId` и `ReferenceImageDataUrls` из того же файла.
-- Миграция 0002 на базе с данными 0001: `image_models` очищается; колонка `max_reference_images` есть со значением 0; существующие генерации получают NULL в `reference_attachment_id`.
+- Новая миграция на базе с данными предыдущих: `image_models` очищается; колонка `max_reference_images` есть со значением 0; существующие генерации получают NULL в `reference_attachment_id`.
 - `OpenRouterClient.GenerateAsync` с одним референсом: тело запроса содержит `input_references` (формат — после проверки, см. вопрос).
 - Удаление сессии с вложением → папка `images/<sessionId>` удалена.
 - Сообщение только с вложением (пустой текст) → сохраняется; ассистенту уходит без текста только при наличии 017.
@@ -99,7 +101,7 @@ created: 2026-10-27
 - Windows: `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0` и `-f net10.0-android`; ручной сценарий на Windows: прикрепить, отправить, увидеть пропуск модели без референсов.
 - `scripts/check.sh`
 
-Файлы: `ImageGen/ImageGen.Core/Domain/Chat/ChatAttachment.cs` (новый), `ImageGen/ImageGen.Core/Storage/IChatAttachmentRepository.cs` (новый), `ImageGen/ImageGen.Core/Storage/IImageFileStore.cs`, `ImageGen/ImageGen.Core/Domain/Models/ImageModel.cs`, `ImageGen/ImageGen.Core/Domain/Generations/Generation.cs`, `ImageGen/ImageGen.Core/Providers/ImageGenerationRequest.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Services/AttachmentService.cs` (новый), `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core/Services/StartRunResult.cs` (новый), `ImageGen/ImageGen.Data/Migrations/0002_*.sql` (новый), `ImageGen/ImageGen.Data/Migrations.cs`, `ImageGen/ImageGen.Data/FileImageStore.cs`, `ImageGen/ImageGen.Data/Repositories/ChatAttachmentRepository.cs` (новый), `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Data/Repositories/ImageModelRepository.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/ChatAttachmentRepositoryTests.cs` (новый), `ImageGen/ImageGen.Data.Tests/FileImageStoreTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/AttachmentServiceTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `ImageGen/ImageGen.Maui/Services/IFilePickerService.cs` (новый), `ImageGen/ImageGen.Maui/Services/MauiFilePickerService.cs` (новый), `ImageGen/ImageGen.Maui/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Maui/PageModels/ChatItemTemplateChoice.cs`, `ImageGen/ImageGen.Maui/PageModels/GenerationItemViewModel.cs`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Maui/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Maui/MauiProgram.cs`, `docs/architecture.md` (раздел «Хранение»: папка вложений)
+Файлы: `ImageGen/ImageGen.Core/Domain/Chat/ChatAttachment.cs` (новый), `ImageGen/ImageGen.Core/Storage/IChatAttachmentRepository.cs` (новый), `ImageGen/ImageGen.Core/Storage/IImageFileStore.cs`, `ImageGen/ImageGen.Core/Domain/Models/ImageModel.cs`, `ImageGen/ImageGen.Core/Domain/Generations/Generation.cs`, `ImageGen/ImageGen.Core/Providers/ImageGenerationRequest.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Services/AttachmentService.cs` (новый), `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core/Services/StartRunResult.cs` (новый), `ImageGen/ImageGen.Data/Migrations/NNNN_chat_attachments.sql` (новый), `ImageGen/ImageGen.Data/Migrations.cs`, `ImageGen/ImageGen.Data/FileImageStore.cs`, `ImageGen/ImageGen.Data/Repositories/ChatAttachmentRepository.cs` (новый), `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Data/Repositories/ImageModelRepository.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/ChatAttachmentRepositoryTests.cs` (новый), `ImageGen/ImageGen.Data.Tests/FileImageStoreTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/AttachmentServiceTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `ImageGen/ImageGen.Maui/Services/IFilePickerService.cs` (новый), `ImageGen/ImageGen.Maui/Services/MauiFilePickerService.cs` (новый), `ImageGen/ImageGen.Maui/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Maui/PageModels/ChatItemTemplateChoice.cs`, `ImageGen/ImageGen.Maui/PageModels/GenerationItemViewModel.cs`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Maui/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Maui/MauiProgram.cs`, `docs/architecture.md` (раздел «Хранение»: папка вложений)
 
 ## Отчёт
 
@@ -117,3 +119,7 @@ created: 2026-10-27
 8. Типы файлов: PNG, JPEG, WebP (предложено). Лимит размера в байтах — неизвестно, владелец задаёт?
 9. Предупреждение F10.6 (картинки уходят провайдеру) — в этой задаче или позже?
 
+
+### 2026-10-28, ревью (claude, Windows)
+Общий порядок по пересечениям файлов и таблиц (предложение ревью, решает владелец): 035 → 036 → 020 → 017 → 018 → 019 → 027; 025 и 026 после 036 и принятия ADR 0003. Причины: 036 меняет `ImageModel`, `image_models` (ключ `(provider_id, id)`), `SessionSettings.ImageModelIds` (`ModelRef`) и `GenerationService`; 020 вводит полный список параметров модели, из которого 018 берёт лимит референсов; 017 вводит каталог чат-моделей, `IImageFileStore.ReadAsync` и `ImageDataUrl` для 018, 019 и 027. Номера миграций в планах заменены на `NNNN_<смысл>.sql` (правило в `docs/tasks.md`), строка «Среда» добавлена в «Описание».
+По вопросу 7: номер миграции назначается при реализации (следующий свободный). Пересечение с 020: если 020 сделана раньше, отдельная колонка `image_models.max_reference_images` и `DELETE FROM image_models` не нужны — лимит берётся из `ImageModel.Parameters` (параметр `input_references`, `Max`), а устаревший кеш 020 уже перезагружает. План надо будет поправить по порядку, который выберет владелец.

@@ -13,6 +13,8 @@ created: 2026-10-27
 
 Детализировать (точные файлы, код, тесты, как в задачах v0.1) после задачи 016, когда будет код скелета.
 
+Среда: только Windows (есть MAUI-часть: экран чата).
+
 ## Критерии готовности
 - Провайдер, модель и цена описания видны.
 
@@ -79,7 +81,7 @@ UI (MAUI, Windows и Android):
 - Доступность: `SemanticProperties.Description` на кнопках «Описать» и «Подставить»; цену читать как текст, не только цветом.
 - Тексты в `AppResources.resx`.
 
-Миграция и хранение (предложено сейчас, вопрос ниже): `0003_image_descriptions.sql` (или `0002`, если 018 ещё не слита), таблица `image_descriptions` с индексом по `session_id`. Удаление сессии удаляет описания каскадно (как генерации; известное упрощение скелета).
+Миграция и хранение (предложено сейчас, вопрос ниже): `NNNN_image_descriptions.sql` (номер — следующий свободный при реализации), таблица `image_descriptions` с индексом по `session_id`. Удаление сессии удаляет описания каскадно (как генерации; известное упрощение скелета).
 
 Крайние случаи:
 - Модель ассистента без поддержки картинок: кнопка доступна, но запрос не отправляется; показывается причина.
@@ -108,7 +110,7 @@ UI (MAUI, Windows и Android):
 - Windows: `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0` и `-f net10.0-android`; вручную на Windows: описать результат, проверить, что ввод не меняется до «Подставить».
 - `scripts/check.sh`
 
-Файлы: `ImageGen/ImageGen.Core/Domain/Descriptions/DescriptionMode.cs` (новый), `ImageGen/ImageGen.Core/Domain/Descriptions/ImageDescription.cs` (новый), `ImageGen/ImageGen.Core/Storage/IImageDescriptionRepository.cs` (новый), `ImageGen/ImageGen.Core/Services/DescriptionPrompts.cs` (новый), `ImageGen/ImageGen.Core/Services/ImageDescriptionService.cs` (новый), `ImageGen/ImageGen.Data/Migrations/0003_image_descriptions.sql` (новый; номер — по 018), `ImageGen/ImageGen.Data/Migrations.cs`, `ImageGen/ImageGen.Data/Repositories/ImageDescriptionRepository.cs` (новый), `ImageGen/ImageGen.Data/DataServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/ImageDescriptionRepositoryTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/ImageDescriptionServiceTests.cs` (новый), `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Maui/PageModels/GenerationItemViewModel.cs`, `ImageGen/ImageGen.Maui/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Maui/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Core.Tests/MauiLinked/ChatPageModelTests.cs`, `docs/architecture.md` (раздел «Хранение»: таблица описаний)
+Файлы: `ImageGen/ImageGen.Core/Domain/Descriptions/DescriptionMode.cs` (новый), `ImageGen/ImageGen.Core/Domain/Descriptions/ImageDescription.cs` (новый), `ImageGen/ImageGen.Core/Storage/IImageDescriptionRepository.cs` (новый), `ImageGen/ImageGen.Core/Services/DescriptionPrompts.cs` (новый), `ImageGen/ImageGen.Core/Services/ImageDescriptionService.cs` (новый), `ImageGen/ImageGen.Data/Migrations/NNNN_image_descriptions.sql` (новый; номер — следующий свободный), `ImageGen/ImageGen.Data/Migrations.cs`, `ImageGen/ImageGen.Data/Repositories/ImageDescriptionRepository.cs` (новый), `ImageGen/ImageGen.Data/DataServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/ImageDescriptionRepositoryTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/ImageDescriptionServiceTests.cs` (новый), `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Maui/PageModels/GenerationItemViewModel.cs`, `ImageGen/ImageGen.Maui/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Maui/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Core.Tests/MauiLinked/ChatPageModelTests.cs`, `docs/architecture.md` (раздел «Хранение»: таблица описаний)
 
 ## Отчёт
 
@@ -124,3 +126,6 @@ UI (MAUI, Windows и Android):
 6. Неудачные запросы chat completions тарифицируются ли? В `docs/specs/image-client.md` написано только про картинки. Неизвестно.
 7. Источник «своей» картинки: ждать 018 или сделать сначала описание результатов (предложено: результаты сначала)?
 
+
+### 2026-10-28, ревью (claude, Windows)
+Общий порядок по пересечениям файлов и таблиц (предложение ревью, решает владелец): 035 → 036 → 020 → 017 → 018 → 019 → 027; 025 и 026 после 036 и принятия ADR 0003. Причины: 036 меняет `ImageModel`, `image_models` (ключ `(provider_id, id)`), `SessionSettings.ImageModelIds` (`ModelRef`) и `GenerationService`; 020 вводит полный список параметров модели, из которого 018 берёт лимит референсов; 017 вводит каталог чат-моделей, `IImageFileStore.ReadAsync` и `ImageDataUrl` для 018, 019 и 027. Номера миграций в планах заменены на `NNNN_<смысл>.sql` (правило в `docs/tasks.md`), строка «Среда» добавлена в «Описание».

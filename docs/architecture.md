@@ -32,12 +32,14 @@ ImageGen/
     CoreServiceCollectionExtensions.cs   AddImageGenCore()
   ImageGen.Data/                   net10.0, Microsoft.Data.Sqlite: SqliteDatabase, Migrations, репозитории, FileImageStore,
                                    DataServiceCollectionExtensions (AddImageGenData())
-  ImageGen.Core.Tests/             xUnit v3 + NSubstitute
-  ImageGen.Data.Tests/             xUnit v3, временная БД в файле
+  ImageGen.Core.Tests/             xUnit v3 + NSubstitute; MauiLinked/ — тесты модели страниц MAUI
+  ImageGen.Data.Tests/             xUnit v3, временная БД в файле; MauiLinked/ — то же для моделей, которым нужна БД
   ImageGen.Maui/                   MAUI: Pages/, PageModels/, Services/ (MauiSecretStore, MauiAppPaths), Converters/, Resources/Strings/
 ```
 
 Зависимости: `Maui → Data → Core`, `Maui → Core`. `Core` ссылается только на `Microsoft.Extensions.Http`, `Microsoft.Extensions.Logging.Abstractions`, `Microsoft.Extensions.DependencyInjection.Abstractions`. Архитектурный тест в `ImageGen.Core.Tests` проверяет, что `Core` не ссылается на `Microsoft.Maui*`, `Microsoft.AspNetCore*`, `Microsoft.Data.Sqlite*`.
+
+Логика страниц MAUI (PageModels, маршруты, строки, `AppInitializer`) не использует типы MAUI и тестируется без него: тестовые проекты подключают эти файлы из `ImageGen.Maui` через `<Compile Include=... Link=...>` (и `.resx` через `EmbeddedResource`), поэтому тесты идут на Linux. Типы MAUI (`IQueryAttributable`, `MainThread`, `ImageSource`) остаются в страницах, конвертерах и обёртках (`IMainThread`).
 
 ## Скелет v0.1: потоки
 **Первый запуск.** `App` инициализирует БД (`SqliteDatabase.InitializeAsync`), помечает незавершённые генерации «Interrupted» (`GenerationService.RecoverInterruptedAsync`). Если ключа OpenRouter нет (`ApiKeyService.HasKeyAsync`), открывается страница ключа; ключ проверяется `GET /api/v1/key` и сохраняется в `SecureStorage` (`ISecretStore`).
