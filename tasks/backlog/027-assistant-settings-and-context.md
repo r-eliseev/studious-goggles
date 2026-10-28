@@ -1,6 +1,6 @@
 ---
 id: 027
-status: todo
+status: planned
 assignee:
 claimed:
 created: 2026-10-27
@@ -17,9 +17,97 @@ created: 2026-10-27
 - Длинная сессия не превышает контекст модели ассистента.
 
 ## Анализ
+Проверено 2026-10-28 по `origin/main`. Задачи 012–016 пока не закрыты (см. 017): экран моделей сессии (015) может поменяться.
+
+Среда: ядро выполнимо на Linux; экран выбора модели ассистента — MAUI, только Windows (строки «Среда» нет).
+
+Что уже есть:
+- `SessionSettings.AssistantModelId` и `DefaultAssistantModelId`. `SessionService.UpdateSettingsAsync` принимает и сохраняет `AssistantModelId`, проверяя только непустоту; каталог не проверяется.
+- `AssistantService` берёт модель ассистента из настроек сессии при каждом запросе, поэтому новое значение действует на следующее сообщение (S5.2 уже выполняется на уровне ядра).
+- `AssistantPrompts.HistoryMessageCount = 20`; `BuildRequestAsync` берёт `TakeLast(20)` сообщений без ошибок.
+- Экран моделей сессии (`SessionModelsPage`) выбирает модели картинок и число запусков; выбора модели ассистента нет.
+- Настройки хранятся как JSON (`settings_json`), новые поля с значением по умолчанию не требуют миграции.
+
+Чего не хватает:
+- Каталога чат-моделей (вводит 017, в памяти). По `GET /api/v1/models` (2026-10-28) для `google/gemma-4-31b-it:free` есть `context_length` = 262144, `input_modalities` (image, text, video), `supported_parameters` с `tools`, цена 0. Этих полей в коде нет, кроме тех, что добавит 017.
+- Подсчёта токенов. `OpenRouterClient` разбирает только `usage.cost`; `usage.prompt_tokens` не читается, в `OpenRouterChatResult` его нет.
+- Хранения сводки истории. Таблицы и репозитория нет.
+- Полной спецификации управления контекстом: S2.6 в `docs/specs/chat-sessions.md` говорит «позже», деталей (бюджет, что сжимать, что при ошибке) нет. По `AGENTS.md` крупная работа без спецификации начинается с короткой спецификации и ожидания подтверждения. Поэтому первый шаг плана — спецификация.
+
+Конфликты и порядок:
+- С 017: оба меняют `AssistantService.BuildRequestAsync`. 027 делать после 017.
+- С 018: вложения (картинки) тоже попадают в контекст; их стоимость в токенах неизвестна.
+- С 019: если появится выбор модели описания, он на том же экране и в `SessionService.UpdateSettingsAsync`.
+- С 020 (параметры генерации): возможно, тот же экран настроек сессии.
+- Решение о схеме хранения сводки — новое, нужен ADR (`docs/decisions/`). Миграция `0001_initial.sql` не меняется, сводка добавляется новой миграцией (ADR 0002).
 
 ## План
+Шаг 0 (до кода): короткая спецификация в `docs/specs/chat-sessions.md` (раздел S2.6) или в новом файле `docs/specs/assistant-context.md`. В ней: бюджет токенов, сколько последних сообщений всегда идёт дословно, как считается оценка токенов, чем и когда сжимается старая часть истории, что хранится, что делать при ошибке сжатия, что показывать в чате. После подтверждения владельца статус `approved`, затем реализация по пунктам ниже.
+
+Часть A. Модель ассистента в настройках.
+- `ChatModelCatalogService` (из 017) получает `FindAsync(modelId)` и поле `SupportsTools` в `ChatModel` (из `supported_parameters` содержит `tools`).
+- `SessionService.UpdateSettingsAsync`: `AssistantModelId` должен быть в каталоге чат-моделей и иметь `SupportsTools`; иначе `ArgumentException` с понятным текстом, настройки не меняются.
+- `SessionModelsPageModel`: второй раздел «Модель ассистента» — выбор одной модели из списка с поиском. У каждой строки пометки: «принимает картинки» и «бесплатная, возможны лимиты». Значение сохраняется через `UpdateSettingsAsync`.
+
+Часть B. Управление контекстом.
+- `Services/ContextBuilder` (чистая логика, без I/O): вход — сообщения сессии без `IsError`, текущий промпт, сводка (если есть), `ContextLength` модели, резерв на ответ и на инструмент; выход — сообщения для запроса и список старых сообщений, которые нужно свести.
+- Бюджет: `Budget = ContextLength − ReserveForOutput − Tokens(системный промпт, инструмент, текущий промпт, сводка, картинки)`. Значения резервов — константы из спецификации.
+- Оценка токенов: эвристика по длине текста для решения; точное значение `usage.prompt_tokens` последнего ответа (после разбора в `OpenRouterChatResult`) используется для поправки. Точность эвристики для gemma неизвестна.
+- Алгоритм выбора: идём от последнего сообщения назад и берём, пока помещается; минимум — N последних сообщений всегда целиком (значение из спецификации). Всё старее уходит в «старую часть».
+- `Services/ConversationSummaryService`: если старая часть не покрыта сводкой, вызывает модель (`IOpenRouterChatClient`) с инструкцией сжать; результат сохраняется как `ConversationSummary` (текст, `CoversUpToMessageId`, `CreatedAt`, `CostUsd`).
+- `Domain/Chat/ConversationSummary`, `Storage/IConversationSummaryRepository`, миграция `chat_summaries` (или колонка), `Data/Repositories/ConversationSummaryRepository`. Решение по схеме и стратегии — ADR.
+- `AssistantService.BuildRequestAsync`: вместо `TakeLast(20)` вызывает `ContextBuilder`. Сводка идёт отдельным системным сообщением перед историей. `AssistantPrompts.HistoryMessageCount` перестаёт быть правилом и остаётся минимумом (или удаляется, решение в спецификации).
+
+Потоки данных:
+- Сообщение → `AssistantService` → `ContextBuilder` (с `ContextLength` из `ChatModelCatalogService`) → если есть старая часть вне сводки → `ConversationSummaryService` → `IConversationSummaryRepository` → запрос `IOpenRouterChatClient`.
+- Ошибка сводки не блокирует сообщение: запрос строится без неё, в пределах бюджета.
+
+Крайние случаи:
+- Ошибка сводки (`ProviderException`): запрос без сводки, только помещающиеся последние сообщения; сообщение пользователя сохранено; предупреждение в журнал; в чате по умолчанию без пометки (вопрос).
+- Одно сообщение длиннее бюджета: в запрос входит урезанная версия с маркером, в БД сообщение не меняется.
+- Смена модели на модель с меньшим контекстом: бюджет пересчитывается, лишнее уходит в сводку. Сводка сохраняется, не пересоздаётся.
+- Сводка устарела (пользователь удалил сообщения): в рамках этой задачи сообщения не удаляются, поэтому сводка всегда покрывает префикс истории.
+- Короткие сессии: сообщения идут дословно, сводка не вызывается. Поведение меняется: вместо «20 сообщений» действует бюджет (это новое поведение, нужно подтвердить в спецификации).
+- Удаление сессии: сводка удаляется каскадно.
+- Сообщения с `IsError` не попадают ни в контекст, ни в сводку.
+
+Тест-кейсы (условие → результат):
+- Короткая сессия (10 сообщений, бюджет достаточен) → все сообщения в запросе, сводка не вызывалась.
+- Сессия из 500 длинных сообщений, `ContextLength` = 8000 (тестовая модель) → оценка токенов запроса не больше `ContextLength − Reserve`; сводка вызвана для старой части один раз.
+- Старая часть уже покрыта сводкой → сводка повторно не вызывается.
+- Сводка бросает `ProviderException` → запрос строится без сводки и укладывается в бюджет; сообщение пользователя сохранено; ответ ассистента без `IsError`.
+- Одно сообщение длиннее бюджета → в запросе урезанная версия; в БД текст полный.
+- Смена модели на меньший `ContextLength` → запрос укладывается в новый бюджет.
+- Сообщения с `IsError` → не попадают в запрос и в сводку.
+- `ContextBuilder`: порядок сохраняется; сводка стоит перед историей.
+- `UpdateSettingsAsync` с моделью не из каталога → исключение; настройки не меняются.
+- `UpdateSettingsAsync` с моделью без `SupportsTools` → исключение; настройки не меняются.
+- Экран: выбор модели ассистента сохраняется; ViewModel показывает пометки «картинки» и «бесплатная» по данным каталога.
+- Миграция `chat_summaries`: на базе с данными 0001 создаётся пустая таблица; сводка читается и пишется (Data.Tests).
+
+Команды проверки:
+- `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`
+- `dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj`
+- `dotnet format` для `ImageGen.Core`, `ImageGen.Core.Tests`, `ImageGen.Data`, `ImageGen.Data.Tests`, `ImageGen.Maui` (`--verify-no-changes`)
+- Windows: `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0`; вручную: сменить модель ассистента, отправить сообщение, увидеть, что запрос уходит с новой моделью.
+- `scripts/check.sh`
+
+Файлы: `docs/specs/chat-sessions.md` (раздел S2.6, после подтверждения), `docs/decisions/NNNN-assistant-context.md` (новый ADR), `ImageGen/ImageGen.Core/Domain/Chat/ConversationSummary.cs` (новый), `ImageGen/ImageGen.Core/Storage/IConversationSummaryRepository.cs` (новый), `ImageGen/ImageGen.Core/Services/ContextBuilder.cs` (новый), `ImageGen/ImageGen.Core/Services/ConversationSummaryService.cs` (новый), `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core/Services/AssistantPrompts.cs`, `ImageGen/ImageGen.Core/Services/SessionService.cs`, `ImageGen/ImageGen.Core/Domain/Models/ChatModel.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterChatResult.cs`, `ImageGen/ImageGen.Data/Migrations/0004_chat_summaries.sql` (новый; номер — по порядку слияния), `ImageGen/ImageGen.Data/Repositories/ConversationSummaryRepository.cs` (новый), `ImageGen/ImageGen.Data/Migrations.cs`, `ImageGen/ImageGen.Maui/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Maui/Pages/SessionModelsPage.xaml`, `ImageGen/ImageGen.Maui/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Core.Tests/Services/ContextBuilderTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/SessionServiceTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/ConversationSummaryRepositoryTests.cs` (новый), `docs/architecture.md`
 
 ## Отчёт
 
 ## Комментарии
+
+### 2026-10-28, claude-qnrqyt
+Открытые вопросы (план предложен, при ответе поправлю «План»):
+1. Шаг 0: короткая спецификация (S2.6 или `docs/specs/assistant-context.md`) и подтверждение владельца до кода. Подтверждаете такой порядок?
+2. Бюджет и минимум: доля от `context_length` или фиксированный резерв, и сколько последних сообщений всегда идут дословно. Числа предлагаю выбрать в спецификации, не в плане.
+3. Подсчёт токенов: эвристика, `usage.prompt_tokens` или оба? Точность эвристики для gemma неизвестна; `usage.prompt_tokens` сейчас не читается.
+4. Модель сводки: модель ассистента (предложено) или отдельная дешёвая? Бесплатные модели дают 429, это уже видно в чате.
+5. Стоимость сводки: учитывать как у описания из 019 (вопрос там о таблице расходов).
+6. Токены картинок (017, 018): как резервировать? Неизвестно.
+7. Ошибка сводки: тихо в журнал (предложено) или пометка в чате?
+8. Каталог чат-моделей: в памяти (как в 017) или в SQLite? Решение здесь.
+9. Поведение коротких сессий меняется: вместо «20 сообщений» действует бюджет. Это надо подтвердить в спецификации.
+10. ADR про стратегию сводки и схему хранения: нужен (предложено, `docs/decisions/`).
+
