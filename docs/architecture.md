@@ -69,7 +69,7 @@ ImageGen.Web/ClientApp   Vue 3 + Vite + TypeScript
 ImageGen.Web.Tests
 Dockerfile, docker-compose.yml   том /data
 ```
-- Провайдеры: контракт submit/watch/cancel из ADR 0003 заменит узкий `IImageGenerator`, когда появятся fal и Replicate; тогда же восстановление незавершённых генераций после перезапуска.
+- Провайдеры: контракт submit/poll/cancel (ADR 0003, ADR 0005) заменит узкий `IImageGenerator`, когда появятся fal и Replicate; тогда же восстановление незавершённых генераций после перезапуска. OpenRouter в нём — задание в фоне в памяти процесса (`OpenRouterJobRunner`), статус всех провайдеров читается общим опросом (`ProviderJobPoller`).
 - События: для Web подписка через `Channel` вместо события .NET.
 - Web: однопользовательский, пароль из переменной окружения, cookie-сессия; секреты в файле под Data Protection; ключи шифрования и данные в томе Docker.
 - MAUI: на телефоне вкладки внизу, на широком экране боковая панель.

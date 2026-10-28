@@ -61,7 +61,7 @@ created: 2026-10-27
 
 ### Поток отправки и опроса
 1. `SubmitAsync` → `POST` без заголовка `Prefer`; сохраняется handle из ответа.
-2. `WatchAsync` опрашивает `GetUrl` с интервалом (вопрос 8 из 025 про интервал, здесь тот же).
+2. `PollAsync` читает `GetUrl` один раз; цикл и интервалы — общий `ProviderJobPoller` из 025 (ADR 0005).
 3. Сопоставление статусов:
    - `starting` → `Queued` (без позиции);
    - `processing` → `Running` (логи из ответа);
@@ -96,7 +96,7 @@ created: 2026-10-27
 - `POST` отмены → `CancellationRequested`, затем опрос `canceled` → `Cancelled`.
 - `429` при создании → `RateLimited`, второй `POST` создания не отправлен.
 - Сбой сети при опросе → опрос повторён, новое создание не отправлено.
-- Перезапуск с handle в `processing` → `WatchAsync` с тем же handle, `SubmitAsync` не вызван.
+- Перезапуск с handle в `processing` → опрос (`ProviderJobPoller`) с тем же handle, `SubmitAsync` не вызван.
 
 ### Команды проверки
 ```

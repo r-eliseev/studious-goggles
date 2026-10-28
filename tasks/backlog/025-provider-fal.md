@@ -55,7 +55,8 @@ created: 2026-10-27
 Общий слой (типы `ProviderKind`, `ProviderConfig`, `ModelRef`, `SecretNames.For`, миграция `provider_id`) задан в 036 и здесь не повторяется. 025 идёт после 036 и после принятия ADR 0003.
 
 ### Контракт (`ImageGen/ImageGen.Core/Providers/`, по ADR 0003)
-- `IImageProvider`: `CheckKeyAsync(key)`, `ListModelsAsync()`, `DescribeModelAsync(modelId)`, `SubmitAsync(ProviderJobRequest)` → `ProviderJobHandle`, `WatchAsync(handle)` → `IAsyncEnumerable<JobUpdate>`, `CancelAsync(handle)` → `CancelOutcome`. `IImageGenerator` и `IModelProvider` удаляются.
+- `IImageProvider`: `CheckKeyAsync(key)`, `ListModelsAsync()`, `DescribeModelAsync(modelId)`, `SubmitAsync(ProviderJobRequest)` → `ProviderJobHandle`, `PollAsync(handle)` → `JobUpdate` (одно чтение состояния; ADR 0005), `CancelAsync(handle)` → `CancelOutcome`. `IImageGenerator` и `IModelProvider` удаляются.
+- `Providers/ProviderJobPoller` (общий для всех провайдеров, ADR 0005): `WatchAsync(provider, handle)` → `IAsyncEnumerable<JobUpdate>`. Цикл: `PollAsync` → отдать обновление при смене состояния → ждать интервал (растёт от минимума к максимуму из конфига провайдера) → повтор до конечного состояния. Сбой сети на опросе — повтор опроса, не отправки.
 - `ProviderJobRequest` (record): `ModelId`, `Prompt`, `Seed` (null, если модель не принимает seed), `NumImages` всегда 1 (одна генерация = один запуск модели с одним сидом).
 - `ProviderJobHandle` (record, сериализуемый): `ProviderId`, `Kind` (вариант на провайдера). Для fal: `RequestId`, `StatusUrl`, `ResponseUrl`, `CancelUrl` из ответа отправки. Хранится в `generations` (JSON), см. миграцию ниже.
 - `JobUpdate`: состояние (`Queued` с позицией или `null`, `Running` с логами, `Succeeded` с `ImageDownload`, `Filtered`, `Failed` с `ErrorKind` и текстом, `Cancelled`). Состояния соответствуют единой модели из ADR 0003.
@@ -63,15 +64,20 @@ created: 2026-10-27
 - `CancelOutcome`: `Cancelled`, `CancellationRequested`, `AlreadyCompleted`, `NotSupported`.
 - `GenerationStatus` получает `CancelRequested` (запрос на отмену отправлен). Позиция в очереди не сохраняется в БД, только передаётся в событие.
 
+### OpenRouter как задание в фоне (`ImageGen/ImageGen.Core/OpenRouter/`, ADR 0005)
+- `OpenRouterJobRunner` (singleton, в памяти): `Start(request)` → локальный id; задание ждёт слот (семафор на 4, локальная позиция в очереди), затем в `Task.Run` выполняет `POST images` своим `CancellationTokenSource`. Состояния: в очереди → идёт → готово (байты, тип, цена) / ошибка / отфильтровано (403 с `metadata.reasons`) / отменено. Конечное задание удаляется после того, как опрос его выдал, или по сроку.
+- `OpenRouterImageProvider : IImageProvider`: `SubmitAsync` вызывает `Start` и сразу возвращает handle (`ProviderId`, локальный id), не дожидаясь HTTP; `PollAsync` читает состояние из `OpenRouterJobRunner`, неизвестный id → ошибка `ErrorKind.Interrupted` (задание не пережило перезапуск); `CancelAsync` отменяет HTTP-запрос → `Cancelled`. Ключ, каталог и проверка ключа — из нынешнего `OpenRouterClient`.
+- `ImageDownload` для OpenRouter несёт байты в памяти (у fal и Replicate — адрес для скачивания).
+
 ### fal (`ImageGen/ImageGen.Core/Fal/`, новые)
 - `FalImageProvider : IImageProvider`: сопоставляет вызовы с `FalQueueClient` и разбирает ответы.
 - `FalQueueClient`: HTTP-вызовы отправки, статуса, результата, отмены. Ключ берётся из `ISecretStore` на каждый запрос (`SecretNames.For("fal")`).
 - `FalJson` (записи для `System.Text.Json`, добавляются в `CoreJsonContext`).
 
 ### Поток отправки и опроса
-1. `GenerationService` берёт слот (`_slots`), вызывает `SubmitAsync`, отпускает слот.
+1. `GenerationService` вызывает `SubmitAsync` одинаково для всех провайдеров (у OpenRouter он тоже возвращается сразу, ADR 0005). Слоты: у fal и Replicate семафор провайдера держится только на отправку, у OpenRouter очередь и слоты внутри `OpenRouterJobRunner`.
 2. Handle сохраняется в `generations` сразу. Без сохранения handle задание не продолжается.
-3. `WatchAsync`: цикл опроса статуса по `StatusUrl` (`?logs=1`) с нарастающим интервалом (вопрос 8). Порядок:
+3. `ProviderJobPoller.WatchAsync` вызывает `PollAsync` fal: статус по `StatusUrl` (`?logs=1`), интервал нарастает (вопрос 8). Сопоставление:
    - `IN_QUEUE` → `Queued(queue_position)`;
    - `IN_PROGRESS` → `Running(logs)`;
    - `COMPLETED` с `error` → `Failed(ErrorKind по error_type, текст без ключа)`;
@@ -83,8 +89,9 @@ created: 2026-10-27
 - Сам поток отмены в сервисе (одно задание и группа) задача 024. 025 даёт провайдерный `CancelAsync` и маппинг исходов.
 
 ### Восстановление после перезапуска
-- Генерации со статусом `Queued` или `Running` и сохранённым handle возобновляют `WatchAsync` с тем же handle. Новая отправка не происходит.
-- Генерации без handle (синхронный OpenRouter) помечаются `Interrupted`, как сейчас.
+- Генерации со статусом `Queued` или `Running` и сохранённым handle возобновляют опрос (`ProviderJobPoller`) с тем же handle. Новая отправка не происходит.
+- У OpenRouter handle тоже сохранён, но задание жило в памяти: первый `PollAsync` после перезапуска возвращает ошибку `Interrupted`. Отдельной ветки для OpenRouter нет.
+- Генерации без handle (созданные до этой задачи) помечаются `Interrupted`, как сейчас.
 - Если `ResponseUrl` больше не отдаёт результат, генерация `Failed` с текстом провайдера (срок хранения неизвестен, вопрос 4).
 
 ### Миграция `NNNN_generation_jobs.sql` (номер — следующий свободный при реализации)
@@ -109,7 +116,13 @@ created: 2026-10-27
 - Отмена: `200` → `Cancelled`; `202` → `CancellationRequested`, затем `COMPLETED` → итоговый статус из опроса; `400` → `AlreadyCompleted`; `404` → `Failed`.
 - Сбой сети на опросе → опрос повторяется, новой отправки нет; после лимита повторов → `Failed` с `Network`.
 - Ключ не задан → `InvalidKey` без HTTP-вызова.
-- Перезапуск с `Running` и handle → `WatchAsync` вызван с тем же handle, `SubmitAsync` не вызван (NSubstitute).
+- Перезапуск с `Running` и handle → опрос с тем же handle, `SubmitAsync` не вызван (NSubstitute).
+- OpenRouter: `SubmitAsync` возвращается до ответа HTTP (подмена держит ответ, пока тест не отпустит); опрос даёт «в очереди» → «идёт» → «готово» с байтами; файл сохранён до события.
+- OpenRouter: пятое задание при четырёх занятых слотах → «в очереди» с позицией 1.
+- OpenRouter: `CancelAsync` во время HTTP → запрос отменён (токен подмены сработал), состояние «отменено».
+- OpenRouter: 403 с `metadata.reasons` → «отфильтровано».
+- OpenRouter: `PollAsync` с неизвестным локальным id → ошибка `Interrupted`.
+- `ProviderJobPoller`: интервал растёт от минимума к максимуму; одинаковые состояния подряд не дают повторного события.
 - Перезапуск с `Running` без handle → `Interrupted`, как раньше.
 - Новая миграция на базе с данными: существующие строки `job_json = NULL`.
 
@@ -122,7 +135,7 @@ dotnet format ImageGen/ImageGen.Data/ImageGen.Data.csproj --verify-no-changes
 scripts/check.sh
 ```
 
-Файлы: `ImageGen/ImageGen.Core/Providers/IImageProvider.cs` (новый), `ImageGen/ImageGen.Core/Providers/IImageGenerator.cs` (удаляется), `ImageGen/ImageGen.Core/Providers/IModelProvider.cs` (удаляется), `ImageGen/ImageGen.Core/Providers/ProviderJobRequest.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderJobHandle.cs` (новый), `ImageGen/ImageGen.Core/Providers/JobUpdate.cs` (новый), `ImageGen/ImageGen.Core/Providers/CancelOutcome.cs` (новый), `ImageGen/ImageGen.Core/Providers/ImageDownload.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalImageProvider.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalQueueClient.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalJson.cs` (новый), `ImageGen/ImageGen.Core/Domain/Generations/GenerationStatus.cs`, `ImageGen/ImageGen.Core/Domain/Generations/Generation.cs`, `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Services/ApiKeyService.cs`, `ImageGen/ImageGen.Core/Storage/IRunRepository.cs`, `ImageGen/ImageGen.Core/Storage/IImageFileStore.cs`, `ImageGen/ImageGen.Core/Serialization/CoreJsonContext.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data/Migrations/NNNN_generation_jobs.sql` (новый), `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Data/FileImageStore.cs`, `ImageGen/ImageGen.Core.Tests/Fal/FalImageProviderTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/RunRepositoryTests.cs`, `ImageGen/ImageGen.Data.Tests/FileImageStoreTests.cs`, `ImageGen/ImageGen.Maui/PageModels/GenerationItemViewModel.cs`, `docs/decisions/0003-provider-contract-and-jobs.md` (только статус после принятия владельцем)
+Файлы: `ImageGen/ImageGen.Core/Providers/IImageProvider.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderJobPoller.cs` (новый), `ImageGen/ImageGen.Core/OpenRouter/OpenRouterJobRunner.cs` (новый), `ImageGen/ImageGen.Core/OpenRouter/OpenRouterImageProvider.cs` (новый), `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterImageProviderTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Providers/ProviderJobPollerTests.cs` (новый), `ImageGen/ImageGen.Core/Providers/IImageGenerator.cs` (удаляется), `ImageGen/ImageGen.Core/Providers/IModelProvider.cs` (удаляется), `ImageGen/ImageGen.Core/Providers/ProviderJobRequest.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderJobHandle.cs` (новый), `ImageGen/ImageGen.Core/Providers/JobUpdate.cs` (новый), `ImageGen/ImageGen.Core/Providers/CancelOutcome.cs` (новый), `ImageGen/ImageGen.Core/Providers/ImageDownload.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalImageProvider.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalQueueClient.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalJson.cs` (новый), `ImageGen/ImageGen.Core/Domain/Generations/GenerationStatus.cs`, `ImageGen/ImageGen.Core/Domain/Generations/Generation.cs`, `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Services/ApiKeyService.cs`, `ImageGen/ImageGen.Core/Storage/IRunRepository.cs`, `ImageGen/ImageGen.Core/Storage/IImageFileStore.cs`, `ImageGen/ImageGen.Core/Serialization/CoreJsonContext.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data/Migrations/NNNN_generation_jobs.sql` (новый), `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Data/FileImageStore.cs`, `ImageGen/ImageGen.Core.Tests/Fal/FalImageProviderTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/RunRepositoryTests.cs`, `ImageGen/ImageGen.Data.Tests/FileImageStoreTests.cs`, `ImageGen/ImageGen.Maui/PageModels/GenerationItemViewModel.cs`, `docs/architecture.md` (раскладка провайдеров)
 
 ## Отчёт
 
@@ -143,3 +156,6 @@ scripts/check.sh
 
 ### 2026-10-28, ревью (claude, Windows)
 Общий порядок по пересечениям файлов и таблиц (предложение ревью, решает владелец): 035 → 036 → 020 → 017 → 018 → 019 → 027; 025 и 026 после 036 и принятия ADR 0003. Причины: 036 меняет `ImageModel`, `image_models` (ключ `(provider_id, id)`), `SessionSettings.ImageModelIds` (`ModelRef`) и `GenerationService`; 020 вводит полный список параметров модели, из которого 018 берёт лимит референсов; 017 вводит каталог чат-моделей, `IImageFileStore.ReadAsync` и `ImageDataUrl` для 018, 019 и 027. Номера миграций в планах заменены на `NNNN_<смысл>.sql` (правило в `docs/tasks.md`), строка «Среда» добавлена в «Описание».
+
+### 2026-10-28, владелец (через ревью)
+ADR 0003 принят. Уточнение в ADR 0005: OpenRouter тоже работает как задание в фоне (`SubmitAsync` возвращается сразу, HTTP в отдельной задаче), статус всех провайдеров читается общим опросом (`PollAsync` + `ProviderJobPoller`). План поправлен: раздел «OpenRouter как задание в фоне», поток, восстановление, тест-кейсы, файлы. Вопрос 1 закрыт.
