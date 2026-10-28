@@ -31,6 +31,7 @@ public class ApiKeyPageModelTests
         await model.OnAppearingAsync();
 
         Assert.Equal(AppResources.ApiKeyNotPersisted, model.PersistenceWarning);
+        Assert.True(model.HasPersistenceWarning);
     }
 
     [Fact]
@@ -42,6 +43,7 @@ public class ApiKeyPageModelTests
         await model.OnAppearingAsync();
 
         Assert.Equal("", model.PersistenceWarning);
+        Assert.False(model.HasPersistenceWarning);
     }
 
     [Fact]
@@ -87,6 +89,14 @@ public class ApiKeyPageModelTests
     }
 
     [Fact]
+    public void HasError_IsFalseBeforeAnyCheck()
+    {
+        var model = CreateModel();
+
+        Assert.False(model.HasError);
+    }
+
+    [Fact]
     public async Task SaveCommand_InvalidKey_ShowsRejectionKeepsFieldAndDoesNotSave()
     {
         _provider.CheckKeyAsync("sk-or-test", Arg.Any<CancellationToken>()).Returns(ApiKeyStatus.Invalid);
@@ -96,6 +106,7 @@ public class ApiKeyPageModelTests
         await model.SaveCommand.ExecuteAsync(null);
 
         Assert.Equal(AppResources.ApiKeyInvalid, model.StatusText);
+        Assert.True(model.HasError);
         Assert.Equal("sk-or-test", model.ApiKey);
         Assert.False(model.IsBusy);
         await _secrets.DidNotReceive().SetAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());

@@ -79,6 +79,31 @@ public class SessionsPageModelTests : IDisposable
     }
 
     [Fact]
+    public async Task OnAppearingAsync_SplitsTodayAndEarlier()
+    {
+        var now = new DateTimeOffset(2026, 10, 28, 12, 0, 0, TimeSpan.Zero);
+        var clock = new FixedClock(now);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns(
+        [
+            NewSession("Fresh", now.AddMinutes(-5)),
+            NewSession("Old", now.AddDays(-3)),
+        ]);
+        var model = CreateModel(clock);
+        _secrets.GetAsync(SecretNames.OpenRouterApiKey, Arg.Any<CancellationToken>()).Returns("sk-or-saved");
+
+        await model.OnAppearingAsync();
+
+        Assert.Equal(["Fresh"], model.Today.Select(item => item.Title));
+        Assert.Equal(["Old"], model.Earlier.Select(item => item.Title));
+        Assert.Equal(2, model.Sessions.Count);
+    }
+
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    [Fact]
     public async Task OnAppearingAsync_NoSessions_LeavesListEmpty()
     {
         var model = CreateModel();
@@ -173,12 +198,12 @@ public class SessionsPageModelTests : IDisposable
         Assert.Single(model.Sessions);
     }
 
-    private SessionsPageModel CreateModel()
+    private SessionsPageModel CreateModel(TimeProvider? time = null)
     {
         var catalog = new ChatModelCatalogService(ProviderDoubles.Router(), NullLogger<ChatModelCatalogService>.Instance);
         var sessions = new SessionService(_sessionRepository, Substitute.For<IChatMessageRepository>(), _runs, _files, catalog, TimeProvider.System);
         var apiKeys = new ApiKeyService(ProviderDoubles.Router(_provider), _secrets, NullLogger<ApiKeyService>.Instance);
-        return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs);
+        return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs, time ?? TimeProvider.System);
     }
 
     private static Session NewSession(string title, DateTimeOffset updatedAt) => new()

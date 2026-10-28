@@ -273,4 +273,19 @@
   <data name="AssistantSelected" xml:space="preserve">
     <value>selected</value>
   </data>
+  <data name="SessionsToday" xml:space="preserve">
+    <value>Today</value>
+  </data>
+  <data name="SessionsEarlier" xml:space="preserve">
+    <value>Earlier</value>
+  </data>
+  <data name="EmptyChatTitle" xml:space="preserve">
+    <value>What do you want to draw?</value>
+  </data>
+  <data name="EmptyChatHint" xml:space="preserve">
+    <value>Describe an image. The assistant writes the prompt and runs the models of this session.</value>
+  </data>
+  <data name="ApiKeyHeading" xml:space="preserve">
+    <value>Connect OpenRouter</value>
+  </data>
 </root>

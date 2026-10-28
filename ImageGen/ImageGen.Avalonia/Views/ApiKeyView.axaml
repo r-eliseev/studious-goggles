@@ -2,31 +2,51 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:markup="clr-namespace:ImageGen.Avalonia.Markup"
              xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels;assembly=ImageGen.Presentation"
+             xmlns:glyphs="clr-namespace:ImageGen.Presentation.Appearance;assembly=ImageGen.Presentation"
              x:Class="ImageGen.Avalonia.Views.ApiKeyView"
              x:DataType="pm:ApiKeyPageModel">
     <ScrollViewer>
-        <StackPanel Margin="16" Spacing="12" MaxWidth="600" HorizontalAlignment="Center">
-            <TextBlock Text="{markup:Res ApiKeyDescription}" TextWrapping="Wrap" />
+        <Border Margin="16"
+                MaxWidth="440"
+                HorizontalAlignment="Center"
+                Padding="28"
+                Background="{DynamicResource IgSurfaceBrush}"
+                BorderBrush="{DynamicResource IgLineBrush}"
+                BorderThickness="1"
+                CornerRadius="{DynamicResource IgRadiusLg}">
+            <StackPanel Spacing="12">
+                <TextBlock Classes="heading" Text="{markup:Res ApiKeyHeading}" TextWrapping="Wrap" />
+                <TextBlock Classes="muted" Text="{markup:Res ApiKeyDescription}" TextWrapping="Wrap" />
 
-            <TextBox Text="{Binding ApiKey, Mode=TwoWay}"
-                     PasswordChar="*"
-                     PlaceholderText="{markup:Res ApiKeyPlaceholder}"
-                     MinHeight="44"
-                     AutomationProperties.Name="{markup:Res ApiKeyTitle}"
-                     AutomationProperties.HelpText="{markup:Res ApiKeyDescription}" />
+                <TextBox Text="{Binding ApiKey, Mode=TwoWay}"
+                         Classes.error="{Binding HasError}"
+                         PasswordChar="*"
+                         PlaceholderText="{markup:Res ApiKeyPlaceholder}"
+                         AutomationProperties.Name="{markup:Res ApiKeyTitle}"
+                         AutomationProperties.HelpText="{markup:Res ApiKeyDescription}" />
 
-            <Button Content="{markup:Res ApiKeySave}"
-                    Command="{Binding SaveCommand}"
-                    HorizontalAlignment="Stretch"
-                    MinHeight="44"
-                    AutomationProperties.Name="{markup:Res ApiKeySave}" />
+                <Button Classes="primary"
+                        Command="{Binding SaveCommand}"
+                        HorizontalAlignment="Stretch"
+                        Content="{markup:Res ApiKeySave}"
+                        AutomationProperties.Name="{markup:Res ApiKeySave}" />
 
-            <ProgressBar IsIndeterminate="True"
-                         IsVisible="{Binding IsBusy}"
-                         AutomationProperties.Name="{markup:Res ApiKeyChecking}" />
+                <ProgressBar IsIndeterminate="True"
+                             IsVisible="{Binding IsBusy}"
+                             AutomationProperties.Name="{markup:Res ApiKeyChecking}" />
 
-            <TextBlock Text="{Binding PersistenceWarning}" TextWrapping="Wrap" />
-            <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
-        </StackPanel>
+                <Border Padding="10"
+                        CornerRadius="{DynamicResource IgRadiusSm}"
+                        Background="{DynamicResource IgWarnSoftBrush}"
+                        IsVisible="{Binding HasPersistenceWarning}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Classes="icon" Foreground="{DynamicResource IgWarnBrush}" Text="{x:Static glyphs:IconGlyphs.Info}" />
+                        <TextBlock Text="{Binding PersistenceWarning}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Classes.error="{Binding HasError}" Text="{Binding StatusText}" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
     </ScrollViewer>
 </UserControl>

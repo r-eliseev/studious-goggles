@@ -13,9 +13,16 @@ public sealed partial class SessionsPageModel(
     ApiKeyService apiKeyService,
     SessionService sessionService,
     INavigationService navigation,
-    IDialogService dialogs) : ObservableObject
+    IDialogService dialogs,
+    TimeProvider timeProvider) : ObservableObject
 {
     public ObservableCollection<SessionItemViewModel> Sessions { get; } = [];
+
+    /// <summary>Sessions last changed today (local date), newest first.</summary>
+    public ObservableCollection<SessionItemViewModel> Today { get; } = [];
+
+    /// <summary>Sessions last changed on earlier days, newest first.</summary>
+    public ObservableCollection<SessionItemViewModel> Earlier { get; } = [];
 
     [ObservableProperty]
     public partial bool IsBusy { get; set; }
@@ -34,10 +41,15 @@ public sealed partial class SessionsPageModel(
             }
 
             var sessions = await sessionService.ListAsync(CancellationToken.None);
+            var today = timeProvider.GetLocalNow().Date;
             Sessions.Clear();
+            Today.Clear();
+            Earlier.Clear();
             foreach (var session in sessions.OrderByDescending(session => session.UpdatedAt))
             {
-                Sessions.Add(new SessionItemViewModel(session, OpenSessionAsync, DeleteSessionAsync));
+                var item = new SessionItemViewModel(session, OpenSessionAsync, DeleteSessionAsync);
+                Sessions.Add(item);
+                (session.UpdatedAt.ToLocalTime().Date == today ? Today : Earlier).Add(item);
             }
         }
         catch (Exception ex)
@@ -92,6 +104,8 @@ public sealed partial class SessionsPageModel(
         {
             await sessionService.DeleteAsync(item.Id, CancellationToken.None);
             Sessions.Remove(item);
+            Today.Remove(item);
+            Earlier.Remove(item);
         }
         catch (Exception ex)
         {

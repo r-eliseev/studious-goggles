@@ -85,6 +85,16 @@ public static class AppResources
 
     public static string Copied => Get(nameof(Copied));
 
+    public static string SessionsToday => Get(nameof(SessionsToday));
+
+    public static string SessionsEarlier => Get(nameof(SessionsEarlier));
+
+    public static string EmptyChatTitle => Get(nameof(EmptyChatTitle));
+
+    public static string EmptyChatHint => Get(nameof(EmptyChatHint));
+
+    public static string ApiKeyHeading => Get(nameof(ApiKeyHeading));
+
     public static string NewSeed => Get(nameof(NewSeed));
 
     public static string Edit => Get(nameof(Edit));

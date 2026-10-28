@@ -3,42 +3,109 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels"
              xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
+             xmlns:appearance="clr-namespace:ImageGen.Presentation.Appearance"
              x:Class="ImageGen.Maui.Pages.SessionsPage"
              x:DataType="pm:SessionsPageModel"
              Title="{x:Static strings:AppResources.SessionsTitle}">
-    <Grid RowDefinitions="Auto,Auto,*" Padding="16" RowSpacing="12">
-        <Button Text="{x:Static strings:AppResources.NewSession}"
-                Command="{Binding NewSessionCommand}"
-                MinimumHeightRequest="44"
-                HorizontalOptions="Start"
-                SemanticProperties.Description="{x:Static strings:AppResources.NewSession}" />
+    <Grid x:Name="SessionsLayout" ColumnDefinitions="272,*" ColumnSpacing="16" Padding="16">
+        <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+            <Button StyleClass="primary"
+                    Command="{Binding NewSessionCommand}"
+                    Text="{x:Static strings:AppResources.NewSession}"
+                    HorizontalOptions="Fill"
+                    SemanticProperties.Description="{x:Static strings:AppResources.NewSession}">
+                <Button.ImageSource>
+                    <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Plus}" Color="{DynamicResource IgOnAccentColor}" Size="16" />
+                </Button.ImageSource>
+            </Button>
 
-        <ActivityIndicator Grid.Row="1"
-                           IsRunning="{Binding IsBusy}"
-                           IsVisible="{Binding IsBusy}"
-                           HorizontalOptions="Start"
-                           AutomationProperties.IsInAccessibleTree="False" />
+            <ActivityIndicator Grid.Row="1"
+                               IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Start"
+                               AutomationProperties.IsInAccessibleTree="False" />
 
-        <CollectionView Grid.Row="2" ItemsSource="{Binding Sessions}" SelectionMode="None">
-            <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="pm:SessionItemViewModel">
-                    <Grid ColumnDefinitions="*,Auto" Padding="0,8" ColumnSpacing="12">
-                        <VerticalStackLayout SemanticProperties.Description="{Binding Title}">
-                            <VerticalStackLayout.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding OpenCommand}" />
-                            </VerticalStackLayout.GestureRecognizers>
-                            <Label Text="{Binding Title}" FontAttributes="Bold" />
-                            <Label Text="{Binding UpdatedText}" FontSize="12" />
-                        </VerticalStackLayout>
+            <ScrollView Grid.Row="2">
+                <VerticalStackLayout Spacing="6">
+                    <Label StyleClass="section" Text="{x:Static strings:AppResources.SessionsToday}" Margin="4,8,0,0" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Today}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="pm:SessionItemViewModel">
+                                <SwipeView>
+                                    <SwipeView.RightItems>
+                                        <SwipeItems>
+                                            <SwipeItem Text="{x:Static strings:AppResources.DeleteSession}"
+                                                       BackgroundColor="{DynamicResource IgErrColor}"
+                                                       Command="{Binding DeleteCommand}" />
+                                        </SwipeItems>
+                                    </SwipeView.RightItems>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                                        <Button StyleClass="ghost"
+                                                Command="{Binding OpenCommand}"
+                                                HorizontalOptions="Fill"
+                                                Text="{Binding Title}"
+                                                SemanticProperties.Description="{Binding Title}" />
+                                        <Button Grid.Column="1"
+                                                StyleClass="ghost"
+                                                Command="{Binding DeleteCommand}"
+                                                IsVisible="{OnIdiom Desktop=True, Default=False}"
+                                                SemanticProperties.Description="{x:Static strings:AppResources.DeleteSession}">
+                                            <Button.ImageSource>
+                                                <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Delete}" Color="{DynamicResource IgMutedColor}" Size="16" />
+                                            </Button.ImageSource>
+                                        </Button>
+                                    </Grid>
+                                </SwipeView>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
 
-                        <Button Grid.Column="1"
-                                Text="{x:Static strings:AppResources.DeleteSession}"
-                                Command="{Binding DeleteCommand}"
-                                MinimumHeightRequest="44"
-                                SemanticProperties.Description="{x:Static strings:AppResources.DeleteSession}" />
-                    </Grid>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+                    <Label StyleClass="section" Text="{x:Static strings:AppResources.SessionsEarlier}" Margin="4,8,0,0" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Earlier}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="pm:SessionItemViewModel">
+                                <SwipeView>
+                                    <SwipeView.RightItems>
+                                        <SwipeItems>
+                                            <SwipeItem Text="{x:Static strings:AppResources.DeleteSession}"
+                                                       BackgroundColor="{DynamicResource IgErrColor}"
+                                                       Command="{Binding DeleteCommand}" />
+                                        </SwipeItems>
+                                    </SwipeView.RightItems>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                                        <Button StyleClass="ghost"
+                                                Command="{Binding OpenCommand}"
+                                                HorizontalOptions="Fill"
+                                                Text="{Binding Title}"
+                                                SemanticProperties.Description="{Binding Title}" />
+                                        <Button Grid.Column="1"
+                                                StyleClass="ghost"
+                                                Command="{Binding DeleteCommand}"
+                                                IsVisible="{OnIdiom Desktop=True, Default=False}"
+                                                SemanticProperties.Description="{x:Static strings:AppResources.DeleteSession}">
+                                            <Button.ImageSource>
+                                                <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Delete}" Color="{DynamicResource IgMutedColor}" Size="16" />
+                                            </Button.ImageSource>
+                                        </Button>
+                                    </Grid>
+                                </SwipeView>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </ScrollView>
+        </Grid>
+
+        <!-- Shown only in the wide layout (SessionsPage.xaml.cs). -->
+        <Border x:Name="EmptyState" Grid.Column="1" StyleClass="card" VerticalOptions="Center" HorizontalOptions="Center">
+            <VerticalStackLayout Spacing="12" MaximumWidthRequest="440">
+                <Label StyleClass="heading" Text="{x:Static strings:AppResources.EmptyChatTitle}" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" />
+                <Label StyleClass="muted" Text="{x:Static strings:AppResources.EmptyChatHint}" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" />
+                <Button StyleClass="primary"
+                        Command="{Binding NewSessionCommand}"
+                        HorizontalOptions="Center"
+                        Text="{x:Static strings:AppResources.NewSession}" />
+            </VerticalStackLayout>
+        </Border>
     </Grid>
 </ContentPage>
