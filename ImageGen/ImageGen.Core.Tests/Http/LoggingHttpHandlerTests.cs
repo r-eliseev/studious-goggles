@@ -86,6 +86,35 @@ public class LoggingHttpHandlerTests
     }
 
     [Fact]
+    public async Task SendAsync_KeyCheckResponse_BodyIsNotLoggedAtDebug()
+    {
+        const string json = "{\"data\":{\"label\":\"sk-or-v1-0d5secret\",\"creator_user_id\":\"user_abc123\"}}";
+        var logger = new CapturingLogger<LoggingHttpHandler>();
+        using var client = Client(logger, StubHttpMessageHandler.Json(HttpStatusCode.OK, json));
+
+        using var response = await client.GetAsync("https://example.test/api/v1/key", TestContext.Current.CancellationToken);
+
+        Assert.DoesNotContain("sk-or-v1-0d5secret", logger.AllText, StringComparison.Ordinal);
+        Assert.DoesNotContain("user_abc123", logger.AllText, StringComparison.Ordinal);
+        Assert.Contains("/api/v1/key", logger.AllText, StringComparison.Ordinal);
+        Assert.Equal(json, await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public void Redact_ApiKeyAndUserIdFields_ReplacesValuesWithPlaceholder()
+    {
+        var text = "{\"api_key\":\"sk-or-secret-1\",\"creator_user_id\":\"user_2\",\"model\":\"gemma\"}";
+
+        var redacted = BodyRedactor.Redact(text);
+
+        Assert.DoesNotContain("sk-or-secret-1", redacted, StringComparison.Ordinal);
+        Assert.DoesNotContain("user_2", redacted, StringComparison.Ordinal);
+        Assert.Contains("\"api_key\":\"<redacted>\"", redacted, StringComparison.Ordinal);
+        Assert.Contains("\"creator_user_id\":\"<redacted>\"", redacted, StringComparison.Ordinal);
+        Assert.Contains("\"model\":\"gemma\"", redacted, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Redact_LongBody_TruncatesToLimit()
     {
         var text = new string('x', 10_000);
