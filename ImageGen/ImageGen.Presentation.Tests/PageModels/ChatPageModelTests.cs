@@ -291,6 +291,32 @@ public class ChatPageModelTests
     }
 
     [Fact]
+    public async Task OnAppearingAsync_LegacyRunMessageWithoutOwnText_ShowsPromptOnceInRun()
+    {
+        var run = NewRun(_session.Id, "red fox");
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.Assistant, Text = "Prompt: red fox", CreatedAt = Now, RunId = run.Id });
+        StoreRun(run, [NewGeneration(run, 5)]);
+
+        await _model.OnAppearingAsync();
+
+        var runItem = Assert.IsType<RunItemViewModel>(Assert.Single(_model.Items));
+        Assert.Equal(string.Format(AppResources.RunPromptFormat, "red fox"), runItem.PromptText);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_LegacyRunMessageWithText_ShowsTextWithoutPromptLine()
+    {
+        var run = NewRun(_session.Id, "red fox");
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.Assistant, Text = "Drawing.\n\nPrompt: red fox", CreatedAt = Now, RunId = run.Id });
+        StoreRun(run, [NewGeneration(run, 5)]);
+
+        await _model.OnAppearingAsync();
+
+        Assert.Equal(2, _model.Items.Count);
+        Assert.Equal("Drawing.", Assert.IsType<MessageItemViewModel>(_model.Items[0]).Text);
+    }
+
+    [Fact]
     public async Task ReloadAsync_UnknownSession_ShowsAlert()
     {
         var unknown = Guid.NewGuid();

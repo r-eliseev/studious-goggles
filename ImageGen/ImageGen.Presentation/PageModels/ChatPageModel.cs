@@ -98,11 +98,24 @@ public sealed partial class ChatPageModel(
 
             Items.Clear();
             _cards.Clear();
-            foreach (var entry in TimelineOrdering.Order(timeline))
+            var entries = TimelineOrdering.Order(timeline);
+            var promptByRunId = entries.Where(e => e.Run is not null).ToDictionary(e => e.Run!.Id, e => e.Run!.Prompt);
+            foreach (var entry in entries)
             {
                 if (entry.Message is { } message)
                 {
-                    Items.Add(new MessageItemViewModel(message));
+                    if (message.RunId is { } runId && promptByRunId.TryGetValue(runId, out var runPrompt))
+                    {
+                        var text = RunMessageText.Visible(message.Text, runPrompt);
+                        if (text.Length > 0)
+                        {
+                            Items.Add(new MessageItemViewModel(message, text));
+                        }
+                    }
+                    else
+                    {
+                        Items.Add(new MessageItemViewModel(message));
+                    }
                 }
                 else if (entry.Run is { } run)
                 {

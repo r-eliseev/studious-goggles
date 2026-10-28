@@ -195,8 +195,8 @@ public sealed class AssistantService(
                 notes.Add($"{result.ReferencesNotSent} attached image(s) were not sent: over the model's reference limit.");
             }
 
-            var text = AssistantPrompts.RunMessage(assistantText, prompt);
-            return (result.Run, string.Join(" ", [text, .. notes]), false);
+            var text = AssistantPrompts.RunMessage(assistantText);
+            return (result.Run, string.Join(" ", [text, .. notes]).Trim(), false);
         }
         catch (InvalidOperationException ex)
         {

@@ -467,21 +467,22 @@ public class AssistantServiceTests
         Assert.Equal(RunOrigin.Assistant, result.Run.Origin);
         Assert.Equal(result.Run.Id, result.AssistantMessage.RunId);
         Assert.False(result.AssistantMessage.IsError);
-        Assert.Equal("Here is the plan.\n\nPrompt: a red fox in snow", result.AssistantMessage.Text);
+        Assert.Equal("Here is the plan.", result.AssistantMessage.Text);
         await _generator.Received(1).GenerateAsync(
             Arg.Is<ImageGenerationRequest>(r => r.Prompt == "a red fox in snow" && r.ModelId == ImageModel),
             Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task SendUserMessageAsync_ToolCallWithoutText_RunMessageIsOnlyPrompt()
+    public async Task SendUserMessageAsync_ToolCallWithoutText_RunMessageIsEmpty()
     {
         ReplyWithToolCall("""{"prompt":"a fox"}""");
 
         var result = await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
         await _generations.WhenIdleAsync();
 
-        Assert.Equal("Prompt: a fox", result.AssistantMessage.Text);
+        Assert.Equal("", result.AssistantMessage.Text);
+        Assert.NotNull(result.AssistantMessage.RunId);
     }
 
     [Fact]

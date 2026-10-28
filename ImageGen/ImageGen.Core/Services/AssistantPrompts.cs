@@ -34,12 +34,9 @@ public static class AssistantPrompts
 
     public static string CurrentPrompt(string prompt) => "Current prompt: " + prompt;
 
-    /// <summary>Text of an assistant message that started a run. The prompt is always shown.</summary>
-    public static string RunMessage(string? assistantText, string prompt)
-    {
-        var promptLine = "Prompt: " + prompt;
-        return string.IsNullOrWhiteSpace(assistantText)
-            ? promptLine
-            : assistantText.Trim() + "\n\n" + promptLine;
-    }
+    /// <summary>
+    /// Text of an assistant message that started a run: only what the assistant said, possibly empty.
+    /// The prompt is not repeated here: the run block shows it (S2.3).
+    /// </summary>
+    public static string RunMessage(string? assistantText) => assistantText?.Trim() ?? string.Empty;
 }
