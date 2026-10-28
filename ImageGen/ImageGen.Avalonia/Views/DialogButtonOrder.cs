@@ -8,14 +8,17 @@ namespace ImageGen.Avalonia.Views;
 /// </summary>
 public static class DialogButtonOrder
 {
-    public static void Apply(Panel row, Control save, Control cancel)
+    public static void Apply(Panel row, Control save, Control cancel) => Apply(row, save, cancel, OperatingSystem.IsMacOS());
+
+    /// <param name="isMacOs">Passed in so that the order can be tested on any platform.</param>
+    public static void Apply(Panel row, Control save, Control cancel, bool isMacOs)
     {
         ArgumentNullException.ThrowIfNull(row);
         ArgumentNullException.ThrowIfNull(save);
         ArgumentNullException.ThrowIfNull(cancel);
 
         row.Children.Clear();
-        if (OperatingSystem.IsMacOS())
+        if (isMacOs)
         {
             row.Children.Add(cancel);
             row.Children.Add(save);
