@@ -1,8 +1,8 @@
 ---
 id: 039
-status: in-progress
-assignee: claude-qnrqyt
-claimed: 2026-10-28T00:00:00Z
+status: done
+assignee:
+claimed:
 created: 2026-10-28
 ---
 
@@ -72,6 +72,13 @@ scripts/check.sh
 - Документация: `AGENTS.md` (команды Avalonia и Presentation-тестов), `docs/architecture.md` (текущая раскладка, зависимости), `docs/knowledge/dev-environment.md` (строка таблицы), `docs/knowledge/avalonia.md` (новый, неочевидные факты), `docs/index.md`, `docs/decisions/0007-avalonia-tests-xunit-3-2.md` (новый ADR о версии xunit).
 - Не проверено: сборка и запуск на Windows и macOS (нет машин; Windows-часть — отдельная проверка); задача `avalonia` в GitHub Actions (локально повторены её шаги). Поэтому статус `in-progress`.
 - Среда: Linux (облачная сессия) с Xvfb.
+
+**Проверено на Windows (2026-10-28, ревью после мерджа PR #19; Windows 11, SDK 10.0.402):**
+- `dotnet format --verify-no-changes` для всех девяти проектов — без изменений.
+- Тесты: Core 94, Data 37, Presentation 114, Avalonia 45 из 46 (пропущен только интеграционный тест Secret Service — он для Linux); тест DPAPI на Windows выполнен и прошёл.
+- Сборка: MAUI `net10.0-windows10.0.19041.0` и `net10.0-android`, Avalonia — 0 ошибок, 0 предупреждений; CI на PR #19: задачи `core`, `maui`, `avalonia` зелёные.
+- Запуск `ImageGen.Avalonia.exe`: окно «ImageGen» открывается, база создаётся в `%LOCALAPPDATA%ImageGen`.
+- Закрыто: сборки и автоматические проверки выполнены; ручные пункты (экран на Windows и Linux-рабочем столе, сохранённый ключ после перезапуска, gnome-keyring login, реальный ответ OpenRouter) перенесены в задачу ручной проверки 046. macOS — не проверено (решение владельца).
 
 ## Комментарии
 

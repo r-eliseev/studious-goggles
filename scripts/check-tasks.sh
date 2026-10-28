@@ -41,4 +41,9 @@ while IFS= read -r f; do
     echo "ОШИБКА: $f: указан assignee, но нет claimed"; fail=1
   fi
 done < <(find tasks -type f -name '[0-9][0-9]*-*.md' | sort)
+
+# Номер задачи не должен повторять номер из журнала завершённых (tasks/DONE.md)
+for d in $(task_done_ids .); do
+  case "$ids" in *" $d "*) echo "ОШИБКА: номер $d уже есть в tasks/DONE.md (завершённая задача): перенумеруй новую задачу"; fail=1 ;; esac
+done
 exit $fail

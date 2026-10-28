@@ -22,10 +22,15 @@ task_set() {
 # task_norm_id <число>: номер с ведущими нулями (1 -> 001)
 task_norm_id() { printf '%03d' "$((10#$1))"; }
 
-# task_next_id <корень>: следующий свободный номер задачи
+# task_done_ids <корень>: номера задач из журнала завершённых tasks/DONE.md
+task_done_ids() {
+  [ -f "$1/tasks/DONE.md" ] && sed -nE 's/^- ([0-9]+) \|.*/\1/p' "$1/tasks/DONE.md" || true
+}
+
+# task_next_id <корень>: следующий свободный номер задачи (с учётом tasks/DONE.md: номера не используются повторно)
 task_next_id() {
   local last
-  last=$(find "$1/tasks" -type f -name '[0-9][0-9]*-*.md' | sed -E 's|.*/([0-9]+)-[^/]*$|\1|' | sort -n | tail -1)
+  last=$( { find "$1/tasks" -type f -name '[0-9][0-9]*-*.md' | sed -E 's|.*/([0-9]+)-[^/]*$|\1|'; task_done_ids "$1"; } | sort -n | tail -1)
   printf '%03d' $(( 10#${last:-0} + 1 ))
 }
 

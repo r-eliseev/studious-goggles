@@ -35,6 +35,7 @@ scripts/             скрипты задач и проверок
 - `scripts/claim-task.sh <номер> <имя>` занять задачу;
 - `scripts/release-task.sh <номер> [--publish]` снять занятость;
 - `scripts/release-notes.sh <релиз>` черновик заметок о релизе из выполненных задач;
+- `scripts/archive-tasks.sh [--dry-run]` убрать задачи `done` и `cancelled` в журнал `tasks/DONE.md` (номера не используются повторно, текст — в истории git);
 - `scripts/check.sh` проверить документацию и задачи;
 - `scripts/audit.sh [дней-занятости] [дней-устаревания-доков]` показать сигналы устаревания (см. ниже).
 

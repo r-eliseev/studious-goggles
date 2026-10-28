@@ -1,8 +1,8 @@
 ---
 id: 038
-status: in-progress
-assignee: claude-qnrqyt
-claimed: 2026-10-28T00:00:00Z
+status: done
+assignee:
+claimed:
 created: 2026-10-28
 ---
 
@@ -79,6 +79,13 @@ Windows-цель MAUI — CI (задача `maui`) или Windows-машина: 
   - `scripts/check.sh`: пройден.
 - Не проверено: сборка цели `net10.0-windows10.0.19041.0` (CI, задача `maui`, и Windows-машина; на Linux не собирается); job `core` в GitHub Actions (локально повторены его шаги). Поэтому статус `in-progress`.
 - Среда: Linux (облачная сессия) с Android SDK.
+
+**Проверено на Windows (2026-10-28, ревью после мерджа PR #19; Windows 11, SDK 10.0.402):**
+- `dotnet format --verify-no-changes` для всех девяти проектов — без изменений.
+- Тесты: Core 94, Data 37, Presentation 114, Avalonia 45 из 46 (пропущен только интеграционный тест Secret Service — он для Linux); тест DPAPI на Windows выполнен и прошёл.
+- Сборка: MAUI `net10.0-windows10.0.19041.0` и `net10.0-android`, Avalonia — 0 ошибок, 0 предупреждений; CI на PR #19: задачи `core`, `maui`, `avalonia` зелёные.
+- Запуск `ImageGen.Avalonia.exe`: окно «ImageGen» открывается, база создаётся в `%LOCALAPPDATA%ImageGen`.
+- Закрыто: сборки и автоматические проверки выполнены; ручные пункты (экран на Windows и Linux-рабочем столе, сохранённый ключ после перезапуска, gnome-keyring login, реальный ответ OpenRouter) перенесены в задачу ручной проверки 046. macOS — не проверено (решение владельца).
 
 ## Комментарии
 
