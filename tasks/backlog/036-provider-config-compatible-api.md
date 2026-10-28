@@ -13,6 +13,7 @@ created: 2026-10-27
 
 Исходная точка: `IModelProvider` (`ImageGen/ImageGen.Core/Providers/IModelProvider.cs`) и `OpenRouterClient` (`ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`). Источник: ревью PR #1.
 
+Зависит от: 035.
 Среда: Linux или Windows (в MAUI меняются только модели страниц, они тестируются в MauiLinked; сборку MAUI проверяет CI на Windows).
 
 ## Критерии готовности
