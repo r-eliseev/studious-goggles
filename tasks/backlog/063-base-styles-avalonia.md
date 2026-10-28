@@ -1,6 +1,6 @@
 ---
 id: 063
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -59,5 +59,17 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Avalonia/Themes/Controls.axaml`, `ImageGen/ImageGen.Avalonia/App.axaml`, `ImageGen/ImageGen.Avalonia.Tests/Appearance/*`, `docs/knowledge/avalonia.md`
 
 ## Отчёт
+
+Сделано:
+- `Themes/Controls.axaml` (`Styles`), подключён в `App.axaml` через `StyleInclude` после `FluentTheme`: `Window`/`UserControl`; `Button` (обычная), `.primary`, `.ghost`, `.danger`, `.icon`, `.small` с состояниями `:pointerover`, `:pressed`, `:disabled`; `:focus-visible` для кнопок, полей, флажка и выпадающего списка (обводка 2 px `IgAccentBrush`); `TextBox` и `TextBox.error`; `CheckBox`, `ComboBox`, `ToggleSwitch`; текст `.muted`, `.meta`, `.caption`, `.title`, `.heading`, `.section`, `.icon`, `.error`; `Border.chip`, `.tag`, `.status` с `.done`, `.running`, `.queued`, `.failed`, `.filtered`, `.cancelled`.
+- Все цвета, радиусы, шрифты и размеры — только `DynamicResource Ig*`.
+- Тесты `Appearance/ControlStylesTests.cs` (5): основная кнопка берёт акцент Quiet; после смены на Gallery — новый акцент без пересоздания кнопки; `TextBox.error` — рамка `IgErrBrush`; `.status.filtered` — фон `IgWarnSoftBrush`; `.icon` — шрифт `lucide`.
+
+Отличия от плана:
+- Страница-образец `ControlsGallery.axaml` в тестах не сделана: критерии её не требуют, проверки сделаны тестами по классам.
+- Состояние `:pressed` и `:pointerover` проверено только загрузкой стилей, без наведения мышью (headless не имитирует указатель); визуально — в 046.
+- Для `Button.primary:pressed` фон не переопределён: берётся `Button:pressed`, это не проверено на экране.
+
+Проверка: `ImageGen.Avalonia.Tests` 73/73 (пропущено 2, как и раньше), сборка `ImageGen.Avalonia` — успешно, `dotnet format --verify-no-changes` для Avalonia и тестов — без изменений.
 
 ## Комментарии

@@ -28,7 +28,15 @@ public sealed partial class ApiKeyPageModel(
 
     /// <summary>Shown when the key will not survive closing the app; empty otherwise.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPersistenceWarning))]
     public partial string PersistenceWarning { get; set; } = "";
+
+    /// <summary>True when the key would not be kept safely; the page shows <see cref="PersistenceWarning"/>.</summary>
+    public bool HasPersistenceWarning => PersistenceWarning.Length > 0;
+
+    /// <summary>True when the last check failed (rejected key or no network), so the field shows the error.</summary>
+    [ObservableProperty]
+    public partial bool HasError { get; set; }
 
     /// <summary>Checks where the key would be kept. The page calls it when it appears.</summary>
     public async Task OnAppearingAsync()
@@ -41,6 +49,7 @@ public sealed partial class ApiKeyPageModel(
     private async Task SaveAsync()
     {
         IsBusy = true;
+        HasError = false;
         StatusText = AppResources.ApiKeyChecking;
         try
         {
@@ -53,6 +62,7 @@ public sealed partial class ApiKeyPageModel(
                 return;
             }
 
+            HasError = true;
             StatusText = status switch
             {
                 ApiKeyStatus.Invalid => AppResources.ApiKeyInvalid,

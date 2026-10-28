@@ -26,7 +26,9 @@ public sealed partial class ChatPageModel(
     IMainThread mainThread,
     AttachmentService attachments,
     IFilePickerService filePicker,
-    ImageDescriptionService descriptions) : ObservableObject
+    ImageDescriptionService descriptions,
+    IClipboardService clipboard,
+    ICurrentSessionTracker currentSession) : ObservableObject
 {
     private readonly Dictionary<Guid, GenerationItemViewModel> _cards = [];
     private bool _imageConsentGiven;
@@ -84,6 +86,7 @@ public sealed partial class ChatPageModel(
     /// <summary>Reads the whole timeline of the session and rebuilds the rows and cards.</summary>
     public async Task ReloadAsync()
     {
+        currentSession.CurrentId = _sessionId;
         try
         {
             var timeline = await sessions.GetTimelineAsync(_sessionId, CancellationToken.None);
@@ -98,16 +101,29 @@ public sealed partial class ChatPageModel(
 
             Items.Clear();
             _cards.Clear();
-            foreach (var entry in TimelineOrdering.Order(timeline))
+            var entries = TimelineOrdering.Order(timeline);
+            var promptByRunId = entries.Where(e => e.Run is not null).ToDictionary(e => e.Run!.Id, e => e.Run!.Prompt);
+            foreach (var entry in entries)
             {
                 if (entry.Message is { } message)
                 {
-                    Items.Add(new MessageItemViewModel(message));
+                    if (message.RunId is { } runId && promptByRunId.TryGetValue(runId, out var runPrompt))
+                    {
+                        var text = RunMessageText.Visible(message.Text, runPrompt);
+                        if (text.Length > 0)
+                        {
+                            Items.Add(new MessageItemViewModel(message, text, new CopyTextAction(clipboard, mainThread, text)));
+                        }
+                    }
+                    else
+                    {
+                        Items.Add(new MessageItemViewModel(message, message.Text, new CopyTextAction(clipboard, mainThread, message.Text)));
+                    }
                 }
                 else if (entry.Run is { } run)
                 {
                     var cards = entry.Generations.Select(CreateCard).ToList();
-                    Items.Add(new RunItemViewModel(run, cards));
+                    Items.Add(new RunItemViewModel(run, cards, new CopyTextAction(clipboard, mainThread, run.Prompt)));
                 }
             }
         }

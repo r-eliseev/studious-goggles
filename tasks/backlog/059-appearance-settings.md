@@ -1,6 +1,6 @@
 ---
 id: 059
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -67,5 +67,14 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Presentation/Appearance/*.cs` (новые), `ImageGen/ImageGen.Presentation.Tests/Appearance/*.cs` (новые)
 
 ## Отчёт
+
+Сделано (Linux, `ImageGen.Presentation`):
+- `Appearance/AppearanceStyle.cs`, `AppearanceTheme.cs`, `AppearanceSettings.cs` (record с `Default` = Quiet/System).
+- `Appearance/AppearanceSettingsFile.cs`: `Parse` и `Serialize`; неизвестное значение, не-JSON и JSON не в виде объекта дают значения по умолчанию и предупреждение.
+- `Appearance/AppearanceService.cs`: ленивая загрузка `appearance.json`, `SaveAsync` (без события при том же значении), предупреждения в журнал.
+
+Отличие от плана: событие `Changed` объявлено как `Action<AppearanceSettings>`, а не `EventHandler<AppearanceSettings>` (у `EventHandler<T>` `T` должен быть `EventArgs`). Добавлен тест на JSON-массив в корне (в плане его не было: `TryGetProperty` на массиве бросает исключение).
+
+Проверка: `ImageGen.Presentation.Tests` 153/153 (было 140), `dotnet format --verify-no-changes` для Presentation и его тестов — без изменений.
 
 ## Комментарии

@@ -8,6 +8,7 @@ public static class Routes
     public const string Chat = "chat";
     public const string SessionModels = "models";
     public const string SessionParameters = "parameters";
+    public const string Settings = "settings";
     public const string SessionIdParameter = "sessionId";
 
     public static string ChatFor(Guid sessionId) => $"{Chat}?{SessionIdParameter}={sessionId:D}";

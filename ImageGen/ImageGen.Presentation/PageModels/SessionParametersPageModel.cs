@@ -66,6 +66,10 @@ public sealed partial class SessionParametersPageModel(
 
     public Task OnAppearingAsync() => LoadAsync();
 
+    /// <summary>Leaves the screen without saving: the session keeps its parameters.</summary>
+    [RelayCommand]
+    private Task CancelAsync() => navigation.GoBackAsync();
+
     [RelayCommand(CanExecute = nameof(CanRun))]
     private async Task SaveAsync()
     {

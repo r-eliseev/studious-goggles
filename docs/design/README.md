@@ -16,3 +16,5 @@
 `prototype.html` загружает `tokens.json` запросом, поэтому из файла (`file://`) не открывается: `python3 -m http.server` в `docs/design/`, затем http://localhost:8000/prototype.html.
 
 Контраст всех шести палитр проверяется таблицей на экране «Дизайн-система» прототипа.
+
+Шрифты и значки: файлы TTF лежат в `ImageGen/ImageGen.Maui/Resources/Fonts/` (регистрация в `MauiProgram.cs`) и `ImageGen/ImageGen.Avalonia/Assets/Fonts/` (`AvaloniaResource` в `ImageGen.Avalonia.csproj`); лицензии OFL 1.1 и ISC — в папках `Licenses/` рядом. Имена начертаний и значения значков — в `implementation.md`, разделы 3 и 5.

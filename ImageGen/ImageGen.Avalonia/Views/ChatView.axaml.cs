@@ -13,15 +13,32 @@ namespace ImageGen.Avalonia.Views;
 /// <summary>Chat of one session. Enter sends the message; Shift+Enter starts a new line.</summary>
 public partial class ChatView : UserControl, IAppearing, IDisappearing
 {
+    /// <summary>From this width the session list is shown beside the chat.</summary>
+    private const double WideWidth = 840;
+
     public ChatView()
     {
         AvaloniaXamlLoader.Load(this);
         // Tunnel phase: Enter is taken before the TextBox turns it into a new line.
         this.FindControl<TextBox>("Input")?.AddHandler(KeyDownEvent, OnInputKeyDown, RoutingStrategies.Tunnel);
+        SizeChanged += (_, e) => ApplyWidth(e.NewSize.Width);
+    }
+
+    /// <summary>The session list of the wide layout; opening a session in it replaces this chat.</summary>
+    public SessionsPageModel? SessionPicker
+    {
+        get => this.FindControl<SessionsListView>("SessionList")?.DataContext as SessionsPageModel;
+        set => this.FindControl<SessionsListView>("SessionList")!.DataContext = value;
     }
 
     public void OnAppearing()
     {
+        if (SessionPicker is { } picker)
+        {
+            picker.ReplaceOnOpen = true;
+            picker.OnAppearingAsync().FireAndForgetSafeAsync();
+        }
+
         if (DataContext is not ChatPageModel model)
         {
             return;
@@ -63,4 +80,12 @@ public partial class ChatView : UserControl, IAppearing, IDisappearing
         Dispatcher.UIThread.Post(
             () => this.FindControl<ScrollViewer>("Transcript")?.ScrollToEnd(),
             DispatcherPriority.Background);
+
+    private void ApplyWidth(double width)
+    {
+        var wide = width >= WideWidth;
+        var layout = this.FindControl<Grid>("Layout")!;
+        layout.ColumnDefinitions[0].Width = wide ? new GridLength(272) : new GridLength(0);
+        this.FindControl<SessionsListView>("SessionList")!.IsVisible = wide;
+    }
 }

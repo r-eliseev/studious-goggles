@@ -29,6 +29,9 @@ public sealed partial class AssistantModelOptionViewModel(
     [NotifyPropertyChangedFor(nameof(AutomationName))]
     public partial bool IsSelected { get; set; } = isSelected;
 
+    /// <summary>Short labels of the row: free, takes images. Shown as tags next to the name.</summary>
+    public IReadOnlyList<string> Tags { get; } = BuildTags(model);
+
     /// <summary>The name with a check mark for the selected row, shown on screen.</summary>
     public string DisplayName => IsSelected ? "✓ " + Name : Name;
 
@@ -37,6 +40,22 @@ public sealed partial class AssistantModelOptionViewModel(
 
     [RelayCommand]
     private void Select() => select(this);
+
+    private static List<string> BuildTags(ChatModel model)
+    {
+        var tags = new List<string>();
+        if (model.IsFree)
+        {
+            tags.Add(AppResources.AssistantFree);
+        }
+
+        if (model.SupportsImageInput)
+        {
+            tags.Add(AppResources.AssistantTakesImages);
+        }
+
+        return tags;
+    }
 
     private static string BuildDetails(ChatModel model)
     {

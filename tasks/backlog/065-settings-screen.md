@@ -1,6 +1,6 @@
 ---
 id: 065
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -58,5 +58,19 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Presentation/{Routes.cs,Services/IFolderLauncher.cs,PageModels/SettingsPageModel.cs,PageModels/StyleOptionViewModel.cs,Resources/Strings/*}`, `ImageGen/ImageGen.Presentation/PageModels/SessionsPageModel.cs`, `ImageGen/ImageGen.Avalonia/{Views/SettingsView.*,Views/SessionsListView.axaml,Views/MainWindow.*,Composition/AppServices.cs,Services/AvaloniaFolderLauncher.cs}`, `ImageGen/ImageGen.Maui/{Pages/SettingsPage.*,Pages/SessionsPage.xaml,Controls/SessionsListView.xaml,MauiProgram.cs,Services/MauiFolderLauncher.cs}`, тесты, `docs/specs/chat-sessions.md`, `docs/architecture.md`
 
 ## Отчёт
+
+Сделано:
+- Presentation: `Routes.Settings`; строки настроек; `IFolderLauncher`; `StyleOptionViewModel`; `SettingsPageModel` (ключ по последним 4 символам, выбор стиля и темы сохраняется сразу, «Change…», «Open folder» по `IsSupported`); `SessionsPageModel.OpenSettingsCommand`. Тесты: `SettingsPageModelTests` (7), `SessionsPageModelTests.OpenSettings_NavigatesToSettings`.
+- Avalonia: `Views/SettingsView` (ключ, карточки стилей с акцентной рамкой для выбранной, три радиокнопки темы с именами, папка логов); `AvaloniaFolderLauncher` (`LaunchUriAsync` для папки); маршрут и `SettingsPageModel` в `AppServices`; шестерёнка внизу `SessionsListView`. Тесты: `Flows/SettingsFlowTests` (вход из списка, выбор Gallery меняет акцент), `ViewsAccessibilityTests` проверяет экран «настройки».
+- MAUI: `Pages/SettingsPage` (те же секции на классах, выбор темы через `CheckedChanged`, как в 070), `MauiFolderLauncher` (`IsSupported` — только на десктопе), маршрут и DI в `MauiProgram`, шестерёнка внизу `Controls/SessionsListView`.
+- Спецификация `docs/specs/chat-sessions.md`: S6.4.
+
+Отличия от плана:
+- Тема выбирается методами `SelectThemeCommand(theme)`, а не двусторонней привязкой `SelectedTheme`: сохранение асинхронное, и тесту нужен явный вызов. Для радиокнопок добавлены `IsSystemTheme`, `IsLightTheme`, `IsDarkTheme`.
+- Вход в настройки — шестерёнка внизу списка, а не `ToolbarItem` на экране сессий (в MAUI `ToolbarItem` нельзя скрыть по платформе из XAML). `Ctrl/Cmd+,` не сделано (это задача 073).
+- MAUI: карточки стилей не получают отдельного `CheckedChanged` — выбор через кнопку внутри карточки; рамка выбранной карточки — `DataTrigger`.
+- Тест `SelectGallery_ChangesAccentResource` сам запускает `AvaloniaAppearanceApplier`, потому что в тестовом хосте подписка приложения не поднята.
+
+Проверка: `ImageGen.Presentation.Tests` 203/203; `ImageGen.Avalonia.Tests` 90/90 (2 пропущены, как и раньше); сборка `ImageGen.Maui` для `net10.0-android` — успешно; `dotnet format --verify-no-changes` для Presentation, Presentation.Tests, Avalonia, Avalonia.Tests, MAUI — без изменений. Внешний вид и открытие папки не проверены (016, 046).
 
 ## Комментарии

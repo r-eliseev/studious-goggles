@@ -1,6 +1,6 @@
 ---
 id: 066
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -54,5 +54,20 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Presentation/PageModels/{SessionsPageModel,SessionItemViewModel,ApiKeyPageModel}.cs`, строки, `ImageGen/ImageGen.Avalonia/Views/{SessionsView,ApiKeyView}.*`, `ImageGen/ImageGen.Maui/Pages/{SessionsPage,ApiKeyPage}.*`, тесты
 
 ## Отчёт
+
+Сделано:
+- Presentation: `SessionsPageModel.Today` и `Earlier` (группы по локальной дате обновления, время берётся из `TimeProvider`, он добавлен в конструктор); удаление убирает строку из всех трёх коллекций. `ApiKeyPageModel.HasError` (отказ или сеть) и `HasPersistenceWarning`. Строки `SessionsToday`, `SessionsEarlier`, `EmptyChatTitle`, `EmptyChatHint`, `ApiKeyHeading`.
+- Avalonia `SessionsView.axaml`: колонки 272 и `*`; слева — `primary` «New session» со значком `Plus`, секции «Today» и «Earlier», строки `Button.ghost` с `TextTrimming`; значок корзины `row-delete` прозрачен, виден при `:pointerover` строки. Справа — пустое состояние (`EmptyState`). Ширина: `SessionsView.axaml.cs` при < 840 скрывает пустое состояние и отдаёт колонку списку. `ApiKeyView.axaml`: карточка 440 с `IgRadiusLg`, `TextBox.error` при `HasError`, плашка `IgWarnSoftBrush` с `Info`. Явные `MinHeight="44"` убраны.
+- MAUI `SessionsPage.xaml` и `.xaml.cs`: те же группы через `BindableLayout`, `SwipeView` с красной кнопкой Delete на телефонах, значок корзины только на десктопе (`OnIdiom`), пустое состояние. `ApiKeyPage.xaml`: карточка, плашка предупреждения, ошибка через `DataTrigger`.
+- Тесты: `SessionsPageModelTests.OnAppearingAsync_SplitsTodayAndEarlier`, `ApiKeyPageModelTests` (`HasError`, `HasPersistenceWarning`), `Avalonia.Tests/Views/SessionsViewTests` (узкое окно скрывает пустое состояние, широкое показывает, у кнопки удаления есть имя).
+
+Отличия от плана:
+- Вместо `SessionItemViewModel.IsToday` группы — две коллекции в `SessionsPageModel`; так проще и проверяется тестом.
+- MAUI: ширина окна обрабатывается в `SessionsPage.xaml.cs` (`SizeChanged`), а не `AdaptiveTrigger`: визуальное состояние не меняет ширину колонки. Удаление на телефонах — свайп.
+- MAUI: значок корзины не появляется по наведению (наведение в `CollectionView` MAUI ненадёжно); на десктопе он виден всегда.
+- MAUI `Entry` не подсвечивает рамку при ошибке (нет класса ошибки у поля); ошибка — красным текстом под полем.
+- Тест доступности MAUI не добавлен: MAUI-разметка проверяется сборкой Android.
+
+Проверка: `ImageGen.Presentation.Tests` 186/186; `ImageGen.Avalonia.Tests` 76/76 (2 пропущены, как и раньше); сборка `ImageGen.Maui` для `net10.0-android` — успешно; `dotnet format --verify-no-changes` для Presentation, Presentation.Tests, Avalonia, Avalonia.Tests, MAUI — без изменений. Окна и наведение мышью не проверены (016, 046).
 
 ## Комментарии

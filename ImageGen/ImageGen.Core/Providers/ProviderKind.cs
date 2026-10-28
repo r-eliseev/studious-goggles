@@ -11,4 +11,7 @@ public enum ProviderKind
 
     /// <summary>Anthropic-compatible Messages API: assistant chat only, no images.</summary>
     AnthropicCompatible = 2,
+
+    /// <summary>fal queue API: images as queued jobs (submit, poll, cancel).</summary>
+    Fal = 3,
 }

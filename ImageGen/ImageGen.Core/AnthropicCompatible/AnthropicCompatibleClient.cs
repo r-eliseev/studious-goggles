@@ -163,6 +163,10 @@ public sealed class AnthropicCompatibleClient(
             }
         }
 
-        return new AssistantChatResult(texts.Count == 0 ? null : string.Concat(texts), toolCalls, null);
+        return new AssistantChatResult(
+            texts.Count == 0 ? null : string.Concat(texts),
+            toolCalls,
+            null,
+            root["usage"]?["input_tokens"] is JsonValue tokens && tokens.TryGetValue<int>(out var count) ? count : null);
     }
 }

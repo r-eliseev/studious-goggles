@@ -10,6 +10,7 @@ using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Data;
 using ImageGen.Presentation;
+using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,19 +54,25 @@ public static class AppServices
         services.AddSingleton<IMainThread, AvaloniaMainThread>();
         services.AddSingleton<IDialogService>(dialogs ?? new AvaloniaDialogService(MainWindowOwner));
         services.AddSingleton<IFilePickerService>(new AvaloniaFilePickerService(MainWindowOwner));
+        services.AddSingleton<AppearanceService>();
+        services.AddSingleton<IClipboardService>(new AvaloniaClipboardService(MainWindowOwner));
+        services.AddSingleton<ICurrentSessionTracker, CurrentSessionTracker>();
 
         services.AddSingleton(sp => new PageRoutes()
             .Add(Routes.Sessions, _ => new SessionsView { DataContext = sp.GetRequiredService<SessionsPageModel>() })
             .Add(Routes.ApiKey, _ => new ApiKeyView { DataContext = sp.GetRequiredService<ApiKeyPageModel>() })
-            .Add(Routes.Chat, query => Page(sp.GetRequiredService<ChatPageModel>(), query, model => new ChatView { DataContext = model }))
+            .Add(Routes.Chat, query => Page(sp.GetRequiredService<ChatPageModel>(), query, model => new ChatView { DataContext = model, SessionPicker = sp.GetRequiredService<SessionsPageModel>() }))
             .Add(Routes.SessionModels, query => Page(sp.GetRequiredService<SessionModelsPageModel>(), query, model => new SessionModelsView { DataContext = model }))
-            .Add(Routes.SessionParameters, query => Page(sp.GetRequiredService<SessionParametersPageModel>(), query, model => new SessionParametersView { DataContext = model })));
+            .Add(Routes.SessionParameters, query => Page(sp.GetRequiredService<SessionParametersPageModel>(), query, model => new SessionParametersView { DataContext = model }))
+            .Add(Routes.Settings, _ => Page(sp.GetRequiredService<SettingsPageModel>(), new Dictionary<string, string>(), model => new SettingsView { DataContext = model })));
         services.AddSingleton<AvaloniaNavigationService>();
         services.AddSingleton<INavigationService>(sp => sp.GetRequiredService<AvaloniaNavigationService>());
 
         services.AddSingleton<SessionsPageModel>();
         services.AddTransient<ApiKeyPageModel>();
         services.AddTransient<ChatPageModel>();
+        services.AddTransient<SettingsPageModel>();
+        services.AddSingleton<IFolderLauncher>(new AvaloniaFolderLauncher(MainWindowOwner));
         services.AddTransient<SessionModelsPageModel>();
         services.AddTransient<SessionParametersPageModel>();
 

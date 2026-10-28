@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+  <!-- Section 2.3 of docs/design/implementation.md: the platform type scale and control height. Generated. -->
+  <OnPlatform x:Key="IgFontSizeCaption" x:TypeArguments="x:Double">
+    <On Platform="WinUI" Value="12" />
+    <On Platform="MacCatalyst" Value="12" />
+    <On Platform="iOS" Value="12" />
+    <On Platform="Android" Value="12" />
+  </OnPlatform>
+  <OnPlatform x:Key="IgFontSizeMeta" x:TypeArguments="x:Double">
+    <On Platform="WinUI" Value="12" />
+    <On Platform="MacCatalyst" Value="12" />
+    <On Platform="iOS" Value="13" />
+    <On Platform="Android" Value="13" />
+  </OnPlatform>
+  <OnPlatform x:Key="IgFontSizeTitle" x:TypeArguments="x:Double">
+    <On Platform="WinUI" Value="15" />
+    <On Platform="MacCatalyst" Value="15" />
+    <On Platform="iOS" Value="17" />
+    <On Platform="Android" Value="16" />
+  </OnPlatform>
+  <OnPlatform x:Key="IgFontSizeHeading" x:TypeArguments="x:Double">
+    <On Platform="WinUI" Value="20" />
+    <On Platform="MacCatalyst" Value="20" />
+    <On Platform="iOS" Value="22" />
+    <On Platform="Android" Value="22" />
+  </OnPlatform>
+  <OnPlatform x:Key="IgFontSizeDisplay" x:TypeArguments="x:Double">
+    <On Platform="WinUI" Value="24" />
+    <On Platform="MacCatalyst" Value="24" />
+    <On Platform="iOS" Value="28" />
+    <On Platform="Android" Value="28" />
+  </OnPlatform>
+  <OnPlatform x:Key="IgControlHeight" x:TypeArguments="x:Double">
+    <On Platform="WinUI" Value="32" />
+    <On Platform="MacCatalyst" Value="32" />
+    <On Platform="iOS" Value="44" />
+    <On Platform="Android" Value="48" />
+  </OnPlatform>
+</ResourceDictionary>

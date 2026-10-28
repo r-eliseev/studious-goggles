@@ -21,10 +21,21 @@
                             <Label Text="{Binding Text}" LineBreakMode="WordWrap">
                                 <Label.Triggers>
                                     <DataTrigger TargetType="Label" Binding="{Binding IsError}" Value="True">
-                                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource ErrorLight}, Dark={StaticResource ErrorDark}}" />
+                                        <Setter Property="TextColor" Value="{DynamicResource IgErrColor}" />
                                     </DataTrigger>
                                 </Label.Triggers>
                             </Label>
+                            <Button Text="{x:Static strings:AppResources.Copy}"
+                                    Command="{Binding Copy.CopyCommand}"
+                                    HorizontalOptions="Start"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.Copy}">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsUser}" Value="True">
+                                        <Setter Property="IsVisible" Value="False" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Label Text="{x:Static strings:AppResources.Copied}" FontSize="12" IsVisible="{Binding Copy.IsCopied}" />
                         </VerticalStackLayout>
                     </DataTemplate>
                 </pmui:ChatItemTemplateSelector.MessageTemplate>
@@ -33,6 +44,11 @@
                     <DataTemplate x:DataType="pm:RunItemViewModel">
                         <VerticalStackLayout Spacing="8" Padding="0,4" SemanticProperties.Description="{Binding PromptText}">
                             <Label Text="{Binding PromptText}" FontAttributes="Italic" LineBreakMode="WordWrap" />
+                            <Button Text="{x:Static strings:AppResources.Copy}"
+                                    Command="{Binding Copy.CopyCommand}"
+                                    HorizontalOptions="Start"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.Copy}" />
+                            <Label Text="{x:Static strings:AppResources.Copied}" FontSize="12" IsVisible="{Binding Copy.IsCopied}" />
                             <FlexLayout Wrap="Wrap" Direction="Row" JustifyContent="Start" AlignItems="Start"
                                         BindableLayout.ItemsSource="{Binding Generations}">
                                 <BindableLayout.ItemTemplate>
@@ -61,7 +77,7 @@
                                                        LineBreakMode="WordWrap">
                                                     <Label.Triggers>
                                                         <DataTrigger TargetType="Label" Binding="{Binding HasError}" Value="True">
-                                                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource ErrorLight}, Dark={StaticResource ErrorDark}}" />
+                                                            <Setter Property="TextColor" Value="{DynamicResource IgErrColor}" />
                                                         </DataTrigger>
                                                     </Label.Triggers>
                                                 </Label>
@@ -100,7 +116,11 @@
         </ResourceDictionary>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="Auto,*,Auto,Auto" Padding="16" RowSpacing="12">
+    <Grid x:Name="ChatLayout" ColumnDefinitions="272,*" ColumnSpacing="16" Padding="16">
+        <!-- Wide layout only: the session list beside the chat (ChatPage.xaml.cs). -->
+        <controls:SessionsListView x:Name="SessionList" Grid.Column="0" />
+
+        <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12">
         <HorizontalStackLayout Spacing="8" HorizontalOptions="Start">
             <Button Text="{Binding ModelsButtonText}"
                     Command="{Binding OpenModelsCommand}"
@@ -166,5 +186,6 @@
                         SemanticProperties.Description="{x:Static strings:AppResources.Send}" />
             </Grid>
         </VerticalStackLayout>
+        </Grid>
     </Grid>
 </ContentPage>

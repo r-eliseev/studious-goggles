@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.Json;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
@@ -24,6 +25,11 @@ public sealed class GenerationService(
     ILogger<GenerationService> logger)
 {
     public const int MaxParallelGenerations = 4;
+
+    /// <summary>Poll interval of a queued job: starts at the minimum and grows to the maximum (ADR 0005).</summary>
+    private static readonly TimeSpan PollMinInterval = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan PollMaxInterval = TimeSpan.FromSeconds(5);
+    private const int MaxPollNetworkFailures = 5;
 
     private readonly SemaphoreSlim _slots = new(MaxParallelGenerations, MaxParallelGenerations);
     private readonly ConcurrentDictionary<Guid, Task> _running = new();
@@ -117,8 +123,22 @@ public sealed class GenerationService(
 
     /// <summary>Marks generations left unfinished by a previous app session as Failed with <see cref="ErrorKind.Interrupted"/>.</summary>
     /// <returns>Number of updated generations.</returns>
-    public Task<int> RecoverInterruptedAsync(CancellationToken cancellationToken) =>
-        runs.MarkUnfinishedAsInterruptedAsync(timeProvider.GetUtcNow(), cancellationToken);
+    /// <remarks>
+    /// Generations that have a queued job (a saved handle) are not interrupted: their jobs are followed again with the
+    /// saved handle, without a new submit. The job of a provider that is no longer configured is left as it is.
+    /// </remarks>
+    public async Task<int> RecoverInterruptedAsync(CancellationToken cancellationToken)
+    {
+        foreach (var generation in await runs.ListResumableJobsAsync(cancellationToken))
+        {
+            if (QueuedProviderOf(generation.ProviderId) is { } queued)
+            {
+                Launch(generation, () => WatchQueuedAsync(generation, queued));
+            }
+        }
+
+        return await runs.MarkUnfinishedAsInterruptedAsync(timeProvider.GetUtcNow(), cancellationToken);
+    }
 
     /// <summary>Waits until no background generation is running. Used by tests.</summary>
     public async Task WhenIdleAsync()
@@ -233,7 +253,9 @@ public sealed class GenerationService(
         }
     }
 
-    private void Launch(Generation generation)
+    private void Launch(Generation generation) => Launch(generation, () => ExecuteAsync(generation));
+
+    private void Launch(Generation generation, Func<Task> work)
     {
         // The task waits on this gate so that it cannot remove its own entry before the entry is added.
         var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -243,7 +265,7 @@ public sealed class GenerationService(
             await gate.Task.ConfigureAwait(false);
             try
             {
-                await ExecuteAsync(generation).ConfigureAwait(false);
+                await work().ConfigureAwait(false);
             }
             finally
             {
@@ -257,6 +279,12 @@ public sealed class GenerationService(
 
     private async Task ExecuteAsync(Generation generation)
     {
+        if (QueuedProviderOf(generation.ProviderId) is { } queued)
+        {
+            await ExecuteQueuedAsync(generation, queued).ConfigureAwait(false);
+            return;
+        }
+
         await _slots.WaitAsync(CancellationToken.None).ConfigureAwait(false);
         try
         {
@@ -273,37 +301,143 @@ public sealed class GenerationService(
         }
     }
 
-    private async Task GenerateAndStoreAsync(Generation generation)
+    /// <summary>
+    /// A queued provider (fal): the slot is held while the job is submitted; the watch of the job runs after the slot is
+    /// released, because a queue can take minutes.
+    /// </summary>
+    private async Task ExecuteQueuedAsync(Generation generation, IQueuedImageProvider queued)
     {
-        IReadOnlyList<string> references;
+        await _slots.WaitAsync(CancellationToken.None).ConfigureAwait(false);
         try
         {
-            references = await ReadReferencesAsync(generation);
+            generation.Status = GenerationStatus.Running;
+            await SaveAndNotifyAsync(generation).ConfigureAwait(false);
+            await SubmitQueuedAsync(generation, queued).ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException)
+        finally
         {
-            logger.LogWarning(ex, "Reference image of generation {GenerationId} is missing or unreadable.", generation.Id);
-            generation.Status = GenerationStatus.Failed;
-            generation.ErrorKind = ErrorKind.Unknown;
-            generation.ErrorMessage = "Reference image is missing or unreadable.";
+            _slots.Release();
+        }
+
+        if (!generation.IsFinished && generation.JobJson is not null)
+        {
+            await WatchQueuedAsync(generation, queued).ConfigureAwait(false);
+        }
+    }
+
+    private async Task SubmitQueuedAsync(Generation generation, IQueuedImageProvider queued)
+    {
+        var request = await BuildRequestAsync(generation).ConfigureAwait(false);
+        if (request is null)
+        {
+            generation.CompletedAt = timeProvider.GetUtcNow();
+            await SaveAndNotifyAsync(generation).ConfigureAwait(false);
             return;
         }
 
         try
         {
-            // Only the values the plan accepted are sent: a dropped parameter is not in the request.
-            var sent = generation.Outcomes
-                .Where(o => o.Sent is not null)
-                .ToDictionary(o => o.Name, o => o.Sent!, StringComparer.Ordinal);
-            var request = new ImageGenerationRequest(
-                generation.ModelId,
-                generation.Prompt,
-                generation.SeedApplied ? generation.Seed : null,
-                sent.GetValueOrDefault(GenerationParameterPlanner.AspectRatioName),
-                sent.GetValueOrDefault(GenerationParameterPlanner.ResolutionName),
-                sent.GetValueOrDefault(GenerationParameterPlanner.OutputFormatName),
-                sent.GetValueOrDefault(GenerationParameterPlanner.QualityName),
-                references);
+            var handle = await queued.SubmitAsync(request, CancellationToken.None).ConfigureAwait(false);
+            generation.JobJson = JsonSerializer.Serialize(handle);
+            generation.Status = GenerationStatus.Queued;
+        }
+        catch (ProviderException ex)
+        {
+            generation.Status = ex.Kind == ErrorKind.Moderated ? GenerationStatus.Filtered : GenerationStatus.Failed;
+            generation.ErrorKind = ex.Kind;
+            generation.ErrorMessage = ex.Message;
+            generation.CompletedAt = timeProvider.GetUtcNow();
+        }
+
+        await SaveAndNotifyAsync(generation).ConfigureAwait(false);
+    }
+
+    /// <summary>Follows the saved job until it ends; every change is saved and announced.</summary>
+    private async Task WatchQueuedAsync(Generation generation, IQueuedImageProvider queued)
+    {
+        try
+        {
+            var handle = JsonSerializer.Deserialize<ProviderJobHandle>(generation.JobJson!)
+                ?? throw new InvalidOperationException("The saved job handle is empty.");
+            await foreach (var update in ProviderJobPoller.WatchAsync(
+                queued, handle, PollMinInterval, PollMaxInterval, MaxPollNetworkFailures, CancellationToken.None).ConfigureAwait(false))
+            {
+                await ApplyUpdateAsync(generation, update).ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or IOException)
+        {
+            logger.LogError(ex, "Queued job of generation {GenerationId} could not be followed.", generation.Id);
+            generation.Status = GenerationStatus.Failed;
+            generation.ErrorKind = ErrorKind.Unknown;
+            generation.ErrorMessage = ex.Message;
+            generation.CompletedAt = timeProvider.GetUtcNow();
+            await SaveAndNotifyAsync(generation).ConfigureAwait(false);
+        }
+    }
+
+    private async Task ApplyUpdateAsync(Generation generation, JobUpdate update)
+    {
+        switch (update.State)
+        {
+            case JobState.Queued:
+                generation.Status = GenerationStatus.Queued;
+                break;
+            case JobState.Running:
+                generation.Status = GenerationStatus.Running;
+                break;
+            case JobState.Succeeded:
+                generation.ImagePath = await files.SaveAsync(
+                    generation.SessionId, generation.Id, update.Result!.Content, update.Result.MediaType, CancellationToken.None)
+                    .ConfigureAwait(false);
+                generation.MediaType = update.Result.MediaType;
+                generation.Status = GenerationStatus.Succeeded;
+                generation.CompletedAt = timeProvider.GetUtcNow();
+                break;
+            case JobState.Filtered:
+                generation.Status = GenerationStatus.Filtered;
+                generation.ErrorKind = ErrorKind.Moderated;
+                generation.ErrorMessage = update.ErrorMessage;
+                generation.CompletedAt = timeProvider.GetUtcNow();
+                break;
+            case JobState.Failed:
+                generation.Status = GenerationStatus.Failed;
+                generation.ErrorKind = update.ErrorKind ?? ErrorKind.Unknown;
+                generation.ErrorMessage = update.ErrorMessage;
+                generation.CompletedAt = timeProvider.GetUtcNow();
+                break;
+            case JobState.Cancelled:
+                generation.Status = GenerationStatus.Cancelled;
+                generation.CompletedAt = timeProvider.GetUtcNow();
+                break;
+        }
+
+        await SaveAndNotifyAsync(generation).ConfigureAwait(false);
+    }
+
+    /// <summary>The client of a provider when it runs queued jobs; null for every other provider.</summary>
+    private IQueuedImageProvider? QueuedProviderOf(string providerId)
+    {
+        try
+        {
+            return providers.GetConnection(providerId) as IQueuedImageProvider;
+        }
+        catch (ProviderException)
+        {
+            return null;
+        }
+    }
+
+    private async Task GenerateAndStoreAsync(Generation generation)
+    {
+        var request = await BuildRequestAsync(generation).ConfigureAwait(false);
+        if (request is null)
+        {
+            return;
+        }
+
+        try
+        {
             var provider = providers.GetImageProvider(generation.ProviderId);
             var result = await provider.GenerateAsync(request, CancellationToken.None).ConfigureAwait(false);
 
@@ -327,6 +461,38 @@ public sealed class GenerationService(
             generation.ErrorKind = ErrorKind.Unknown;
             generation.ErrorMessage = ex.Message;
         }
+    }
+
+    /// <summary>The request of a generation with its references read; null when a reference is missing (the generation is then Failed).</summary>
+    private async Task<ImageGenerationRequest?> BuildRequestAsync(Generation generation)
+    {
+        IReadOnlyList<string> references;
+        try
+        {
+            references = await ReadReferencesAsync(generation);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException)
+        {
+            logger.LogWarning(ex, "Reference image of generation {GenerationId} is missing or unreadable.", generation.Id);
+            generation.Status = GenerationStatus.Failed;
+            generation.ErrorKind = ErrorKind.Unknown;
+            generation.ErrorMessage = "Reference image is missing or unreadable.";
+            return null;
+        }
+
+        // Only the values the plan accepted are sent: a dropped parameter is not in the request.
+        var sent = generation.Outcomes
+            .Where(o => o.Sent is not null)
+            .ToDictionary(o => o.Name, o => o.Sent!, StringComparer.Ordinal);
+        return new ImageGenerationRequest(
+            generation.ModelId,
+            generation.Prompt,
+            generation.SeedApplied ? generation.Seed : null,
+            sent.GetValueOrDefault(GenerationParameterPlanner.AspectRatioName),
+            sent.GetValueOrDefault(GenerationParameterPlanner.ResolutionName),
+            sent.GetValueOrDefault(GenerationParameterPlanner.OutputFormatName),
+            sent.GetValueOrDefault(GenerationParameterPlanner.QualityName),
+            references);
     }
 
     /// <summary>

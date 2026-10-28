@@ -4,4 +4,6 @@ namespace ImageGen.Core.Providers;
 public static class ProviderIds
 {
     public const string OpenRouter = "openrouter";
+
+    public const string Fal = "fal";
 }

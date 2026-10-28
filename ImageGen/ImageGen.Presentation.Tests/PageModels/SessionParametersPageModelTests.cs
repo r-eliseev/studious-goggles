@@ -91,6 +91,18 @@ public class SessionParametersPageModelTests
     }
 
     [Fact]
+    public async Task Cancel_GoesBackWithoutSaving()
+    {
+        await _model.OnAppearingAsync();
+        _model.SelectedAspectRatio = _model.AspectRatioOptions.Single(o => o.Value == "3:2");
+
+        await _model.CancelCommand.ExecuteAsync(null);
+
+        await _navigation.Received(1).GoBackAsync();
+        Assert.Null(_saved);
+    }
+
+    [Fact]
     public async Task SaveCommand_SelectedValues_SavesParametersAndGoesBack()
     {
         await _model.OnAppearingAsync();

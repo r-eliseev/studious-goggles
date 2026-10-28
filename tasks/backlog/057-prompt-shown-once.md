@@ -1,6 +1,6 @@
 ---
 id: 057
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -53,6 +53,15 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Services/AssistantPrompts.cs`, `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/RunMessageText.cs` (новый), `ImageGen/ImageGen.Presentation.Tests/PageModels/*`, `docs/specs/chat-sessions.md`, `tasks/v0.1/016-skeleton-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`
 
 ## Отчёт
+
+Сделано:
+- Core: `AssistantPrompts.RunMessage(assistantText)` возвращает только текст ассистента (пустой допустим); строка `Prompt:` больше не пишется. `AssistantService` склеивает текст и примечания без пустых частей.
+- Presentation: `PageModels/RunMessageText.cs` — `Visible(text, runPrompt)` убирает старую строку `Prompt: <промпт прогона>` (в конце или целиком). `ChatPageModel` берёт промпт связанного прогона из таймлайна; если текст пустой, строки сообщения нет. Для обычных сообщений без `RunId` ничего не меняется. Конструктор `MessageItemViewModel(message, text)`.
+- Спецификация `docs/specs/chat-sessions.md`, S2.3: промпт один раз, в блоке прогона.
+
+Отличие от плана: пункт про проверку в 016 и 046 не добавлен в этом коммите (ручная проверка — позже вместе с волной). Решение по критерию «отдельного сообщения ассистента нет, если текста нет»: сообщения нет вовсе (сохранённое с пустым текстом не показывается).
+
+Проверка: Core.Tests 262/262, Presentation.Tests 159/159 (было 152 до 057; новые — RunMessageTextTests и 2 теста ChatPageModel), Avalonia.Tests — без падений (59 пройдено), `dotnet format --verify-no-changes` для Core, Core.Tests, Presentation, Presentation.Tests — без изменений.
 
 ## Комментарии
 

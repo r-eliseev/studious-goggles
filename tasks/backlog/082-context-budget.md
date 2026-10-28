@@ -1,6 +1,6 @@
 ---
 id: 082
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -53,5 +53,27 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Providers/AssistantChatResult.cs`, `ImageGen/ImageGen.Core/{OpenRouter/OpenRouterClient.cs,OpenAiCompatible/OpenAiCompatibleClient.cs,AnthropicCompatible/AnthropicCompatibleClient.cs}`, `ImageGen/ImageGen.Core/Context/*` (новые), `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, тесты ядра, `docs/specs/chat-sessions.md`, `docs/architecture.md`
 
 ## Отчёт
+
+Сделано (`ImageGen.Core`):
+- `AssistantChatResult.PromptTokens` (по умолчанию `null`); OpenRouter и OpenAI-совместимый клиенты читают `usage.prompt_tokens`, Anthropic-совместимый — `usage.input_tokens`.
+- `Context/`: `TokenEstimator` (3,5 символа на токен, +4 на сообщение, 1 600 на картинку, резерв 4 096, неизвестный контекст 32 000), `ContextBudget`, `TokenCorrection` (фактор модели в пределах 0,5–2,0, в памяти процесса), `ContextBuilder.Select` (ошибки не входят, идёт с конца пока помещается, длинное сокращается по C1.5, текущее сообщение пользователя — дословно).
+- `AssistantService.BuildRequestAsync`: сначала картинки, затем бюджет (контекст модели из каталога, постоянная часть, картинки), история через `ContextBuilder`; после ответа — поправка по `PromptTokens`. `ChatModelCatalogService.ContextLengthAsync`.
+- DI: `TokenCorrection` — синглтон.
+- `docs/specs/chat-sessions.md`: S2.6 ссылается на `assistant-context.md`.
+
+Отличия от плана:
+- Текущее сообщение пользователя не сокращается даже при малом бюджете: C1.4 требует его дословно, сокращённый текст исказил бы вопрос. В плане это не оговорено.
+- Прежний предел «20 сообщений» (`TakeLast`) заменён правилом C1.4: 20 — минимум, дальше берётся всё, что помещается. Тест `SendUserMessageAsync_LongHistory…` переименован и обновлён под это.
+- Сводка (C3) и `SummaryTokens` = 0 — до задачи 083.
+- `docs/architecture.md` (модуль `Core/Context`) не обновлён: по `AGENTS.md` архитектура описывает задуманное устройство, а модуль реализован как в плане — правка не понадобилась. Если владелец хочет отметку, это отдельный шаг.
+
+Проверка (запуск в этой сессии):
+- `ImageGen.Core.Tests` 305/305;
+- `ImageGen.Data.Tests` 63/63;
+- `ImageGen.Presentation.Tests` 203/203;
+- `ImageGen.Avalonia.Tests` 90/90 и 2 пропущены: `DpapiSecretBackendTests` (только Windows) и `SecretServiceBackendTests` (нужна служба Secret Service/D-Bus), оба были до этой задачи.
+- `dotnet format --verify-no-changes` — см. запуск `scripts/check.sh` в «Комментариях».
+
+Не проверено: поправка `TokenCorrection` на реальных ответах провайдеров (только модульные тесты с заглушками, живой ключ не использовался).
 
 ## Комментарии

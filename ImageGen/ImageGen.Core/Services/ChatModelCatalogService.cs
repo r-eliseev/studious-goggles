@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using ImageGen.Core.Context;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Providers;
@@ -41,6 +42,13 @@ public sealed class ChatModelCatalogService(IProviderRouter providers, ILogger<C
     /// Chat models of a provider, or null when the list cannot be loaded. The caller decides what to do without it;
     /// the failure is logged here.
     /// </summary>
+    /// <summary>Context length of the model in tokens; <see cref="TokenEstimator.UnknownContextLength"/> when the catalog does not say (C1.1).</summary>
+    public async Task<int> ContextLengthAsync(ModelRef model, CancellationToken cancellationToken)
+    {
+        var models = await FindModelsAsync(model.ProviderId, cancellationToken);
+        return models?.FirstOrDefault(m => m.Id == model.ModelId)?.ContextLength ?? TokenEstimator.UnknownContextLength;
+    }
+
     public async Task<IReadOnlyList<ChatModel>?> FindModelsAsync(string providerId, CancellationToken cancellationToken)
     {
         try

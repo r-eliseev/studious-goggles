@@ -9,7 +9,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
     private const string GenerationColumns = """
         g.id, g.run_id, g.session_id, g.provider_id, g.model_id, g.prompt, g.seed, g.seed_applied, g.status,
         g.image_path, g.media_type, g.cost_usd, g.error_kind, g.error_message, g.created_at, g.completed_at, g.sort_order, g.outcomes_json,
-        g.reference_attachment_ids_json
+        g.reference_attachment_ids_json, g.job_json
         """;
 
     public async Task AddRunAsync(Run run, IReadOnlyList<Generation> generations, CancellationToken cancellationToken)
@@ -42,10 +42,10 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
             command.CommandText = """
                 INSERT INTO generations (id, run_id, session_id, provider_id, model_id, prompt, seed, seed_applied, status,
                     image_path, media_type, cost_usd, error_kind, error_message, created_at, completed_at, sort_order, outcomes_json,
-                    reference_attachment_ids_json)
+                    reference_attachment_ids_json, job_json)
                 VALUES (@id, @run_id, @session_id, @provider_id, @model_id, @prompt, @seed, @seed_applied, @status,
                     @image_path, @media_type, @cost_usd, @error_kind, @error_message, @created_at, @completed_at, @sort_order, @outcomes_json,
-                    @reference_attachment_ids_json);
+                    @reference_attachment_ids_json, @job_json);
                 """;
             AddGenerationParameters(command, generation);
             await command.ExecuteNonQueryAsync(cancellationToken);
@@ -128,11 +128,33 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
                 seed_applied = @seed_applied, status = @status, image_path = @image_path, media_type = @media_type,
                 cost_usd = @cost_usd, error_kind = @error_kind, error_message = @error_message,
                 created_at = @created_at, completed_at = @completed_at, sort_order = @sort_order, outcomes_json = @outcomes_json,
-                reference_attachment_ids_json = @reference_attachment_ids_json
+                reference_attachment_ids_json = @reference_attachment_ids_json, job_json = @job_json
             WHERE id = @id;
             """;
         AddGenerationParameters(command, generation);
         await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>Generations that were queued at a provider and not finished: their jobs are followed again after a restart.</summary>
+    public async Task<IReadOnlyList<Generation>> ListResumableJobsAsync(CancellationToken cancellationToken)
+    {
+        await using var connection = await database.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"""
+            SELECT {GenerationColumns} FROM generations g
+            WHERE g.status IN (@queued, @running) AND g.job_json IS NOT NULL
+            ORDER BY g.created_at, g.sort_order;
+            """;
+        command.Parameters.AddWithValue("@queued", (int)GenerationStatus.Queued);
+        command.Parameters.AddWithValue("@running", (int)GenerationStatus.Running);
+        var result = new List<Generation>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            result.Add(ReadGeneration(reader));
+        }
+
+        return result;
     }
 
     public async Task<int> MarkUnfinishedAsInterruptedAsync(DateTimeOffset completedAt, CancellationToken cancellationToken)
@@ -142,7 +164,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
         command.CommandText = """
             UPDATE generations
             SET status = @failed, error_kind = @interrupted, error_message = @message, completed_at = @completed_at
-            WHERE status IN (@queued, @running);
+            WHERE status IN (@queued, @running) AND job_json IS NULL;
             """;
         command.Parameters.AddWithValue("@failed", (int)GenerationStatus.Failed);
         command.Parameters.AddWithValue("@interrupted", (int)ErrorKind.Interrupted);
@@ -176,6 +198,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
         command.Parameters.AddWithValue("@sort_order", generation.SortOrder);
         command.Parameters.AddWithValue("@outcomes_json", ParameterJson.Outcomes(generation.Outcomes));
         command.Parameters.AddWithValue("@reference_attachment_ids_json", ParameterJson.References(generation.ReferenceAttachmentIds));
+        command.Parameters.AddWithValue("@job_json", (object?)generation.JobJson ?? DBNull.Value);
     }
 
     private static Run ReadRun(SqliteDataReader reader) => new()
@@ -207,6 +230,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
             CostUsd = SqliteValues.GetNullableDecimal(reader, "cost_usd"),
             ErrorKind = errorKind.HasValue ? (ErrorKind)errorKind.Value : null,
             ErrorMessage = SqliteValues.GetNullableString(reader, "error_message"),
+            JobJson = SqliteValues.GetNullableString(reader, "job_json"),
             CreatedAt = SqliteValues.GetDate(reader, "created_at"),
             CompletedAt = SqliteValues.GetNullableDate(reader, "completed_at"),
             SortOrder = SqliteValues.GetInt32(reader, "sort_order"),

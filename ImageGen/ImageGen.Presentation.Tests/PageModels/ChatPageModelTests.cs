@@ -34,6 +34,7 @@ public class ChatPageModelTests
     private readonly INavigationService _navigation = Substitute.For<INavigationService>();
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly IMainThread _mainThread = Substitute.For<IMainThread>();
+    private readonly IClipboardService _clipboard = Substitute.For<IClipboardService>();
     private readonly IFilePickerService _filePicker = Substitute.For<IFilePickerService>();
     private readonly IChatAttachmentRepository _chatAttachments = Substitute.For<IChatAttachmentRepository>();
     private AttachmentService _attachments = null!;
@@ -159,7 +160,7 @@ public class ChatPageModelTests
         _assistant = new AssistantService(
             _sessionService, _messageRepository, _runRepository, ProviderDoubles.Router(chat: _chat), _generationService,
             new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),
-            _files, _attachments, time, NullLogger<AssistantService>.Instance);
+            _files, _attachments, time, NullLogger<AssistantService>.Instance, new ImageGen.Core.Context.TokenCorrection());
 
         _model = CreateModel(_session.Id);
     }
@@ -178,6 +179,8 @@ public class ChatPageModelTests
         },
     };
 
+    private readonly CurrentSessionTracker _tracker = new();
+
     private ChatPageModel CreateModel(Guid sessionId)
     {
         var model = new ChatPageModel(
@@ -190,7 +193,9 @@ public class ChatPageModelTests
             _mainThread,
             _attachments,
             _filePicker,
-            _descriptions);
+            _descriptions,
+            _clipboard,
+            _tracker);
         model.ApplyQueryAttributes(new Dictionary<string, object>
         {
             [Routes.SessionIdParameter] = sessionId.ToString("D"),
@@ -291,6 +296,40 @@ public class ChatPageModelTests
     }
 
     [Fact]
+    public async Task OnAppearingAsync_SetsCurrentSession()
+    {
+        await _model.OnAppearingAsync();
+
+        Assert.Equal(_session.Id, _tracker.CurrentId);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_LegacyRunMessageWithoutOwnText_ShowsPromptOnceInRun()
+    {
+        var run = NewRun(_session.Id, "red fox");
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.Assistant, Text = "Prompt: red fox", CreatedAt = Now, RunId = run.Id });
+        StoreRun(run, [NewGeneration(run, 5)]);
+
+        await _model.OnAppearingAsync();
+
+        var runItem = Assert.IsType<RunItemViewModel>(Assert.Single(_model.Items));
+        Assert.Equal(string.Format(AppResources.RunPromptFormat, "red fox"), runItem.PromptText);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_LegacyRunMessageWithText_ShowsTextWithoutPromptLine()
+    {
+        var run = NewRun(_session.Id, "red fox");
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.Assistant, Text = "Drawing.\n\nPrompt: red fox", CreatedAt = Now, RunId = run.Id });
+        StoreRun(run, [NewGeneration(run, 5)]);
+
+        await _model.OnAppearingAsync();
+
+        Assert.Equal(2, _model.Items.Count);
+        Assert.Equal("Drawing.", Assert.IsType<MessageItemViewModel>(_model.Items[0]).Text);
+    }
+
+    [Fact]
     public async Task ReloadAsync_UnknownSession_ShowsAlert()
     {
         var unknown = Guid.NewGuid();
@@ -306,7 +345,7 @@ public class ChatPageModelTests
     public void ApplyQueryAttributes_MissingSessionId_Throws()
     {
         var model = new ChatPageModel(
-            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions);
+            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard, _tracker);
 
         Assert.Throws<ArgumentException>(() => model.ApplyQueryAttributes(new Dictionary<string, object>()));
     }

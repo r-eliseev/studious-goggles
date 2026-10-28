@@ -5,6 +5,7 @@ using ImageGen.Data;
 using ImageGen.Maui.Pages;
 using ImageGen.Maui.Services;
 using ImageGen.Presentation;
+using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.Logging;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Services;
@@ -33,12 +34,23 @@ public static class MauiProgram
             .UseMauiCommunityToolkit()
             .ConfigureFonts(fonts =>
             {
-                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                fonts.AddFont("Onest-Regular.ttf", "OnestRegular");
+                fonts.AddFont("Onest-Medium.ttf", "OnestMedium");
+                fonts.AddFont("Onest-SemiBold.ttf", "OnestSemiBold");
+                fonts.AddFont("IBMPlexSans-Regular.ttf", "PlexSansRegular");
+                fonts.AddFont("IBMPlexSans-Medium.ttf", "PlexSansMedium");
+                fonts.AddFont("IBMPlexSans-SemiBold.ttf", "PlexSansSemiBold");
+                fonts.AddFont("IBMPlexMono-Regular.ttf", "PlexMonoRegular");
+                fonts.AddFont("IBMPlexMono-Medium.ttf", "PlexMonoMedium");
+                fonts.AddFont("lucide.ttf", "LucideIcons");
             });
 
 #if WINDOWS
         ImageGen.Maui.Platforms.Windows.ChatEditorKeyHandling.Register();
+#endif
+
+#if ANDROID
+        ImageGen.Maui.Platforms.Android.ChatEditorImeHandling.Register();
 #endif
 
         var paths = new MauiAppPaths();
@@ -60,6 +72,10 @@ public static class MauiProgram
         builder.Services.AddSingleton<INavigationService, ShellNavigationService>();
         builder.Services.AddSingleton<IMainThread, MauiMainThread>();
         builder.Services.AddSingleton<IFilePickerService, MauiFilePickerService>();
+        builder.Services.AddSingleton<AppearanceService>();
+        builder.Services.AddSingleton<MauiAppearanceApplier>();
+        builder.Services.AddSingleton<IClipboardService, MauiClipboardService>();
+        builder.Services.AddSingleton<ICurrentSessionTracker, CurrentSessionTracker>();
 
         // Pages and page models
         builder.Services.AddSingleton<SessionsPageModel>();
@@ -68,6 +84,8 @@ public static class MauiProgram
         builder.Services.AddTransientWithShellRoute<ChatPage, ChatPageModel>(Routes.Chat);
         builder.Services.AddTransientWithShellRoute<SessionModelsPage, SessionModelsPageModel>(Routes.SessionModels);
         builder.Services.AddTransientWithShellRoute<SessionParametersPage, SessionParametersPageModel>(Routes.SessionParameters);
+        builder.Services.AddTransientWithShellRoute<SettingsPage, SettingsPageModel>(Routes.Settings);
+        builder.Services.AddSingleton<IFolderLauncher, MauiFolderLauncher>();
 
         var app = builder.Build();
         var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ImageGen.Startup");

@@ -144,4 +144,62 @@ public class RunRepositoryTests
 
         Assert.Equal(GenerationStatus.Succeeded, (await repository.GetGenerationAsync(succeeded.Id, ct))!.Status);
     }
+
+    [Fact]
+    public async Task AddRunAsync_JobJson_RoundTrips()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var session = TestData.Session();
+        await new SessionRepository(test.Database).AddAsync(session, ct);
+        var repository = new RunRepository(test.Database);
+        var run = TestData.Run(session.Id, TestData.BaseTime);
+        var generation = TestData.Generation(run, 0);
+        generation.JobJson = """{"ProviderId":"fal","RequestId":"req-1"}""";
+        await repository.AddRunAsync(run, [generation], ct);
+
+        var loaded = await repository.GetGenerationAsync(generation.Id, ct);
+
+        Assert.Equal(generation.JobJson, loaded!.JobJson);
+    }
+
+    [Fact]
+    public async Task ListResumableJobsAsync_ReturnsOnlyUnfinishedGenerationsWithJob()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var session = TestData.Session();
+        await new SessionRepository(test.Database).AddAsync(session, ct);
+        var repository = new RunRepository(test.Database);
+        var run = TestData.Run(session.Id, TestData.BaseTime);
+        var withJob = TestData.Generation(run, 0);
+        withJob.Status = GenerationStatus.Running;
+        withJob.JobJson = "{}";
+        var withoutJob = TestData.Generation(run, 1);
+        withoutJob.Status = GenerationStatus.Running;
+        await repository.AddRunAsync(run, [withJob, withoutJob], ct);
+
+        var resumable = await repository.ListResumableJobsAsync(ct);
+
+        Assert.Equal([withJob.Id], resumable.Select(g => g.Id));
+    }
+
+    [Fact]
+    public async Task MarkUnfinishedAsInterruptedAsync_KeepsGenerationsWithJob()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var session = TestData.Session();
+        await new SessionRepository(test.Database).AddAsync(session, ct);
+        var repository = new RunRepository(test.Database);
+        var run = TestData.Run(session.Id, TestData.BaseTime);
+        var withJob = TestData.Generation(run, 0);
+        withJob.Status = GenerationStatus.Queued;
+        withJob.JobJson = "{}";
+        await repository.AddRunAsync(run, [withJob], ct);
+
+        await repository.MarkUnfinishedAsInterruptedAsync(TestData.BaseTime, ct);
+
+        Assert.Equal(GenerationStatus.Queued, (await repository.GetGenerationAsync(withJob.Id, ct))!.Status);
+    }
 }

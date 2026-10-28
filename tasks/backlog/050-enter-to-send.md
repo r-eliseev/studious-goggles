@@ -1,6 +1,6 @@
 ---
 id: 050
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -60,7 +60,12 @@ scripts/check.sh
 
 ## Отчёт
 
-Частично: Avalonia и подсказка сделаны, MAUI-часть (Windows и Android) — нет. Задача остаётся открытой, статус `approved`.
+Сделано:
+- Avalonia и подсказка (см. ниже; подробности в «Комментариях» 2026-10-28)
+- Windows: задача 056 (`Controls/ChatEditor.cs`, `Platforms/Windows/ChatEditorKeyHandling.cs`).
+- Android (эта волна): `Platforms/Android/ChatEditorImeHandling.cs` — `ImeAction.Send` и `SetRawInputType(ClassText | TextFlagCapSentences)` (без `TextFlagMultiLine`), `EditorAction` и `KeyPress` (Enter без Shift → отправка, Shift+Enter не трогаем), регистрация в `MauiProgram.cs` под `#if ANDROID`. Перевод строки на экранной клавиатуре Android не предусмотрен (поле однострочное для клавиатуры) — решение записано в `docs/knowledge/maui.md`.
+
+Проверка: сборка `net10.0-android` (APK) проходит, `dotnet format --verify-no-changes` для MAUI — без изменений. Поведение на устройстве не проверено (нет эмулятора) — пункт 11 в задаче 016. Риск: однострочный ввод может не переносить длинный текст; если так, решение пересматривается по результатам 016.
 
 Сделано:
 - Avalonia (`ChatView.axaml`, `ChatView.axaml.cs`): обработчик Enter перенесён из XAML в туннельную фазу (`AddHandler(..., RoutingStrategies.Tunnel)` в конструкторе). Enter без Shift ставит `Handled` и отправляет, если отправка доступна; Shift+Enter не трогается, перевод строки остаётся за `TextBox`. Причина туннельной фазы — в `docs/knowledge/avalonia.md`.

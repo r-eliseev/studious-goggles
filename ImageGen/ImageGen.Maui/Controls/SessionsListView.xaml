@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels"
+             xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
+             xmlns:appearance="clr-namespace:ImageGen.Presentation.Appearance"
+             x:Class="ImageGen.Maui.Controls.SessionsListView"
+             x:DataType="pm:SessionsPageModel">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+        <Button StyleClass="primary"
+                Command="{Binding NewSessionCommand}"
+                Text="{x:Static strings:AppResources.NewSession}"
+                HorizontalOptions="Fill"
+                SemanticProperties.Description="{x:Static strings:AppResources.NewSession}">
+            <Button.ImageSource>
+                <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Plus}" Color="{DynamicResource IgOnAccentColor}" Size="16" />
+            </Button.ImageSource>
+        </Button>
+
+        <ActivityIndicator Grid.Row="1"
+                           IsRunning="{Binding IsBusy}"
+                           IsVisible="{Binding IsBusy}"
+                           HorizontalOptions="Start"
+                           AutomationProperties.IsInAccessibleTree="False" />
+
+        <ScrollView Grid.Row="2">
+            <VerticalStackLayout Spacing="6">
+                <Label StyleClass="section" Text="{x:Static strings:AppResources.SessionsToday}" Margin="4,8,0,0" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Today}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="pm:SessionItemViewModel">
+                            <SwipeView>
+                                <SwipeView.RightItems>
+                                    <SwipeItems>
+                                        <SwipeItem Text="{x:Static strings:AppResources.DeleteSession}"
+                                                   BackgroundColor="{DynamicResource IgErrColor}"
+                                                   Command="{Binding DeleteCommand}" />
+                                    </SwipeItems>
+                                </SwipeView.RightItems>
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                                    <Button StyleClass="ghost"
+                                            Command="{Binding OpenCommand}"
+                                            HorizontalOptions="Fill"
+                                            Text="{Binding Title}"
+                                            SemanticProperties.Description="{Binding Title}" />
+                                    <Button Grid.Column="1"
+                                            StyleClass="ghost"
+                                            Command="{Binding DeleteCommand}"
+                                            IsVisible="{OnIdiom Desktop=True, Default=False}"
+                                            SemanticProperties.Description="{x:Static strings:AppResources.DeleteSession}">
+                                        <Button.ImageSource>
+                                            <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Delete}" Color="{DynamicResource IgMutedColor}" Size="16" />
+                                        </Button.ImageSource>
+                                    </Button>
+                                </Grid>
+                            </SwipeView>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
+                <Label StyleClass="section" Text="{x:Static strings:AppResources.SessionsEarlier}" Margin="4,8,0,0" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Earlier}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="pm:SessionItemViewModel">
+                            <SwipeView>
+                                <SwipeView.RightItems>
+                                    <SwipeItems>
+                                        <SwipeItem Text="{x:Static strings:AppResources.DeleteSession}"
+                                                   BackgroundColor="{DynamicResource IgErrColor}"
+                                                   Command="{Binding DeleteCommand}" />
+                                    </SwipeItems>
+                                </SwipeView.RightItems>
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                                    <Button StyleClass="ghost"
+                                            Command="{Binding OpenCommand}"
+                                            HorizontalOptions="Fill"
+                                            Text="{Binding Title}"
+                                            SemanticProperties.Description="{Binding Title}" />
+                                    <Button Grid.Column="1"
+                                            StyleClass="ghost"
+                                            Command="{Binding DeleteCommand}"
+                                            IsVisible="{OnIdiom Desktop=True, Default=False}"
+                                            SemanticProperties.Description="{x:Static strings:AppResources.DeleteSession}">
+                                        <Button.ImageSource>
+                                            <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Delete}" Color="{DynamicResource IgMutedColor}" Size="16" />
+                                        </Button.ImageSource>
+                                    </Button>
+                                </Grid>
+                            </SwipeView>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Button Grid.Row="3"
+                StyleClass="ghost"
+                Command="{Binding OpenSettingsCommand}"
+                HorizontalOptions="Start"
+                SemanticProperties.Description="{x:Static strings:AppResources.SettingsTitle}">
+            <Button.ImageSource>
+                <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Settings}" Color="{DynamicResource IgMutedColor}" Size="16" />
+            </Button.ImageSource>
+        </Button>
+    </Grid>
+</ContentView>

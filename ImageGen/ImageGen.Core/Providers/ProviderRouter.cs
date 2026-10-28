@@ -37,6 +37,7 @@ public sealed class ProviderRouter(
         ProviderKind.OpenRouter => new OpenRouterClient(config, httpClientFactory, secretStore, timeProvider),
         ProviderKind.OpenAiCompatible => new OpenAiCompatibleClient(config, httpClientFactory, secretStore, timeProvider),
         ProviderKind.AnthropicCompatible => new AnthropicCompatibleClient(config, httpClientFactory, secretStore, timeProvider),
+        ProviderKind.Fal => new ImageGen.Core.Fal.FalImageProvider(config, httpClientFactory, secretStore, timeProvider),
         _ => throw new InvalidOperationException($"Unknown provider kind {config.Kind}."),
     };
 }

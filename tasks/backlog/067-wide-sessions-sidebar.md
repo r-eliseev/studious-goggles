@@ -1,6 +1,6 @@
 ---
 id: 067
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -51,5 +51,18 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Presentation/{Services/ICurrentSessionTracker.cs,Services/CurrentSessionTracker.cs,Services/INavigationService.cs,PageModels/ChatPageModel.cs,PageModels/SessionsPageModel.cs,PageModels/SessionItemViewModel.cs}`, `ImageGen/ImageGen.Avalonia/{Views/SessionsListView.*,Views/SessionsView.axaml,Views/ChatView.*,Services/Navigation/*}`, `ImageGen/ImageGen.Maui/{Controls/SessionsListView.*,Pages/ChatPage.xaml,Pages/SessionsPage.xaml,Services/ShellNavigationService.cs}`, тесты, `docs/knowledge/*`
 
 ## Отчёт
+
+Сделано:
+- Presentation: удаление спрашивает `ConfirmAsync(..., destructive: true)`; `ICurrentSessionTracker`/`CurrentSessionTracker` (синглтон), `ChatPageModel` выставляет текущую сессию; `SessionItemViewModel.IsCurrent`; `SessionsPageModel.ReplaceOnOpen` (открытие заменяет чат, а не добавляет его в стек); `INavigationService.ReplaceAsync`.
+- Avalonia: `Views/SessionsListView` (список из 066), `SessionsView` и `ChatView` включают его; в широком чате список слева (272), в узком скрыт. `AvaloniaNavigationService.ReplaceAsync` меняет верхнюю страницу стека.
+- MAUI: `Controls/SessionsListView` (ContentView), `SessionsPage` и `ChatPage` включают его; ширина — в code-behind (как в Avalonia). `ShellNavigationService.ReplaceAsync` — pop + push (в Shell нет замены на месте).
+- Тесты: Presentation (удаление с destructive, метки текущей сессии, replace, трекер в чате); Avalonia `AvaloniaNavigationServiceTests` (replace, back), `ChatLayoutTests` (широкий/узкий чат, выбор сессии в чате и возврат к списку).
+
+Отличия от плана:
+- `ReplaceOnOpen` — флаг на `SessionsPageModel`, который выставляют экраны при появлении; без него один и тот же список не различал бы «открыть» и «заменить».
+- Метки текущей сессии обновляются подпиской на трекер в `OnAppearingAsync`, а не в конструкторе.
+- MAUI: `ReplaceAsync` через pop + push; на Android/Windows не проверено.
+
+Проверка: `ImageGen.Presentation.Tests` 194/194; `ImageGen.Avalonia.Tests` 88/88 (2 пропущены, как и раньше); сборка `ImageGen.Maui` для `net10.0-android` — успешно; `dotnet format --verify-no-changes` для всех пяти проектов — без изменений.
 
 ## Комментарии

@@ -3,6 +3,7 @@
              xmlns:markup="clr-namespace:ImageGen.Avalonia.Markup"
              xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels;assembly=ImageGen.Presentation"
              xmlns:conv="clr-namespace:ImageGen.Avalonia.Converters"
+             xmlns:views="clr-namespace:ImageGen.Avalonia.Views"
              x:Class="ImageGen.Avalonia.Views.ChatView"
              x:DataType="pm:ChatPageModel">
     <UserControl.Resources>
@@ -14,7 +15,11 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid RowDefinitions="Auto,*,Auto,Auto" Margin="16" RowSpacing="12">
+    <Grid x:Name="Layout" ColumnDefinitions="272,*" ColumnSpacing="16" Margin="16">
+        <!-- Wide layout only: the session list beside the chat (ChatView.axaml.cs). -->
+        <views:SessionsListView x:Name="SessionList" Grid.Column="0" />
+
+        <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12">
         <StackPanel Orientation="Horizontal" Spacing="8">
             <Button Content="{Binding ModelsButtonText}"
                     Command="{Binding OpenModelsCommand}"
@@ -35,15 +40,26 @@
                     <DataTemplate DataType="pm:MessageItemViewModel" x:DataType="pm:MessageItemViewModel">
                         <StackPanel Spacing="2" Margin="0,4">
                             <TextBlock Text="{Binding RoleText}" FontWeight="Bold" FontSize="12" />
-                            <TextBlock Text="{Binding Text}"
-                                       TextWrapping="Wrap"
-                                       Classes.error="{Binding IsError}" />
+                            <SelectableTextBlock Text="{Binding Text}"
+                                                 TextWrapping="Wrap"
+                                                 Classes.error="{Binding IsError}" />
+                            <Button Command="{Binding Copy.CopyCommand}"
+                                    Content="{markup:Res Copy}"
+                                    IsVisible="{Binding !IsUser}"
+                                    HorizontalAlignment="Left"
+                                    AutomationProperties.Name="{markup:Res Copy}" />
+                            <TextBlock Text="{markup:Res Copied}" FontSize="12" IsVisible="{Binding Copy.IsCopied}" />
                         </StackPanel>
                     </DataTemplate>
 
                     <DataTemplate DataType="pm:RunItemViewModel" x:DataType="pm:RunItemViewModel">
                         <StackPanel Spacing="8" Margin="0,4">
-                            <TextBlock Text="{Binding PromptText}" FontStyle="Italic" TextWrapping="Wrap" />
+                            <SelectableTextBlock Text="{Binding PromptText}" FontStyle="Italic" TextWrapping="Wrap" />
+                            <Button Command="{Binding Copy.CopyCommand}"
+                                    Content="{markup:Res Copy}"
+                                    HorizontalAlignment="Left"
+                                    AutomationProperties.Name="{markup:Res Copy}" />
+                            <TextBlock Text="{markup:Res Copied}" FontSize="12" IsVisible="{Binding Copy.IsCopied}" />
                             <ItemsControl ItemsSource="{Binding Generations}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -166,5 +182,6 @@
                         AutomationProperties.Name="{markup:Res Send}" />
             </Grid>
         </StackPanel>
+        </Grid>
     </Grid>
 </UserControl>

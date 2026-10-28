@@ -4,17 +4,22 @@
              RequestedThemeVariant="Default">
     <Application.Resources>
         <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://ImageGen.Avalonia/Themes/Common.axaml" />
+                <ResourceInclude Source="avares://ImageGen.Avalonia/Themes/Quiet.axaml" />
+            </ResourceDictionary.MergedDictionaries>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush x:Key="ErrorBrush">#B3261E</SolidColorBrush>
+                    <SolidColorBrush x:Key="ErrorBrush">#B42318</SolidColorBrush>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="ErrorBrush">#FFB4AB</SolidColorBrush>
+                    <SolidColorBrush x:Key="ErrorBrush">#F97066</SolidColorBrush>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
     </Application.Resources>
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://ImageGen.Avalonia/Themes/Controls.axaml" />
     </Application.Styles>
 </Application>

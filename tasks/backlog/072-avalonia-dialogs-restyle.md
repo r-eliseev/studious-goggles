@@ -1,6 +1,6 @@
 ---
 id: 072
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -50,5 +50,20 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Presentation/Services/IDialogService.cs`, `ImageGen/ImageGen.Avalonia/Services/AvaloniaDialogService.cs`, `ImageGen/ImageGen.Maui/Services/ShellDialogService.cs`, тестовые подмены `IDialogService`, тесты
 
 ## Отчёт
+
+Сделано:
+- Presentation: `IDialogService.ConfirmAsync(title, message, accept, cancel, bool destructive)`; старая перегрузка осталась.
+- Avalonia: `Services/DialogLayout.cs` строит содержимое окна (`Build(..., multiline, destructive, isMacOs)`): заголовок 17 с классом `title`, текст, поле ввода (для Edit — многострочное, `AcceptsReturn`, высота 96), кнопки. Фон `IgSurfaceBrush`, радиус 12 (`IgRadiusLg`). Основная кнопка — `primary`, при `destructive` — `danger`. Порядок кнопок — `DialogButtonOrder.Apply(row, save, cancel, isMacOs)` с признаком ОС в аргументе.
+- `AvaloniaDialogService` использует `DialogLayout`; Escape закрывает окно (считается отказом), Enter в однострочном вводе подтверждает (туннельный обработчик, как в чате).
+- MAUI `ShellDialogService`: новая перегрузка, вызывает `DisplayAlert` (системный диалог не умеет «опасное» действие).
+- Тесты `Avalonia.Tests/Services/DialogLayoutTests` (5): порядок не на macOS и на macOS, `danger` у удаления, многострочное поле для Edit, одна кнопка у alert.
+
+Отличия от плана:
+- Тесты `AvaloniaDialogServiceTests` не созданы: окна не открываются в тестах. Порядок и класс кнопок проверяются на `DialogLayout`; Escape и Enter — только вручную (016, 046).
+- Вызов с `destructive: true` из удаления сессии не добавлен: по плану это задача 067.
+- Фон диалога берётся один раз при создании окна (`TryFindResource`), смена темы при открытом окне не обновит его.
+- Поля Avalonia для Edit остаются `TextBox` с переносом; поле без `MinHeight` при однострочном вводе.
+
+Проверка: `ImageGen.Presentation.Tests` 190/190; `ImageGen.Avalonia.Tests` 83/83 (2 пропущены, как и раньше); сборка `ImageGen.Maui` для `net10.0-android` — успешно; `dotnet format --verify-no-changes` для Presentation, Presentation.Tests, Avalonia, Avalonia.Tests, MAUI — без изменений.
 
 ## Комментарии

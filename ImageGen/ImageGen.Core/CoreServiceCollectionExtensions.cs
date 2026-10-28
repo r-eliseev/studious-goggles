@@ -1,3 +1,4 @@
+using ImageGen.Core.Context;
 using ImageGen.Core.Http;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
@@ -47,6 +48,7 @@ public static class CoreServiceCollectionExtensions
         services.AddSingleton<GenerationService>();
         services.AddSingleton<ChatModelCatalogService>();
         services.AddSingleton<AssistantService>();
+        services.AddSingleton<TokenCorrection>();
 
         return services;
     }

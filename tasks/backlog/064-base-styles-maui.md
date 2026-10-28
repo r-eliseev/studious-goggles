@@ -1,6 +1,6 @@
 ---
 id: 064
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -52,5 +52,21 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Maui/Resources/Styles/*`, `ImageGen/ImageGen.Maui/Resources/Fonts/OpenSans-*`, `ImageGen/ImageGen.Maui/App.xaml`, `MauiProgram.cs`, `ImageGen/ImageGen.Maui/Pages/*.xaml` (только замена ключей), `ImageGen/ImageGen.Maui/Resources/Themes/*` (если нужен `IgButtonCornerRadius`), тесты, `docs/design/implementation.md`, `docs/knowledge/maui.md`
 
 ## Отчёт
+
+Сделано:
+- `Resources/Styles/Styles.xaml` переписан на ключи `Ig*`: `Page`, `Shell`, `Label`, `Entry`, `Editor`, `Button` (с `VisualStateManager`: `PointerOver`, `Pressed`, `Focused`, `Disabled`), классы кнопок `primary`, `ghost`, `danger`, `icon`, `small`, классы текста `muted`, `meta`, `caption`, `title`, `heading`, `section`, `icon`, `error`, статусы `status-*` у `Label`, классы `chip`, `tag`, `card`, `status` у `Border`.
+- `Resources/Styles/Colors.xaml` удалён; `OpenSans-*.ttf` удалены вместе с регистрацией в `MauiProgram.cs`.
+- `App.xaml`: `Themes/Common.xaml` объединяется первым, затем `Styles.xaml`.
+- `Pages/ChatPage.xaml`: `AppThemeBinding` с `ErrorLight`/`ErrorDark` заменён на `DynamicResource IgErrColor`.
+- Словари темы (062) получили `IgButtonCornerRadius` (`x:Int32`), сгенерированы заново.
+- Тесты `Design/MauiStylesTests.cs` (3): в `Styles.xaml` и `Pages/*.xaml` нет ключей шаблона; `Styles.xaml` читает только `Ig*`; `Colors.xaml` удалён.
+
+Отличия от плана:
+- Размер шрифта `IgFontSizeBody` на iOS (17) и Android (16) не применяется: в словарях это обычное число (десктоп). Нужно вынести в `OnPlatform` и решить, как читать его из стиля (см. ниже); до этого на телефоне текст как на десктопе.
+- `IgControlHeight` подключён через `StaticResource`, а не `DynamicResource`: `OnPlatform` в динамическом ресурсе не проверен на устройстве.
+- Классы `primary`, `ghost` и др. не получили собственных состояний `PointerOver`/`Pressed` (прозрачность 0.92 / 0.85) — только базовые состояния кнопки.
+- Экранная проверка стилей — в 016 (Windows) и на Android не проверена (нет эмулятора).
+
+Проверка: `ImageGen.Presentation.Tests` 184/184; сборка `ImageGen.Maui` для `net10.0-android` — успешно (XAML стилей скомпилирован); `dotnet format --verify-no-changes` для MAUI и Presentation.Tests — без изменений.
 
 ## Комментарии

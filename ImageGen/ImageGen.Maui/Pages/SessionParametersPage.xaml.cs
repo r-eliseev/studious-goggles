@@ -12,6 +12,15 @@ public partial class SessionParametersPage : ContentPage, IQueryAttributable
     {
         InitializeComponent();
         BindingContext = _model = model;
+        ApplyButtonOrder();
+    }
+
+    /// <summary>Save first on Windows, Cancel first on macOS (docs/design/implementation.md, section 7).</summary>
+    private void ApplyButtonOrder()
+    {
+        var mac = DeviceInfo.Platform == DevicePlatform.MacCatalyst;
+        Grid.SetColumn(SaveButton, mac ? 1 : 0);
+        Grid.SetColumn(CancelButton, mac ? 0 : 1);
     }
 
     /// <summary>Shell passes the route query (the session id) here before the page appears.</summary>

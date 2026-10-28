@@ -48,6 +48,9 @@ public sealed class Generation
     /// <summary>What happened to each requested parameter. Empty when none was requested or for old records.</summary>
     public IReadOnlyList<ParameterOutcome> Outcomes { get; set; } = [];
 
+    /// <summary>JSON of the provider job handle of a queued generation (fal). Null for a generation without a queued job.</summary>
+    public string? JobJson { get; set; }
+
     public bool IsFinished => Status is GenerationStatus.Succeeded or GenerationStatus.Failed
         or GenerationStatus.Cancelled or GenerationStatus.Filtered;
 }

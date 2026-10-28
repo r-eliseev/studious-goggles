@@ -1,6 +1,7 @@
 using Avalonia;
-using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using ImageGen.Presentation.Resources.Strings;
@@ -9,24 +10,27 @@ using ImageGen.Presentation.Services;
 namespace ImageGen.Avalonia.Services;
 
 /// <summary>
-/// Alert, confirm and prompt as small windows over the main window. The windows are built in code: they are short and
-/// every control gets its <c>AutomationProperties.Name</c>. They are not modal: the call waits for the answer, the rest of
-/// the window stays usable (the owner is set, so the window stays above it).
+/// Alert, confirm and prompt as small windows over the main window. The content comes from <see cref="DialogLayout"/>.
+/// The windows are not modal: the call waits for the answer, the rest of the window stays usable (the owner is set, so
+/// the window stays above it). Escape closes the window as a cancel; Enter answers a single-line prompt.
 /// </summary>
 public sealed class AvaloniaDialogService(Func<Window?> owner) : IDialogService
 {
     public async Task AlertAsync(string title, string message) =>
-        await ShowAsync(title, message, AppResources.Ok, cancel: null, input: null);
+        await ShowAsync(title, message, AppResources.Ok, cancel: null, input: null, multiline: false, destructive: false);
 
-    public async Task<bool> ConfirmAsync(string title, string message, string accept, string cancel)
+    public Task<bool> ConfirmAsync(string title, string message, string accept, string cancel) =>
+        ConfirmAsync(title, message, accept, cancel, destructive: false);
+
+    public async Task<bool> ConfirmAsync(string title, string message, string accept, string cancel, bool destructive)
     {
-        var outcome = await ShowAsync(title, message, accept, cancel, input: null);
+        var outcome = await ShowAsync(title, message, accept, cancel, input: null, multiline: false, destructive);
         return outcome.Accepted;
     }
 
     public async Task<string?> PromptAsync(string title, string message, string accept, string cancel, string initialValue)
     {
-        var outcome = await ShowAsync(title, message, accept, cancel, input: initialValue);
+        var outcome = await ShowAsync(title, message, accept, cancel, input: initialValue, multiline: true, destructive: false);
         return outcome.Accepted ? outcome.Text : null;
     }
 
@@ -35,7 +39,9 @@ public sealed class AvaloniaDialogService(Func<Window?> owner) : IDialogService
         string message,
         string accept,
         string? cancel,
-        string? input)
+        string? input,
+        bool multiline,
+        bool destructive)
     {
         var answer = new TaskCompletionSource<(bool Accepted, string? Text)>(TaskCreationOptions.RunContinuationsAsynchronously);
         var window = new Window
@@ -46,38 +52,40 @@ public sealed class AvaloniaDialogService(Func<Window?> owner) : IDialogService
             CanResize = false,
         };
 
-        var text = input is null ? null : new TextBox { Text = input, MaxLength = 4000 };
-        if (text is not null)
+        var parts = DialogLayout.Build(title, message, accept, cancel, input, multiline, destructive, OperatingSystem.IsMacOS());
+        parts.Accept.Click += (_, _) =>
         {
-            AutomationProperties.SetName(text, message);
-        }
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
-        var acceptButton = new Button { Content = accept, MinHeight = 44, MinWidth = 88 };
-        AutomationProperties.SetName(acceptButton, accept);
-        acceptButton.Click += (_, _) =>
-        {
-            answer.TrySetResult((true, text?.Text));
+            answer.TrySetResult((true, parts.Input?.Text));
             window.Close();
         };
-        buttons.Children.Add(acceptButton);
-
-        if (cancel is not null)
+        if (parts.Cancel is not null)
         {
-            var cancelButton = new Button { Content = cancel, MinHeight = 44, MinWidth = 88 };
-            AutomationProperties.SetName(cancelButton, cancel);
-            cancelButton.Click += (_, _) => window.Close();
-            buttons.Children.Add(cancelButton);
+            parts.Cancel.Click += (_, _) => window.Close();
         }
 
-        var content = new StackPanel { Margin = new Thickness(16), Spacing = 12 };
-        content.Children.Add(new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap });
-        if (text is not null)
+        // Escape closes the window; it counts as a cancel, so the answer stays "not accepted".
+        window.KeyDown += (_, e) =>
         {
-            content.Children.Add(text);
+            if (e.Key == Key.Escape)
+            {
+                window.Close();
+                e.Handled = true;
+            }
+        };
+        if (parts.Input is { AcceptsReturn: false } single)
+        {
+            single.AddHandler(InputElement.KeyDownEvent, (_, e) =>
+            {
+                if (e.Key == Key.Enter)
+                {
+                    answer.TrySetResult((true, single.Text));
+                    window.Close();
+                    e.Handled = true;
+                }
+            }, RoutingStrategies.Tunnel);
         }
 
-        content.Children.Add(buttons);
-        window.Content = content;
+        window.Content = parts.Content;
         window.Closed += (_, _) => answer.TrySetResult((false, null));
 
         var parent = owner();

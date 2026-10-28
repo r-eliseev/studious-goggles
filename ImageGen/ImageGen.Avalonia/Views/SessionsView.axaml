@@ -2,45 +2,24 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:markup="clr-namespace:ImageGen.Avalonia.Markup"
              xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels;assembly=ImageGen.Presentation"
+             xmlns:views="clr-namespace:ImageGen.Avalonia.Views"
              x:Class="ImageGen.Avalonia.Views.SessionsView"
              x:DataType="pm:SessionsPageModel">
-    <Grid RowDefinitions="Auto,Auto,*" Margin="16" RowSpacing="12">
-        <Button Content="{markup:Res NewSession}"
-                Command="{Binding NewSessionCommand}"
-                HorizontalAlignment="Left"
-                MinHeight="44"
-                AutomationProperties.Name="{markup:Res NewSession}" />
 
-        <ProgressBar Grid.Row="1"
-                     IsIndeterminate="True"
-                     IsVisible="{Binding IsBusy}"
-                     AutomationProperties.Name="{markup:Res SessionsTitle}" />
+    <Grid x:Name="Layout" ColumnDefinitions="272,*" ColumnSpacing="16" Margin="16">
+        <views:SessionsListView Grid.Column="0" />
 
-        <ScrollViewer Grid.Row="2">
-            <ItemsControl ItemsSource="{Binding Sessions}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="pm:SessionItemViewModel">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,4">
-                            <StackPanel Spacing="2">
-                                <Button Content="{Binding Title}"
-                                        Command="{Binding OpenCommand}"
-                                        HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Left"
-                                        MinHeight="44"
-                                        AutomationProperties.Name="{Binding Title}" />
-                                <TextBlock Text="{Binding UpdatedText}" FontSize="12" />
-                            </StackPanel>
-
-                            <Button Grid.Column="1"
-                                    Content="{markup:Res DeleteSession}"
-                                    Command="{Binding DeleteCommand}"
-                                    VerticalAlignment="Center"
-                                    MinHeight="44"
-                                    AutomationProperties.Name="{markup:Res DeleteSession}" />
-                        </Grid>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+        <!-- Shown only in the wide layout (SessionsView.axaml.cs). -->
+        <Border x:Name="EmptyState" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <StackPanel Spacing="12" MaxWidth="440">
+                <TextBlock Classes="heading" Text="{markup:Res EmptyChatTitle}" TextAlignment="Center" TextWrapping="Wrap" />
+                <TextBlock Classes="muted" Text="{markup:Res EmptyChatHint}" TextAlignment="Center" TextWrapping="Wrap" />
+                <Button Classes="primary"
+                        Command="{Binding NewSessionCommand}"
+                        HorizontalAlignment="Center"
+                        Content="{markup:Res NewSession}"
+                        AutomationProperties.Name="{markup:Res NewSession}" />
+            </StackPanel>
+        </Border>
     </Grid>
 </UserControl>
