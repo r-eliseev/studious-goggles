@@ -41,6 +41,7 @@ public static class TestData
         Id = Guid.NewGuid(),
         RunId = run.Id,
         SessionId = run.SessionId,
+        ProviderId = "openrouter",
         ModelId = "black-forest-labs/flux.2-klein-4b",
         Prompt = run.Prompt,
         Seed = 42 + sortOrder,

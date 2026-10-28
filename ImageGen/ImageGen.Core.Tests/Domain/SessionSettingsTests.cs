@@ -1,5 +1,7 @@
 using System.Text.Json;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
+using ImageGen.Core.Providers;
 using ImageGen.Core.Serialization;
 
 namespace ImageGen.Core.Tests.Domain;
@@ -11,9 +13,9 @@ public class SessionSettingsTests
     {
         var settings = SessionSettings.CreateDefault();
 
-        Assert.Equal(["black-forest-labs/flux.2-klein-4b"], settings.ImageModelIds);
+        Assert.Equal([new ModelRef(ProviderIds.OpenRouter, "black-forest-labs/flux.2-klein-4b")], settings.ImageModels);
         Assert.Equal(1, settings.RunsPerModel);
-        Assert.Equal("google/gemma-4-31b-it:free", settings.AssistantModelId);
+        Assert.Equal(new ModelRef(ProviderIds.OpenRouter, "google/gemma-4-31b-it:free"), settings.AssistantModel);
     }
 
     [Fact]
@@ -21,27 +23,28 @@ public class SessionSettingsTests
     {
         var settings = new SessionSettings
         {
-            ImageModelIds = ["a", "b"],
+            ImageModels = [new ModelRef("openrouter", "a"), new ModelRef("fal", "b")],
             RunsPerModel = 3,
-            AssistantModelId = "x",
+            AssistantModel = new ModelRef("openrouter", "x"),
         };
 
         var json = JsonSerializer.Serialize(settings, CoreJsonContext.Default.SessionSettings);
         var restored = JsonSerializer.Deserialize(json, CoreJsonContext.Default.SessionSettings);
 
         Assert.NotNull(restored);
-        Assert.Equal(settings.ImageModelIds, restored.ImageModelIds);
+        Assert.Equal(settings.ImageModels, restored.ImageModels);
         Assert.Equal(settings.RunsPerModel, restored.RunsPerModel);
-        Assert.Equal(settings.AssistantModelId, restored.AssistantModelId);
+        Assert.Equal(settings.AssistantModel, restored.AssistantModel);
     }
 
     [Fact]
-    public void Serialize_UsesCamelCaseNames()
+    public void Serialize_UsesLegacyPropertyNames()
     {
         var json = JsonSerializer.Serialize(SessionSettings.CreateDefault(), CoreJsonContext.Default.SessionSettings);
 
         Assert.Contains("\"imageModelIds\"", json);
         Assert.Contains("\"runsPerModel\"", json);
         Assert.Contains("\"assistantModelId\"", json);
+        Assert.Contains("\"openrouter:black-forest-labs/flux.2-klein-4b\"", json);
     }
 }

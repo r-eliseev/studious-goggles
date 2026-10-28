@@ -1,0 +1,11 @@
+{
+  "providers": [
+    {
+      "id": "openrouter",
+      "kind": "openRouter",
+      "displayName": "OpenRouter",
+      "baseAddress": "https://openrouter.ai/api/v1/",
+      "timeoutSeconds": 180
+    }
+  ]
+}

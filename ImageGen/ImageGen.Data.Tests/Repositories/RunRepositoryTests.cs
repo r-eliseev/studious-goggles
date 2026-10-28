@@ -7,6 +7,32 @@ namespace ImageGen.Data.Tests.Repositories;
 public class RunRepositoryTests
 {
     [Fact]
+    public async Task AddRunAsync_GenerationFromLocalProvider_KeepsProviderAndUpdateKeepsIt()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var session = TestData.Session();
+        await new SessionRepository(test.Database).AddAsync(session, ct);
+        var repository = new RunRepository(test.Database);
+        var run = TestData.Run(session.Id, TestData.BaseTime);
+        var generation = TestData.Generation(run, 0);
+        generation.ProviderId = "local";
+        generation.ModelId = "sd-xl";
+        await repository.AddRunAsync(run, [generation], ct);
+
+        var loaded = await repository.GetGenerationAsync(generation.Id, ct);
+        Assert.Equal("local", loaded!.ProviderId);
+        Assert.Equal("sd-xl", loaded.ModelId);
+
+        loaded.Status = GenerationStatus.Succeeded;
+        await repository.UpdateGenerationAsync(loaded, ct);
+
+        var updated = await repository.GetGenerationAsync(generation.Id, ct);
+        Assert.Equal("local", updated!.ProviderId);
+        Assert.Equal(GenerationStatus.Succeeded, updated.Status);
+    }
+
+    [Fact]
     public async Task AddRunAsync_ThenGet_ReturnsRunAndGenerations()
     {
         var ct = TestContext.Current.CancellationToken;

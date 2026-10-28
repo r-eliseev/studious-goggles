@@ -4,35 +4,36 @@ using ImageGen.Core.Providers;
 
 namespace ImageGen.Core.Services;
 
-public sealed class ApiKeyService(ISecretStore secretStore, IModelProvider client)
+/// <summary>Keys of the configured providers. Each key is kept in the secret store under its provider's name.</summary>
+public sealed class ApiKeyService(IProviderRouter providers, ISecretStore secretStore)
 {
-    public async Task<bool> HasKeyAsync(CancellationToken cancellationToken)
+    public async Task<bool> HasKeyAsync(string providerId, CancellationToken cancellationToken)
     {
-        var key = await secretStore.GetAsync(SecretNames.OpenRouterApiKey, cancellationToken);
+        var key = await secretStore.GetAsync(SecretNames.ForProvider(providerId), cancellationToken);
         return !string.IsNullOrWhiteSpace(key);
     }
 
-    /// <summary>Checks the key and saves it only when OpenRouter accepts it.</summary>
-    public async Task<ApiKeyStatus> SaveAsync(string apiKey, CancellationToken cancellationToken)
+    /// <summary>Checks the key with the provider and saves it only when the provider accepts it.</summary>
+    public async Task<ApiKeyStatus> SaveAsync(string providerId, string apiKey, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(apiKey);
         var trimmed = apiKey.Trim();
-        var status = await client.CheckKeyAsync(trimmed, cancellationToken);
+        var status = await providers.GetConnection(providerId).CheckKeyAsync(trimmed, cancellationToken);
         if (status == ApiKeyStatus.Valid)
         {
-            await secretStore.SetAsync(SecretNames.OpenRouterApiKey, trimmed, cancellationToken);
+            await secretStore.SetAsync(SecretNames.ForProvider(providerId), trimmed, cancellationToken);
         }
 
         return status;
     }
 
-    public Task RemoveAsync(CancellationToken cancellationToken) =>
-        secretStore.RemoveAsync(SecretNames.OpenRouterApiKey, cancellationToken);
+    public Task RemoveAsync(string providerId, CancellationToken cancellationToken) =>
+        secretStore.RemoveAsync(SecretNames.ForProvider(providerId), cancellationToken);
 
     /// <summary>Returns "••••" plus the last 4 characters, or null when no key is saved.</summary>
-    public async Task<string?> GetMaskedKeyAsync(CancellationToken cancellationToken)
+    public async Task<string?> GetMaskedKeyAsync(string providerId, CancellationToken cancellationToken)
     {
-        var key = await secretStore.GetAsync(SecretNames.OpenRouterApiKey, cancellationToken);
+        var key = await secretStore.GetAsync(SecretNames.ForProvider(providerId), cancellationToken);
         if (string.IsNullOrWhiteSpace(key))
         {
             return null;

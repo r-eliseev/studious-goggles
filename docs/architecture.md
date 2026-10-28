@@ -18,14 +18,21 @@ ImageGen/
     Domain/Sessions/               Session, SessionSettings, SessionTimeline, TimelineEntry
     Domain/Chat/                   ChatMessage, ChatRole
     Domain/Generations/            Run, RunOrigin, Generation, GenerationStatus, ErrorKind
-    Domain/Keys/                   ApiKeyStatus, SecretNames
-    Domain/Models/                 ImageModel
+    Domain/Keys/                   ApiKeyStatus, SecretNames (ключ по провайдеру)
+    Domain/Models/                 ImageModel, ModelRef (ссылка «провайдер:модель»)
     Platform/                      ISecretStore, IAppPaths
     Storage/                       ISessionRepository, IChatMessageRepository, IRunRepository,
-                                   IImageModelRepository, IImageFileStore
-    Providers/                     ProviderException, IImageGenerator, ImageGenerationRequest, ImageGenerationResult
-    Providers/IModelProvider       слой абстракции над провайдером моделей (реализация: OpenRouterClient)
-    OpenRouter/                    OpenRouterClient, IOpenRouterChatClient (чат ассистента), запросы и ответы чата
+                                   IImageModelRepository (кэш по провайдеру), IImageFileStore
+    Providers/                     ProviderConfig, ProviderKind, ConfiguredImageModel, ProviderConfigLoader (встроенный
+                                   builtin-providers.json и providers.json в DataDirectory), ProviderRegistry (проверка),
+                                   IProviderRouter / ProviderRouter (клиент по id провайдера), ProviderClientBase (HTTP,
+                                   таймаут из конфига, коды ошибок), ProviderException, ProviderConfigException
+    Providers/                     IProviderConnection (проверка ключа), IModelProvider (картинки: IImageGenerator,
+                                   каталог), IAssistantChatClient (чат), AssistantChatMessage/Request/Result, AssistantTool,
+                                   AssistantToolCall (нейтральный формат чата), ImageGenerationRequest/Result
+    OpenRouter/                    OpenRouterClient (картинки и чат)
+    OpenAiCompatible/              OpenAiCompatibleClient (картинки и чат), OpenAiChatWire (формат chat/completions)
+    AnthropicCompatible/           AnthropicCompatibleClient (только чат, Messages API)
     Services/                      ApiKeyService, ModelCatalogService, SessionService, TimelineOrdering, GenerationService,
                                    AssistantService, AssistantPrompts, ISeedSource, RandomSeedSource
     Serialization/                 CoreJsonContext
@@ -89,12 +96,12 @@ Dockerfile, docker-compose.yml   том /data
 
 ## Правила слоёв
 - `Core` не знает про MAUI, ASP.NET Core, SQLite и UI-типы (`Brush`, `Color`, `Shell`, `Preferences`, `FileSystem`). Платформенное — через `Core/Platform`.
-- Код вне `Providers/` и `OpenRouter/` не знает, какой провайдер рисует картинки (исключения скелета, где провайдер один: ассистент работает только через OpenRouter, `AssistantService` использует `IOpenRouterChatClient`; ключ один — `ApiKeyService` работает с `SecretNames.OpenRouterApiKey`; модели по умолчанию в `SessionSettings` — идентификаторы OpenRouter).
+- Код вне `Providers/`, `OpenRouter/`, `OpenAiCompatible/`, `AnthropicCompatible/` не знает, какой провайдер рисует картинки или отвечает ассистенту: провайдер берётся по `ModelRef` (провайдер и модель) через `IProviderRouter`. Адреса и типы API провайдеров задаёт конфиг (ADR 0009), ключи — только в `ISecretStore`.
 - Ядро не формирует тексты интерфейса: ошибки и состояния отдаёт кодами (`ErrorKind`, `GenerationStatus`), тексты в `.resx` слоя представления (`Presentation`, общий для MAUI и Avalonia).
 - Страницы MAUI и view Avalonia знают только свой `PageModel`; `PageModel` знает сервисы ядра.
 
 ## Внешние системы
-OpenRouter (HTTP API: `/api/v1/key`, `/api/v1/images/models`, `/api/v1/images`, `/api/v1/chat/completions`). Позже fal.ai и Replicate.
+OpenRouter (HTTP API: `/api/v1/key`, `/api/v1/images/models`, `/api/v1/images`, `/api/v1/chat/completions`). Подключаемые через конфиг (`providers.json`): API в формате OpenAI (`images/generations`, `chat/completions`) и Anthropic Messages API (чат). Позже fal.ai и Replicate.
 
 ## Ограничения
 - Платформы: у MAUI нет цели Linux; Linux-десктоп обслуживает Avalonia-оболочка (ADR 0006), браузер и Docker — Web-оболочка. Цель Windows у MAUI собирается только на Windows (`docs/knowledge/dev-environment.md`).

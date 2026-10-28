@@ -25,6 +25,7 @@ public class RunItemViewModelTests
             Id = Guid.NewGuid(),
             RunId = Guid.NewGuid(),
             SessionId = Guid.NewGuid(),
+            ProviderId = "openrouter",
             ModelId = "vendor/model",
             Prompt = "red fox",
             Seed = sortOrder,

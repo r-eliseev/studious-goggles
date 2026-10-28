@@ -14,14 +14,18 @@ public class OpenRouterClientTests
     private const string ApiKey = "sk-or-test-1234";
     private static readonly DateTimeOffset Now = new(2026, 10, 27, 12, 0, 0, TimeSpan.Zero);
 
+    private static readonly Uri OpenRouterAddress = new("https://openrouter.ai/api/v1/");
+
     private static OpenRouterClient CreateClient(StubHttpMessageHandler handler, string? storedKey = ApiKey)
     {
         var secrets = Substitute.For<ISecretStore>();
         secrets.GetAsync(SecretNames.OpenRouterApiKey, Arg.Any<CancellationToken>()).Returns(storedKey);
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
-        var http = new HttpClient(handler) { BaseAddress = OpenRouterClient.BaseAddress };
-        return new OpenRouterClient(http, secrets, time);
+        var factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient(ProviderIds.OpenRouter).Returns(new HttpClient(handler));
+        var config = ProviderConfigLoader.Build(ProviderConfigLoader.ReadBuiltInJson(), null).Get(ProviderIds.OpenRouter);
+        return new OpenRouterClient(config, factory, secrets, time);
     }
 
     [Theory]
@@ -220,10 +224,10 @@ public class OpenRouterClientTests
             """;
         var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, json);
         var client = CreateClient(handler);
-        var request = new OpenRouterChatRequest(
+        var request = new AssistantChatRequest(
             "assistant/model",
-            [OpenRouterChatMessage.System("sys"), OpenRouterChatMessage.User("draw a fox")],
-            [new OpenRouterTool("generate_images", "Generate", """{"type":"object","properties":{"prompt":{"type":"string"}}}""")]);
+            [AssistantChatMessage.System("sys"), AssistantChatMessage.User("draw a fox")],
+            [new AssistantTool("generate_images", "Generate", """{"type":"object","properties":{"prompt":{"type":"string"}}}""")]);
 
         var result = await client.CompleteChatAsync(request, TestContext.Current.CancellationToken);
 
@@ -250,7 +254,7 @@ public class OpenRouterClientTests
         var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, json));
 
         var result = await client.CompleteChatAsync(
-            new OpenRouterChatRequest("m", [OpenRouterChatMessage.User("hi")], []),
+            new AssistantChatRequest("m", [AssistantChatMessage.User("hi")], []),
             TestContext.Current.CancellationToken);
 
         Assert.Equal("Which style?", result.Text);
@@ -262,9 +266,9 @@ public class OpenRouterClientTests
     {
         var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"choices":[{"message":{"content":"ok"}}]}""");
         var client = CreateClient(handler);
-        var message = new OpenRouterChatMessage("user", "look", ["data:image/png;base64,AQID"]);
+        var message = new AssistantChatMessage("user", "look", ["data:image/png;base64,AQID"]);
 
-        await client.CompleteChatAsync(new OpenRouterChatRequest("m", [message], []), TestContext.Current.CancellationToken);
+        await client.CompleteChatAsync(new AssistantChatRequest("m", [message], []), TestContext.Current.CancellationToken);
 
         var body = JsonNode.Parse(handler.RequestBodies[0])!;
         var content = body["messages"]![0]!["content"]!.AsArray();

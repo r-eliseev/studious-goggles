@@ -1,4 +1,5 @@
 using ImageGen.Core.Domain.Keys;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
@@ -9,6 +10,7 @@ using ImageGen.Presentation;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using ImageGen.Presentation.Tests.TestDoubles;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute.ExceptionExtensions;
@@ -174,7 +176,7 @@ public class SessionsPageModelTests : IDisposable
     private SessionsPageModel CreateModel()
     {
         var sessions = new SessionService(_sessionRepository, Substitute.For<IChatMessageRepository>(), _runs, _files, TimeProvider.System);
-        var apiKeys = new ApiKeyService(_secrets, _provider);
+        var apiKeys = new ApiKeyService(ProviderDoubles.Router(_provider), _secrets);
         return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs);
     }
 
@@ -189,16 +191,16 @@ public class SessionsPageModelTests : IDisposable
 
     private AppInitializer CreateInitializer()
     {
-        var catalog = new ModelCatalogService(Substitute.For<IModelProvider>(), Substitute.For<IImageModelRepository>());
+        var catalog = new ModelCatalogService(ProviderDoubles.Router(), Substitute.For<IImageModelRepository>());
         var generation = new GenerationService(
             Substitute.For<ISessionRepository>(),
             _runs,
-            Substitute.For<IImageGenerator>(),
+            ProviderDoubles.Router(Substitute.For<IModelProvider>()),
             Substitute.For<IImageFileStore>(),
             catalog,
             Substitute.For<ISeedSource>(),
             TimeProvider.System,
             NullLogger<GenerationService>.Instance);
-        return new AppInitializer(_database, generation);
+        return new AppInitializer(_database, generation, ProviderDoubles.BuiltInRegistry());
     }
 }

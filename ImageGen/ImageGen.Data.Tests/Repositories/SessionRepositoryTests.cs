@@ -1,4 +1,5 @@
 using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
 using ImageGen.Data.Repositories;
 
@@ -13,7 +14,7 @@ public class SessionRepositoryTests
         await using var test = await TestDatabase.CreateAsync(ct);
         var repository = new SessionRepository(test.Database);
         var session = TestData.Session();
-        session.Settings.ImageModelIds = ["a/b", "c/d"];
+        session.Settings.ImageModels = [new ModelRef("openrouter", "a/b"), new ModelRef("local", "c/d")];
         session.Settings.RunsPerModel = 3;
 
         await repository.AddAsync(session, ct);
@@ -23,7 +24,7 @@ public class SessionRepositoryTests
         Assert.Equal(session.Title, loaded.Title);
         Assert.Equal(session.CreatedAt, loaded.CreatedAt);
         Assert.Equal(session.UpdatedAt, loaded.UpdatedAt);
-        Assert.Equal(["a/b", "c/d"], loaded.Settings.ImageModelIds);
+        Assert.Equal(session.Settings.ImageModels, loaded.Settings.ImageModels);
         Assert.Equal(3, loaded.Settings.RunsPerModel);
     }
 

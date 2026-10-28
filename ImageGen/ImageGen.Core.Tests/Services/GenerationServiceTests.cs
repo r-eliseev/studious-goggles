@@ -18,7 +18,8 @@ public class GenerationServiceTests
 
     private readonly ISessionRepository _sessions = Substitute.For<ISessionRepository>();
     private readonly IRunRepository _runs = Substitute.For<IRunRepository>();
-    private readonly IImageGenerator _generator = Substitute.For<IImageGenerator>();
+    private readonly IModelProvider _generator = Substitute.For<IModelProvider>();
+    private readonly IProviderRouter _providers = Substitute.For<IProviderRouter>();
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
     private readonly ISeedSource _seeds = Substitute.For<ISeedSource>();
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
@@ -29,12 +30,14 @@ public class GenerationServiceTests
 
     public GenerationServiceTests()
     {
-        _modelRepository.ListAsync(Arg.Any<CancellationToken>()).Returns(
+        _providers.GetImageProvider(ProviderIds.OpenRouter).Returns(_generator);
+        _providers.ImageProviderIds.Returns([ProviderIds.OpenRouter]);
+        _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(
             [
                 ModelCatalogServiceTests.Model(Seeded, "Seeded"),
                 ModelCatalogServiceTests.Model(Unseeded, "Unseeded", supportsSeed: false),
             ]);
-        var catalog = new ModelCatalogService(Substitute.For<IModelProvider>(), _modelRepository);
+        var catalog = new ModelCatalogService(_providers, _modelRepository);
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
 
@@ -54,15 +57,15 @@ public class GenerationServiceTests
             UpdatedAt = Now,
             Settings = new SessionSettings
             {
-                ImageModelIds = [Seeded, Unseeded],
+                ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded), new ModelRef(ProviderIds.OpenRouter, Unseeded)],
                 RunsPerModel = 2,
-                AssistantModelId = SessionSettings.DefaultAssistantModelId,
+                AssistantModel = new ModelRef(ProviderIds.OpenRouter, SessionSettings.DefaultAssistantModelId),
             },
         };
         _sessions.GetAsync(_session.Id, Arg.Any<CancellationToken>()).Returns(_session);
 
         _service = new GenerationService(
-            _sessions, _runs, _generator, _files, catalog, _seeds, time, NullLogger<GenerationService>.Instance);
+            _sessions, _runs, _providers, _files, catalog, _seeds, time, NullLogger<GenerationService>.Instance);
         _service.GenerationUpdated += (_, e) => _events.Enqueue(e.Generation);
     }
 
@@ -71,6 +74,7 @@ public class GenerationServiceTests
         Id = Guid.NewGuid(),
         RunId = Guid.NewGuid(),
         SessionId = sessionId,
+        ProviderId = ProviderIds.OpenRouter,
         ModelId = modelId,
         Prompt = prompt,
         Seed = seed,
@@ -175,9 +179,42 @@ public class GenerationServiceTests
     }
 
     [Fact]
+    public async Task StartRunAsync_ModelOfUnconfiguredProvider_FailsWithoutCallingAnyProvider()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        _session.Settings.ImageModels = [new ModelRef("fal", "fal-ai/flux/dev")];
+        _providers.GetImageProvider("fal").Returns<IModelProvider>(_ => throw new ProviderException(ErrorKind.ModelUnavailable, "Provider 'fal' is not configured."));
+
+        await _service.StartRunAsync(_session.Id, "a fox", ct);
+        await _service.WhenIdleAsync();
+
+        Assert.All(_added, g =>
+        {
+            Assert.Equal("fal", g.ProviderId);
+            Assert.Equal(GenerationStatus.Failed, g.Status);
+            Assert.Equal(ErrorKind.ModelUnavailable, g.ErrorKind);
+        });
+        await _generator.DidNotReceive().GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RepeatAsync_SourceFromOtherProvider_KeepsProviderOfSource()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var source = Existing(_session.Id, "sd-xl", seed: 33);
+        source.ProviderId = "local";
+        _runs.GetGenerationAsync(source.Id, Arg.Any<CancellationToken>()).Returns(source);
+
+        await _service.RepeatAsync(source.Id, ct);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal([("local", "sd-xl", 33L)], _added.Select(g => (g.ProviderId, g.ModelId, g.Seed)));
+    }
+
+    [Fact]
     public async Task StartRunAsync_NoImageModels_ThrowsAndCreatesNothing()
     {
-        _session.Settings.ImageModelIds = [];
+        _session.Settings.ImageModels = [];
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.StartRunAsync(_session.Id, "a fox", TestContext.Current.CancellationToken));

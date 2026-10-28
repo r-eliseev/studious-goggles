@@ -1,4 +1,4 @@
-using ImageGen.Core.OpenRouter;
+using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,7 +8,9 @@ namespace ImageGen.Core;
 public static class CoreServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the core services and the OpenRouter provider.
+    /// Registers the core services and the providers. Providers come from the built-in config and the optional
+    /// user file <c>providers.json</c> in <c>IAppPaths.DataDirectory</c>; an invalid config throws
+    /// <see cref="ProviderConfigException"/> when the registry is first resolved (at app start).
     /// The host must register <c>ISecretStore</c> and <c>IAppPaths</c> itself and call <c>AddImageGenData()</c>
     /// (from ImageGen.Data) for the storage services; resolving the core services fails without them.
     /// </summary>
@@ -18,16 +20,20 @@ public static class CoreServiceCollectionExtensions
 
         services.AddSingleton(TimeProvider.System);
 
-        // One typed client for OpenRouter. The interfaces below hand out the same type.
-        services.AddHttpClient<OpenRouterClient>(client =>
+        // Clients take HttpClient from IHttpClientFactory per request. The timeout is set per provider
+        // in the request itself, so the default HttpClient timeout must not cut it short.
+        services.AddHttpClient();
+        services.ConfigureHttpClientDefaults(builder =>
+            builder.ConfigureHttpClient(client => client.Timeout = Timeout.InfiniteTimeSpan));
+
+        services.AddSingleton(sp =>
         {
-            client.BaseAddress = OpenRouterClient.BaseAddress;
-            // Some image models take longer than the default 100 seconds.
-            client.Timeout = TimeSpan.FromMinutes(3);
+            var paths = sp.GetRequiredService<IAppPaths>();
+            return ProviderConfigLoader.Build(
+                ProviderConfigLoader.ReadBuiltInJson(),
+                ProviderConfigLoader.ReadUserJson(paths.DataDirectory));
         });
-        services.AddTransient<IModelProvider>(sp => sp.GetRequiredService<OpenRouterClient>());
-        services.AddTransient<IImageGenerator>(sp => sp.GetRequiredService<OpenRouterClient>());
-        services.AddTransient<IOpenRouterChatClient>(sp => sp.GetRequiredService<OpenRouterClient>());
+        services.AddSingleton<IProviderRouter, ProviderRouter>();
 
         services.AddSingleton<ISeedSource, RandomSeedSource>();
         services.AddSingleton<ApiKeyService>();
