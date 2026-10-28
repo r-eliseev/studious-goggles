@@ -5,6 +5,7 @@
              xmlns:pmui="clr-namespace:ImageGen.Maui.PageModels"
              xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
              xmlns:converters="clr-namespace:ImageGen.Maui.Converters"
+             xmlns:controls="clr-namespace:ImageGen.Maui.Controls"
              x:Class="ImageGen.Maui.Pages.ChatPage"
              x:DataType="pm:ChatPageModel"
              Title="{Binding Title}">
@@ -151,7 +152,8 @@
             </CollectionView>
 
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <Editor Text="{Binding InputText}"
+                <controls:ChatEditor Text="{Binding InputText}"
+                        SendCommand="{Binding SendCommand}"
                         Placeholder="{x:Static strings:AppResources.ChatPlaceholder}"
                         AutoSize="TextChanges"
                         MaximumHeightRequest="160"

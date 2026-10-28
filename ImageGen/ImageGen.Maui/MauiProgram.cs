@@ -37,6 +37,10 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
+#if WINDOWS
+        ImageGen.Maui.Platforms.Windows.ChatEditorKeyHandling.Register();
+#endif
+
         var paths = new MauiAppPaths();
         var logDirectory = ImageGenLogging.LogDirectoryFor(paths.DataDirectory);
         var level = LogLevelSettings.Load(
