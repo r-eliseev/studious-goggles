@@ -216,4 +216,34 @@
   <data name="RemoveAttachment" xml:space="preserve">
     <value>Remove</value>
   </data>
+  <data name="DescribeButton" xml:space="preserve">
+    <value>Describe</value>
+  </data>
+  <data name="DescribePromptButton" xml:space="preserve">
+    <value>Prompt</value>
+  </data>
+  <data name="DescriptionTitle" xml:space="preserve">
+    <value>Image description</value>
+  </data>
+  <data name="DescriptionCostUnknown" xml:space="preserve">
+    <value>cost unknown</value>
+  </data>
+  <data name="DescriptionFromFormat" xml:space="preserve">
+    <value>{0} / {1} · {2}</value>
+  </data>
+  <data name="DescriptionInsert" xml:space="preserve">
+    <value>Insert into input</value>
+  </data>
+  <data name="DescriptionClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="DescriptionReplace" xml:space="preserve">
+    <value>Replace</value>
+  </data>
+  <data name="DescriptionAppend" xml:space="preserve">
+    <value>Append</value>
+  </data>
+  <data name="DescriptionReplaceQuestion" xml:space="preserve">
+    <value>Replace the text in the input field?</value>
+  </data>
 </root>

@@ -1,6 +1,7 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ImageGen.Core.Domain.Descriptions;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
@@ -18,13 +19,15 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     private readonly Func<GenerationItemViewModel, Task> _repeat;
     private readonly Func<GenerationItemViewModel, Task> _newSeed;
     private readonly Func<GenerationItemViewModel, Task> _edit;
+    private readonly Func<GenerationItemViewModel, DescriptionMode, Task> _describe;
 
     public GenerationItemViewModel(
         Generation generation,
         IImageFileStore files,
         Func<GenerationItemViewModel, Task> repeat,
         Func<GenerationItemViewModel, Task> newSeed,
-        Func<GenerationItemViewModel, Task> edit)
+        Func<GenerationItemViewModel, Task> edit,
+        Func<GenerationItemViewModel, DescriptionMode, Task> describe)
     {
         ArgumentNullException.ThrowIfNull(generation);
         ArgumentNullException.ThrowIfNull(files);
@@ -35,6 +38,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         _repeat = repeat;
         _newSeed = newSeed;
         _edit = edit;
+        _describe = describe;
         Id = generation.Id;
         Prompt = generation.Prompt;
         Update(generation);
@@ -81,6 +85,8 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(RepeatCommand))]
     [NotifyCanExecuteChangedFor(nameof(NewSeedCommand))]
     [NotifyCanExecuteChangedFor(nameof(EditCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DescribeCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DescribePromptCommand))]
     public partial bool IsFinished { get; set; }
 
     [RelayCommand(CanExecute = nameof(IsFinished))]
@@ -91,6 +97,13 @@ public sealed partial class GenerationItemViewModel : ObservableObject
 
     [RelayCommand(CanExecute = nameof(IsFinished))]
     private Task EditAsync() => _edit(this);
+
+    /// <summary>Describes this picture (task 019): the text is shown, and it goes into the input field only on the user's action.</summary>
+    [RelayCommand(CanExecute = nameof(IsFinished))]
+    private Task DescribeAsync() => _describe(this, DescriptionMode.Description);
+
+    [RelayCommand(CanExecute = nameof(IsFinished))]
+    private Task DescribePromptAsync() => _describe(this, DescriptionMode.Prompt);
 
     /// <summary>Recomputes every displayed value from the saved generation.</summary>
     public void Update(Generation generation)

@@ -17,6 +17,7 @@ public static class DataServiceCollectionExtensions
         services.AddSingleton<IImageModelRepository, ImageModelRepository>();
         services.AddSingleton<IImageFileStore, FileImageStore>();
         services.AddSingleton<IChatAttachmentRepository, ChatAttachmentRepository>();
+        services.AddSingleton<IImageDescriptionRepository, ImageDescriptionRepository>();
         return services;
     }
 }

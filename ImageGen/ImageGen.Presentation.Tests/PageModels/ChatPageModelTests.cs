@@ -1,4 +1,5 @@
 using ImageGen.Core.Domain.Chat;
+using ImageGen.Core.Domain.Descriptions;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
@@ -36,6 +37,7 @@ public class ChatPageModelTests
     private readonly IFilePickerService _filePicker = Substitute.For<IFilePickerService>();
     private readonly IChatAttachmentRepository _chatAttachments = Substitute.For<IChatAttachmentRepository>();
     private AttachmentService _attachments = null!;
+    private ImageDescriptionService _descriptions = null!;
 
     // Stored rows. Guarded by _gate because background generations write to them.
     private readonly object _gate = new();
@@ -142,6 +144,10 @@ public class ChatPageModelTests
 
         _sessionService = new SessionService(_sessionRepository, _messageRepository, _runRepository, _files, time);
         _attachments = new AttachmentService(_chatAttachments, _files, time);
+        _descriptions = new ImageDescriptionService(
+            _sessionRepository, _runRepository, ProviderDoubles.Router(chat: _chat),
+            new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),
+            _files, Substitute.For<IImageDescriptionRepository>(), time);
         _files.SaveAttachmentAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(ci => $"images/s/attachments/{ci.ArgAt<Guid>(1):N}.png");
         _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
@@ -180,7 +186,8 @@ public class ChatPageModelTests
             _dialogs,
             _mainThread,
             _attachments,
-            _filePicker);
+            _filePicker,
+            _descriptions);
         model.ApplyQueryAttributes(new Dictionary<string, object>
         {
             [Routes.SessionIdParameter] = sessionId.ToString("D"),
@@ -296,7 +303,7 @@ public class ChatPageModelTests
     public void ApplyQueryAttributes_MissingSessionId_Throws()
     {
         var model = new ChatPageModel(
-            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker);
+            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions);
 
         Assert.Throws<ArgumentException>(() => model.ApplyQueryAttributes(new Dictionary<string, object>()));
     }
@@ -421,6 +428,73 @@ public class ChatPageModelTests
         await _model.AttachImageCommand.ExecuteAsync(null);
 
         Assert.True(_model.SendCommand.CanExecute(null));
+    }
+
+    private static ImageDescription Description(string text) => new()
+    {
+        Id = Guid.NewGuid(),
+        SessionId = Guid.NewGuid(),
+        SourceGenerationId = Guid.NewGuid(),
+        Mode = DescriptionMode.Description,
+        ProviderId = ProviderIds.OpenRouter,
+        ModelId = "vendor/vision",
+        Text = text,
+        CostUsd = 0.0004m,
+        CreatedAt = DateTimeOffset.UnixEpoch,
+    };
+
+    [Fact]
+    public async Task ShowDescriptionAsync_EmptyInputAndInsertAccepted_PutsTextIntoInput()
+    {
+        await _model.OnAppearingAsync();
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), AppResources.DescriptionInsert, AppResources.DescriptionClose).Returns(true);
+
+        await _model.ShowDescriptionAsync(Description("A red fox."));
+
+        Assert.Equal("A red fox.", _model.InputText);
+    }
+
+    [Fact]
+    public async Task ShowDescriptionAsync_DialogShowsTextAndPriceWithoutTouchingInput()
+    {
+        await _model.OnAppearingAsync();
+        _model.InputText = "keep me";
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), AppResources.DescriptionInsert, AppResources.DescriptionClose).Returns(false);
+
+        await _model.ShowDescriptionAsync(Description("A red fox."));
+
+        Assert.Equal("keep me", _model.InputText);
+        await _dialogs.Received(1).ConfirmAsync(
+            AppResources.DescriptionTitle,
+            Arg.Is<string>(m => m.StartsWith("A red fox.", StringComparison.Ordinal) && m.Contains("$0.0004", StringComparison.Ordinal)),
+            AppResources.DescriptionInsert,
+            AppResources.DescriptionClose);
+    }
+
+    [Fact]
+    public async Task ShowDescriptionAsync_InputHasTextAndReplaceChosen_ReplacesIt()
+    {
+        await _model.OnAppearingAsync();
+        _model.InputText = "old";
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), AppResources.DescriptionInsert, AppResources.DescriptionClose).Returns(true);
+        _dialogs.ConfirmAsync(AppResources.DescriptionTitle, AppResources.DescriptionReplaceQuestion, AppResources.DescriptionReplace, AppResources.DescriptionAppend).Returns(true);
+
+        await _model.ShowDescriptionAsync(Description("A red fox."));
+
+        Assert.Equal("A red fox.", _model.InputText);
+    }
+
+    [Fact]
+    public async Task ShowDescriptionAsync_InputHasTextAndAppendChosen_AddsLine()
+    {
+        await _model.OnAppearingAsync();
+        _model.InputText = "old";
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), AppResources.DescriptionInsert, AppResources.DescriptionClose).Returns(true);
+        _dialogs.ConfirmAsync(AppResources.DescriptionTitle, AppResources.DescriptionReplaceQuestion, AppResources.DescriptionReplace, AppResources.DescriptionAppend).Returns(false);
+
+        await _model.ShowDescriptionAsync(Description("A red fox."));
+
+        Assert.Equal("old\nA red fox.", _model.InputText);
     }
 
     [Fact]

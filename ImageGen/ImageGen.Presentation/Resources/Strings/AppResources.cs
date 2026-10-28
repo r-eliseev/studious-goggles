@@ -149,6 +149,26 @@ public static class AppResources
 
     public static string RemoveAttachment => Get(nameof(RemoveAttachment));
 
+    public static string DescribeButton => Get(nameof(DescribeButton));
+
+    public static string DescribePromptButton => Get(nameof(DescribePromptButton));
+
+    public static string DescriptionTitle => Get(nameof(DescriptionTitle));
+
+    public static string DescriptionCostUnknown => Get(nameof(DescriptionCostUnknown));
+
+    public static string DescriptionFromFormat => Get(nameof(DescriptionFromFormat));
+
+    public static string DescriptionInsert => Get(nameof(DescriptionInsert));
+
+    public static string DescriptionClose => Get(nameof(DescriptionClose));
+
+    public static string DescriptionReplace => Get(nameof(DescriptionReplace));
+
+    public static string DescriptionAppend => Get(nameof(DescriptionAppend));
+
+    public static string DescriptionReplaceQuestion => Get(nameof(DescriptionReplaceQuestion));
+
     private static string Get(string name) =>
         ResourceManager.GetString(name, CultureInfo.CurrentUICulture)
         ?? throw new InvalidOperationException($"Missing string resource '{name}'.");

@@ -1,3 +1,4 @@
+using ImageGen.Core.Domain.Descriptions;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Storage;
@@ -44,6 +45,57 @@ public class GenerationItemViewModelTests
     }
 
     [Fact]
+    public async Task DescribeCommand_CallsDescribeWithDescriptionMode()
+    {
+        DescriptionMode? requested = null;
+        var card = CardWithDescribe((_, mode) =>
+        {
+            requested = mode;
+            return Task.CompletedTask;
+        });
+
+        await card.DescribeCommand.ExecuteAsync(null);
+
+        Assert.Equal(DescriptionMode.Description, requested);
+    }
+
+    [Fact]
+    public async Task DescribePromptCommand_CallsDescribeWithPromptMode()
+    {
+        DescriptionMode? requested = null;
+        var card = CardWithDescribe((_, mode) =>
+        {
+            requested = mode;
+            return Task.CompletedTask;
+        });
+
+        await card.DescribePromptCommand.ExecuteAsync(null);
+
+        Assert.Equal(DescriptionMode.Prompt, requested);
+    }
+
+    private static GenerationItemViewModel CardWithDescribe(Func<GenerationItemViewModel, DescriptionMode, Task> describe) => new(
+        new Generation
+        {
+            Id = Guid.NewGuid(),
+            RunId = Guid.NewGuid(),
+            SessionId = Guid.NewGuid(),
+            ProviderId = "openrouter",
+            ModelId = "vendor/a",
+            Prompt = "fox",
+            Seed = 1,
+            SeedApplied = true,
+            Status = GenerationStatus.Succeeded,
+            CreatedAt = Now,
+            SortOrder = 0,
+        },
+        Substitute.For<IImageFileStore>(),
+        _ => Task.CompletedTask,
+        _ => Task.CompletedTask,
+        _ => Task.CompletedTask,
+        describe);
+
+    [Fact]
     public void Details_NoOutcomes_TextUnchanged()
     {
         var card = Card();
@@ -75,5 +127,6 @@ public class GenerationItemViewModelTests
         Substitute.For<IImageFileStore>(),
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,
-        _ => Task.CompletedTask);
+        _ => Task.CompletedTask,
+        (_, _) => Task.CompletedTask);
 }

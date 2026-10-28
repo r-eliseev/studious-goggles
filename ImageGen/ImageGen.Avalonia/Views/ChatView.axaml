@@ -91,6 +91,16 @@
                                                             Margin="0,0,6,6"
                                                             MinHeight="44"
                                                             AutomationProperties.Name="{markup:Res Edit}" />
+                                                    <Button Content="{markup:Res DescribeButton}"
+                                                            Command="{Binding DescribeCommand}"
+                                                            Margin="0,0,6,6"
+                                                            MinHeight="44"
+                                                            AutomationProperties.Name="{markup:Res DescribeButton}" />
+                                                    <Button Content="{markup:Res DescribePromptButton}"
+                                                            Command="{Binding DescribePromptCommand}"
+                                                            Margin="0,0,6,6"
+                                                            MinHeight="44"
+                                                            AutomationProperties.Name="{markup:Res DescribePromptButton}" />
                                                 </WrapPanel>
                                             </StackPanel>
                                         </Border>

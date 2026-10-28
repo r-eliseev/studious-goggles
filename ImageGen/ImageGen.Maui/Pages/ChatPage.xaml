@@ -78,6 +78,14 @@
                                                             Command="{Binding EditCommand}"
                                                             Margin="0,0,6,6"
                                                             SemanticProperties.Description="{x:Static strings:AppResources.Edit}" />
+                                                    <Button Text="{x:Static strings:AppResources.DescribeButton}"
+                                                            Command="{Binding DescribeCommand}"
+                                                            Margin="0,0,6,6"
+                                                            SemanticProperties.Description="{x:Static strings:AppResources.DescribeButton}" />
+                                                    <Button Text="{x:Static strings:AppResources.DescribePromptButton}"
+                                                            Command="{Binding DescribePromptCommand}"
+                                                            Margin="0,0,6,6"
+                                                            SemanticProperties.Description="{x:Static strings:AppResources.DescribePromptButton}" />
                                                 </FlexLayout>
                                             </VerticalStackLayout>
                                         </Border>

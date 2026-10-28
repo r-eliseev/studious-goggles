@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ImageGen.Core.Domain.Descriptions;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
@@ -24,7 +25,8 @@ public sealed partial class ChatPageModel(
     IDialogService dialogs,
     IMainThread mainThread,
     AttachmentService attachments,
-    IFilePickerService filePicker) : ObservableObject
+    IFilePickerService filePicker,
+    ImageDescriptionService descriptions) : ObservableObject
 {
     private readonly Dictionary<Guid, GenerationItemViewModel> _cards = [];
     private bool _imageConsentGiven;
@@ -287,9 +289,59 @@ public sealed partial class ChatPageModel(
 
     private GenerationItemViewModel CreateCard(Generation generation)
     {
-        var card = new GenerationItemViewModel(generation, files, RepeatCardAsync, NewSeedCardAsync, EditCardAsync);
+        var card = new GenerationItemViewModel(generation, files, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync);
         _cards[generation.Id] = card;
         return card;
+    }
+
+    /// <summary>Describes a card's picture with the assistant model, then shows the text (task 019).</summary>
+    public async Task DescribeCardAsync(GenerationItemViewModel card, DescriptionMode mode)
+    {
+        try
+        {
+            var language = CultureInfo.CurrentUICulture.EnglishName;
+            var description = await descriptions.DescribeAsync(_sessionId, card.Id, mode, language, CancellationToken.None);
+            await ShowDescriptionAsync(description);
+        }
+        catch (Exception ex)
+        {
+            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Shows the description with its model, provider and price. The text goes into the input field only when the user
+    /// chooses it; if the field has text, the user chooses between replacing it and appending.
+    /// </summary>
+    public async Task ShowDescriptionAsync(ImageDescription description)
+    {
+        ArgumentNullException.ThrowIfNull(description);
+        var price = description.CostUsd is { } cost
+            ? "$" + cost.ToString("0.####", CultureInfo.InvariantCulture)
+            : AppResources.DescriptionCostUnknown;
+        var source = string.Format(CultureInfo.CurrentCulture, AppResources.DescriptionFromFormat, description.ProviderId, description.ModelId, price);
+        var insert = await dialogs.ConfirmAsync(
+            AppResources.DescriptionTitle,
+            description.Text + "\n\n" + source,
+            AppResources.DescriptionInsert,
+            AppResources.DescriptionClose);
+        if (!insert)
+        {
+            return;
+        }
+
+        if (InputText.Trim().Length == 0)
+        {
+            InputText = description.Text;
+            return;
+        }
+
+        var replace = await dialogs.ConfirmAsync(
+            AppResources.DescriptionTitle,
+            AppResources.DescriptionReplaceQuestion,
+            AppResources.DescriptionReplace,
+            AppResources.DescriptionAppend);
+        InputText = replace ? description.Text : InputText + "\n" + description.Text;
     }
 
     /// <summary>Raised on a background thread. Only the card of this session is updated, on the UI thread.</summary>
