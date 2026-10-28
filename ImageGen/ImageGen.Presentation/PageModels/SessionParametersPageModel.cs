@@ -25,6 +25,12 @@ public sealed partial class SessionParametersPageModel(
 
     private Guid _sessionId;
 
+    /// <summary>In pane mode (wide window) Save and Cancel raise <see cref="CloseRequested"/> instead of going back.</summary>
+    public bool HostedInPane { get; set; }
+
+    /// <summary>Raised when the pane should close (Save, Cancel or the close button).</summary>
+    public event EventHandler? CloseRequested;
+
     public ObservableCollection<ParameterOption> AspectRatioOptions { get; } = [];
 
     public ObservableCollection<ParameterOption> ResolutionOptions { get; } = [];
@@ -68,7 +74,19 @@ public sealed partial class SessionParametersPageModel(
 
     /// <summary>Leaves the screen without saving: the session keeps its parameters.</summary>
     [RelayCommand]
-    private Task CancelAsync() => navigation.GoBackAsync();
+    private Task CancelAsync() => CloseAsync();
+
+    /// <summary>In pane mode raises <see cref="CloseRequested"/>; otherwise goes back, as before.</summary>
+    private Task CloseAsync()
+    {
+        if (HostedInPane)
+        {
+            CloseRequested?.Invoke(this, EventArgs.Empty);
+            return Task.CompletedTask;
+        }
+
+        return navigation.GoBackAsync();
+    }
 
     [RelayCommand(CanExecute = nameof(CanRun))]
     private async Task SaveAsync()
@@ -83,7 +101,7 @@ public sealed partial class SessionParametersPageModel(
                 Quality = SelectedQuality?.Value,
             };
             await sessionService.UpdateGenerationParametersAsync(_sessionId, parameters, CancellationToken.None);
-            await navigation.GoBackAsync();
+            await CloseAsync();
         }
         catch (Exception ex)
         {

@@ -1,6 +1,6 @@
 ---
 id: 071
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -48,5 +48,29 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Presentation/PageModels/{ChatPageModel,SessionModelsPageModel,SessionParametersPageModel}.cs`, `ImageGen/ImageGen.Avalonia/Views/ChatView.*`, `Composition/AppServices.cs`, `ImageGen/ImageGen.Maui/Pages/ChatPage.*`, `MauiProgram.cs`, тесты
 
 ## Отчёт
+
+Сделано по плану, TDD, все проверки зелёные.
+
+Файлы:
+- `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs`: конструктор получил фабрики `Func<SessionModelsPageModel>`/`Func<SessionParametersPageModel>`; свойства `IsWide`, `ModelsPane`, `ParametersPane` плюс вычисляемые `ActivePane`, `IsPaneOpen`, `PaneTitle` (с `NotifyPropertyChangedFor`); команды `OpenModels`/`OpenParameters` при `IsWide` открывают/переключают панель (повторное нажатие той же кнопки закрывает, другая кнопка заменяет), иначе навигация как прежде; команда `ClosePane` и обработчик `CloseRequested` панели.
+- `ImageGen/ImageGen.Presentation/PageModels/SessionModelsPageModel.cs` и `SessionParametersPageModel.cs`: флаг `HostedInPane`, событие `CloseRequested`; Save и Cancel в режиме панели вызывают событие вместо `GoBackAsync` (по умолчанию поведение прежнее).
+- `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml(.cs)`: третья колонка 360 — `Border x:Name="SidePane"` с заголовком `PaneTitle`, крестиком (`ClosePaneCommand`, значок U+E1B2, имя `DescriptionClose`) и `ContentControl Content="{Binding ActivePane}"` с шаблонами данных на `SessionModelsView`/`SessionParametersView`; `IsWide` выставляется из обработчика ширины (067), при узком окне панель закрывается.
+- `ImageGen/ImageGen.Avalonia/Composition/AppServices.cs` и `ImageGen/ImageGen.Maui/MauiProgram.cs`: регистрация фабрик панелей (`Func<...>` → `GetRequiredService`).
+- `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml(.cs)`: третья колонка — `Border x:Name="SidePane"` (360, `IsVisible` по `IsPaneOpen`), заголовок, крестик, и два тела (модели/параметры), повторяющие `SessionModelsPage`/`SessionParametersPage`, с `BindingContext={Binding ModelsPane|ParametersPane}` и `IsVisible` через `toolkit:IsNotNullConverter` (источник — страница по `x:Reference`); `IsWide` из `SizeChanged`; обработчик `OnAssistantCheckedChanged` (у `RadioButton` в MAUI нет `Command`).
+- Тесты: `ImageGen.Presentation.Tests/PageModels/ChatPageModelTests.cs` (`OpenModels_Wide_OpensPane`, `OpenModels_Narrow_Navigates`, `OpenParameters_Narrow_Navigates`, `OpenModelsTwice_ClosesPane`, `SaveInPane_ClosesPaneAndAppliesToNextRun`, `OpenParameters_WhenModelsOpen_ReplacesPane`); `ImageGen.Avalonia.Tests/Views/ChatPaneTests.cs` (`Wide_ModelsButton_ShowsPane`, `Narrow_ModelsButton_Navigates`, `Pane_Save_Closes`). Обновлён `ViewsAccessibilityTests` — теперь явно задаёт узкое окно (600), иначе кнопка Models по новому поведению открыла бы панель, а не экран.
+
+Автономные решения:
+- Для заголовка панели и крестика взял существующие строки `ModelsTitle`/`SessionParametersTitle` и `DescriptionClose` (отдельного ресурса `Close` в проекте нет, есть только значок).
+- Добавил вычисляемые `ActivePane`/`IsPaneOpen`/`PaneTitle` в `ChatPageModel`, чтобы разметка обеих оболочек оставалась простой (в проекте нет null→bool конвертера для Avalonia; `ContentControl.Content` берёт `ActivePane`).
+- MAUI: тело панели собрано инлайн по образцу страниц `SessionModelsPage`/`SessionParametersPage` (переиспользуемых ContentView для них в MAUI нет, только ContentPage; извлечение — вне объёма). Видимость тел — через `toolkit:IsNotNullConverter` из `CommunityToolkit.Maui`.
+- `SaveInPane_*` проверяет через `_sessionRepository.Received().UpdateAsync(...)` с `RunsPerModel == 5` (мок `GetAsync` возвращает исходный объект, так что перечитать значение нельзя).
+
+Проверки (локально, .NET 10 SDK 10.0.403, MAUI android workload + Android SDK, JDK 21):
+- `dotnet build ImageGen.Maui -f net10.0-android` — успешно, 0 warnings / 0 errors.
+- Presentation.Tests 215/215, Avalonia.Tests 102/102 (2 пропуска — DPAPI/Secret Service, как обычно).
+- `dotnet format` (Presentation, Avalonia, Maui) — без изменений.
+- `scripts/check.sh` — пройден.
+
+Не проверено: запуск под Windows/рабочим столом вживую (ручная проверка 016/046) — панель смотрелась только через headless-тесты Avalonia и сборку MAUI; Windows-цель MAUI собирает CI.
 
 ## Комментарии

@@ -181,6 +181,16 @@ public class ChatPageModelTests
 
     private readonly CurrentSessionTracker _tracker = new();
 
+    private ChatModelCatalogService ChatModels => new(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance);
+
+    private ModelCatalogService Catalog => new(ProviderDoubles.Router(), _modelRepository, NullLogger<ModelCatalogService>.Instance);
+
+    private SessionModelsPageModel NewModelsPane() =>
+        new(_sessionService, Catalog, ChatModels, _navigation, _dialogs);
+
+    private SessionParametersPageModel NewParametersPane() =>
+        new(_sessionService, Catalog, _navigation, _dialogs);
+
     private ChatPageModel CreateModel(Guid sessionId)
     {
         var model = new ChatPageModel(
@@ -195,7 +205,9 @@ public class ChatPageModelTests
             _filePicker,
             _descriptions,
             _clipboard,
-            _tracker);
+            _tracker,
+            NewModelsPane,
+            NewParametersPane);
         model.ApplyQueryAttributes(new Dictionary<string, object>
         {
             [Routes.SessionIdParameter] = sessionId.ToString("D"),
@@ -345,7 +357,7 @@ public class ChatPageModelTests
     public void ApplyQueryAttributes_MissingSessionId_Throws()
     {
         var model = new ChatPageModel(
-            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard, _tracker);
+            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard, _tracker, NewModelsPane, NewParametersPane);
 
         Assert.Throws<ArgumentException>(() => model.ApplyQueryAttributes(new Dictionary<string, object>()));
     }
@@ -789,18 +801,80 @@ public class ChatPageModelTests
     }
 
     [Fact]
-    public async Task OpenParametersCommand_NavigatesToSessionParameters()
+    public async Task OpenParameters_Narrow_Navigates()
     {
+        _model.IsWide = false;
+
         await _model.OpenParametersCommand.ExecuteAsync(null);
 
         await _navigation.Received(1).GoToAsync(Routes.SessionParametersFor(_session.Id));
+        Assert.Null(_model.ParametersPane);
     }
 
     [Fact]
-    public async Task OpenModelsCommand_NavigatesToSessionModels()
+    public async Task OpenModels_Narrow_Navigates()
     {
+        _model.IsWide = false;
+
         await _model.OpenModelsCommand.ExecuteAsync(null);
 
         await _navigation.Received(1).GoToAsync(Routes.SessionModelsFor(_session.Id));
+        Assert.Null(_model.ModelsPane);
+    }
+
+    [Fact]
+    public async Task OpenModels_Wide_OpensPane()
+    {
+        _model.IsWide = true;
+
+        await _model.OpenModelsCommand.ExecuteAsync(null);
+
+        Assert.NotNull(_model.ModelsPane);
+        Assert.True(_model.ModelsPane!.HostedInPane);
+        Assert.Null(_model.ParametersPane);
+        await _navigation.DidNotReceive().GoToAsync(Routes.SessionModelsFor(_session.Id));
+    }
+
+    [Fact]
+    public async Task OpenModelsTwice_ClosesPane()
+    {
+        _model.IsWide = true;
+
+        await _model.OpenModelsCommand.ExecuteAsync(null);
+        await _model.OpenModelsCommand.ExecuteAsync(null);
+
+        Assert.Null(_model.ModelsPane);
+    }
+
+    [Fact]
+    public async Task OpenParameters_WhenModelsOpen_ReplacesPane()
+    {
+        _model.IsWide = true;
+        await _model.OpenModelsCommand.ExecuteAsync(null);
+
+        await _model.OpenParametersCommand.ExecuteAsync(null);
+
+        Assert.Null(_model.ModelsPane);
+        Assert.NotNull(_model.ParametersPane);
+    }
+
+    [Fact]
+    public async Task SaveInPane_ClosesPaneAndAppliesToNextRun()
+    {
+        _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ChatModel>>(
+            [new ChatModel(AssistantModel, "Assistant", SupportsImageInput: true, ContextLength: 1000, SupportsTools: true)]));
+        _model.IsWide = true;
+        await _model.OnAppearingAsync();
+        await _model.OpenModelsCommand.ExecuteAsync(null);
+        var pane = _model.ModelsPane!;
+        Assert.False(pane.IsBusy);
+        pane.RunsPerModel = 5;
+
+        await pane.SaveCommand.ExecuteAsync(null);
+
+        Assert.Null(_model.ModelsPane);
+        await _sessionRepository.Received().UpdateAsync(
+            Arg.Is<Session>(s => s.Id == _session.Id && s.Settings.RunsPerModel == 5),
+            Arg.Any<CancellationToken>());
     }
 }

@@ -105,5 +105,14 @@ public partial class ChatView : UserControl, IAppearing, IDisappearing
         var layout = this.FindControl<Grid>("Layout")!;
         layout.ColumnDefinitions[0].Width = wide ? new GridLength(272) : new GridLength(0);
         this.FindControl<SessionsListView>("SessionList")!.IsVisible = wide;
+        if (DataContext is ChatPageModel model)
+        {
+            // A narrow window opens the models and parameters as a screen; any open pane is closed.
+            model.IsWide = wide;
+            if (!wide)
+            {
+                model.ClosePaneCommand.Execute(null);
+            }
+        }
     }
 }

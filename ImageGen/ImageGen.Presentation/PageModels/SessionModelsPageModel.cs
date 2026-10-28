@@ -30,6 +30,12 @@ public sealed partial class SessionModelsPageModel(
     private Session? _session;
     private bool _loaded;
 
+    /// <summary>In pane mode (wide window) Save and Cancel raise <see cref="CloseRequested"/> instead of going back.</summary>
+    public bool HostedInPane { get; set; }
+
+    /// <summary>Raised when the pane should close (Save, Cancel or the close button).</summary>
+    public event EventHandler? CloseRequested;
+
     /// <summary>Image model rows shown now: the catalog filtered by <see cref="SearchText"/>.</summary>
     public ObservableCollection<ModelOptionViewModel> Models { get; } = [];
 
@@ -101,7 +107,7 @@ public sealed partial class SessionModelsPageModel(
                 AssistantModel = _assistants.FirstOrDefault(a => a.IsSelected)?.Reference ?? session.Settings.AssistantModel,
             };
             await sessionService.UpdateSettingsAsync(_sessionId, settings, CancellationToken.None);
-            await navigation.GoBackAsync();
+            await CloseAsync();
         }
         catch (Exception ex)
         {
@@ -111,7 +117,19 @@ public sealed partial class SessionModelsPageModel(
 
     /// <summary>Leaves the screen without saving: the session keeps its settings.</summary>
     [RelayCommand]
-    private Task CancelAsync() => navigation.GoBackAsync();
+    private Task CancelAsync() => CloseAsync();
+
+    /// <summary>In pane mode raises <see cref="CloseRequested"/>; otherwise goes back, as before.</summary>
+    private Task CloseAsync()
+    {
+        if (HostedInPane)
+        {
+            CloseRequested?.Invoke(this, EventArgs.Empty);
+            return Task.CompletedTask;
+        }
+
+        return navigation.GoBackAsync();
+    }
 
     private bool CanRun() => !IsBusy;
 

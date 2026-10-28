@@ -9,11 +9,13 @@
              xmlns:controls="clr-namespace:ImageGen.Maui.Controls"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="ImageGen.Maui.Pages.ChatPage"
+             x:Name="Page"
              x:DataType="pm:ChatPageModel"
              Title="{Binding Title}">
     <ContentPage.Resources>
         <ResourceDictionary>
             <converters:FilePathToImageSourceConverter x:Key="FilePathToImageSource" />
+            <toolkit:IsNotNullConverter x:Key="IsNotNull" />
 
             <pmui:ChatItemTemplateSelector x:Key="ChatItemSelector">
                 <pmui:ChatItemTemplateSelector.MessageTemplate>
@@ -260,7 +262,7 @@
         </ResourceDictionary>
     </ContentPage.Resources>
 
-    <Grid x:Name="ChatLayout" ColumnDefinitions="272,*" ColumnSpacing="16" Padding="16">
+    <Grid x:Name="ChatLayout" ColumnDefinitions="272,*,Auto" ColumnSpacing="16" Padding="16">
         <!-- Wide layout only: the session list beside the chat (ChatPage.xaml.cs). -->
         <controls:SessionsListView x:Name="SessionList" Grid.Column="0" />
 
@@ -343,5 +345,143 @@
             </VerticalStackLayout>
         </Border>
         </Grid>
+
+        <!-- Wide window only: models or parameters as a 360 pane beside the chat (task 071). -->
+        <Border x:Name="SidePane" Grid.Column="2"
+                WidthRequest="360"
+                IsVisible="{Binding IsPaneOpen}"
+                StrokeThickness="0"
+                BackgroundColor="{DynamicResource IgSurfaceColor}">
+            <Grid RowDefinitions="Auto,*">
+                <Grid ColumnDefinitions="*,Auto" Padding="16,12,8,0">
+                    <Label StyleClass="title" VerticalOptions="Center" Text="{Binding PaneTitle}" />
+                    <Button Grid.Column="1"
+                            StyleClass="ghost,icon" Text="{x:Static appearance:IconGlyphs.Close}" FontFamily="LucideIcons"
+                            Command="{Binding ClosePaneCommand}"
+                            SemanticProperties.Description="{x:Static strings:AppResources.DescriptionClose}" />
+                </Grid>
+
+                <!-- Models pane body (mirrors SessionModelsPage). -->
+                <ScrollView Grid.Row="1"
+                            IsVisible="{Binding Source={x:Reference Page}, Path=BindingContext.ModelsPane, Converter={StaticResource IsNotNull}}"
+                            BindingContext="{Binding ModelsPane}"
+                            x:DataType="pm:SessionModelsPageModel">
+                    <VerticalStackLayout Padding="16,8,16,16" Spacing="8">
+                        <SearchBar Text="{Binding SearchText, Mode=TwoWay}"
+                                   Placeholder="{x:Static strings:AppResources.ModelsSearchPlaceholder}"
+                                   SemanticProperties.Description="{x:Static strings:AppResources.ModelsSearchPlaceholder}" />
+                        <HorizontalStackLayout Spacing="12">
+                            <Label StyleClass="muted" Text="{Binding RunsPerModelText}" VerticalOptions="Center" />
+                            <Stepper Value="{Binding RunsPerModel, Mode=TwoWay}"
+                                     Minimum="{Binding MinRunsPerModel}"
+                                     Maximum="{Binding MaxRunsPerModel}"
+                                     Increment="1"
+                                     SemanticProperties.Description="{Binding RunsPerModelText}" />
+                        </HorizontalStackLayout>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label StyleClass="section" Text="{Binding SelectedCountText}" VerticalOptions="Center" />
+                            <Button Grid.Column="1"
+                                    StyleClass="ghost"
+                                    FontSize="12"
+                                    Text="{x:Static strings:AppResources.Refresh}"
+                                    Command="{Binding RefreshCommand}"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.Refresh}" />
+                        </Grid>
+                        <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" VerticalOptions="Start" />
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Models}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="pm:ModelOptionViewModel">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="0,4">
+                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                  SemanticProperties.Description="{Binding Name}" />
+                                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                            <Label Text="{Binding Name}" />
+                                            <Label StyleClass="meta" Text="{Binding DetailsText}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                        <Label StyleClass="section" Text="{x:Static strings:AppResources.AssistantModelTitle}" Margin="0,12,0,0" />
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding AssistantModels}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="pm:AssistantModelOptionViewModel">
+                                    <VerticalStackLayout Spacing="2" Margin="0,4">
+                                        <RadioButton GroupName="paneAssistant"
+                                                     Content="{Binding Name}"
+                                                     IsChecked="{Binding IsSelected}"
+                                                     CheckedChanged="OnAssistantCheckedChanged"
+                                                     SemanticProperties.Description="{Binding AutomationName}" />
+                                        <HorizontalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Tags}">
+                                            <BindableLayout.ItemTemplate>
+                                                <DataTemplate x:DataType="x:String">
+                                                    <Border StyleClass="tag">
+                                                        <Label StyleClass="meta" Text="{Binding .}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </BindableLayout.ItemTemplate>
+                                        </HorizontalStackLayout>
+                                        <Label StyleClass="meta" Text="{Binding DetailsText}" />
+                                    </VerticalStackLayout>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8" Margin="0,8,0,0">
+                            <Button StyleClass="primary"
+                                    Text="{x:Static strings:AppResources.Save}"
+                                    Command="{Binding SaveCommand}"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.Save}" />
+                            <Button Grid.Column="1"
+                                    Text="{x:Static strings:AppResources.Cancel}"
+                                    Command="{Binding CancelCommand}"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.Cancel}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </ScrollView>
+
+                <!-- Parameters pane body (mirrors SessionParametersPage). -->
+                <Grid Grid.Row="1" RowDefinitions="*,Auto" Padding="16,8,16,16" RowSpacing="8"
+                      IsVisible="{Binding Source={x:Reference Page}, Path=BindingContext.ParametersPane, Converter={StaticResource IsNotNull}}"
+                      BindingContext="{Binding ParametersPane}"
+                      x:DataType="pm:SessionParametersPageModel">
+                    <ScrollView>
+                        <VerticalStackLayout Spacing="8">
+                            <Label StyleClass="muted" Text="{x:Static strings:AppResources.SessionParametersDescription}" />
+                            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+                            <Label StyleClass="section" Text="{x:Static strings:AppResources.ParameterAspectRatio}" />
+                            <Picker ItemsSource="{Binding AspectRatioOptions}"
+                                    ItemDisplayBinding="{Binding Label}"
+                                    SelectedItem="{Binding SelectedAspectRatio, Mode=TwoWay}"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.ParameterAspectRatio}" />
+                            <Label StyleClass="section" Text="{x:Static strings:AppResources.ParameterResolution}" />
+                            <Picker ItemsSource="{Binding ResolutionOptions}"
+                                    ItemDisplayBinding="{Binding Label}"
+                                    SelectedItem="{Binding SelectedResolution, Mode=TwoWay}"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.ParameterResolution}" />
+                            <Label StyleClass="section" Text="{x:Static strings:AppResources.ParameterOutputFormat}" />
+                            <Picker ItemsSource="{Binding OutputFormatOptions}"
+                                    ItemDisplayBinding="{Binding Label}"
+                                    SelectedItem="{Binding SelectedOutputFormat, Mode=TwoWay}"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.ParameterOutputFormat}" />
+                            <Label StyleClass="section" Text="{x:Static strings:AppResources.ParameterQuality}" />
+                            <Picker ItemsSource="{Binding QualityOptions}"
+                                    ItemDisplayBinding="{Binding Label}"
+                                    SelectedItem="{Binding SelectedQuality, Mode=TwoWay}"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.ParameterQuality}" />
+                        </VerticalStackLayout>
+                    </ScrollView>
+                    <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Button StyleClass="primary"
+                                Text="{x:Static strings:AppResources.ParameterSave}"
+                                Command="{Binding SaveCommand}"
+                                SemanticProperties.Description="{x:Static strings:AppResources.ParameterSave}" />
+                        <Button Grid.Column="1"
+                                Text="{x:Static strings:AppResources.Cancel}"
+                                Command="{Binding CancelCommand}"
+                                SemanticProperties.Description="{x:Static strings:AppResources.Cancel}" />
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Border>
     </Grid>
 </ContentPage>

@@ -75,6 +75,9 @@ public static class AppServices
         services.AddSingleton<IFolderLauncher>(new AvaloniaFolderLauncher(MainWindowOwner));
         services.AddTransient<SessionModelsPageModel>();
         services.AddTransient<SessionParametersPageModel>();
+        // The chat side pane (wide window) creates a fresh page model each time it opens.
+        services.AddSingleton<Func<SessionModelsPageModel>>(sp => sp.GetRequiredService<SessionModelsPageModel>);
+        services.AddSingleton<Func<SessionParametersPageModel>>(sp => sp.GetRequiredService<SessionParametersPageModel>);
 
         return services.BuildServiceProvider(new ServiceProviderOptions
         {

@@ -32,7 +32,7 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid x:Name="Layout" ColumnDefinitions="272,*" ColumnSpacing="16" Margin="16">
+    <Grid x:Name="Layout" ColumnDefinitions="272,*,Auto" ColumnSpacing="16" Margin="16">
         <!-- Wide layout only: the session list beside the chat (ChatView.axaml.cs). -->
         <views:SessionsListView x:Name="SessionList" Grid.Column="0" />
 
@@ -362,5 +362,38 @@
             </StackPanel>
         </Border>
         </Grid>
+
+        <!-- Wide window only: models or parameters as a 360 pane beside the chat (task 071). -->
+        <Border x:Name="SidePane" Grid.Column="2"
+                Width="360"
+                IsVisible="{Binding IsPaneOpen}"
+                BorderThickness="1,0,0,0"
+                BorderBrush="{DynamicResource IgLineBrush}"
+                Background="{DynamicResource IgSurfaceBrush}">
+            <Grid RowDefinitions="Auto,*">
+                <Grid ColumnDefinitions="*,Auto" Margin="16,12,8,0">
+                    <TextBlock Classes="title"
+                               VerticalAlignment="Center"
+                               Text="{Binding PaneTitle}" />
+                    <Button Grid.Column="1"
+                            Classes="ghost icon"
+                            Command="{Binding ClosePaneCommand}"
+                            ToolTip.Tip="{markup:Res DescriptionClose}"
+                            AutomationProperties.Name="{markup:Res DescriptionClose}">
+                        <TextBlock Classes="icon" Text="&#xE1B2;" />
+                    </Button>
+                </Grid>
+                <ContentControl Grid.Row="1" Content="{Binding ActivePane}">
+                    <ContentControl.DataTemplates>
+                        <DataTemplate DataType="pm:SessionModelsPageModel" x:DataType="pm:SessionModelsPageModel">
+                            <views:SessionModelsView />
+                        </DataTemplate>
+                        <DataTemplate DataType="pm:SessionParametersPageModel" x:DataType="pm:SessionParametersPageModel">
+                            <views:SessionParametersView />
+                        </DataTemplate>
+                    </ContentControl.DataTemplates>
+                </ContentControl>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>
