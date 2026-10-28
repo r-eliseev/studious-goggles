@@ -4,6 +4,7 @@
 Мульти-провайдерный клиент для генерации изображений: ключи fal.ai, Replicate и OpenRouter (BYOK) подключаются один раз, один промпт параллельно уходит в несколько моделей, результаты показываются рядом с ценой и временем и сохраняются локально. Стек: C# / .NET 10; целевая раскладка: общее ядро и оболочки (MAUI для мобильных и десктопа, Web API + Vue для браузера и Docker). Цели и решения владельца: `docs/product.md`. Полная спецификация: `docs/specs/image-client.md`. Основной сценарий (сессии с ассистентом): `docs/specs/chat-sessions.md`.
 
 ## Команды
+- Папка данных Avalonia: по умолчанию `ImageGen` в локальных данных; переменная `IMAGEGEN_DATA_DIR` задаёт другую (тесты используют временную, см. задачу 048).
 - Логи приложения: `<папка данных>/logs/imagegen-<дата>.log` (14 дней). Уровень: переменная `IMAGEGEN_LOG_LEVEL` или `logging.json` в папке данных. Где папка на каждой ОС: `docs/knowledge/dev-environment.md`, раздел «Логи».
 - Среда: почти всё идёт на Linux — ядро, хранилище, `Presentation`, Avalonia (сборка, headless-тесты, окно на Linux-рабочем столе) и MAUI через цель Android; Windows-цель MAUI проверяет CI. Только Windows — запуск и ручная проверка MAUI под Windows (строка «Среда» в задаче, `docs/knowledge/dev-environment.md`)
 - Сборка ядра: `dotnet build ImageGen/ImageGen.Core/ImageGen.Core.csproj`; всё решение только на Windows с MAUI-нагрузками (долго): `dotnet build ImageGen/ImageGen.slnx`
