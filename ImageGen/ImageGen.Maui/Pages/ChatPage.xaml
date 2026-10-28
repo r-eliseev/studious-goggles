@@ -21,7 +21,7 @@
                             <Label Text="{Binding Text}" LineBreakMode="WordWrap">
                                 <Label.Triggers>
                                     <DataTrigger TargetType="Label" Binding="{Binding IsError}" Value="True">
-                                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource ErrorLight}, Dark={StaticResource ErrorDark}}" />
+                                        <Setter Property="TextColor" Value="{DynamicResource IgErrColor}" />
                                     </DataTrigger>
                                 </Label.Triggers>
                             </Label>
@@ -77,7 +77,7 @@
                                                        LineBreakMode="WordWrap">
                                                     <Label.Triggers>
                                                         <DataTrigger TargetType="Label" Binding="{Binding HasError}" Value="True">
-                                                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource ErrorLight}, Dark={StaticResource ErrorDark}}" />
+                                                            <Setter Property="TextColor" Value="{DynamicResource IgErrColor}" />
                                                         </DataTrigger>
                                                     </Label.Triggers>
                                                 </Label>

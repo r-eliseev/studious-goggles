@@ -34,8 +34,6 @@ public static class MauiProgram
             .UseMauiCommunityToolkit()
             .ConfigureFonts(fonts =>
             {
-                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 fonts.AddFont("Onest-Regular.ttf", "OnestRegular");
                 fonts.AddFont("Onest-Medium.ttf", "OnestMedium");
                 fonts.AddFont("Onest-SemiBold.ttf", "OnestSemiBold");

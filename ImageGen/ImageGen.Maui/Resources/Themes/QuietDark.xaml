@@ -41,6 +41,7 @@
   <CornerRadius x:Key="IgRadiusLg">12</CornerRadius>
   <CornerRadius x:Key="IgRadiusControl">6</CornerRadius>
   <x:Double x:Key="IgCardGap">12</x:Double>
+  <x:Int32 x:Key="IgButtonCornerRadius">6</x:Int32>
   <x:String x:Key="IgFontText"></x:String>
   <x:String x:Key="IgFontMeta"></x:String>
   <SolidColorBrush x:Key="IgUserMessageBackgroundBrush" Color="Transparent" />

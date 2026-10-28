@@ -41,6 +41,7 @@
   <CornerRadius x:Key="IgRadiusLg">6</CornerRadius>
   <CornerRadius x:Key="IgRadiusControl">3</CornerRadius>
   <x:Double x:Key="IgCardGap">10</x:Double>
+  <x:Int32 x:Key="IgButtonCornerRadius">3</x:Int32>
   <x:String x:Key="IgFontText">PlexSansRegular</x:String>
   <x:String x:Key="IgFontMeta">PlexMonoRegular</x:String>
   <SolidColorBrush x:Key="IgUserMessageBackgroundBrush" Color="Transparent" />
