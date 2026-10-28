@@ -1,7 +1,7 @@
 ---
 id: 017
-status: approved
-assignee:
+status: done
+assignee: 
 claimed:
 created: 2026-10-27
 ---
@@ -115,6 +115,31 @@ imageUrls = []
 Файлы: `ImageGen/ImageGen.Core/Storage/IImageFileStore.cs`, `ImageGen/ImageGen.Data/FileImageStore.cs`, `ImageGen/ImageGen.Data.Tests/FileImageStoreTests.cs`, `ImageGen/ImageGen.Core/Services/ImageDataUrl.cs` (новый), `ImageGen/ImageGen.Core/Services/RunImageSelector.cs` (новый), `ImageGen/ImageGen.Core/Domain/Models/ChatModel.cs` (новый), `ImageGen/ImageGen.Core/OpenRouter/IOpenRouterChatClient.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Services/ChatModelCatalogService.cs` (новый), `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core/Services/AssistantPrompts.cs`, `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/RunImageSelectorTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/ChatModelCatalogServiceTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `docs/architecture.md`
 
 ## Отчёт
+
+Исполнитель: claude-07d6. Ветка: `ccr-07d63c19-ma1lxw`.
+
+### Что сделано
+- **Ядро:** `ChatModel` (id, name, входная картинка, окно контекста). `IAssistantChatClient.ListChatModelsAsync`: OpenRouter читает `GET /api/v1/models` (`architecture.input_modalities`, `context_length`, записи без id пропускаются); OpenAI- и Anthropic-совместимые клиенты возвращают пустой список (модальностей у них нет).
+- `ChatModelCatalogService`: признак «модель принимает картинки», кеш в памяти по провайдеру; модели нет или каталог не загрузился — `false` (ответ ассистента не становится ошибкой).
+- `RunImageSelector` (чистая функция): только успешные генерации с сохранённым файлом, первые `AssistantPrompts.MaxRunImages` (4) по `SortOrder`.
+- `ImageDataUrl.From`: `data:<media type>;base64,<data>`.
+- `IImageFileStore.ReadAsync`: `FileImageStore` проверяет существование файла и бросает `FileNotFoundException` (в том числе когда нет папки).
+- `AssistantService.BuildRequestAsync`: если модель ассистента принимает картинки, картинки последнего прогона прикрепляются к текущему сообщению пользователя. Пропавший файл пропускается с предупреждением, остальные уходят. Запрос без изменений, если модель без картинок.
+- Документы: `GET /api/v1/models` в `docs/architecture.md` («Внешние системы»), по решению владельца без ADR.
+
+### Проверка
+- `dotnet test`: Core (все, включая новые тесты сценариев и селектора), Data (все, включая чтение файла), Presentation (все), Avalonia (все).
+- `dotnet format --verify-no-changes`: все изменённые проекты чистые.
+- `scripts/check.sh`: проходит.
+
+### Отличия от плана
+1. План ссылался на `IOpenRouterChatClient`; после задачи 036 используется `IAssistantChatClient` (по решению владельца).
+2. `ListChatModelsAsync` добавлен в `IAssistantChatClient` и реализован во всех трёх клиентах (план предполагал только OpenRouter).
+3. Ошибка чтения файла (кроме «файла нет», например диск недоступен) тоже пропускает картинку, а не ломает отправку сообщения.
+
+### Не проверено в этой среде
+- Живой запрос к `GET /api/v1/models` и ответ ассистента с картинкой на реальном OpenRouter (проверки на заглушках).
+- Размер запроса с четырьмя картинками (владелец: без уменьшения, лимит по количеству).
 
 ## Комментарии
 
