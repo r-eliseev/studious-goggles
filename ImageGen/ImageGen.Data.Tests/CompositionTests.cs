@@ -47,7 +47,7 @@ public class CompositionTests
 
         var registry = provider.GetRequiredService<ProviderRegistry>();
 
-        Assert.Equal(["openrouter", "local"], registry.All.Select(p => p.Id));
+        Assert.Equal(["openrouter", "fal", "local"], registry.All.Select(p => p.Id));
     }
 
     [Fact]

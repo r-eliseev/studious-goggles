@@ -49,7 +49,15 @@ public sealed class ModelCatalogService(
         var all = new List<ImageModel>();
         foreach (var providerId in providers.ImageProviderIds)
         {
-            all.AddRange(await GetImageModelsAsync(providerId, forceRefresh, cancellationToken));
+            try
+            {
+                all.AddRange(await GetImageModelsAsync(providerId, forceRefresh, cancellationToken));
+            }
+            catch (ProviderException ex)
+            {
+                // One provider that cannot list its models (no key, offline) must not blank the whole catalog.
+                logger.LogWarning(ex, "Skipped image models of provider {ProviderId}: {Message}.", providerId, ex.Message);
+            }
         }
 
         return all.OrderBy(m => m.Name, StringComparer.Ordinal).ThenBy(m => m.ProviderId, StringComparer.Ordinal).ToList();
