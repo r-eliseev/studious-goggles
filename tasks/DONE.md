@@ -25,3 +25,10 @@
 - 014 | v0.1 | done | 2026-10-28 | MAUI: чат сессии и карточки генераций | `tasks/v0.1/014-maui-chat.md`
 - 015 | v0.1 | done | 2026-10-28 | MAUI: модели сессии | `tasks/v0.1/015-maui-session-models.md`
 - 034 | v0.1 | done | 2026-10-27 | Пустое MAUI-приложение и MAUI-сборка в CI | `tasks/v0.1/034-maui-scaffold.md`
+- 017 | backlog | done | 2026-10-28 | Ассистент видит картинки последнего прогона | `tasks/backlog/017-assistant-vision.md`
+- 018 | backlog | done | 2026-10-28 | Своя картинка в чате | `tasks/backlog/018-user-image-in-chat.md`
+- 019 | backlog | done | 2026-10-28 | Img2Text: описание по картинке | `tasks/backlog/019-img2text.md`
+- 020 | backlog | done | 2026-10-28 | Параметры генерации в настройках сессии | `tasks/backlog/020-generation-parameters.md`
+- 026 | backlog | cancelled | 2026-10-28 | Провайдер Replicate | `tasks/backlog/026-provider-replicate.md`
+- 036 | backlog | done | 2026-10-28 | Провайдер моделей: адрес и тип API в конфиге | `tasks/backlog/036-provider-config-compatible-api.md`
+- 045 | backlog | done | 2026-10-28 | Подробное логирование всего приложения | `tasks/backlog/045-detailed-logging.md`
