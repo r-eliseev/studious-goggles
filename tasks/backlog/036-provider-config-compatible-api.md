@@ -1,8 +1,8 @@
 ---
 id: 036
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: claude-qnrqyt
+claimed: 2026-10-28T08:20:24Z
 created: 2026-10-27
 ---
 
