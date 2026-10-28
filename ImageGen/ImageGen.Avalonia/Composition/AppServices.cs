@@ -53,8 +53,8 @@ public static class AppServices
         services.AddSingleton(sp => new PageRoutes()
             .Add(Routes.Sessions, _ => new SessionsView { DataContext = sp.GetRequiredService<SessionsPageModel>() })
             .Add(Routes.ApiKey, _ => new ApiKeyView { DataContext = sp.GetRequiredService<ApiKeyPageModel>() })
-            .Add(Routes.Chat, _ => new ComingSoonView())
-            .Add(Routes.SessionModels, _ => new ComingSoonView()));
+            .Add(Routes.Chat, query => Page(sp.GetRequiredService<ChatPageModel>(), query, model => new ChatView { DataContext = model }))
+            .Add(Routes.SessionModels, query => Page(sp.GetRequiredService<SessionModelsPageModel>(), query, model => new SessionModelsView { DataContext = model })));
         services.AddSingleton<AvaloniaNavigationService>();
         services.AddSingleton<INavigationService>(sp => sp.GetRequiredService<AvaloniaNavigationService>());
 
@@ -68,6 +68,24 @@ public static class AppServices
             ValidateOnBuild = true,
             ValidateScopes = true,
         });
+    }
+
+    /// <summary>Gives the route query to the page model (the session id) and creates the view for it.</summary>
+    private static Control Page<TModel>(TModel model, IReadOnlyDictionary<string, string> query, Func<TModel, Control> createView)
+        where TModel : class
+    {
+        var values = query.ToDictionary(pair => pair.Key, pair => (object)pair.Value, StringComparer.Ordinal);
+        switch (model)
+        {
+            case ChatPageModel chat:
+                chat.ApplyQueryAttributes(values);
+                break;
+            case SessionModelsPageModel models:
+                models.ApplyQueryAttributes(values);
+                break;
+        }
+
+        return createView(model);
     }
 
     private static Window? MainWindowOwner() =>

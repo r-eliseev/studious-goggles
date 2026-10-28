@@ -72,7 +72,7 @@ public class StartFlowTests
 
         Assert.StartsWith(Routes.Chat + "?" + Routes.SessionIdParameter + "=", shell.Navigation.CurrentRoute, StringComparison.Ordinal);
         Assert.Single(await shell.Provider.GetRequiredService<SessionService>().ListAsync(TestContext.Current.CancellationToken));
-        Assert.IsType<ComingSoonView>(shell.Window.PageArea.Content);
+        Assert.IsType<ChatView>(shell.Window.PageArea.Content);
     }
 
     [AvaloniaFact]

@@ -5,7 +5,8 @@ namespace ImageGen.Avalonia.Services.Navigation;
 
 /// <summary>
 /// Page stack in the main window (Avalonia has no Shell). Routes are the same strings as in MAUI (<c>Routes</c>);
-/// going back shows the previous page again, and that page is told it appears (<see cref="IAppearing"/>).
+/// going back shows the previous page again, and that page is told it appears (<see cref="IAppearing"/>). A page that is
+/// covered or popped is told it disappears (<see cref="IDisappearing"/>).
 /// </summary>
 public sealed class AvaloniaNavigationService(PageRoutes routes) : INavigationService
 {
@@ -29,6 +30,11 @@ public sealed class AvaloniaNavigationService(PageRoutes routes) : INavigationSe
         var host = RequireHost();
 
         var view = create(query);
+        if (_stack.Count > 0)
+        {
+            Leave(_stack[^1].View);
+        }
+
         _stack.Add((route, view));
         Show(host, view);
         return Task.CompletedTask;
@@ -42,6 +48,7 @@ public sealed class AvaloniaNavigationService(PageRoutes routes) : INavigationSe
         }
 
         var host = RequireHost();
+        Leave(_stack[^1].View);
         _stack.RemoveAt(_stack.Count - 1);
         Show(host, _stack[^1].View);
         return Task.CompletedTask;
@@ -49,6 +56,14 @@ public sealed class AvaloniaNavigationService(PageRoutes routes) : INavigationSe
 
     private ContentControl RequireHost() =>
         _host ?? throw new InvalidOperationException("Окно приложения ещё не создано: некуда показать страницу.");
+
+    private static void Leave(Control view)
+    {
+        if (view is IDisappearing disappearing)
+        {
+            disappearing.OnDisappearing();
+        }
+    }
 
     private static void Show(ContentControl host, Control view)
     {

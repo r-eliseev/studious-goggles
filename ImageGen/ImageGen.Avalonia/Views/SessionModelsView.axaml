@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:markup="clr-namespace:ImageGen.Avalonia.Markup"
+             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels;assembly=ImageGen.Presentation"
+             x:Class="ImageGen.Avalonia.Views.SessionModelsView"
+             x:DataType="pm:SessionModelsPageModel">
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="16" RowSpacing="8">
+        <TextBox Text="{Binding SearchText, Mode=TwoWay}"
+                 PlaceholderText="{markup:Res ModelsSearchPlaceholder}"
+                 MinHeight="44"
+                 AutomationProperties.Name="{markup:Res ModelsSearchPlaceholder}" />
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12">
+            <TextBlock Text="{Binding RunsPerModelText}" VerticalAlignment="Center" />
+            <NumericUpDown Value="{Binding RunsPerModel, Mode=TwoWay}"
+                           Minimum="{Binding MinRunsPerModel}"
+                           Maximum="{Binding MaxRunsPerModel}"
+                           Increment="1"
+                           FormatString="0"
+                           AutomationProperties.Name="{Binding RunsPerModelText}" />
+            <Button Content="{markup:Res Refresh}"
+                    Command="{Binding RefreshCommand}"
+                    MinHeight="44"
+                    AutomationProperties.Name="{markup:Res Refresh}" />
+        </StackPanel>
+
+        <ProgressBar Grid.Row="2"
+                     IsIndeterminate="True"
+                     IsVisible="{Binding IsBusy}"
+                     AutomationProperties.Name="{markup:Res ModelsTitle}" />
+
+        <ScrollViewer Grid.Row="3">
+            <ItemsControl ItemsSource="{Binding Models}">
+                <ItemsControl.DataTemplates>
+                    <DataTemplate DataType="pm:ModelOptionViewModel" x:DataType="pm:ModelOptionViewModel">
+                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                  MinHeight="44"
+                                  Margin="0,2"
+                                  AutomationProperties.Name="{Binding Name}">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Name}" />
+                                <TextBlock Text="{Binding DetailsText}" FontSize="12" />
+                            </StackPanel>
+                        </CheckBox>
+                    </DataTemplate>
+                </ItemsControl.DataTemplates>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <Button Grid.Row="4"
+                Content="{markup:Res Save}"
+                Command="{Binding SaveCommand}"
+                HorizontalAlignment="Stretch"
+                MinHeight="44"
+                AutomationProperties.Name="{markup:Res Save}" />
+    </Grid>
+</UserControl>

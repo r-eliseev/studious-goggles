@@ -16,6 +16,13 @@
 - `AvaloniaUseCompiledBindingsByDefault=true` включён; привязки в разметке нужно снабжать `x:DataType`. Режим `Mode=TwoWay` для `TextBox.Text` указываем явно.
 - Внутри `namespace ImageGen.Avalonia` полные имена `Avalonia.Controls.X` не разрешаются (тень пространства имён): используем `using`.
 
+## Чат и карточки (задача 042)
+- `Bitmap(path)` для файла, который не картинка, не бросает исключение: даёт битмап 1×1 (проверено на 12.1.4). Конвертер `FilePathToBitmapConverter` всё равно возвращает `null` для пустого пути и отсутствующего файла.
+- Элементы шаблонов `ControlTemplate` (например, кнопки счётчика `NumericUpDown`) имеют `TemplatedParent`; при проверке имён доступности их пропускаем.
+- Визуальное дерево новой страницы появляется после прохода компоновки: `Layoutable.UpdateLayout()` в тесте.
+- Снимок окна в headless: `UseSkia()` и `UseHeadlessDrawing = false` в `AvaloniaHeadlessPlatformOptions`, затем `AvaloniaHeadlessPlatform.ForceRenderTimerTick()` и `CaptureRenderedFrame()`. В обычных тестах не используется: отрисовка замедляет и не нужна проверкам логики.
+- Прокрутка ленты: `ScrollViewer.ScrollToEnd()` через `Dispatcher.UIThread.Post` после изменения коллекции (иначе новая строка ещё не имеет размера).
+
 ## Навигация и диалоги (задача 041)
 - Стек страниц в `ContentControl` главного окна (`AvaloniaNavigationService`); маршруты — те же строки `Routes`, что в MAUI. Страница, которую показали, получает `OnAppearing` (интерфейс `IAppearing`), в том числе при возврате назад.
 - Диалоги (`AvaloniaDialogService`) собираются в коде, а не в XAML: окно с текстом, полем и кнопками, у каждого контрола `AutomationProperties.Name`. Ожидание ответа — через `TaskCompletionSource`; окно немодальное (владелец задан, модальности нет). В headless-тестах диалоги подменяются.

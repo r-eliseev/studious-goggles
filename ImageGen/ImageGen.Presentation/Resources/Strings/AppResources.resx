@@ -48,9 +48,6 @@
   <data name="ApiKeyNotPersisted" xml:space="preserve">
     <value>The system secure storage is not available, so the key will be kept only until the app closes.</value>
   </data>
-  <data name="ComingSoon" xml:space="preserve">
-    <value>Coming soon.</value>
-  </data>
   <data name="SessionsTitle" xml:space="preserve">
     <value>Sessions</value>
   </data>

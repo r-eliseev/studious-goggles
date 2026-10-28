@@ -74,6 +74,46 @@ public class AvaloniaNavigationServiceTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => navigation.GoToAsync("first"));
     }
 
+    [AvaloniaFact]
+    public async Task GoToAsync_LeavingPage_CallsOnDisappearingOfThatPage()
+    {
+        var host = new ContentControl();
+        var navigation = new AvaloniaNavigationService(new PageRoutes()
+            .Add("first", _ => new DisappearingPage())
+            .Add("second", _ => new CountingPage()));
+        navigation.AttachHost(host);
+        await navigation.GoToAsync("first");
+        var first = Assert.IsType<DisappearingPage>(host.Content);
+
+        await navigation.GoToAsync("second");
+
+        Assert.Equal(1, first.Disappearances);
+    }
+
+    [AvaloniaFact]
+    public async Task GoBackAsync_PoppedPage_CallsOnDisappearing()
+    {
+        var host = new ContentControl();
+        var navigation = new AvaloniaNavigationService(new PageRoutes()
+            .Add("first", _ => new CountingPage())
+            .Add("second", _ => new DisappearingPage()));
+        navigation.AttachHost(host);
+        await navigation.GoToAsync("first");
+        await navigation.GoToAsync("second");
+        var second = Assert.IsType<DisappearingPage>(host.Content);
+
+        await navigation.GoBackAsync();
+
+        Assert.Equal(1, second.Disappearances);
+    }
+
+    private sealed class DisappearingPage : UserControl, IDisappearing
+    {
+        public int Disappearances { get; private set; }
+
+        public void OnDisappearing() => Disappearances++;
+    }
+
     private sealed class CountingPage : UserControl, IAppearing
     {
         public int Appearances { get; private set; }

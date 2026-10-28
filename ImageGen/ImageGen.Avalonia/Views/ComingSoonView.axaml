@@ -1,8 +1,0 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:markup="clr-namespace:ImageGen.Avalonia.Markup"
-             x:Class="ImageGen.Avalonia.Views.ComingSoonView">
-    <TextBlock Margin="16"
-               Text="{markup:Res ComingSoon}"
-               AutomationProperties.Name="{markup:Res ComingSoon}" />
-</UserControl>

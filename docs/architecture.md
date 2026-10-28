@@ -38,11 +38,11 @@ ImageGen/
                                    IMainThread, ISecretPersistence, AppInitializer), Routes, Utilities/, Resources/Strings/ (AppResources.resx)
   ImageGen.Presentation.Tests/     xUnit v3 + NSubstitute: модели страниц, маршруты, строки, архитектурный тест
   ImageGen.Avalonia/               десктоп (Avalonia 12.1, WinExe): App, Views/ (MainWindow, SessionsView, ApiKeyView,
-                                   ComingSoonView), Composition/AppServices, Markup/ (расширение строк), Platform/
-                                   (DesktopAppPaths, InMemorySecretStore), Services/ (AvaloniaMainThread, AvaloniaDialogService,
-                                   Navigation/ — стек страниц и маршруты), Services/Secrets/ (DesktopSecretStore и бэкенды:
-                                   SecretServiceBackend для Linux, DpapiSecretBackend для Windows, KeychainSecretBackend для
-                                   macOS; ADR 0008)
+                                   ChatView, SessionModelsView), Composition/AppServices, Converters/ (FilePathToBitmap),
+                                   Markup/ (расширение строк), Platform/ (DesktopAppPaths, InMemorySecretStore), Services/
+                                   (AvaloniaMainThread, AvaloniaDialogService, Navigation/ — стек страниц и маршруты),
+                                   Services/Secrets/ (DesktopSecretStore и бэкенды: SecretServiceBackend для Linux,
+                                   DpapiSecretBackend для Windows, KeychainSecretBackend для macOS; ADR 0008)
   ImageGen.Avalonia.Tests/         headless (Avalonia.Headless.XUnit), xunit.v3 3.2.2 (ADR 0007)
   ImageGen.Maui/                   MAUI: Pages/, PageModels/ (только ChatItemTemplateSelector), Services/ (MauiSecretStore,
                                    MauiAppPaths, MauiMainThread, Shell-реализации), Converters/

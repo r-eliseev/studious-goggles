@@ -37,8 +37,6 @@ public static class AppResources
 
     public static string ApiKeyNotPersisted => Get(nameof(ApiKeyNotPersisted));
 
-    public static string ComingSoon => Get(nameof(ComingSoon));
-
     public static string SessionsTitle => Get(nameof(SessionsTitle));
 
     public static string NewSession => Get(nameof(NewSession));
