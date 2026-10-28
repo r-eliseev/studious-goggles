@@ -255,6 +255,18 @@ public static class AppResources
 
     public static string DescriptionReplaceQuestion => Get(nameof(DescriptionReplaceQuestion));
 
+    public static string ErrorDetailsTitle => Get(nameof(ErrorDetailsTitle));
+
+    public static string OtherModel => Get(nameof(OtherModel));
+
+    public static string CopyPrompt => Get(nameof(CopyPrompt));
+
+    public static string UsedInSession => Get(nameof(UsedInSession));
+
+    public static string AllModels => Get(nameof(AllModels));
+
+    public static string ModelPickerTitle => Get(nameof(ModelPickerTitle));
+
     private static string Get(string name) =>
         ResourceManager.GetString(name, CultureInfo.CurrentUICulture)
         ?? throw new InvalidOperationException($"Missing string resource '{name}'.");

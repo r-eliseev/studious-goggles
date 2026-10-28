@@ -18,32 +18,40 @@ public sealed partial class GenerationItemViewModel : ObservableObject
 {
     private readonly IImageFileStore _files;
     private readonly IDialogService _dialogs;
+    private readonly IClipboardService _clipboard;
     private readonly Func<GenerationItemViewModel, Task> _repeat;
     private readonly Func<GenerationItemViewModel, Task> _newSeed;
     private readonly Func<GenerationItemViewModel, Task> _edit;
     private readonly Func<GenerationItemViewModel, DescriptionMode, Task> _describe;
+    private readonly Func<GenerationItemViewModel, Task> _otherModel;
 
     public GenerationItemViewModel(
         Generation generation,
         IImageFileStore files,
         IDialogService dialogs,
+        IClipboardService clipboard,
         Func<GenerationItemViewModel, Task> repeat,
         Func<GenerationItemViewModel, Task> newSeed,
         Func<GenerationItemViewModel, Task> edit,
-        Func<GenerationItemViewModel, DescriptionMode, Task> describe)
+        Func<GenerationItemViewModel, DescriptionMode, Task> describe,
+        Func<GenerationItemViewModel, Task> otherModel)
     {
         ArgumentNullException.ThrowIfNull(generation);
         ArgumentNullException.ThrowIfNull(files);
         ArgumentNullException.ThrowIfNull(dialogs);
+        ArgumentNullException.ThrowIfNull(clipboard);
         ArgumentNullException.ThrowIfNull(repeat);
         ArgumentNullException.ThrowIfNull(newSeed);
         ArgumentNullException.ThrowIfNull(edit);
+        ArgumentNullException.ThrowIfNull(otherModel);
         _files = files;
         _dialogs = dialogs;
+        _clipboard = clipboard;
         _repeat = repeat;
         _newSeed = newSeed;
         _edit = edit;
         _describe = describe;
+        _otherModel = otherModel;
         Id = generation.Id;
         Prompt = generation.Prompt;
         Update(generation);
@@ -100,6 +108,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     public partial bool IsActive { get; set; }
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(DetailsCommand))]
     public partial bool IsFailed { get; set; }
 
     [ObservableProperty]
@@ -135,6 +144,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
 
     /// <summary>True for a failed or filtered generation: the Repeat action stays visible even without hover (task 069).</summary>
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(OtherModelCommand))]
     public partial bool IsFailedOrFiltered { get; set; }
 
     [ObservableProperty]
@@ -146,6 +156,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(EditCommand))]
     [NotifyCanExecuteChangedFor(nameof(DescribeCommand))]
     [NotifyCanExecuteChangedFor(nameof(DescribePromptCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyPromptCommand))]
     [NotifyCanExecuteChangedFor(nameof(ShowActionsCommand))]
     public partial bool IsFinished { get; set; }
 
@@ -165,6 +176,18 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(IsFinished))]
     private Task DescribePromptAsync() => _describe(this, DescriptionMode.Prompt);
 
+    /// <summary>Shows the full error text of a failed generation (task 076). Only a failed card has it.</summary>
+    [RelayCommand(CanExecute = nameof(IsFailed))]
+    private Task DetailsAsync() => _dialogs.AlertAsync(AppResources.ErrorDetailsTitle, ErrorText);
+
+    /// <summary>Opens the model picker to run this prompt and seed on another model (failed or filtered card, task 076).</summary>
+    [RelayCommand(CanExecute = nameof(IsFailedOrFiltered))]
+    private Task OtherModelAsync() => _otherModel(this);
+
+    /// <summary>Copies the exact prompt to the clipboard (any finished card, task 076).</summary>
+    [RelayCommand(CanExecute = nameof(IsFinished))]
+    private Task CopyPromptAsync() => _clipboard.SetTextAsync(Prompt);
+
     /// <summary>
     /// Opens the actions menu (phone action sheet or right-click/"More" context menu). The title is the card meta line
     /// (model, seed, cost, time), the options are the same actions as the icon row, and the chosen one runs.
@@ -172,14 +195,24 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(IsFinished))]
     private async Task ShowActionsAsync()
     {
-        var actions = new (string Label, Func<GenerationItemViewModel, Task> Run)[]
+        var actions = new List<(string Label, Func<GenerationItemViewModel, Task> Run)>
         {
             (AppResources.Repeat, _repeat),
             (AppResources.NewSeed, _newSeed),
             (AppResources.ActionEditPrompt, _edit),
             (AppResources.ActionDescribeImage, card => _describe(card, DescriptionMode.Description)),
             (AppResources.ActionPromptFromImage, card => _describe(card, DescriptionMode.Prompt)),
+            (AppResources.CopyPrompt, card => card._clipboard.SetTextAsync(card.Prompt)),
         };
+        if (IsFailedOrFiltered)
+        {
+            actions.Add((AppResources.OtherModel, card => card._otherModel(card)));
+        }
+
+        if (IsFailed)
+        {
+            actions.Add((AppResources.ErrorDetailsTitle, card => card._dialogs.AlertAsync(AppResources.ErrorDetailsTitle, card.ErrorText)));
+        }
 
         var title = string.Join(" · ", new[] { ModelText, SeedText, CostText, TimeText }.Where(text => text.Length > 0));
         var chosen = await _dialogs.ChooseAsync(title, AppResources.Cancel, actions.Select(action => action.Label).ToList());

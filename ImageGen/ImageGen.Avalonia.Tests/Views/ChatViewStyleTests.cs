@@ -150,10 +150,12 @@ public class ChatViewStyleTests
             generation,
             Substitute.For<IImageFileStore>(),
             Substitute.For<IDialogService>(),
+            Substitute.For<IClipboardService>(),
             _ => Task.CompletedTask,
             _ => Task.CompletedTask,
             _ => Task.CompletedTask,
-            (_, _) => Task.CompletedTask);
+            (_, _) => Task.CompletedTask,
+            _ => Task.CompletedTask);
     }
 
     private static CopyTextAction Copy() =>

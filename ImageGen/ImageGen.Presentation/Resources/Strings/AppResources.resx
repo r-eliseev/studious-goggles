@@ -375,4 +375,22 @@
   <data name="SettingsOpenLogs" xml:space="preserve">
     <value>Open folder</value>
   </data>
+  <data name="ErrorDetailsTitle" xml:space="preserve">
+    <value>Error details</value>
+  </data>
+  <data name="OtherModel" xml:space="preserve">
+    <value>Other model…</value>
+  </data>
+  <data name="CopyPrompt" xml:space="preserve">
+    <value>Copy prompt</value>
+  </data>
+  <data name="UsedInSession" xml:space="preserve">
+    <value>Used in this session</value>
+  </data>
+  <data name="AllModels" xml:space="preserve">
+    <value>All models</value>
+  </data>
+  <data name="ModelPickerTitle" xml:space="preserve">
+    <value>Run on another model</value>
+  </data>
 </root>

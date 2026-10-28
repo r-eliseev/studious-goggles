@@ -51,6 +51,65 @@ public class GenerationItemViewModelTests
         Assert.False(card.ShowActionsCommand.CanExecute(null));
     }
 
+    [Fact]
+    public void Details_OnlyForFailed()
+    {
+        var failed = BaseGeneration();
+        failed.Status = GenerationStatus.Failed;
+        failed.ErrorMessage = "boom";
+        var filtered = BaseGeneration();
+        filtered.Status = GenerationStatus.Filtered;
+        var succeeded = BaseGeneration();
+        succeeded.Status = GenerationStatus.Succeeded;
+
+        Assert.True(CardOf(failed).DetailsCommand.CanExecute(null));
+        Assert.False(CardOf(filtered).DetailsCommand.CanExecute(null));
+        Assert.False(CardOf(succeeded).DetailsCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Details_ShowsErrorText()
+    {
+        var generation = BaseGeneration();
+        generation.Status = GenerationStatus.Failed;
+        generation.ErrorMessage = "the provider said no";
+        var dialogs = Substitute.For<IDialogService>();
+        var card = CardOf(generation, dialogs);
+
+        await card.DetailsCommand.ExecuteAsync(null);
+
+        await dialogs.Received(1).AlertAsync(AppResources.ErrorDetailsTitle, "the provider said no");
+    }
+
+    [Fact]
+    public void OtherModel_ForFailedAndFiltered()
+    {
+        var failed = BaseGeneration();
+        failed.Status = GenerationStatus.Failed;
+        var filtered = BaseGeneration();
+        filtered.Status = GenerationStatus.Filtered;
+        var succeeded = BaseGeneration();
+        succeeded.Status = GenerationStatus.Succeeded;
+
+        Assert.True(CardOf(failed).OtherModelCommand.CanExecute(null));
+        Assert.True(CardOf(filtered).OtherModelCommand.CanExecute(null));
+        Assert.False(CardOf(succeeded).OtherModelCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task CopyPrompt_CopiesExactPrompt()
+    {
+        var generation = BaseGeneration();
+        generation.Status = GenerationStatus.Succeeded;
+        generation.Prompt = "a red fox in snow";
+        var clipboard = Substitute.For<IClipboardService>();
+        var card = CardOf(generation, clipboard: clipboard);
+
+        await card.CopyPromptCommand.ExecuteAsync(null);
+
+        await clipboard.Received(1).SetTextAsync("a red fox in snow");
+    }
+
     private static GenerationItemViewModel CardWithActions(
         IDialogService dialogs,
         Func<GenerationItemViewModel, Task>? repeat = null) => new(
@@ -70,10 +129,12 @@ public class GenerationItemViewModelTests
         },
         Substitute.For<IImageFileStore>(),
         dialogs,
+        Substitute.For<IClipboardService>(),
         repeat ?? (_ => Task.CompletedTask),
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,
-        (_, _) => Task.CompletedTask);
+        (_, _) => Task.CompletedTask,
+        _ => Task.CompletedTask);
 
     [Fact]
     public void Details_ReplacedParameter_ShowsRequestedAndSentValues()
@@ -155,10 +216,12 @@ public class GenerationItemViewModelTests
         },
         Substitute.For<IImageFileStore>(),
         Substitute.For<IDialogService>(),
+        Substitute.For<IClipboardService>(),
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,
-        describe);
+        describe,
+        _ => Task.CompletedTask);
 
     [Fact]
     public void Details_NoOutcomes_TextUnchanged()
@@ -242,14 +305,19 @@ public class GenerationItemViewModelTests
         SortOrder = 0,
     };
 
-    private static GenerationItemViewModel CardOf(Generation generation) => new(
+    private static GenerationItemViewModel CardOf(
+        Generation generation,
+        IDialogService? dialogs = null,
+        IClipboardService? clipboard = null) => new(
         generation,
         Substitute.For<IImageFileStore>(),
-        Substitute.For<IDialogService>(),
+        dialogs ?? Substitute.For<IDialogService>(),
+        clipboard ?? Substitute.For<IClipboardService>(),
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,
-        (_, _) => Task.CompletedTask);
+        (_, _) => Task.CompletedTask,
+        _ => Task.CompletedTask);
 
     private static GenerationItemViewModel Card(params ParameterOutcome[] outcomes) => Card(outcomes, 0);
 
@@ -274,8 +342,10 @@ public class GenerationItemViewModelTests
         },
         Substitute.For<IImageFileStore>(),
         Substitute.For<IDialogService>(),
+        Substitute.For<IClipboardService>(),
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,
-        (_, _) => Task.CompletedTask);
+        (_, _) => Task.CompletedTask,
+        _ => Task.CompletedTask);
 }

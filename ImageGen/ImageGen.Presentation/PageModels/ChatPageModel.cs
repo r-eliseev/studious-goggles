@@ -396,9 +396,14 @@ public sealed partial class ChatPageModel(
         await ReloadAsync();
     }
 
+    /// <summary>Opens the model picker for a card: pick a model, run the same prompt and seed on it (task 076).</summary>
+    private Task OtherModelCardAsync(GenerationItemViewModel card) =>
+        navigation.GoToAsync(Routes.ModelPickerFor(_sessionId, card.Id));
+
     private GenerationItemViewModel CreateCard(Generation generation)
     {
-        var card = new GenerationItemViewModel(generation, files, dialogs, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync);
+        var card = new GenerationItemViewModel(
+            generation, files, dialogs, clipboard, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync, OtherModelCardAsync);
         _cards[generation.Id] = card;
         return card;
     }

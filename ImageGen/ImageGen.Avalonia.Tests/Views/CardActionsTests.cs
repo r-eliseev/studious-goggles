@@ -73,6 +73,9 @@ public class CardActionsTests
                 AppResources.ActionEditPrompt,
                 AppResources.ActionDescribeImage,
                 AppResources.ActionPromptFromImage,
+                AppResources.CopyPrompt,
+                AppResources.OtherModel,
+                AppResources.ErrorDetailsTitle,
             },
             headers);
     }
@@ -85,7 +88,9 @@ public class CardActionsTests
         Render(view);
 
         var actions = CardActions(view);
+        // A succeeded card hides the failure-only Details icon; only the visible buttons are named here.
         var names = actions.GetVisualDescendants().OfType<Button>()
+            .Where(button => button.IsVisible)
             .Select(AutomationProperties.GetName)
             .ToList();
 
@@ -96,6 +101,7 @@ public class CardActionsTests
                 AppResources.NewSeed,
                 AppResources.Edit,
                 AppResources.DescribeButton,
+                AppResources.CopyPrompt,
                 AppResources.More,
             },
             names);
@@ -155,10 +161,12 @@ public class CardActionsTests
             generation,
             Substitute.For<IImageFileStore>(),
             Substitute.For<IDialogService>(),
+            Substitute.For<IClipboardService>(),
             _ => Task.CompletedTask,
             _ => Task.CompletedTask,
             _ => Task.CompletedTask,
-            (_, _) => Task.CompletedTask);
+            (_, _) => Task.CompletedTask,
+            _ => Task.CompletedTask);
     }
 
     private static CopyTextAction Copy() =>

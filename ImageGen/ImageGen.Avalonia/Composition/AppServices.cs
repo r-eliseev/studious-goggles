@@ -64,6 +64,7 @@ public static class AppServices
             .Add(Routes.Chat, query => Page(sp.GetRequiredService<ChatPageModel>(), query, model => new ChatView { DataContext = model, SessionPicker = sp.GetRequiredService<SessionsPageModel>() }))
             .Add(Routes.SessionModels, query => Page(sp.GetRequiredService<SessionModelsPageModel>(), query, model => new SessionModelsView { DataContext = model }))
             .Add(Routes.SessionParameters, query => Page(sp.GetRequiredService<SessionParametersPageModel>(), query, model => new SessionParametersView { DataContext = model }))
+            .Add(Routes.ModelPicker, query => Page(sp.GetRequiredService<ModelPickerPageModel>(), query, model => new ModelPickerView { DataContext = model }))
             .Add(Routes.Settings, _ => Page(sp.GetRequiredService<SettingsPageModel>(), new Dictionary<string, string>(), model => new SettingsView { DataContext = model })));
         services.AddSingleton<AvaloniaNavigationService>();
         services.AddSingleton<INavigationService>(sp => sp.GetRequiredService<AvaloniaNavigationService>());
@@ -75,6 +76,7 @@ public static class AppServices
         services.AddSingleton<IFolderLauncher>(new AvaloniaFolderLauncher(MainWindowOwner));
         services.AddTransient<SessionModelsPageModel>();
         services.AddTransient<SessionParametersPageModel>();
+        services.AddTransient<ModelPickerPageModel>();
         // The chat side pane (wide window) creates a fresh page model each time it opens.
         services.AddSingleton<Func<SessionModelsPageModel>>(sp => sp.GetRequiredService<SessionModelsPageModel>);
         services.AddSingleton<Func<SessionParametersPageModel>>(sp => sp.GetRequiredService<SessionParametersPageModel>);
@@ -101,6 +103,9 @@ public static class AppServices
                 break;
             case SessionParametersPageModel parameters:
                 parameters.ApplyQueryAttributes(values);
+                break;
+            case ModelPickerPageModel picker:
+                picker.ApplyQueryAttributes(values);
                 break;
         }
 

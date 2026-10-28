@@ -112,6 +112,9 @@
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionEditPrompt}" Command="{Binding EditCommand}" />
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionDescribeImage}" Command="{Binding DescribeCommand}" />
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionPromptFromImage}" Command="{Binding DescribePromptCommand}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.CopyPrompt}" Command="{Binding CopyPromptCommand}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.OtherModel}" Command="{Binding OtherModelCommand}" IsEnabled="{Binding IsFailedOrFiltered}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.ErrorDetailsTitle}" Command="{Binding DetailsCommand}" IsEnabled="{Binding IsFailed}" />
                                                     </MenuFlyout>
                                                 </FlyoutBase.ContextFlyout>
                                                 <VerticalStackLayout Spacing="6">

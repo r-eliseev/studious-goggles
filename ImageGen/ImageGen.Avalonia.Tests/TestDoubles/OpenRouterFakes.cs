@@ -23,9 +23,11 @@ public static class OpenRouterFakes
 
     /// <param name="chatStatus">HTTP status of chat completions; anything but 200 is an error reply.</param>
     /// <param name="toolArgumentsJson">Arguments of the generate_images call the assistant makes.</param>
+    /// <param name="imagesFiltered">When true, image generation answers 403 with a moderation reason, so the card is filtered.</param>
     public static StubHttpMessageHandler Create(
         HttpStatusCode chatStatus = HttpStatusCode.OK,
-        string toolArgumentsJson = """{"prompt":"a red fox"}""") =>
+        string toolArgumentsJson = """{"prompt":"a red fox"}""",
+        bool imagesFiltered = false) =>
         new(request =>
         {
             var path = request.RequestUri!.AbsolutePath;
@@ -41,7 +43,9 @@ public static class OpenRouterFakes
 
             if (path.EndsWith("/images", StringComparison.Ordinal))
             {
-                return Json(HttpStatusCode.OK, $$"""{"data":[{"b64_json":"{{OnePixelPngBase64}}","media_type":"image/png"}]}""");
+                return imagesFiltered
+                    ? Json(HttpStatusCode.Forbidden, """{"error":{"code":403,"message":"filtered","metadata":{"reasons":["content_policy"]}}}""")
+                    : Json(HttpStatusCode.OK, $$"""{"data":[{"b64_json":"{{OnePixelPngBase64}}","media_type":"image/png"}]}""");
             }
 
             if (path.EndsWith("/chat/completions", StringComparison.Ordinal))

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels"
+             xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
+             x:Class="ImageGen.Maui.Pages.ModelPickerPage"
+             x:Name="Page"
+             x:DataType="pm:ModelPickerPageModel"
+             Title="{x:Static strings:AppResources.ModelPickerTitle}">
+    <Grid RowDefinitions="Auto,*" Padding="16" RowSpacing="8">
+        <ActivityIndicator Grid.Row="0"
+                           IsRunning="{Binding IsBusy}"
+                           IsVisible="{Binding IsBusy}"
+                           VerticalOptions="Start" />
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="8">
+                <!-- Quick list: models already used in this session. -->
+                <Label StyleClass="section" Text="{x:Static strings:AppResources.UsedInSession}" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding UsedModels}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="pm:ModelOptionViewModel">
+                            <Button StyleClass="ghost"
+                                    HorizontalOptions="Fill"
+                                    Margin="0,2"
+                                    Command="{Binding BindingContext.PickCommand, Source={x:Reference Page}}"
+                                    CommandParameter="{Binding}"
+                                    Text="{Binding Name}"
+                                    SemanticProperties.Description="{Binding Name}" />
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
+                <!-- All models: collapsed by default, with a search that filters this block only. -->
+                <Button StyleClass="ghost"
+                        HorizontalOptions="Start"
+                        Text="{x:Static strings:AppResources.AllModels}"
+                        Command="{Binding ToggleAllCommand}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.AllModels}" />
+                <VerticalStackLayout Spacing="8" IsVisible="{Binding IsAllExpanded}">
+                    <SearchBar Text="{Binding SearchText, Mode=TwoWay}"
+                               Placeholder="{x:Static strings:AppResources.ModelsSearchPlaceholder}"
+                               SemanticProperties.Description="{x:Static strings:AppResources.ModelsSearchPlaceholder}" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding AllModels}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="pm:ModelOptionViewModel">
+                                <Button StyleClass="ghost"
+                                        HorizontalOptions="Fill"
+                                        Margin="0,2"
+                                        Command="{Binding BindingContext.PickCommand, Source={x:Reference Page}}"
+                                        CommandParameter="{Binding}"
+                                        Text="{Binding Name}"
+                                        SemanticProperties.Description="{Binding Name}" />
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>
