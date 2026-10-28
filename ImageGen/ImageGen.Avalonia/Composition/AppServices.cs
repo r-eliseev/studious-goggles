@@ -10,6 +10,7 @@ using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Data;
 using ImageGen.Presentation;
+using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,6 +54,7 @@ public static class AppServices
         services.AddSingleton<IMainThread, AvaloniaMainThread>();
         services.AddSingleton<IDialogService>(dialogs ?? new AvaloniaDialogService(MainWindowOwner));
         services.AddSingleton<IFilePickerService>(new AvaloniaFilePickerService(MainWindowOwner));
+        services.AddSingleton<AppearanceService>();
 
         services.AddSingleton(sp => new PageRoutes()
             .Add(Routes.Sessions, _ => new SessionsView { DataContext = sp.GetRequiredService<SessionsPageModel>() })

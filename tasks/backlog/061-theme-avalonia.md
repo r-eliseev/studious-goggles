@@ -1,6 +1,6 @@
 ---
 id: 061
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -61,5 +61,20 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Avalonia/Themes/*.axaml`, `ImageGen/ImageGen.Avalonia/App.axaml`, `App.axaml.cs`, `Composition/AppServices.cs`, `Services/AvaloniaAppearanceApplier.cs`, `ImageGen/ImageGen.Avalonia.Tests/Appearance/*`, `docs/knowledge/avalonia.md`
 
 ## Отчёт
+
+Сделано (`ImageGen.Avalonia`):
+- `Themes/Common.axaml` — раздел 2.3 (десктоп), кроме `IgFontSizeBody`.
+- `Themes/Quiet.axaml`, `Gallery.axaml`, `Notebook.axaml` — разделы 2.2 и 2.4, `IgFontSizeBody` из `size.bodyDesktop`; внутри `ThemeDictionaries` Light и Dark: 16 `Color` и 16 `SolidColorBrush` (`Ig<Name>Color`/`Ig<Name>Brush`) и четыре цветовых варианта 2.4 (`IgUserMessageBackgroundBrush`, `IgPromptBackgroundBrush`, `IgPromptForegroundBrush`, `IgCardBackgroundBrush`).
+- Файлы сгенерированы из `docs/design/tokens.json` и правил раздела 2 скриптом, который не входит в репозиторий (лежал в `tmp/`).
+- `App.axaml`: `MergedDictionaries` (Common + Quiet), `ErrorBrush` в Light/Dark — значения токена `err` стиля Quiet (`#B42318` / `#F97066`; было `#B3261E` / `#FFB4AB`).
+- `Services/AvaloniaAppearanceApplier.cs`: `ThemeUri(style)`, `Apply(settings)` (меняет словарь стиля и `RequestedThemeVariant`), `Start()` (применяет сохранённое, следит за `AppearanceService.Changed`; вызов в UI-потоке синхронный).
+- `Composition/AppServices.cs`: `AppearanceService` как синглтон; `App.axaml.cs`: запуск applier до создания `MainWindow`.
+
+Отличия от плана:
+- Перечисления (выравнивание, стиль шрифта) — строки `x:String`, так как XAML не объявляет enum-ресурсы. Экраны (063, 066–072) переводят строку в значение enum.
+- Вариантные кисти записаны литералами цвета, а не ссылками `StaticResource` (ссылки между ключами внутри `ThemeDictionaries` не проверялись).
+- Тест «Тема System следует системной» проверяет только `RequestedThemeVariant = Default`, а не системную тему.
+
+Проверка: `ImageGen.Avalonia.Tests` 68/68 (без пропущенных), сборка `ImageGen.Avalonia` — успешно, `dotnet format --verify-no-changes` для Avalonia и его тестов — без изменений. Визуально в окне не проверено (046).
 
 ## Комментарии

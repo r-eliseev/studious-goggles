@@ -5,11 +5,13 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using ImageGen.Avalonia.Composition;
 using ImageGen.Avalonia.Platform;
+using ImageGen.Avalonia.Services;
 using ImageGen.Avalonia.Services.Logging;
 using ImageGen.Avalonia.Services.Navigation;
 using ImageGen.Avalonia.Services.Secrets;
 using ImageGen.Avalonia.Views;
 using ImageGen.Presentation;
+using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.Logging;
 using ImageGen.Presentation.Utilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,6 +70,7 @@ public partial class App : Application
             logger.LogCritical(args.Exception, "Unhandled exception on the UI thread.");
         AppTaskExtensions.Logger = Services.GetRequiredService<ILoggerFactory>().CreateLogger("ImageGen.Background");
 
+        new AvaloniaAppearanceApplier(Services.GetRequiredService<AppearanceService>(), this).Start();
         MainWindow = new MainWindow();
 
         var navigation = Services.GetRequiredService<AvaloniaNavigationService>();
