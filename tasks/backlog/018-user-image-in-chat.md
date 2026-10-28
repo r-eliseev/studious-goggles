@@ -1,6 +1,6 @@
 ---
 id: 018
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-27
@@ -17,6 +17,9 @@ created: 2026-10-27
 
 ## Критерии готовности
 - Модели без поддержки референсов помечаются и пропускаются с причиной.
+- Прикреплённые картинки (до 4 на сообщение, до 10 МБ каждая, PNG, JPEG, WebP) уходят ассистенту вместе с сообщением.
+- Картинки сообщения становятся референсами прогона, который запустил ассистент; это видно на карточке генерации.
+- Перед первой отправкой картинки показывается предупреждение, что картинки уходят провайдеру (F10.6).
 
 ## Анализ
 Проверено 2026-10-28 по `origin/main`. Задачи 012–016 пока не закрыты (см. 017): MAUI-часть плана может поменяться после их слияния.
@@ -59,9 +62,9 @@ created: 2026-10-27
 - `Domain/Models/ImageModel`: новое поле `MaxReferenceImages` (int, 0 если параметра нет). `OpenRouterClient.ListImageModelsAsync` читает `supported_parameters.input_references.max`.
 - Миграция `NNNN_chat_attachments.sql` (номер — следующий свободный при реализации): колонка `image_models.max_reference_images` (по умолчанию 0), `DELETE FROM image_models` (кеш пересоберётся при следующем обращении), колонка `generations.reference_attachment_id` (NULL), таблица `chat_attachments`, индекс по `message_id`.
 - `Providers/ImageGenerationRequest`: новое поле `ReferenceImageDataUrls` (список, по умолчанию пустой). `OpenRouterClient.GenerateAsync` при непустом списке добавляет `input_references` (формат — вопрос).
-- `Services/GenerationService.StartRunAsync(sessionId, prompt, attachment?)`: для каждой модели сессии, если вложение есть и `MaxReferenceImages == 0`, модель пропускается с кодом причины `NoReferenceSupport`. Остальные модели получают генерации с `reference_attachment_id`. Результат: `StartRunResult(Run?, IReadOnlyList<SkippedModel>)`; `SkippedModel(ModelId, Reason)`. Если все модели пропущены, прогон не создаётся.
-- `Domain/Generations/Generation`: поле `ReferenceAttachmentId` (Guid?).
-- `Services/AssistantService.SendUserMessageAsync(sessionId, text, attachmentId?)`: текст может быть пустым, если есть вложение. Сообщение пользователя хранит вложение. Запрос ассистенту — как в 017 (картинка прикрепляется к сообщению).
+- `Services/GenerationService.StartRunAsync(sessionId, prompt, attachments)` (список, может быть пустым; решение владельца: несколько картинок, до 4): каждой модели уходит не больше `MaxReferenceImages` первых вложений, лишние не отправляются и называются в сообщении о прогоне. Для каждой модели сессии, если вложения есть и `MaxReferenceImages == 0`, модель пропускается с кодом причины `NoReferenceSupport`. Остальные модели получают генерации с `reference_attachment_id`. Результат: `StartRunResult(Run?, IReadOnlyList<SkippedModel>)`; `SkippedModel(ModelId, Reason)`. Если все модели пропущены, прогон не создаётся.
+- `Domain/Generations/Generation`: поле `ReferenceAttachmentIds` (список Guid, пустой по умолчанию); в БД — колонка `generations.reference_attachment_ids_json` вместо одной `reference_attachment_id`.
+- `Services/AssistantService.SendUserMessageAsync(sessionId, text, attachmentIds)`: текст может быть пустым, если есть вложения (до 4; больше — `ArgumentException`). Сообщение пользователя хранит вложение. Запрос ассистенту — как в 017 (картинка прикрепляется к сообщению).
 - MAUI: `Services/IFilePickerService` (`PickImageAsync → (bytes, mediaType)?`) и реализация через MAUI Essentials; `PageModels/ChatPageModel`: команды `AttachImage` и `RemoveAttachment`, состояние `PendingAttachment`; `SendCommand` доступна при тексте или вложении. `PageModels/ChatItemTemplateChoice`: строка сообщения с миниатюрой. `PageModels/GenerationItemViewModel`: пометка «референс» на карточке. `Resources/Strings/AppResources.resx`: тексты кнопок, причины пропуска (ядро отдаёт код, текст в оболочке).
 
 Потоки данных:
@@ -123,3 +126,7 @@ created: 2026-10-27
 ### 2026-10-28, ревью (claude, Windows)
 Общий порядок по пересечениям файлов и таблиц (предложение ревью, решает владелец): 035 → 036 → 020 → 017 → 018 → 019 → 027; 025 и 026 после 036 и принятия ADR 0003. Причины: 036 меняет `ImageModel`, `image_models` (ключ `(provider_id, id)`), `SessionSettings.ImageModelIds` (`ModelRef`) и `GenerationService`; 020 вводит полный список параметров модели, из которого 018 берёт лимит референсов; 017 вводит каталог чат-моделей, `IImageFileStore.ReadAsync` и `ImageDataUrl` для 018, 019 и 027. Номера миграций в планах заменены на `NNNN_<смысл>.sql` (правило в `docs/tasks.md`), строка «Среда» добавлена в «Описание».
 По вопросу 7: номер миграции назначается при реализации (следующий свободный). Пересечение с 020: если 020 сделана раньше, отдельная колонка `image_models.max_reference_images` и `DELETE FROM image_models` не нужны — лимит берётся из `ImageModel.Parameters` (параметр `input_references`, `Max`), а устаревший кеш 020 уже перезагружает. План надо будет поправить по порядку, который выберет владелец.
+
+### 2026-10-28, владелец (ответы в чате, записал ревью)
+Порядок выполнения (решение владельца): 035 → 036 → 020 → 017 → 018 → 019 → 027, затем 025 и 026. План одобрен владельцем сейчас, не дожидаясь 016 (статус `approved`); начинать в этом порядке, после мерджа предыдущей задачи сверить план с кодом.
+Ответы: (1) критерии расширяются — см. «Критерии готовности»; (2) **несколько картинок** на сообщение, не больше 4, каждая не больше 10 МБ; в генерацию уходит не больше `input_references.max` модели (лишние не отправляются, причина в сообщении о прогоне); (3) сообщение только с картинками разрешено; (4) пропуск модели — строка с причиной в сообщении о прогоне, нового статуса нет; (5) форма `input_references` — по допущению: массив data URL в теле `POST /api/v1/images` под именем из каталога; проверка на живом API — вручную после реализации; (6) картинки сообщения автоматически становятся референсами прогона, который запустил ассистент; (7) номер миграции — следующий свободный; (8) типы PNG, JPEG, WebP; (9) предупреждение F10.6 — в этой задаче. План поправлен по пункту 2 («Типы и ответственность»: список вложений).

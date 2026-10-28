@@ -1,6 +1,6 @@
 ---
 id: 020
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-27
@@ -60,7 +60,7 @@ created: 2026-10-27
 ### Типы и их роли (Core)
 - `Domain/Models/ModelParameter` (record): `Name` (имя из каталога), `Kind` (`ParameterKind`: `Enum`, `Range`, `Boolean`), `Values` (только `Enum`, порядок каталога), `Min`, `Max` (только `Range`).
 - `Domain/Models/ImageModel`: новое поле `IReadOnlyList<ModelParameter>? Parameters`. `null` значит «неизвестно» (строка кеша до новой миграции или модель не найдена). Пустой список значит «провайдер не объявил параметров». Поля `SupportsSeed`, `SupportsImageInput`, `MaxImagesPerRequest` сохраняются и выводятся из того же ответа.
-- `Domain/Sessions/GenerationParameters` (record, все поля `string?`): `AspectRatio`, `Resolution`, `OutputFormat`. `null` значит «по умолчанию модели», такой параметр в план не попадает. Статическое `Empty`. Проверка при сохранении: `AspectRatio` — `W:H` (числа, допускается дробь) или `auto`; `Resolution` — непустая строка до 16 символов; `OutputFormat` — `png`, `jpeg` или `webp`.
+- `Domain/Sessions/GenerationParameters` (record, все поля `string?`): `AspectRatio`, `Resolution`, `OutputFormat`, `Quality` (решение владельца 2026-10-28; правило как у `OutputFormat`: только точное совпадение). `null` значит «по умолчанию модели», такой параметр в план не попадает. Статическое `Empty`. Проверка при сохранении: `AspectRatio` — `W:H` (числа, допускается дробь) или `auto`; `Resolution` — непустая строка до 16 символов; `OutputFormat` — `png`, `jpeg` или `webp`.
 - `Domain/Sessions/SessionSettings`: новое поле `GenerationParameters Parameters { get; set; } = new()`. `CreateDefault()` не меняется (параметры пустые).
 - `Domain/Generations/ParameterOutcome` (record): `Name`, `Kind` (`ParameterOutcomeKind`: `Applied`, `Replaced`, `Dropped`), `Requested` (строка), `Sent` (строка или null при `Dropped`), `Reason` (`ParameterDropReason?`: `NotSupported`, `NoAllowedValue`, `CatalogUnknown`).
 - `Domain/Generations/Run`: новое поле `GenerationParameters Parameters`, снимок параметров, запрошенных при создании прогона.
@@ -72,7 +72,7 @@ created: 2026-10-27
 `Plan(GenerationParameters requested, ImageModel? model) → IReadOnlyList<ParameterOutcome>`
 
 ```
-для name в [AspectRatio, Resolution, OutputFormat], если requested.name != null:
+для name в [AspectRatio, Resolution, OutputFormat, Quality], если requested.name != null:
   если model == null или model.Parameters == null          → Dropped(CatalogUnknown)
   p = model.Parameters с Name == name (без учёта регистра имени)
   p == null                                                 → Dropped(NotSupported)
@@ -213,3 +213,7 @@ scripts/check.sh
 ### 2026-10-28, ревью (claude, Windows)
 Общий порядок по пересечениям файлов и таблиц (предложение ревью, решает владелец): 035 → 036 → 020 → 017 → 018 → 019 → 027; 025 и 026 после 036 и принятия ADR 0003. Причины: 036 меняет `ImageModel`, `image_models` (ключ `(provider_id, id)`), `SessionSettings.ImageModelIds` (`ModelRef`) и `GenerationService`; 020 вводит полный список параметров модели, из которого 018 берёт лимит референсов; 017 вводит каталог чат-моделей, `IImageFileStore.ReadAsync` и `ImageDataUrl` для 018, 019 и 027. Номера миграций в планах заменены на `NNNN_<смысл>.sql` (правило в `docs/tasks.md`), строка «Среда» добавлена в «Описание».
 Пересечение с 036: обе меняют `ImageModel`, `ImageModelRepository`, `ModelCatalogService` и `GenerationService`. Если 036 сделана раньше, `supported_parameters_json` добавляется к пересозданной таблице `image_models` с ключом `(provider_id, id)`. Пересечение с 018: `ImageGenerationRequest` и тело `POST images` (референсы).
+
+### 2026-10-28, владелец (ответы в чате, записал ревью)
+Порядок выполнения (решение владельца): 035 → 036 → 020 → 017 → 018 → 019 → 027, затем 025 и 026. План одобрен владельцем сейчас, не дожидаясь 016 (статус `approved`); начинать в этом порядке, после мерджа предыдущей задачи сверить план с кодом.
+Ответы: (1) число картинок — `RunsPerModel`; (2) **`quality` входит в задачу** четвёртым параметром: `GenerationParameters.Quality`, правило планировщика как у `OutputFormat` (только точное совпадение из enum каталога, иначе `Dropped(NoAllowedValue)`), пикер на экране параметров, строка на карточке; (3) форма тела `POST /api/v1/images` — по допущению: параметры на верхнем уровне тела под именами каталога; живая проверка вручную после реализации; (4) `512` и `768` у разрешения — пиксели стороны, `NK` = N·1000; (5) замены показываются на карточке после запуска, без предварительной проверки; (6) «Среда» добавлена; (7) одобрено сейчас; (8) Repeat, New seed, Edit берут параметры прогона-источника; (9) пример «1:1 → 1:1 (замена)» в `docs/specs/image-client.md` исправить в рамках 020.

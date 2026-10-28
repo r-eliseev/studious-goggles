@@ -1,6 +1,6 @@
 ---
 id: 036
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-27
@@ -16,6 +16,11 @@ created: 2026-10-27
 Среда: Linux или Windows (в MAUI меняются только модели страниц, они тестируются в MauiLinked; сборку MAUI проверяет CI на Windows).
 
 ## Критерии готовности
+- Конфиг провайдеров читается из файла (JSON, без ключей) и проверяется при старте; невалидный конфиг не запускает приложение и называет ошибку.
+- Провайдер с OpenAI-совместимым API, описанный только в файле, работает для картинок и чата ассистента без правки кода; Anthropic-совместимый — для чата ассистента.
+- Генерация через OpenRouter ведёт себя как до задачи (тесты `OpenRouterClientTests` проходят).
+- Старые сессии, каталог моделей и ключ OpenRouter переживают миграцию без потерь.
+- Singleton-сервисы не держат собственный `HttpClient` (закрывает задачу 037).
 
 ## Анализ
 
@@ -53,6 +58,12 @@ created: 2026-10-27
 4. 025 (контракт `IImageProvider` и fal).
 5. 026 (Replicate): зависит от контракта и хранения handle из 025.
 6. 037 закрывается в шаге 2.
+
+### Конфиг и типы API (решение владельца 2026-10-28)
+- `ProviderConfig` читается из JSON-файла (`providers.json`: встроенный файл с OpenRouter, fal, Replicate и необязательный файл пользователя в папке данных, его записи добавляются к встроенным или заменяют их по `Id`). Ключей в файле нет. Чтение — через `CoreJsonContext`, путь к пользовательскому файлу даёт `IAppPaths`.
+- `ProviderKind`: `OpenRouter`, `OpenAiCompatible` (картинки `POST images/generations` и чат `chat/completions`), `AnthropicCompatible` (только чат `POST messages`), позже `Fal`, `Replicate`. Формат OpenAI `images/generations` проверяется по документации при реализации; неизвестное помечается «неизвестно» в «Отчёте».
+- Чат ассистента — общий интерфейс `Providers/IAssistantChatClient` (нейтральные типы сообщения, инструмента и вызова инструмента) вместо `IOpenRouterChatClient`; реализации для OpenRouter и OpenAI-совместимого (один формат) и Anthropic-совместимого. Модель ассистента в настройках сессии — тоже `ModelRef`.
+- Провайдер без возможности картинок (Anthropic-совместимый) не попадает в выбор моделей картинок.
 
 ### Типы (`ImageGen/ImageGen.Core/Providers/`, новые)
 - `ProviderKind` (enum): `OpenRouter` сейчас; `Fal` добавляется в 025, `Replicate` в 026. `OpenAiCompatible` и Anthropic-тип не добавляются до ответа на вопрос 2.
@@ -115,7 +126,7 @@ scripts/check.sh
 ```
 Оболочка MAUI (`ImageGen.Maui`) использует `ApiKeyService`, `SessionSettings` и `ModelCatalogService`: её собрать только на Windows (`dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0`).
 
-Файлы: `ImageGen/ImageGen.Core/Providers/ProviderKind.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderConfig.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderRegistry.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderRouter.cs` (новый), `ImageGen/ImageGen.Core/Domain/Models/ModelRef.cs` (новый), `ImageGen/ImageGen.Core/Domain/Models/ImageModel.cs`, `ImageGen/ImageGen.Core/Domain/Generations/Generation.cs`, `ImageGen/ImageGen.Core/Domain/Sessions/SessionSettings.cs`, `ImageGen/ImageGen.Core/Domain/Keys/SecretNames.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Services/ApiKeyService.cs`, `ImageGen/ImageGen.Core/Services/ModelCatalogService.cs`, `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/Storage/IImageModelRepository.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data/Migrations/NNNN_providers.sql` (новый), `ImageGen/ImageGen.Data/Repositories/ImageModelRepository.cs`, `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Data/DataServiceCollectionExtensions.cs` (если меняется регистрация), `ImageGen/ImageGen.Core.Tests/Providers/ProviderRegistryTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/ApiKeyServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/ModelCatalogServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `ImageGen/ImageGen.Core.Tests/Domain/SessionSettingsTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/ImageModelRepositoryTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/RunRepositoryTests.cs`, `ImageGen/ImageGen.Data.Tests/SqliteDatabaseTests.cs`, `ImageGen/ImageGen.Maui/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Maui/PageModels/ApiKeyPageModel.cs`, `docs/decisions/NNNN-provider-config-and-model-ref.md` (новый ADR, номер — следующий свободный; 0005 занят ADR про OpenRouter в фоне), `docs/architecture.md` (раскладка: ProviderRegistry, ProviderRouter, ModelRef)
+Файлы: `ImageGen/ImageGen.Core/Providers/ProviderKind.cs` (новый), `ImageGen/ImageGen.Core/Providers/IAssistantChatClient.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderConfigFile.cs` (новый), `ImageGen/ImageGen.Core/Resources/providers.json` (новый), `ImageGen/ImageGen.Core/OpenAiCompatible/` (новые), `ImageGen/ImageGen.Core/AnthropicCompatible/` (новые), `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core/OpenRouter/IOpenRouterChatClient.cs` (удаляется), `ImageGen/ImageGen.Core/Providers/ProviderConfig.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderRegistry.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderRouter.cs` (новый), `ImageGen/ImageGen.Core/Domain/Models/ModelRef.cs` (новый), `ImageGen/ImageGen.Core/Domain/Models/ImageModel.cs`, `ImageGen/ImageGen.Core/Domain/Generations/Generation.cs`, `ImageGen/ImageGen.Core/Domain/Sessions/SessionSettings.cs`, `ImageGen/ImageGen.Core/Domain/Keys/SecretNames.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Services/ApiKeyService.cs`, `ImageGen/ImageGen.Core/Services/ModelCatalogService.cs`, `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/Storage/IImageModelRepository.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data/Migrations/NNNN_providers.sql` (новый), `ImageGen/ImageGen.Data/Repositories/ImageModelRepository.cs`, `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Data/DataServiceCollectionExtensions.cs` (если меняется регистрация), `ImageGen/ImageGen.Core.Tests/Providers/ProviderRegistryTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/ApiKeyServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/ModelCatalogServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `ImageGen/ImageGen.Core.Tests/Domain/SessionSettingsTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/ImageModelRepositoryTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/RunRepositoryTests.cs`, `ImageGen/ImageGen.Data.Tests/SqliteDatabaseTests.cs`, `ImageGen/ImageGen.Maui/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Maui/PageModels/ApiKeyPageModel.cs`, `docs/decisions/NNNN-provider-config-and-model-ref.md` (новый ADR, номер — следующий свободный; 0005 занят ADR про OpenRouter в фоне), `docs/architecture.md` (раскладка: ProviderRegistry, ProviderRouter, ModelRef)
 
 ## Отчёт
 
@@ -136,3 +147,7 @@ scripts/check.sh
 ### 2026-10-28, ревью (claude, Windows)
 Общий порядок по пересечениям файлов и таблиц (предложение ревью, решает владелец): 035 → 036 → 020 → 017 → 018 → 019 → 027; 025 и 026 после 036 и принятия ADR 0003. Причины: 036 меняет `ImageModel`, `image_models` (ключ `(provider_id, id)`), `SessionSettings.ImageModelIds` (`ModelRef`) и `GenerationService`; 020 вводит полный список параметров модели, из которого 018 берёт лимит референсов; 017 вводит каталог чат-моделей, `IImageFileStore.ReadAsync` и `ImageDataUrl` для 018, 019 и 027. Номера миграций в планах заменены на `NNNN_<смысл>.sql` (правило в `docs/tasks.md`), строка «Среда» добавлена в «Описание».
 Задача 037 (время жизни `HttpClient`) действительно закрывается здесь, если клиент берётся из `IHttpClientFactory` на каждый запрос; тогда 037 стоит отменить при мердже 036.
+
+### 2026-10-28, владелец (ответы в чате, записал ревью)
+Порядок выполнения (решение владельца): 035 → 036 → 020 → 017 → 018 → 019 → 027, затем 025 и 026. План одобрен владельцем сейчас, не дожидаясь 016 (статус `approved`); начинать в этом порядке, после мерджа предыдущей задачи сверить план с кодом.
+Ответы: (1) **конфиг провайдеров — файлом** (JSON без ключей, рядом с приложением или в папке данных; встроенные OpenRouter, fal и Replicate — значения по умолчанию, файл может добавить свои совместимые API без сборки); (2) **OpenAI-совместимый тип — для картинок и чата, Anthropic-совместимый — только для чата ассистента**: чат ассистента выносится за общий интерфейс (`IAssistantChatClient` или аналог в `Providers/`) вместо `IOpenRouterChatClient`; (3) ссылка на модель — строка `provider:model`, без префикса = openrouter; (4) адреса только https, кроме localhost; (5) порядок 035 → 036 → … ; 037 закрывается здесь (отменена); (6) «Среда» добавлена; (7) одобрено сейчас; (8) критерии — см. «Критерии готовности». План поправлен: раздел «Конфиг и типы API».
