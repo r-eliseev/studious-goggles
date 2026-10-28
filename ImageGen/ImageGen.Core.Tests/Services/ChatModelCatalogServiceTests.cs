@@ -1,0 +1,65 @@
+using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Domain.Models;
+using ImageGen.Core.Domain.Sessions;
+using ImageGen.Core.Providers;
+using ImageGen.Core.Services;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace ImageGen.Core.Tests.Services;
+
+public class ChatModelCatalogServiceTests
+{
+    private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
+    private readonly IProviderRouter _providers = Substitute.For<IProviderRouter>();
+    private readonly ChatModelCatalogService _service;
+
+    public ChatModelCatalogServiceTests()
+    {
+        _providers.GetChatClient(ProviderIds.OpenRouter).Returns(_chat);
+        _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ChatModel>>(
+        [
+            new ChatModel("vendor/vision", "Vision", SupportsImageInput: true, ContextLength: 1000),
+            new ChatModel("vendor/text", "Text", SupportsImageInput: false, ContextLength: 1000),
+        ]));
+        _service = new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance);
+    }
+
+    [Fact]
+    public async Task IsImageInputAsync_ModelWithImageInput_True()
+    {
+        Assert.True(await _service.IsImageInputAsync(new ModelRef(ProviderIds.OpenRouter, "vendor/vision"), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task IsImageInputAsync_ModelWithoutImageInput_False()
+    {
+        Assert.False(await _service.IsImageInputAsync(new ModelRef(ProviderIds.OpenRouter, "vendor/text"), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task IsImageInputAsync_UnknownModel_False()
+    {
+        Assert.False(await _service.IsImageInputAsync(new ModelRef(ProviderIds.OpenRouter, "vendor/missing"), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task IsImageInputAsync_CatalogFails_FalseAndNoThrow()
+    {
+        _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns<Task<IReadOnlyList<ChatModel>>>(_ => throw new ProviderException(ErrorKind.Network, "down"));
+        var service = new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance);
+
+        Assert.False(await service.IsImageInputAsync(new ModelRef(ProviderIds.OpenRouter, "vendor/vision"), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task IsImageInputAsync_CalledTwice_LoadsCatalogOnce()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var reference = new ModelRef(ProviderIds.OpenRouter, "vendor/vision");
+
+        await _service.IsImageInputAsync(reference, ct);
+        await _service.IsImageInputAsync(reference, ct);
+
+        await _chat.Received(1).ListChatModelsAsync(Arg.Any<CancellationToken>());
+    }
+}

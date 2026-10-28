@@ -6,6 +6,9 @@ public static class AssistantPrompts
     /// <summary>Number of the latest session messages sent to the assistant.</summary>
     public const int HistoryMessageCount = 20;
 
+    /// <summary>Most images of the last run that go to the assistant (S2.4).</summary>
+    public const int MaxRunImages = 4;
+
     public const string GenerateImagesToolName = "generate_images";
 
     public const string GenerateImagesToolDescription = "Generate images from a complete, self-contained prompt in English.";

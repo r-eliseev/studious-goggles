@@ -43,6 +43,7 @@ public static class CoreServiceCollectionExtensions
         services.AddSingleton<ModelCatalogService>();
         services.AddSingleton<SessionService>();
         services.AddSingleton<GenerationService>();
+        services.AddSingleton<ChatModelCatalogService>();
         services.AddSingleton<AssistantService>();
 
         return services;

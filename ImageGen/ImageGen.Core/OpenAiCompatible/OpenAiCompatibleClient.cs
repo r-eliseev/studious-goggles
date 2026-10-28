@@ -73,6 +73,10 @@ public sealed class OpenAiCompatibleClient(
         return new ImageGenerationResult(Convert.FromBase64String(base64), DefaultMediaType, null);
     }
 
+    /// <summary>These APIs do not list input modalities, so no model is known to take images.</summary>
+    public Task<IReadOnlyList<ImageGen.Core.Domain.Models.ChatModel>> ListChatModelsAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<ImageGen.Core.Domain.Models.ChatModel>>([]);
+
     public async Task<AssistantChatResult> CompleteChatAsync(AssistantChatRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);

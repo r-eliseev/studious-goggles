@@ -18,6 +18,8 @@ public sealed class AssistantService(
     IRunRepository runs,
     IProviderRouter providers,
     GenerationService generations,
+    ChatModelCatalogService chatModels,
+    IImageFileStore files,
     TimeProvider timeProvider,
     ILogger<AssistantService> logger)
 {
@@ -164,11 +166,49 @@ public sealed class AssistantService(
                 : AssistantChatMessage.Assistant(message.Text));
         }
 
+        var images = await LastRunImagesAsync(session, lastRun, cancellationToken);
+        var currentUser = chat.FindLastIndex(m => m.Role == AssistantChatMessage.UserRole);
+        if (images.Count > 0 && currentUser >= 0)
+        {
+            chat[currentUser] = new AssistantChatMessage(AssistantChatMessage.UserRole, chat[currentUser].Text, images);
+        }
+
         var tool = new AssistantTool(
             AssistantPrompts.GenerateImagesToolName,
             AssistantPrompts.GenerateImagesToolDescription,
             AssistantPrompts.GenerateImagesToolSchema);
         return new AssistantChatRequest(session.Settings.AssistantModel.ModelId, chat, [tool]);
+    }
+
+    /// <summary>
+    /// Images of the last run for the assistant (S2.4), as data URLs. Only when the assistant model takes images. A missing
+    /// file is skipped with a warning; the other images are still sent.
+    /// </summary>
+    private async Task<List<string>> LastRunImagesAsync(Session session, Run? lastRun, CancellationToken cancellationToken)
+    {
+        var images = new List<string>();
+        if (lastRun is null
+            || !await chatModels.IsImageInputAsync(session.Settings.AssistantModel, cancellationToken))
+        {
+            return images;
+        }
+
+        var generations = (await runs.ListGenerationsBySessionAsync(session.Id, cancellationToken))
+            .Where(g => g.RunId == lastRun.Id);
+        foreach (var generation in RunImageSelector.Select(generations))
+        {
+            try
+            {
+                var content = await files.ReadAsync(generation.ImagePath!, cancellationToken);
+                images.Add(ImageDataUrl.From(content, generation.MediaType ?? "image/png"));
+            }
+            catch (IOException ex)
+            {
+                logger.LogWarning(ex, "Image {ImagePath} of run {RunId} could not be read; the assistant does not get it.", generation.ImagePath, lastRun.Id);
+            }
+        }
+
+        return images;
     }
 
     private ChatMessage NewMessage(Guid sessionId, ChatRole role, string text) => new()

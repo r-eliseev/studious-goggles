@@ -141,7 +141,9 @@ public class ChatPageModelTests
         _generationService = new GenerationService(
             _sessionRepository, _runRepository, ProviderDoubles.Router(_generator), _files, catalog, _seeds, time, NullLogger<GenerationService>.Instance);
         _assistant = new AssistantService(
-            _sessionService, _messageRepository, _runRepository, ProviderDoubles.Router(chat: _chat), _generationService, time, NullLogger<AssistantService>.Instance);
+            _sessionService, _messageRepository, _runRepository, ProviderDoubles.Router(chat: _chat), _generationService,
+            new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),
+            _files, time, NullLogger<AssistantService>.Instance);
 
         _model = CreateModel(_session.Id);
     }

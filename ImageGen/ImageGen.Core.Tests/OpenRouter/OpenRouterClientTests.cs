@@ -212,6 +212,30 @@ public class OpenRouterClientTests
     }
 
     [Fact]
+    public async Task ListChatModelsAsync_ReadsInputModalitiesAndContextLength()
+    {
+        const string json = """
+            {"data":[
+              {"id":"vendor/vision","name":"Vision","context_length":262144,
+               "architecture":{"input_modalities":["text","image"],"output_modalities":["text"]}},
+              {"id":"vendor/text","name":"Text","context_length":8000,
+               "architecture":{"input_modalities":["text"],"output_modalities":["text"]}},
+              {"name":"No id","architecture":{"input_modalities":["image"]}}
+            ]}
+            """;
+        var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, json);
+        var client = CreateClient(handler);
+
+        var models = await client.ListChatModelsAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("https://openrouter.ai/api/v1/models", handler.Requests[0].RequestUri!.ToString());
+        Assert.Equal(2, models.Count);
+        Assert.True(models[0].SupportsImageInput);
+        Assert.Equal(262144, models[0].ContextLength);
+        Assert.False(models[1].SupportsImageInput);
+    }
+
+    [Fact]
     public async Task GenerateImageAsync_EmptyData_ThrowsEmptyResponse()
     {
         var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"data":[]}"""));

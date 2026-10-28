@@ -26,6 +26,22 @@ public sealed class FileImageStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadAsync_SavedFile_ReturnsSameBytes()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var relativePath = await _store.SaveAsync(Guid.NewGuid(), Guid.NewGuid(), [9, 8, 7, 0], "image/png", ct);
+
+        Assert.Equal([9, 8, 7, 0], await _store.ReadAsync(relativePath, ct));
+    }
+
+    [Fact]
+    public async Task ReadAsync_MissingFile_ThrowsFileNotFound()
+    {
+        await Assert.ThrowsAsync<FileNotFoundException>(
+            () => _store.ReadAsync("images/none/none.png", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task SaveAsync_Png_LogsDebugWithSizeAndNoContent()
     {
         var ct = TestContext.Current.CancellationToken;

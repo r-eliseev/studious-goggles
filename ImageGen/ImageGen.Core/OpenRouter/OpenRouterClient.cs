@@ -98,6 +98,36 @@ public sealed class OpenRouterClient(
             ReadCost(root));
     }
 
+    /// <summary>Chat models of OpenRouter with their input modalities and context window. Entries without an id are skipped.</summary>
+    public async Task<IReadOnlyList<ChatModel>> ListChatModelsAsync(CancellationToken cancellationToken)
+    {
+        using var request = await CreateAuthorizedRequestAsync(HttpMethod.Get, "models", null, cancellationToken);
+        var root = await SendJsonAsync(request, cancellationToken);
+        var result = new List<ChatModel>();
+        if (root["data"] is not JsonArray data)
+        {
+            return result;
+        }
+
+        foreach (var item in data)
+        {
+            var id = ReadString(item?["id"]);
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                continue;
+            }
+
+            var inputModalities = item!["architecture"]?["input_modalities"] as JsonArray;
+            result.Add(new ChatModel(
+                id,
+                ReadString(item["name"]) ?? id,
+                inputModalities?.Any(m => ReadString(m) == "image") == true,
+                ReadInt(item["context_length"])));
+        }
+
+        return result;
+    }
+
     public async Task<AssistantChatResult> CompleteChatAsync(AssistantChatRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -178,6 +208,9 @@ public sealed class OpenRouterClient(
             body[name] = value;
         }
     }
+
+    private static int? ReadInt(JsonNode? node) =>
+        node is JsonValue value && value.TryGetValue<int>(out var number) ? number : null;
 
     private static int ReadMaxImages(JsonObject? parameters)
     {

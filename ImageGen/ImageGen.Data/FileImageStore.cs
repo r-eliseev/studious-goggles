@@ -28,6 +28,18 @@ public sealed class FileImageStore(IAppPaths appPaths, ILogger<FileImageStore> l
         return relativePath;
     }
 
+    public Task<byte[]> ReadAsync(string relativePath, CancellationToken cancellationToken)
+    {
+        var fullPath = GetFullPath(relativePath);
+        // A missing folder gives DirectoryNotFoundException from the framework; the contract is FileNotFoundException.
+        if (!File.Exists(fullPath))
+        {
+            throw new FileNotFoundException("The image file does not exist.", fullPath);
+        }
+
+        return File.ReadAllBytesAsync(fullPath, cancellationToken);
+    }
+
     public string GetFullPath(string relativePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
