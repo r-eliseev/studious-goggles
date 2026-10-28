@@ -1,6 +1,6 @@
 ---
 id: 045
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-28
@@ -82,3 +82,7 @@ scripts/check.sh
 ## Отчёт
 
 ## Комментарии
+
+### 2026-10-28, владелец (ответы в чате)
+План одобрен как есть. Библиотека записи в файл — Serilog (`Serilog.Extensions.Logging` + `Serilog.Sinks.File`), решение оформить ADR в этой задаче.
+Ветка: вместо `task/045-…` работаю в designated-ветке `ccr-07d63c19-ma1lxw` (по инструкции сессии), от `origin/main` (`d5c5c91`, с 036).
