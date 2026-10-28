@@ -32,6 +32,9 @@ CI: `.github/workflows/build.yml` (задача `core` на Ubuntu: формат
 Остальные backlog-задачи (021–024, 028–033) без планов, в очередь не поставлены.
 
 ## Открытые вопросы
+- Avalonia-тесты закреплены на xunit v3 3.2.2 (`VersionOverride` в `ImageGen.Avalonia.Tests`): `Avalonia.Headless.XUnit` 12.1.4 не работает с xunit v3 4.0.2. Принять обход или выбрать общую версию — см. `docs/decisions/0007-avalonia-tests-xunit-3-2.md` (задача 039, «Комментарии»).
+- Секреты на Linux: коллекция `default` (login) в контейнере не создаётся без дисплея; проверить на Linux-рабочем столе с gnome-keyring (задача 040). Keychain (macOS) и DPAPI (Windows) не проверены: нет машин (`docs/decisions/0008-desktop-secret-storage.md`).
+- Ручная проверка Avalonia (Linux и Windows) — отдельный сценарий: добавить в задачу 016 или создать новую задачу (задачи 038–042, «Комментарии»).
 - Бесплатных моделей картинок у OpenRouter на 2026-10-27 нет; модель по умолчанию — `black-forest-labs/flux.2-klein-4b` ($0.014 за мегапиксель, есть seed). Бесплатная модель только у ассистента: `google/gemma-4-31b-it:free`.
 
 ## Решения владельца (2026-10-27)
