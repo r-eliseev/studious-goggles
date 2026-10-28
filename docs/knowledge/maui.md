@@ -30,6 +30,7 @@
 - Стили по умолчанию на `TargetType`, именованные по `x:Key`; `Style TargetType="Page" ApplyToDerivedTypes="True"` для общего фона.
 - Не вкладывать `CollectionView` в `ScrollView` без причины (теряется виртуализация); в примере так сделано для коротких списков.
 
+- **Клавиатура Android в `Editor` (задача 050, собрано, на устройстве не проверено):** действие «Отправить» — `EditorHandler.Mapper.AppendToMapping`, `PlatformView.ImeOptions = ImeAction.Send`, `EditorAction` в `Platforms/Android/ChatEditorImeHandling.cs`. Чтобы клавиатура показала «Отправить», поле переводится в однострочный ввод (`SetRawInputType` без `TextFlagMultiLine`): в однострочном поле Android прокручивает длинный текст по горизонтали, а не переносит его. Это проверяет задача 016 (пункт 11).
 - **Клавиши в `Editor` на Windows (проверено 2026-10-28, задача 056):** у `Editor` нет событий клавиш. Перехват — маппинг `EditorHandler.Mapper.AppendToMapping` и `PreviewKeyDown` у нативного WinUI `TextBox`: обычный `KeyDown` приходит уже после вставки перевода строки. Shift — `InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift)`. Так сделано поле чата `ChatEditor` (Enter — отправить, Shift+Enter — новая строка).
 
 ## Разметка и списки
