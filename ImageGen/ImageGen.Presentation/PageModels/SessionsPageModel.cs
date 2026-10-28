@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
@@ -26,7 +27,7 @@ public sealed partial class SessionsPageModel(
         try
         {
             await initializer.EnsureInitializedAsync();
-            if (!await apiKeyService.HasKeyAsync(CancellationToken.None))
+            if (!await apiKeyService.HasKeyAsync(ProviderIds.OpenRouter, CancellationToken.None))
             {
                 await navigation.GoToAsync(Routes.ApiKey);
                 return;

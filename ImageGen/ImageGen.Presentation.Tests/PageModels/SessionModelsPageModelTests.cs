@@ -19,6 +19,8 @@ public class SessionModelsPageModelTests
     private const string AssistantModel = "vendor/assistant";
     private const string RemovedModel = "vendor/removed";
 
+    private static ModelRef Ref(string modelId) => new(ProviderIds.OpenRouter, modelId);
+
     // Catalog in catalog order (by name). Beta does not support seed.
     private static readonly ImageModel Alpha = TestModels.Model("vendor/alpha", "Alpha");
     private static readonly ImageModel Beta = TestModels.Model("vendor/beta", "Beta Pro", supportsSeed: false);
@@ -42,7 +44,7 @@ public class SessionModelsPageModelTests
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
         _sessionService = new SessionService(_sessions, _messages, _runs, _files, time);
-        _catalog = new ModelCatalogService(_provider, _modelRepository);
+        _catalog = new ModelCatalogService(ProviderDoubles.Router(_provider), _modelRepository);
 
         _session = new Session
         {
@@ -52,14 +54,14 @@ public class SessionModelsPageModelTests
             UpdatedAt = Now,
             Settings = new SessionSettings
             {
-                ImageModelIds = [Beta.Id, RemovedModel],
+                ImageModels = [Ref(Beta.Id), Ref(RemovedModel)],
                 RunsPerModel = 3,
-                AssistantModelId = AssistantModel,
+                AssistantModel = Ref(AssistantModel),
             },
         };
         _sessions.GetAsync(SessionId, Arg.Any<CancellationToken>()).Returns(_session);
         _sessions.UpdateAsync(Arg.Do<Session>(saved => _saved = saved), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
-        _modelRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([Alpha, Beta, Gamma]);
+        _modelRepository.ListAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns([Alpha, Beta, Gamma]);
         _provider.ListImageModelsAsync(Arg.Any<CancellationToken>()).Returns([Gamma, Alpha, Beta]);
     }
 
@@ -98,7 +100,7 @@ public class SessionModelsPageModelTests
     {
         await OpenAsync();
 
-        await _modelRepository.Received(1).ListAsync(Arg.Any<CancellationToken>());
+        await _modelRepository.Received(1).ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>());
         await _provider.DidNotReceive().ListImageModelsAsync(Arg.Any<CancellationToken>());
     }
 
@@ -153,7 +155,7 @@ public class SessionModelsPageModelTests
 
         await model.SaveCommand.ExecuteAsync(null);
 
-        Assert.Equal(new[] { "vendor/beta", "other/gamma", RemovedModel }, _saved!.Settings.ImageModelIds);
+        Assert.Equal(new[] { Ref("vendor/beta"), Ref("other/gamma"), Ref(RemovedModel) }, _saved!.Settings.ImageModels);
     }
 
     [Fact]
@@ -166,9 +168,9 @@ public class SessionModelsPageModelTests
 
         await model.SaveCommand.ExecuteAsync(null);
 
-        Assert.Equal(new[] { "vendor/alpha", "other/gamma", RemovedModel }, _saved!.Settings.ImageModelIds);
+        Assert.Equal(new[] { Ref("vendor/alpha"), Ref("other/gamma"), Ref(RemovedModel) }, _saved!.Settings.ImageModels);
         Assert.Equal(3, _saved.Settings.RunsPerModel);
-        Assert.Equal(AssistantModel, _saved.Settings.AssistantModelId);
+        Assert.Equal(Ref(AssistantModel), _saved.Settings.AssistantModel);
         await _navigation.Received(1).GoBackAsync();
     }
 
@@ -212,7 +214,7 @@ public class SessionModelsPageModelTests
         await model.RefreshCommand.ExecuteAsync(null);
 
         await _provider.Received(1).ListImageModelsAsync(Arg.Any<CancellationToken>());
-        await _modelRepository.Received(1).ReplaceAllAsync(Arg.Any<IReadOnlyList<ImageModel>>(), Arg.Any<CancellationToken>());
+        await _modelRepository.Received(1).ReplaceAllAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<ImageModel>>(), Arg.Any<CancellationToken>());
         Assert.Equal(new[] { "vendor/alpha", "vendor/beta", "other/gamma" }, Ids(model.Models));
         Assert.False(model.Models[0].IsSelected);
         Assert.True(model.Models[1].IsSelected);
@@ -248,7 +250,7 @@ public class SessionModelsPageModelTests
     [Fact]
     public async Task OnAppearingAsync_CatalogFails_ShowsAlert()
     {
-        _modelRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([]);
+        _modelRepository.ListAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns([]);
         _provider.ListImageModelsAsync(Arg.Any<CancellationToken>()).ThrowsAsync(new InvalidOperationException("Network down"));
         var model = CreateModel();
 
@@ -276,7 +278,7 @@ public class SessionModelsPageModelTests
     public async Task SaveAndRefresh_CannotRunWhileLoading()
     {
         var gate = new TaskCompletionSource<IReadOnlyList<ImageModel>>();
-        _modelRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([]);
+        _modelRepository.ListAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns([]);
         _provider.ListImageModelsAsync(Arg.Any<CancellationToken>()).Returns(_ => gate.Task);
         var model = CreateModel();
 

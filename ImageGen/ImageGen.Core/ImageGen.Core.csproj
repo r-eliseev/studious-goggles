@@ -8,6 +8,9 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Providers/builtin-providers.json" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="ImageGen.Core.Tests" />
   </ItemGroup>
 </Project>

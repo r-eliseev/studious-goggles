@@ -32,7 +32,7 @@ public class SessionModelsFlowTests
 
         await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView && chat.ModelsButtonText == string.Format(AppResources.ModelsButtonFormat, 1, 3), "подпись кнопки моделей");
         var saved = await shell.Provider.GetRequiredService<SessionService>().ListAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(["vendor/beta"], saved.Single().Settings.ImageModelIds);
+        Assert.Equal([new ImageGen.Core.Domain.Models.ModelRef(ImageGen.Core.Providers.ProviderIds.OpenRouter, "vendor/beta")], saved.Single().Settings.ImageModels);
         Assert.Equal(3, saved.Single().Settings.RunsPerModel);
     }
 

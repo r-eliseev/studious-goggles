@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Storage;
@@ -14,7 +15,7 @@ namespace ImageGen.Core.Services;
 public sealed class GenerationService(
     ISessionRepository sessions,
     IRunRepository runs,
-    IImageGenerator generator,
+    IProviderRouter providers,
     IImageFileStore files,
     ModelCatalogService catalog,
     ISeedSource seeds,
@@ -34,18 +35,18 @@ public sealed class GenerationService(
     {
         var text = NormalizePrompt(prompt);
         var session = await GetSessionAsync(sessionId, cancellationToken);
-        if (session.Settings.ImageModelIds.Count == 0)
+        if (session.Settings.ImageModels.Count == 0)
         {
             throw new InvalidOperationException($"Session {sessionId} has no image models.");
         }
 
         var seedValues = Enumerable.Range(0, session.Settings.RunsPerModel).Select(_ => seeds.NextSeed()).ToArray();
-        var pairs = new List<(string ModelId, long Seed)>();
-        foreach (var modelId in session.Settings.ImageModelIds)
+        var pairs = new List<(ModelRef Model, long Seed)>();
+        foreach (var model in session.Settings.ImageModels)
         {
             foreach (var seed in seedValues)
             {
-                pairs.Add((modelId, seed));
+                pairs.Add((model, seed));
             }
         }
 
@@ -57,7 +58,7 @@ public sealed class GenerationService(
     {
         var source = await GetSourceAsync(generationId, cancellationToken);
         return await CreateRunAsync(source.SessionId, source.Prompt, RunOrigin.Repeat,
-            [(source.ModelId, source.Seed)], cancellationToken);
+            [(SourceModel(source), source.Seed)], cancellationToken);
     }
 
     /// <summary>New run from one generation: same prompt and model, new random seed.</summary>
@@ -65,7 +66,7 @@ public sealed class GenerationService(
     {
         var source = await GetSourceAsync(generationId, cancellationToken);
         return await CreateRunAsync(source.SessionId, source.Prompt, RunOrigin.NewSeed,
-            [(source.ModelId, seeds.NextSeed())], cancellationToken);
+            [(SourceModel(source), seeds.NextSeed())], cancellationToken);
     }
 
     /// <summary>New run from one generation: new prompt, same model and seed.</summary>
@@ -74,7 +75,7 @@ public sealed class GenerationService(
         var text = NormalizePrompt(newPrompt);
         var source = await GetSourceAsync(generationId, cancellationToken);
         return await CreateRunAsync(source.SessionId, text, RunOrigin.Edit,
-            [(source.ModelId, source.Seed)], cancellationToken);
+            [(SourceModel(source), source.Seed)], cancellationToken);
     }
 
     /// <summary>Marks generations left unfinished by a previous app session as Failed with <see cref="ErrorKind.Interrupted"/>.</summary>
@@ -103,6 +104,8 @@ public sealed class GenerationService(
         return prompt.Trim();
     }
 
+    private static ModelRef SourceModel(Generation source) => new(source.ProviderId, source.ModelId);
+
     private async Task<Session> GetSessionAsync(Guid sessionId, CancellationToken cancellationToken) =>
         await sessions.GetAsync(sessionId, cancellationToken)
         ?? throw new InvalidOperationException($"Session {sessionId} not found.");
@@ -115,7 +118,7 @@ public sealed class GenerationService(
         Guid sessionId,
         string prompt,
         RunOrigin origin,
-        IReadOnlyList<(string ModelId, long Seed)> pairs,
+        IReadOnlyList<(ModelRef Model, long Seed)> pairs,
         CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
@@ -128,16 +131,15 @@ public sealed class GenerationService(
             CreatedAt = now,
         };
 
-        var seedSupport = new Dictionary<string, bool>(StringComparer.Ordinal);
+        var seedSupport = new Dictionary<ModelRef, bool>();
         var generations = new List<Generation>(pairs.Count);
         for (var index = 0; index < pairs.Count; index++)
         {
-            var (modelId, seed) = pairs[index];
-            if (!seedSupport.TryGetValue(modelId, out var supportsSeed))
+            var (model, seed) = pairs[index];
+            if (!seedSupport.TryGetValue(model, out var supportsSeed))
             {
-                var model = await catalog.FindAsync(modelId, cancellationToken);
-                supportsSeed = model?.SupportsSeed ?? false;
-                seedSupport[modelId] = supportsSeed;
+                supportsSeed = await ReadSeedSupportAsync(model, cancellationToken);
+                seedSupport[model] = supportsSeed;
             }
 
             generations.Add(new Generation
@@ -145,7 +147,8 @@ public sealed class GenerationService(
                 Id = Guid.NewGuid(),
                 RunId = run.Id,
                 SessionId = sessionId,
-                ModelId = modelId,
+                ProviderId = model.ProviderId,
+                ModelId = model.ModelId,
                 Prompt = prompt,
                 Seed = seed,
                 SeedApplied = supportsSeed,
@@ -162,6 +165,19 @@ public sealed class GenerationService(
         }
 
         return run;
+    }
+
+    /// <summary>An unknown provider or model does not send a seed; the generation itself reports the error later.</summary>
+    private async Task<bool> ReadSeedSupportAsync(ModelRef model, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return (await catalog.FindAsync(model, cancellationToken))?.SupportsSeed ?? false;
+        }
+        catch (ProviderException)
+        {
+            return false;
+        }
     }
 
     private void Launch(Generation generation)
@@ -212,7 +228,8 @@ public sealed class GenerationService(
                 generation.ModelId,
                 generation.Prompt,
                 generation.SeedApplied ? generation.Seed : null);
-            var result = await generator.GenerateAsync(request, CancellationToken.None).ConfigureAwait(false);
+            var provider = providers.GetImageProvider(generation.ProviderId);
+            var result = await provider.GenerateAsync(request, CancellationToken.None).ConfigureAwait(false);
 
             generation.ImagePath = await files.SaveAsync(
                 generation.SessionId, generation.Id, result.Content, result.MediaType, CancellationToken.None)
@@ -264,6 +281,7 @@ public sealed class GenerationService(
         Id = g.Id,
         RunId = g.RunId,
         SessionId = g.SessionId,
+        ProviderId = g.ProviderId,
         ModelId = g.ModelId,
         Prompt = g.Prompt,
         Seed = g.Seed,

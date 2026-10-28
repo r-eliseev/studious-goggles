@@ -41,6 +41,7 @@ public class TimelineOrderingTests
         Id = Guid.NewGuid(),
         RunId = run.Id,
         SessionId = TestSession.Id,
+        ProviderId = "openrouter",
         ModelId = "m",
         Prompt = run.Prompt,
         Seed = sortOrder,

@@ -1,4 +1,5 @@
 using ImageGen.Core.Domain.Models;
+using ImageGen.Core.Providers;
 
 namespace ImageGen.Presentation.Tests.TestDoubles;
 
@@ -7,6 +8,7 @@ public static class TestModels
 {
     public static ImageModel Model(string id, string name, bool supportsSeed = true) => new()
     {
+        ProviderId = ProviderIds.OpenRouter,
         Id = id,
         Name = name,
         SupportsSeed = supportsSeed,

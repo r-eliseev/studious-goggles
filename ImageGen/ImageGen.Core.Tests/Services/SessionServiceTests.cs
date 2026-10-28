@@ -1,4 +1,6 @@
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
+using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
 
@@ -37,7 +39,7 @@ public class SessionServiceTests
 
         Assert.Equal(Session.NewSessionTitle, session.Title);
         Assert.Equal(Now, session.CreatedAt);
-        Assert.Equal([SessionSettings.DefaultImageModelId], session.Settings.ImageModelIds);
+        Assert.Equal([new ModelRef(ProviderIds.OpenRouter, SessionSettings.DefaultImageModelId)], session.Settings.ImageModels);
         await _sessions.Received(1).AddAsync(session, Arg.Any<CancellationToken>());
     }
 
@@ -53,15 +55,19 @@ public class SessionServiceTests
     }
 
     [Fact]
-    public async Task UpdateSettingsAsync_DuplicateAndBlankIds_AreRemoved()
+    public async Task UpdateSettingsAsync_DuplicateModels_AreRemovedKeepingOrder()
     {
         var session = ExistingSession();
         _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
-        var settings = new SessionSettings { ImageModelIds = [" a ", "b", "a", ""], RunsPerModel = 3 };
+        var settings = new SessionSettings
+        {
+            ImageModels = [ModelRef.Parse("a"), ModelRef.Parse("b"), ModelRef.Parse("a")],
+            RunsPerModel = 3,
+        };
 
         var updated = await _service.UpdateSettingsAsync(session.Id, settings, TestContext.Current.CancellationToken);
 
-        Assert.Equal(["a", "b"], updated.Settings.ImageModelIds);
+        Assert.Equal([ModelRef.Parse("a"), ModelRef.Parse("b")], updated.Settings.ImageModels);
         Assert.Equal(3, updated.Settings.RunsPerModel);
         Assert.Equal(Now, updated.UpdatedAt);
         await _sessions.Received(1).UpdateAsync(session, Arg.Any<CancellationToken>());
@@ -72,7 +78,7 @@ public class SessionServiceTests
     [InlineData(11)]
     public async Task UpdateSettingsAsync_RunsPerModelOutOfRange_Throws(int runs)
     {
-        var settings = new SessionSettings { ImageModelIds = ["a"], RunsPerModel = runs };
+        var settings = new SessionSettings { ImageModels = [ModelRef.Parse("a")], RunsPerModel = runs };
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
             () => _service.UpdateSettingsAsync(Guid.NewGuid(), settings, TestContext.Current.CancellationToken));

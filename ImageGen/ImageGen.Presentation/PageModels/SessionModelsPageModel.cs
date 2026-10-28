@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Services;
 using ImageGen.Presentation.Resources.Strings;
@@ -78,14 +79,14 @@ public sealed partial class SessionModelsPageModel(
         try
         {
             var session = _session ?? throw new InvalidOperationException($"Session {_sessionId} is not loaded.");
-            var knownIds = _all.Select(m => m.Id).ToHashSet(StringComparer.Ordinal);
+            var knownRefs = _all.Select(m => m.Reference).ToHashSet();
             // Models that are saved but not in the catalog stay selected: the catalog may not list them.
-            var unknownSelected = session.Settings.ImageModelIds.Where(id => !knownIds.Contains(id));
+            var unknownSelected = session.Settings.ImageModels.Where(reference => !knownRefs.Contains(reference));
             var settings = new SessionSettings
             {
-                ImageModelIds = _all.Where(m => m.IsSelected).Select(m => m.Id).Concat(unknownSelected).ToList(),
+                ImageModels = _all.Where(m => m.IsSelected).Select(m => m.Reference).Concat(unknownSelected).ToList(),
                 RunsPerModel = (int)Math.Round(RunsPerModel),
-                AssistantModelId = session.Settings.AssistantModelId,
+                AssistantModel = session.Settings.AssistantModel,
             };
             await sessionService.UpdateSettingsAsync(_sessionId, settings, CancellationToken.None);
             await navigation.GoBackAsync();
@@ -111,16 +112,16 @@ public sealed partial class SessionModelsPageModel(
 
             // After the first load the checkboxes are the source of truth (they may hold unsaved changes).
             var selected = _loaded
-                ? _all.Where(m => m.IsSelected).Select(m => m.Id).ToHashSet(StringComparer.Ordinal)
-                : session.Settings.ImageModelIds.ToHashSet(StringComparer.Ordinal);
+                ? _all.Where(m => m.IsSelected).Select(m => m.Reference).ToHashSet()
+                : session.Settings.ImageModels.ToHashSet();
             if (!_loaded)
             {
                 RunsPerModel = session.Settings.RunsPerModel;
             }
 
-            var models = await catalog.GetImageModelsAsync(forceRefresh, CancellationToken.None);
+            var models = await catalog.GetAllImageModelsAsync(forceRefresh, CancellationToken.None);
             _all.Clear();
-            _all.AddRange(models.Select(m => new ModelOptionViewModel(m, selected.Contains(m.Id))));
+            _all.AddRange(models.Select(m => new ModelOptionViewModel(m, selected.Contains(new ModelRef(m.ProviderId, m.Id)))));
             _loaded = true;
             ApplyFilter();
         }

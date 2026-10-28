@@ -7,7 +7,7 @@ namespace ImageGen.Data.Repositories;
 public sealed class RunRepository(SqliteDatabase database) : IRunRepository
 {
     private const string GenerationColumns = """
-        g.id, g.run_id, g.session_id, g.model_id, g.prompt, g.seed, g.seed_applied, g.status,
+        g.id, g.run_id, g.session_id, g.provider_id, g.model_id, g.prompt, g.seed, g.seed_applied, g.status,
         g.image_path, g.media_type, g.cost_usd, g.error_kind, g.error_message, g.created_at, g.completed_at, g.sort_order
         """;
 
@@ -38,9 +38,9 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
             await using var command = connection.CreateCommand();
             command.Transaction = transaction;
             command.CommandText = """
-                INSERT INTO generations (id, run_id, session_id, model_id, prompt, seed, seed_applied, status,
+                INSERT INTO generations (id, run_id, session_id, provider_id, model_id, prompt, seed, seed_applied, status,
                     image_path, media_type, cost_usd, error_kind, error_message, created_at, completed_at, sort_order)
-                VALUES (@id, @run_id, @session_id, @model_id, @prompt, @seed, @seed_applied, @status,
+                VALUES (@id, @run_id, @session_id, @provider_id, @model_id, @prompt, @seed, @seed_applied, @status,
                     @image_path, @media_type, @cost_usd, @error_kind, @error_message, @created_at, @completed_at, @sort_order);
                 """;
             AddGenerationParameters(command, generation);
@@ -120,7 +120,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             UPDATE generations
-            SET run_id = @run_id, session_id = @session_id, model_id = @model_id, prompt = @prompt, seed = @seed,
+            SET run_id = @run_id, session_id = @session_id, provider_id = @provider_id, model_id = @model_id, prompt = @prompt, seed = @seed,
                 seed_applied = @seed_applied, status = @status, image_path = @image_path, media_type = @media_type,
                 cost_usd = @cost_usd, error_kind = @error_kind, error_message = @error_message,
                 created_at = @created_at, completed_at = @completed_at, sort_order = @sort_order
@@ -153,6 +153,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
         command.Parameters.AddWithValue("@id", SqliteValues.FromGuid(generation.Id));
         command.Parameters.AddWithValue("@run_id", SqliteValues.FromGuid(generation.RunId));
         command.Parameters.AddWithValue("@session_id", SqliteValues.FromGuid(generation.SessionId));
+        command.Parameters.AddWithValue("@provider_id", generation.ProviderId);
         command.Parameters.AddWithValue("@model_id", generation.ModelId);
         command.Parameters.AddWithValue("@prompt", generation.Prompt);
         command.Parameters.AddWithValue("@seed", generation.Seed);
@@ -187,6 +188,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
             Id = SqliteValues.GetGuid(reader, "id"),
             RunId = SqliteValues.GetGuid(reader, "run_id"),
             SessionId = SqliteValues.GetGuid(reader, "session_id"),
+            ProviderId = SqliteValues.GetString(reader, "provider_id"),
             ModelId = SqliteValues.GetString(reader, "model_id"),
             Prompt = SqliteValues.GetString(reader, "prompt"),
             Seed = SqliteValues.GetInt64(reader, "seed"),

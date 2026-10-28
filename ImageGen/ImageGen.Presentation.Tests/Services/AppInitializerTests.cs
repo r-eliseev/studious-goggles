@@ -3,6 +3,7 @@ using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
 using ImageGen.Data;
 using ImageGen.Presentation.Services;
+using ImageGen.Presentation.Tests.TestDoubles;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -71,16 +72,16 @@ public class AppInitializerTests : IDisposable
 
     private AppInitializer CreateInitializer()
     {
-        var catalog = new ModelCatalogService(Substitute.For<IModelProvider>(), Substitute.For<IImageModelRepository>());
+        var catalog = new ModelCatalogService(ProviderDoubles.Router(), Substitute.For<IImageModelRepository>());
         var generation = new GenerationService(
             Substitute.For<ISessionRepository>(),
             _runs,
-            Substitute.For<IImageGenerator>(),
+            ProviderDoubles.Router(Substitute.For<IModelProvider>()),
             Substitute.For<IImageFileStore>(),
             catalog,
             Substitute.For<ISeedSource>(),
             TimeProvider.System,
             NullLogger<GenerationService>.Instance);
-        return new AppInitializer(_database, generation);
+        return new AppInitializer(_database, generation, ProviderDoubles.BuiltInRegistry());
     }
 }

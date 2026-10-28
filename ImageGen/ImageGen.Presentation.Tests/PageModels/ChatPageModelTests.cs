@@ -1,7 +1,7 @@
 using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
-using ImageGen.Core.OpenRouter;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
@@ -26,10 +26,10 @@ public class ChatPageModelTests
     private readonly IChatMessageRepository _messageRepository = Substitute.For<IChatMessageRepository>();
     private readonly IRunRepository _runRepository = Substitute.For<IRunRepository>();
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
-    private readonly IImageGenerator _generator = Substitute.For<IImageGenerator>();
+    private readonly IModelProvider _generator = Substitute.For<IModelProvider>();
     private readonly ISeedSource _seeds = Substitute.For<ISeedSource>();
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
-    private readonly IOpenRouterChatClient _chat = Substitute.For<IOpenRouterChatClient>();
+    private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
     private readonly INavigationService _navigation = Substitute.For<INavigationService>();
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly IMainThread _mainThread = Substitute.For<IMainThread>();
@@ -52,9 +52,9 @@ public class ChatPageModelTests
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
 
-        _modelRepository.ListAsync(Arg.Any<CancellationToken>()).Returns(
+        _modelRepository.ListAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(
             [TestModels.Model(ImageModel, "Image")]);
-        var catalog = new ModelCatalogService(Substitute.For<IModelProvider>(), _modelRepository);
+        var catalog = new ModelCatalogService(ProviderDoubles.Router(), _modelRepository);
 
         _session = NewSession("Red fox", runsPerModel: 2);
         _otherSession = NewSession("Other", runsPerModel: 1);
@@ -123,17 +123,17 @@ public class ChatPageModelTests
             .Returns("images/s/g.png");
         _files.GetFullPath(Arg.Any<string>()).Returns(ci => "/data/" + ci.Arg<string>());
 
-        _chat.CompleteChatAsync(Arg.Any<OpenRouterChatRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new OpenRouterChatResult("Here you go.", [], null));
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AssistantChatResult("Here you go.", [], null));
 
         _mainThread.When(m => m.BeginInvokeOnMainThread(Arg.Any<Action>()))
             .Do(ci => ci.Arg<Action>().Invoke());
 
         _sessionService = new SessionService(_sessionRepository, _messageRepository, _runRepository, _files, time);
         _generationService = new GenerationService(
-            _sessionRepository, _runRepository, _generator, _files, catalog, _seeds, time, NullLogger<GenerationService>.Instance);
+            _sessionRepository, _runRepository, ProviderDoubles.Router(_generator), _files, catalog, _seeds, time, NullLogger<GenerationService>.Instance);
         _assistant = new AssistantService(
-            _sessionService, _messageRepository, _runRepository, _chat, _generationService, time, NullLogger<AssistantService>.Instance);
+            _sessionService, _messageRepository, _runRepository, ProviderDoubles.Router(chat: _chat), _generationService, time, NullLogger<AssistantService>.Instance);
 
         _model = CreateModel(_session.Id);
     }
@@ -146,9 +146,9 @@ public class ChatPageModelTests
         UpdatedAt = Now,
         Settings = new SessionSettings
         {
-            ImageModelIds = [ImageModel],
+            ImageModels = [new ModelRef(ProviderIds.OpenRouter, ImageModel)],
             RunsPerModel = runsPerModel,
-            AssistantModelId = AssistantModel,
+            AssistantModel = new ModelRef(ProviderIds.OpenRouter, AssistantModel),
         },
     };
 
@@ -222,6 +222,7 @@ public class ChatPageModelTests
         Id = Guid.NewGuid(),
         RunId = run.Id,
         SessionId = run.SessionId,
+        ProviderId = "openrouter",
         ModelId = ImageModel,
         Prompt = run.Prompt,
         Seed = seed,
@@ -315,7 +316,7 @@ public class ChatPageModelTests
 
         Assert.Equal("", _model.InputText);
         Assert.False(_model.IsBusy);
-        await _chat.Received(1).CompleteChatAsync(Arg.Any<OpenRouterChatRequest>(), Arg.Any<CancellationToken>());
+        await _chat.Received(1).CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
         var user = Assert.IsType<MessageItemViewModel>(_model.Items.First());
         Assert.Equal("draw a fox", user.Text);
         Assert.True(user.IsUser);
@@ -324,8 +325,8 @@ public class ChatPageModelTests
     [Fact]
     public async Task SendCommand_AssistantStartsRun_RunAppearsInTimeline()
     {
-        _chat.CompleteChatAsync(Arg.Any<OpenRouterChatRequest>(), Arg.Any<CancellationToken>()).Returns(
-            new OpenRouterChatResult(null, [new OpenRouterToolCall(AssistantPrompts.GenerateImagesToolName, "{\"prompt\":\"red fox\"}")], null));
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>()).Returns(
+            new AssistantChatResult(null, [new AssistantToolCall(AssistantPrompts.GenerateImagesToolName, "{\"prompt\":\"red fox\"}")], null));
         await _model.OnAppearingAsync();
         _model.InputText = "draw a red fox";
 
@@ -339,7 +340,7 @@ public class ChatPageModelTests
     [Fact]
     public async Task SendCommand_AssistantFailure_RestoresTextShowsAlertAndStopsBusy()
     {
-        _chat.CompleteChatAsync(Arg.Any<OpenRouterChatRequest>(), Arg.Any<CancellationToken>())
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new InvalidOperationException("no network"));
         await _model.OnAppearingAsync();
         _model.InputText = "draw a fox";
@@ -354,8 +355,8 @@ public class ChatPageModelTests
     [Fact]
     public async Task SendCommand_WhileSending_IsBusyShowsThinkingAndCannotSendAgain()
     {
-        var reply = new TaskCompletionSource<OpenRouterChatResult>();
-        _chat.CompleteChatAsync(Arg.Any<OpenRouterChatRequest>(), Arg.Any<CancellationToken>()).Returns(reply.Task);
+        var reply = new TaskCompletionSource<AssistantChatResult>();
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>()).Returns(reply.Task);
         await _model.OnAppearingAsync();
         _model.InputText = "draw a fox";
 
@@ -364,7 +365,7 @@ public class ChatPageModelTests
         Assert.True(_model.IsBusy);
         Assert.False(_model.SendCommand.CanExecute(null));
 
-        reply.SetResult(new OpenRouterChatResult("Here you go.", [], null));
+        reply.SetResult(new AssistantChatResult("Here you go.", [], null));
         await sending;
 
         Assert.False(_model.IsBusy);
