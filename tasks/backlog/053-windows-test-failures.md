@@ -1,6 +1,6 @@
 ---
 id: 053
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-28
@@ -53,3 +53,6 @@ scripts/check.sh
 
 ### 2026-10-28, ревью (claude, Windows)
 Оба теста падают стабильно (два прогона подряд). Остальное зелёное: Core 262, Data 59, Presentation 138 из 139, Avalonia 59 из 61 (1 пропуск — Secret Service). MAUI под Windows и Android, Avalonia — без предупреждений.
+
+### 2026-10-28, владелец (в чате, записал claude)
+План одобрен; делать на Windows.
