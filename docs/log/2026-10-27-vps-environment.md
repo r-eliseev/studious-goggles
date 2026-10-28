@@ -10,7 +10,7 @@
 ## Проверка на машине
 - .NET SDK 10.0.403, JDK 21.0.12, Android SDK (platforms;android-36, build-tools;36.0.0, platform-tools 37.0.1), нагрузка `maui-android`, Docker 29.9.2 с запущенным демоном.
 - `dotnet format --verify-no-changes` — чисто по всем пяти проектам: Core, Core.Tests, Data, Data.Tests, Maui.
-- Core.Tests 94 теста, Data.Tests 26 тестов — проходят.
+- Core.Tests 193 теста, Data.Tests 38 тестов — проходят (перепроверено на `main` от 2026-10-28, после задач 012–015; на 2026-10-27 их было 94 и 26).
 - MAUI, цель Android: APK собран на проекте (`com.companyname.imagegen.maui.apk`), 0 предупреждений.
 - Цель Windows: `NETSDK1100` без флагов, `NETSDK1005` с `-p:EnableWindowsTargeting=true` — подтверждено, что на Linux она не собирается.
 - Эмулятор: `emulator -accel-check` → «KVM requires a CPU that supports vmx or svm» (nested virtualization не проброшен, `/dev/kvm` нет).

@@ -8,7 +8,7 @@
 
 ## Что работает (проверено)
 - **.NET SDK 10.0.403** — та же версия, что в `docs/knowledge/claude-cloud-session.md`. Ставится в `/usr/share/dotnet` (в облачной сессии был `~/.dotnet`).
-- **Ядро и хранилище:** `dotnet build` и `dotnet test` проходят. На `main` от 2026-10-27: Core.Tests 94 теста, Data.Tests 26 тестов, все проходят.
+- **Ядро и хранилище:** `dotnet build` и `dotnet test` проходят. На `main` от 2026-10-28: Core.Tests 193 теста, Data.Tests 38 тестов, все проходят.
 - **`dotnet format --verify-no-changes`** проходит по всем пяти проектам: Core, Core.Tests, Data, Data.Tests, Maui.
 - **MAUI, цель Android:** `dotnet build -f net10.0-android` собирает APK (`com.companyname.imagegen.maui.apk` и `-Signed.apk`), 0 предупреждений. Нагрузка `maui-android` установлена.
 - **Android SDK:** command-line tools с `dl.google.com`, лицензии приняты, `platforms;android-36`, `build-tools;36.0.0`, `platform-tools` 37.0.1, пакет `emulator`.
