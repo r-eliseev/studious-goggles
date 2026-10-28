@@ -1,6 +1,6 @@
 ---
 id: 067
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-28
@@ -13,7 +13,7 @@ created: 2026-10-28
 
 Справочник: `docs/design/implementation.md` (ключи ресурсов, значения, шрифты, значки — дословно оттуда); токены: `docs/design/tokens.json`; макеты: `docs/design/prototype.html` (открыть: `python3 -m http.server` в `docs/design/`, затем http://localhost:8000/prototype.html; опубликованная версия — https://claude.ai/artifact/M9QzPf39KLkRFTnYBtCi6F); решение: ADR 0014.
 
-Зависит от: 066.
+Зависит от: 066, 072.
 Среда: Linux или Windows (Avalonia — headless-тесты на Linux; MAUI — сборка Android на Linux с Android SDK, Windows-цель собирает CI; запуск под Windows — ручная проверка 016, Avalonia на рабочем столе — 046).
 
 ## Критерии готовности
@@ -30,6 +30,7 @@ created: 2026-10-28
 ## План
 Для исполнителя (план рассчитан на небольшую модель): делай шаги строго по порядку, по TDD (сначала падающий тест, потом минимальный код), после каждого шага — сборка и тесты из «Проверки». Имена файлов, типов, ключей и строк переноси дословно. Если шаг не получается так, как написано (компилятор не принимает разметку, API другое), не придумывай обход: опиши в «Комментариях», что пробовал и что получилось, поставь `blocked` и остановись.
 
+0. Presentation: удаление сессии в `SessionsPageModel` вызывает `ConfirmAsync(..., destructive: true)` (перегрузка из 072). Тест `Delete_AsksDestructiveConfirm` (подмена `IDialogService` получила `destructive: true`).
 1. Presentation: `ICurrentSessionTracker` (`Guid? CurrentId`, событие `Changed`) и реализация `CurrentSessionTracker` (синглтон); `ChatPageModel` сообщает свою сессию при загрузке; `SessionsPageModel` подписан и выставляет `SessionItemViewModel.IsCurrent`. Тесты: `OpenChat_MarksSessionCurrent`, `OpenAnotherChat_MovesMark`.
 2. `INavigationService`: если нужен, метод `ReplaceAsync(string route)` (заменить верхнюю страницу). Реализации в обеих оболочках и тест Avalonia навигации (`Services/Navigation`).
 3. Avalonia: `Views/SessionsListView.axaml` — левая колонка из 066 переносится сюда; `SessionsView` и `ChatView` включают её. `ChatView`: колонки 272 и `*`, обработчик ширины как в 066.

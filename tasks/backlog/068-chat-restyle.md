@@ -1,6 +1,6 @@
 ---
 id: 068
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-28
@@ -13,7 +13,7 @@ created: 2026-10-28
 
 Справочник: `docs/design/implementation.md` (ключи ресурсов, значения, шрифты, значки — дословно оттуда); токены: `docs/design/tokens.json`; макеты: `docs/design/prototype.html` (открыть: `python3 -m http.server` в `docs/design/`, затем http://localhost:8000/prototype.html; опубликованная версия — https://claude.ai/artifact/M9QzPf39KLkRFTnYBtCi6F); решение: ADR 0014.
 
-Зависит от: 063, 064, 067; лучше после 055 и 057 (меняют те же файлы чата).
+Зависит от: 055, 057, 063, 064, 067 (055 и 057 меняют те же файлы чата).
 Среда: Linux или Windows (Avalonia — headless-тесты на Linux; MAUI — сборка Android на Linux с Android SDK, Windows-цель собирает CI; запуск под Windows — ручная проверка 016, Avalonia на рабочем столе — 046).
 
 ## Критерии готовности

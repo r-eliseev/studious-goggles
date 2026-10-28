@@ -1,6 +1,6 @@
 ---
 id: 060
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-28

@@ -1,6 +1,6 @@
 ---
 id: 065
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-28
@@ -13,7 +13,7 @@ created: 2026-10-28
 
 Справочник: `docs/design/implementation.md` (ключи ресурсов, значения, шрифты, значки — дословно оттуда); токены: `docs/design/tokens.json`; макеты: `docs/design/prototype.html` (открыть: `python3 -m http.server` в `docs/design/`, затем http://localhost:8000/prototype.html; опубликованная версия — https://claude.ai/artifact/M9QzPf39KLkRFTnYBtCi6F); решение: ADR 0014.
 
-Зависит от: 059, 061, 062, 063, 064.
+Зависит от: 059, 061, 062, 063, 064, 067 (значок настроек ставится в общий список сессий из 067).
 Среда: Linux или Windows (Avalonia — headless-тесты на Linux; MAUI — сборка Android на Linux с Android SDK, Windows-цель собирает CI; запуск под Windows — ручная проверка 016, Avalonia на рабочем столе — 046).
 
 ## Критерии готовности
@@ -39,8 +39,8 @@ created: 2026-10-28
    - `PageModels/StyleOptionViewModel.cs`: `Style`, `Name`, `Hint`, `IsSelected` (observable), `SelectCommand`.
    - `PageModels/SettingsPageModel.cs`: конструктор `(AppearanceService appearance, ISecretStore secrets, INavigationService navigation, IFolderLauncher folders, IAppPaths paths)`; свойства `KeyText`, `Styles` (3 варианта), `SelectedTheme` (`AppearanceTheme`, двусторонняя привязка; при смене — `SaveAsync`), `CanOpenLogs`; команды `LoadCommand` (читает ключ и текущие настройки), `ChangeKeyCommand` (`GoToAsync(Routes.ApiKey)`), `OpenLogsCommand`.
    - Тесты `PageModels/SettingsPageModelTests.cs`: `Load_KeySaved_ShowsLastFourCharacters` (ключ `sk-or-v1-abcd1234` → "Connected · ends with 1234"), `Load_NoKey_ShowsNotConnected`, `SelectStyle_Gallery_SavesAndMarksSelected`, `SelectedTheme_Dark_Saves`, `ChangeKey_NavigatesToApiKey`, `OpenLogs_CallsLauncherWithLogFolder`, `CanOpenLogs_FollowsLauncher`.
-2. Avalonia: `Views/SettingsView.axaml` (+ `.cs`) по макету: заголовки разделов `TextBlock.title`, строки с разделителем `IgLineBrush`, карточки стилей — `ListBox` или три `RadioButton` в виде карточек (`Border` радиус `IgRadiusMd`, выбранная — рамка `IgAccentBrush` 2), тема — три `RadioButton` в группе с видом сегментов. Маршрут в `AppServices` (`PageRoutes.Add(Routes.Settings, ...)`, `AddTransient<SettingsPageModel>`), `IFolderLauncher` → `AvaloniaFolderLauncher`. Значок настроек (`TextBlock.icon` с `IconGlyphs.Settings`) в `SessionsView` рядом с «New session», `AutomationProperties.Name` = `SettingsTitle`. `MainWindow`: `KeyBinding` `Ctrl+OemComma` (на macOS `Meta+OemComma` — через `KeyGesture` `Cmd`? проверить при реализации) → переход на `Routes.Settings`.
-3. MAUI: `Pages/SettingsPage.xaml` (+ `.cs`) — та же разметка на `StyleClass` из 064; `ToolbarItem` с `FontImageSource` (`LucideIcons`, `IconGlyphs.Settings`) на `SessionsPage`; `MauiFolderLauncher` (`IsSupported` = `DeviceInfo.Idiom == DeviceIdiom.Desktop`).
+2. Avalonia: `Views/SettingsView.axaml` (+ `.cs`) по макету: заголовки разделов `TextBlock.title`, строки с разделителем `IgLineBrush`, карточки стилей — `ListBox` или три `RadioButton` в виде карточек (`Border` радиус `IgRadiusMd`, выбранная — рамка `IgAccentBrush` 2), тема — три `RadioButton` в группе с видом сегментов. Маршрут в `AppServices` (`PageRoutes.Add(Routes.Settings, ...)`, `AddTransient<SettingsPageModel>`), `IFolderLauncher` → `AvaloniaFolderLauncher`. Значок настроек (`Button.ghost.icon` с `TextBlock.icon` `IconGlyphs.Settings`) — в `Views/SessionsListView.axaml` (из 067) внизу колонки, `AutomationProperties.Name` = `SettingsTitle`; команда — новая `SessionsPageModel.OpenSettingsCommand` (`GoToAsync(Routes.Settings)`, тест `OpenSettings_Navigates`). `MainWindow`: `KeyBinding` `Ctrl+OemComma` (на macOS `Meta+OemComma` — через `KeyGesture` `Cmd`? проверить при реализации) → переход на `Routes.Settings`.
+3. MAUI: `Pages/SettingsPage.xaml` (+ `.cs`) — та же разметка на `StyleClass` из 064; `ToolbarItem` с `FontImageSource` (`LucideIcons`, `IconGlyphs.Settings`) на `SessionsPage` и та же кнопка внизу `Controls/SessionsListView.xaml` (из 067); `MauiFolderLauncher` (`IsSupported` = `DeviceInfo.Idiom == DeviceIdiom.Desktop`).
 4. Тесты Avalonia: `Flows/SettingsFlowTests.cs` — `OpenSettings_FromSessions_ShowsSettingsView`; `SelectGallery_ChangesAccentResource`; добавить экран настроек в `Views/ViewsAccessibilityTests` (`AssertNamed(shell, "настройки")`).
 5. Документация: `docs/specs/chat-sessions.md` S6.3 — экран называется «Settings», вход из списка сессий и `Ctrl/Cmd+,`; `docs/architecture.md` — новый маршрут и `IFolderLauncher`, если там перечислены маршруты и сервисы.
 
@@ -55,7 +55,7 @@ dotnet format ImageGen/ImageGen.Maui/ImageGen.Maui.csproj --verify-no-changes
 scripts/check.sh
 ```
 
-Файлы: `ImageGen/ImageGen.Presentation/{Routes.cs,Services/IFolderLauncher.cs,PageModels/SettingsPageModel.cs,PageModels/StyleOptionViewModel.cs,Resources/Strings/*}`, `ImageGen/ImageGen.Avalonia/{Views/SettingsView.*,Views/SessionsView.axaml,Views/MainWindow.*,Composition/AppServices.cs,Services/AvaloniaFolderLauncher.cs}`, `ImageGen/ImageGen.Maui/{Pages/SettingsPage.*,Pages/SessionsPage.xaml,MauiProgram.cs,Services/MauiFolderLauncher.cs}`, тесты, `docs/specs/chat-sessions.md`, `docs/architecture.md`
+Файлы: `ImageGen/ImageGen.Presentation/{Routes.cs,Services/IFolderLauncher.cs,PageModels/SettingsPageModel.cs,PageModels/StyleOptionViewModel.cs,Resources/Strings/*}`, `ImageGen/ImageGen.Presentation/PageModels/SessionsPageModel.cs`, `ImageGen/ImageGen.Avalonia/{Views/SettingsView.*,Views/SessionsListView.axaml,Views/MainWindow.*,Composition/AppServices.cs,Services/AvaloniaFolderLauncher.cs}`, `ImageGen/ImageGen.Maui/{Pages/SettingsPage.*,Pages/SessionsPage.xaml,Controls/SessionsListView.xaml,MauiProgram.cs,Services/MauiFolderLauncher.cs}`, тесты, `docs/specs/chat-sessions.md`, `docs/architecture.md`
 
 ## Отчёт
 
