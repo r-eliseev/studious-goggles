@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                    x:Class="ImageGen.Maui.Resources.Themes.QuietDark">
+  <!-- Quiet Dark: sections 2.1, 2.2 and 2.4 of docs/design/implementation.md. Generated from docs/design/tokens.json. -->
+  <Color x:Key="IgBgColor">#16191D</Color>
+  <Color x:Key="IgSurfaceColor">#1E2228</Color>
+  <Color x:Key="IgSunkenColor">#121417</Color>
+  <Color x:Key="IgFgColor">#E6E9ED</Color>
+  <Color x:Key="IgMutedColor">#9AA3AE</Color>
+  <Color x:Key="IgLineColor">#2E343C</Color>
+  <Color x:Key="IgControlColor">#6A7480</Color>
+  <Color x:Key="IgAccentColor">#79A6F2</Color>
+  <Color x:Key="IgOnAccentColor">#0B1424</Color>
+  <Color x:Key="IgAccentSoftColor">#1F2D45</Color>
+  <Color x:Key="IgOkColor">#4CC38A</Color>
+  <Color x:Key="IgErrColor">#F97066</Color>
+  <Color x:Key="IgErrSoftColor">#3A1F1E</Color>
+  <Color x:Key="IgWarnColor">#E8B34B</Color>
+  <Color x:Key="IgWarnSoftColor">#382C16</Color>
+  <Color x:Key="IgPlaceholderColor">#262B32</Color>
+  <SolidColorBrush x:Key="IgBgBrush" Color="#16191D" />
+  <SolidColorBrush x:Key="IgSurfaceBrush" Color="#1E2228" />
+  <SolidColorBrush x:Key="IgSunkenBrush" Color="#121417" />
+  <SolidColorBrush x:Key="IgFgBrush" Color="#E6E9ED" />
+  <SolidColorBrush x:Key="IgMutedBrush" Color="#9AA3AE" />
+  <SolidColorBrush x:Key="IgLineBrush" Color="#2E343C" />
+  <SolidColorBrush x:Key="IgControlBrush" Color="#6A7480" />
+  <SolidColorBrush x:Key="IgAccentBrush" Color="#79A6F2" />
+  <SolidColorBrush x:Key="IgOnAccentBrush" Color="#0B1424" />
+  <SolidColorBrush x:Key="IgAccentSoftBrush" Color="#1F2D45" />
+  <SolidColorBrush x:Key="IgOkBrush" Color="#4CC38A" />
+  <SolidColorBrush x:Key="IgErrBrush" Color="#F97066" />
+  <SolidColorBrush x:Key="IgErrSoftBrush" Color="#3A1F1E" />
+  <SolidColorBrush x:Key="IgWarnBrush" Color="#E8B34B" />
+  <SolidColorBrush x:Key="IgWarnSoftBrush" Color="#382C16" />
+  <SolidColorBrush x:Key="IgPlaceholderBrush" Color="#262B32" />
+  <x:Double x:Key="IgFontSizeBody">14</x:Double>
+  <CornerRadius x:Key="IgRadiusSm">6</CornerRadius>
+  <CornerRadius x:Key="IgRadiusMd">8</CornerRadius>
+  <CornerRadius x:Key="IgRadiusLg">12</CornerRadius>
+  <CornerRadius x:Key="IgRadiusControl">6</CornerRadius>
+  <x:Double x:Key="IgCardGap">12</x:Double>
+  <x:String x:Key="IgFontText"></x:String>
+  <x:String x:Key="IgFontMeta"></x:String>
+  <SolidColorBrush x:Key="IgUserMessageBackgroundBrush" Color="Transparent" />
+  <x:Static x:Key="IgUserMessageAlignment" Member="LayoutOptions.Start" />
+  <Thickness x:Key="IgUserMessagePadding">0</Thickness>
+  <CornerRadius x:Key="IgUserMessageCornerRadius">0</CornerRadius>
+  <x:Boolean x:Key="IgUserMessageRoleVisible">True</x:Boolean>
+  <x:String x:Key="IgRoleFont"></x:String>
+  <Thickness x:Key="IgRunBorderThickness">0</Thickness>
+  <Thickness x:Key="IgRunPadding">0</Thickness>
+  <SolidColorBrush x:Key="IgPromptBackgroundBrush" Color="Transparent" />
+  <SolidColorBrush x:Key="IgPromptForegroundBrush" Color="#9AA3AE" />
+  <Thickness x:Key="IgPromptPadding">0</Thickness>
+  <x:Static x:Key="IgPromptFontStyle" Member="FontAttributes.Italic" />
+  <x:String x:Key="IgPromptFont"></x:String>
+  <Thickness x:Key="IgCardBorderThickness">1</Thickness>
+  <SolidColorBrush x:Key="IgCardBackgroundBrush" Color="#1E2228" />
+  <CornerRadius x:Key="IgCardImageCornerRadius">0</CornerRadius>
+  <x:Boolean x:Key="IgCardShowFullMeta">True</x:Boolean>
+  <x:Boolean x:Key="IgCardShowOverlay">False</x:Boolean>
+</ResourceDictionary>

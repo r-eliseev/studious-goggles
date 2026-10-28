@@ -5,6 +5,7 @@ using ImageGen.Data;
 using ImageGen.Maui.Pages;
 using ImageGen.Maui.Services;
 using ImageGen.Presentation;
+using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.Logging;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Services;
@@ -73,6 +74,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<INavigationService, ShellNavigationService>();
         builder.Services.AddSingleton<IMainThread, MauiMainThread>();
         builder.Services.AddSingleton<IFilePickerService, MauiFilePickerService>();
+        builder.Services.AddSingleton<AppearanceService>();
+        builder.Services.AddSingleton<MauiAppearanceApplier>();
 
         // Pages and page models
         builder.Services.AddSingleton<SessionsPageModel>();

@@ -1,6 +1,6 @@
 ---
 id: 062
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -61,5 +61,20 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Presentation/Appearance/ThemeSelection.cs`, `ImageGen/ImageGen.Maui/Resources/Themes/*`, `ImageGen/ImageGen.Maui/App.xaml`, `App.xaml.cs`, `MauiProgram.cs`, `Services/MauiAppearanceApplier.cs`, тесты, `tasks/v0.1/016-skeleton-manual-check.md`
 
 ## Отчёт
+
+Сделано:
+- `ImageGen.Presentation/Appearance/ThemeSelection.cs`: `IsDark(theme, systemIsDark)`, `DictionaryName(style, isDark)`; тесты `ThemeSelectionTests` (9 случаев).
+- `ImageGen.Maui/Resources/Themes/Common.xaml` (раздел 2.3 через `OnPlatform`, кроме `IgFontSizeBody`) и шесть `<Стиль><Тема>.xaml` с `.xaml.cs` (`x:Class`): 16 `Color`, 16 `SolidColorBrush`, радиусы и `IgCardGap` из `tokens.json`, `IgFontSizeBody` через `OnPlatform`, варианты 2.4. Файлы сгенерированы из `tokens.json` скриптом вне репозитория (лежал в `tmp/`).
+- `Services/MauiAppearanceApplier.cs`: `Apply(application, settings)` (`UserAppTheme`, словарь по `DictionaryName`, замена предыдущего в `MergedDictionaries`), `Start(application)` (применяет сохранённое, следит за `Changed` и `RequestedThemeChanged`, вызов через `MainThread.BeginInvokeOnMainThread`).
+- `App.xaml`: `Common.xaml` в `MergedDictionaries` после шаблонных словарей. `App.xaml.cs`: `Start` вызывается в `CreateWindow` через `Handler.MauiContext.Services`.
+- `MauiProgram.cs`: `AppearanceService` и `MauiAppearanceApplier` как синглтоны.
+- Тест `ImageGen.Presentation.Tests/Design/MauiThemeTokensTests.cs`: XML-разбор шести словарей и Common — цвета совпадают с `tokens.json`, наборы ключей одинаковые.
+- `tasks/v0.1/016-skeleton-manual-check.md`: пункты ручной проверки на Windows (смена стиля и темы, системная тема).
+
+Отличия от плана:
+- В план была инжекция `MauiAppearanceApplier` в конструктор `App`. Шаблон MAUI здесь не регистрирует `App` в DI (`CreateMauiApp` без `UseMauiApp<App>`), поэтому сервис берётся из `Handler.MauiContext.Services` в `CreateWindow`.
+- Тест `Common_HasPlatformTypeScale` проверяет только наличие ключей, не значения по платформе.
+
+Проверка: `ImageGen.Presentation.Tests` 178/178; сборка `ImageGen.Maui` для `net10.0-android` — успешно (XAML всех словарей скомпилирован); `dotnet format --verify-no-changes` для MAUI, Presentation и его тестов — без изменений. Смена темы на устройстве и в окне Windows не проверена (016).
 
 ## Комментарии

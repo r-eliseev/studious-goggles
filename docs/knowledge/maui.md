@@ -103,3 +103,4 @@
 ## Что MAUI не даёт для этого проекта
 - Linux, Docker и веб: поэтому Web API + Vue вынесены в отдельную оболочку (`docs/architecture.md`, ADR 0001).
 - Шифрованная БД и фоновые сервисы: нужны отдельные решения.
+- **Темы MAUI без ThemeDictionaries (задача 062, собрано на Android):** `ResourceDictionary` с `ThemeDictionaries` в MAUI нет, поэтому шесть словарей (`Resources/Themes/<Стиль><Тема>.xaml` с code-behind) подменяются в `Application.Resources.MergedDictionaries` (`Services/MauiAppearanceApplier.cs`). Тема приложения — `Application.UserAppTheme`; системная — `Application.PlatformAppTheme` (не `RequestedTheme`: он показывает уже выбранную явно тему). Значения по платформе — `OnPlatform` (`WinUI`, `MacCatalyst`, `iOS`, `Android`); выравнивание и стиль шрифта — `x:Static` (`LayoutOptions.End`, `FontAttributes.Italic`).
