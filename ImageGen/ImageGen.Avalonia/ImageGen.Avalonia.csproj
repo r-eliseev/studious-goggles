@@ -14,6 +14,10 @@
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
   </ItemGroup>
   <ItemGroup>
+    <AvaloniaResource Include="Assets\Fonts\**" />
+    <AvaloniaResource Include="Assets\Licenses\**" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../ImageGen.Core/ImageGen.Core.csproj" />
     <ProjectReference Include="../ImageGen.Data/ImageGen.Data.csproj" />
     <ProjectReference Include="../ImageGen.Presentation/ImageGen.Presentation.csproj" />

@@ -35,10 +35,23 @@ public static class MauiProgram
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                fonts.AddFont("Onest-Regular.ttf", "OnestRegular");
+                fonts.AddFont("Onest-Medium.ttf", "OnestMedium");
+                fonts.AddFont("Onest-SemiBold.ttf", "OnestSemiBold");
+                fonts.AddFont("IBMPlexSans-Regular.ttf", "PlexSansRegular");
+                fonts.AddFont("IBMPlexSans-Medium.ttf", "PlexSansMedium");
+                fonts.AddFont("IBMPlexSans-SemiBold.ttf", "PlexSansSemiBold");
+                fonts.AddFont("IBMPlexMono-Regular.ttf", "PlexMonoRegular");
+                fonts.AddFont("IBMPlexMono-Medium.ttf", "PlexMonoMedium");
+                fonts.AddFont("lucide.ttf", "LucideIcons");
             });
 
 #if WINDOWS
         ImageGen.Maui.Platforms.Windows.ChatEditorKeyHandling.Register();
+#endif
+
+#if ANDROID
+        ImageGen.Maui.Platforms.Android.ChatEditorImeHandling.Register();
 #endif
 
         var paths = new MauiAppPaths();

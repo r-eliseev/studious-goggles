@@ -1,6 +1,6 @@
 ---
 id: 060
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -62,5 +62,17 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Maui/Resources/Fonts/*`, `ImageGen/ImageGen.Maui/Resources/Licenses/*`, `ImageGen/ImageGen.Maui/MauiProgram.cs`, `ImageGen/ImageGen.Avalonia/Assets/**`, `ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj`, `ImageGen/ImageGen.Presentation/Appearance/IconGlyphs.cs`, тесты, `docs/design/README.md`
 
 ## Отчёт
+
+Сделано:
+- Шрифты: восемь статических начертаний нарезаны из переменных шрифтов (`fonttools` 4.55.0, `varLib.instancer --update-name-table`) и `lucide.ttf` (lucide-static 1.56.0). Имена внутри файлов совпадают с разделом 3 справочника (`Onest Medium`, `IBM Plex Sans SemiBold` и т. д.).
+- MAUI: `Resources/Fonts/` (9 файлов, подхватываются правилом `MauiFont`), `MauiProgram.cs` — 9 вызовов `AddFont` с псевдонимами из раздела 3 (`OpenSans` оставлен для шаблонных стилей до задачи 064). Лицензии — `Resources/Licenses/`.
+- Avalonia: `Assets/Fonts/` (9 файлов) и `Assets/Licenses/`; в `ImageGen.Avalonia.csproj` — `AvaloniaResource` для обеих папок.
+- Presentation: `Appearance/IconGlyphs.cs` сгенерирован из таблицы раздела 5 (30 значков, а не 44 — число взято из таблицы).
+- Тесты: `IconGlyphsTests` (одиночные символы из области PUA, уникальность, число значков, `Plus` = U+E13D); `FontAssetsTests` (AssetLoader видит все 9 шрифтов и 4 лицензии).
+- `docs/design/README.md`: где лежат шрифты и лицензии.
+
+Не сделано из плана: тест `Fonts_HaveExpectedFamilyNames` через `FontManager` (не добавлен; проверено только наличие ресурсов и имена внутри файлов инструментом).
+
+Проверка: `ImageGen.Presentation.Tests` 163/163, `ImageGen.Avalonia.Tests` 61/61, `dotnet build ImageGen/ImageGen.Avalonia` — успешно, `dotnet build ImageGen/ImageGen.Maui -f net10.0-android` — успешно (Android SDK 36 и `maui-android` поставлены в эту сессию), `dotnet format --verify-no-changes` для Presentation, Presentation.Tests, Avalonia, Avalonia.Tests, MAUI — без изменений. Внешний вид шрифтов в окне не проверен (задача 016, 046).
 
 ## Комментарии
