@@ -78,6 +78,14 @@
                                                             Command="{Binding EditCommand}"
                                                             Margin="0,0,6,6"
                                                             SemanticProperties.Description="{x:Static strings:AppResources.Edit}" />
+                                                    <Button Text="{x:Static strings:AppResources.DescribeButton}"
+                                                            Command="{Binding DescribeCommand}"
+                                                            Margin="0,0,6,6"
+                                                            SemanticProperties.Description="{x:Static strings:AppResources.DescribeButton}" />
+                                                    <Button Text="{x:Static strings:AppResources.DescribePromptButton}"
+                                                            Command="{Binding DescribePromptCommand}"
+                                                            Margin="0,0,6,6"
+                                                            SemanticProperties.Description="{x:Static strings:AppResources.DescribePromptButton}" />
                                                 </FlexLayout>
                                             </VerticalStackLayout>
                                         </Border>
@@ -92,10 +100,14 @@
     </ContentPage.Resources>
 
     <Grid RowDefinitions="Auto,*,Auto,Auto" Padding="16" RowSpacing="12">
-        <Button Text="{Binding ModelsButtonText}"
-                Command="{Binding OpenModelsCommand}"
-                HorizontalOptions="Start"
-                SemanticProperties.Description="{Binding ModelsButtonText}" />
+        <HorizontalStackLayout Spacing="8" HorizontalOptions="Start">
+            <Button Text="{Binding ModelsButtonText}"
+                    Command="{Binding OpenModelsCommand}"
+                    SemanticProperties.Description="{Binding ModelsButtonText}" />
+            <Button Text="{x:Static strings:AppResources.ChatParametersButton}"
+                    Command="{Binding OpenParametersCommand}"
+                    SemanticProperties.Description="{x:Static strings:AppResources.ChatParametersButton}" />
+        </HorizontalStackLayout>
 
         <CollectionView Grid.Row="1"
                         ItemsSource="{Binding Items}"
@@ -108,18 +120,46 @@
             <Label Text="{x:Static strings:AppResources.AssistantThinking}" VerticalTextAlignment="Center" />
         </HorizontalStackLayout>
 
-        <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-            <Editor Text="{Binding InputText}"
-                    Placeholder="{x:Static strings:AppResources.ChatPlaceholder}"
-                    AutoSize="TextChanges"
-                    MaximumHeightRequest="160"
-                    SemanticProperties.Description="{x:Static strings:AppResources.ChatPlaceholder}" />
+        <VerticalStackLayout Grid.Row="3" Spacing="6">
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="{x:Static strings:AppResources.AttachImageButton}"
+                        Command="{Binding AttachImageCommand}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.AttachImageButton}" />
+                <Label Text="{Binding AttachmentsText}" VerticalTextAlignment="Center" />
+            </HorizontalStackLayout>
 
-            <Button Grid.Column="1"
-                    Text="{x:Static strings:AppResources.Send}"
-                    Command="{Binding SendCommand}"
-                    VerticalOptions="End"
-                    SemanticProperties.Description="{x:Static strings:AppResources.Send}" />
-        </Grid>
+            <CollectionView ItemsSource="{Binding PendingAttachments}"
+                            IsVisible="{Binding PendingAttachments.Count}"
+                            SelectionMode="None">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="pm:PendingAttachment">
+                        <HorizontalStackLayout Spacing="4">
+                            <Label Text="{Binding FileName}" VerticalTextAlignment="Center" />
+                            <Button Text="{x:Static strings:AppResources.RemoveAttachment}"
+                                    Command="{Binding Remove}"
+                                    CommandParameter="{Binding}"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.RemoveAttachment}" />
+                        </HorizontalStackLayout>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <Editor Text="{Binding InputText}"
+                        Placeholder="{x:Static strings:AppResources.ChatPlaceholder}"
+                        AutoSize="TextChanges"
+                        MaximumHeightRequest="160"
+                        SemanticProperties.Description="{x:Static strings:AppResources.ChatPlaceholder}" />
+
+                <Button Grid.Column="1"
+                        Text="{x:Static strings:AppResources.Send}"
+                        Command="{Binding SendCommand}"
+                        VerticalOptions="End"
+                        SemanticProperties.Description="{x:Static strings:AppResources.Send}" />
+            </Grid>
+        </VerticalStackLayout>
     </Grid>
 </ContentPage>

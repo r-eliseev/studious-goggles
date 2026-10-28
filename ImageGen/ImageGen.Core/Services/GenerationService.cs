@@ -19,6 +19,7 @@ public sealed class GenerationService(
     IImageFileStore files,
     ModelCatalogService catalog,
     ISeedSource seeds,
+    AttachmentService attachments,
     TimeProvider timeProvider,
     ILogger<GenerationService> logger)
 {
@@ -33,6 +34,22 @@ public sealed class GenerationService(
     /// <summary>Starts a run of the session with its image models and <c>RunsPerModel</c> shared seeds.</summary>
     public async Task<Run> StartRunAsync(Guid sessionId, string prompt, CancellationToken cancellationToken)
     {
+        var result = await StartRunWithAttachmentsAsync(sessionId, prompt, [], cancellationToken);
+        return result.Run ?? throw new InvalidOperationException("No model of the session takes the requested input.");
+    }
+
+    /// <summary>
+    /// Starts a run with the user's attached images as reference images (task 018). A model that takes no references is
+    /// skipped with a reason; a model with a limit gets the first attachments up to its limit. Returns no run when every
+    /// model was skipped.
+    /// </summary>
+    public async Task<StartRunResult> StartRunWithAttachmentsAsync(
+        Guid sessionId,
+        string prompt,
+        IReadOnlyList<Guid> attachmentIds,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(attachmentIds);
         var text = NormalizePrompt(prompt);
         var session = await GetSessionAsync(sessionId, cancellationToken);
         if (session.Settings.ImageModels.Count == 0)
@@ -41,32 +58,51 @@ public sealed class GenerationService(
         }
 
         var seedValues = Enumerable.Range(0, session.Settings.RunsPerModel).Select(_ => seeds.NextSeed()).ToArray();
-        var pairs = new List<(ModelRef Model, long Seed)>();
+        var pairs = new List<(ModelRef Model, long Seed, IReadOnlyList<Guid> References)>();
+        var skipped = new List<SkippedModel>();
+        var notSent = 0;
         foreach (var model in session.Settings.ImageModels)
         {
+            var limit = ReferenceImageLimit.Of(await ReadModelAsync(model, cancellationToken));
+            if (attachmentIds.Count > 0 && limit == 0)
+            {
+                skipped.Add(new SkippedModel(model, ModelSkipReason.NoReferenceSupport));
+                continue;
+            }
+
+            var references = attachmentIds.Take(limit).ToList();
+            notSent = Math.Max(notSent, attachmentIds.Count - references.Count);
             foreach (var seed in seedValues)
             {
-                pairs.Add((model, seed));
+                pairs.Add((model, seed, references));
             }
         }
 
-        return await CreateRunAsync(sessionId, text, RunOrigin.Assistant, pairs, cancellationToken);
+        if (pairs.Count == 0)
+        {
+            return new StartRunResult(null, skipped, notSent);
+        }
+
+        var run = await CreateRunAsync(sessionId, text, RunOrigin.Assistant, pairs, session.Settings.Parameters, cancellationToken);
+        return new StartRunResult(run, skipped, notSent);
     }
 
     /// <summary>New run from one generation: same prompt, model and seed.</summary>
     public async Task<Run> RepeatAsync(Guid generationId, CancellationToken cancellationToken)
     {
         var source = await GetSourceAsync(generationId, cancellationToken);
+        var requested = await GetRunParametersAsync(source.RunId, cancellationToken);
         return await CreateRunAsync(source.SessionId, source.Prompt, RunOrigin.Repeat,
-            [(SourceModel(source), source.Seed)], cancellationToken);
+            [(SourceModel(source), source.Seed, source.ReferenceAttachmentIds)], requested, cancellationToken);
     }
 
     /// <summary>New run from one generation: same prompt and model, new random seed.</summary>
     public async Task<Run> NewSeedAsync(Guid generationId, CancellationToken cancellationToken)
     {
         var source = await GetSourceAsync(generationId, cancellationToken);
+        var requested = await GetRunParametersAsync(source.RunId, cancellationToken);
         return await CreateRunAsync(source.SessionId, source.Prompt, RunOrigin.NewSeed,
-            [(SourceModel(source), seeds.NextSeed())], cancellationToken);
+            [(SourceModel(source), seeds.NextSeed(), source.ReferenceAttachmentIds)], requested, cancellationToken);
     }
 
     /// <summary>New run from one generation: new prompt, same model and seed.</summary>
@@ -74,8 +110,9 @@ public sealed class GenerationService(
     {
         var text = NormalizePrompt(newPrompt);
         var source = await GetSourceAsync(generationId, cancellationToken);
+        var requested = await GetRunParametersAsync(source.RunId, cancellationToken);
         return await CreateRunAsync(source.SessionId, text, RunOrigin.Edit,
-            [(SourceModel(source), source.Seed)], cancellationToken);
+            [(SourceModel(source), source.Seed, source.ReferenceAttachmentIds)], requested, cancellationToken);
     }
 
     /// <summary>Marks generations left unfinished by a previous app session as Failed with <see cref="ErrorKind.Interrupted"/>.</summary>
@@ -114,11 +151,17 @@ public sealed class GenerationService(
         await runs.GetGenerationAsync(generationId, cancellationToken)
         ?? throw new InvalidOperationException($"Generation {generationId} not found.");
 
+    /// <summary>Parameters the source run asked for. Repeat, new seed and edit use them, not the current session settings.</summary>
+    private async Task<GenerationParameters> GetRunParametersAsync(Guid runId, CancellationToken cancellationToken) =>
+        (await runs.GetRunAsync(runId, cancellationToken))?.Parameters
+        ?? throw new InvalidOperationException($"Run {runId} not found.");
+
     private async Task<Run> CreateRunAsync(
         Guid sessionId,
         string prompt,
         RunOrigin origin,
-        IReadOnlyList<(ModelRef Model, long Seed)> pairs,
+        IReadOnlyList<(ModelRef Model, long Seed, IReadOnlyList<Guid> References)> pairs,
+        GenerationParameters requested,
         CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
@@ -129,17 +172,18 @@ public sealed class GenerationService(
             Prompt = prompt,
             Origin = origin,
             CreatedAt = now,
+            Parameters = requested,
         };
 
-        var seedSupport = new Dictionary<ModelRef, bool>();
+        var models = new Dictionary<ModelRef, ImageModel?>();
         var generations = new List<Generation>(pairs.Count);
         for (var index = 0; index < pairs.Count; index++)
         {
-            var (model, seed) = pairs[index];
-            if (!seedSupport.TryGetValue(model, out var supportsSeed))
+            var (model, seed, references) = pairs[index];
+            if (!models.TryGetValue(model, out var image))
             {
-                supportsSeed = await ReadSeedSupportAsync(model, cancellationToken);
-                seedSupport[model] = supportsSeed;
+                image = await ReadModelAsync(model, cancellationToken);
+                models[model] = image;
             }
 
             generations.Add(new Generation
@@ -151,10 +195,12 @@ public sealed class GenerationService(
                 ModelId = model.ModelId,
                 Prompt = prompt,
                 Seed = seed,
-                SeedApplied = supportsSeed,
+                SeedApplied = image?.SupportsSeed ?? false,
                 Status = GenerationStatus.Queued,
                 CreatedAt = now,
                 SortOrder = index,
+                Outcomes = GenerationParameterPlanner.Plan(requested, image),
+                ReferenceAttachmentIds = references,
             });
         }
 
@@ -174,16 +220,16 @@ public sealed class GenerationService(
         return run;
     }
 
-    /// <summary>An unknown provider or model does not send a seed; the generation itself reports the error later.</summary>
-    private async Task<bool> ReadSeedSupportAsync(ModelRef model, CancellationToken cancellationToken)
+    /// <summary>An unknown provider or model gives null: no seed is sent and every requested parameter is dropped as unknown.</summary>
+    private async Task<ImageModel?> ReadModelAsync(ModelRef model, CancellationToken cancellationToken)
     {
         try
         {
-            return (await catalog.FindAsync(model, cancellationToken))?.SupportsSeed ?? false;
+            return await catalog.FindAsync(model, cancellationToken);
         }
         catch (ProviderException)
         {
-            return false;
+            return null;
         }
     }
 
@@ -229,12 +275,35 @@ public sealed class GenerationService(
 
     private async Task GenerateAndStoreAsync(Generation generation)
     {
+        IReadOnlyList<string> references;
         try
         {
+            references = await ReadReferencesAsync(generation);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException)
+        {
+            logger.LogWarning(ex, "Reference image of generation {GenerationId} is missing or unreadable.", generation.Id);
+            generation.Status = GenerationStatus.Failed;
+            generation.ErrorKind = ErrorKind.Unknown;
+            generation.ErrorMessage = "Reference image is missing or unreadable.";
+            return;
+        }
+
+        try
+        {
+            // Only the values the plan accepted are sent: a dropped parameter is not in the request.
+            var sent = generation.Outcomes
+                .Where(o => o.Sent is not null)
+                .ToDictionary(o => o.Name, o => o.Sent!, StringComparer.Ordinal);
             var request = new ImageGenerationRequest(
                 generation.ModelId,
                 generation.Prompt,
-                generation.SeedApplied ? generation.Seed : null);
+                generation.SeedApplied ? generation.Seed : null,
+                sent.GetValueOrDefault(GenerationParameterPlanner.AspectRatioName),
+                sent.GetValueOrDefault(GenerationParameterPlanner.ResolutionName),
+                sent.GetValueOrDefault(GenerationParameterPlanner.OutputFormatName),
+                sent.GetValueOrDefault(GenerationParameterPlanner.QualityName),
+                references);
             var provider = providers.GetImageProvider(generation.ProviderId);
             var result = await provider.GenerateAsync(request, CancellationToken.None).ConfigureAwait(false);
 
@@ -281,6 +350,17 @@ public sealed class GenerationService(
         }
     }
 
+    private async Task<IReadOnlyList<string>> ReadReferencesAsync(Generation generation)
+    {
+        var urls = new List<string>(generation.ReferenceAttachmentIds.Count);
+        foreach (var attachmentId in generation.ReferenceAttachmentIds)
+        {
+            urls.Add(await attachments.ReadDataUrlAsync(attachmentId, CancellationToken.None));
+        }
+
+        return urls;
+    }
+
     /// <summary>Saves the generation, then raises the event with a copy. A failed save is logged and not reported.</summary>
     private async Task SaveAndNotifyAsync(Generation generation)
     {
@@ -324,5 +404,7 @@ public sealed class GenerationService(
         CreatedAt = g.CreatedAt,
         CompletedAt = g.CompletedAt,
         SortOrder = g.SortOrder,
+        Outcomes = g.Outcomes,
+        ReferenceAttachmentIds = g.ReferenceAttachmentIds,
     };
 }

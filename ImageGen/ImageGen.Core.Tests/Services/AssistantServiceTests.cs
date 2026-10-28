@@ -30,6 +30,8 @@ public class AssistantServiceTests
     private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
     private readonly List<ChatMessage> _stored = [];
     private readonly List<Run> _storedRuns = [];
+    private readonly List<Generation> _storedGenerations = [];
+    private readonly IChatAttachmentRepository _chatAttachments = Substitute.For<IChatAttachmentRepository>();
     private readonly Session _session;
     private readonly GenerationService _generations;
     private readonly CapturingLogger<AssistantService> _logger = new();
@@ -83,15 +85,233 @@ public class AssistantServiceTests
             });
         _runs.ListRunsBySessionAsync(_session.Id, Arg.Any<CancellationToken>())
             .Returns(_ => Task.FromResult<IReadOnlyList<Run>>(_storedRuns.ToList()));
+        _runs.ListGenerationsBySessionAsync(_session.Id, Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromResult<IReadOnlyList<Generation>>(_storedGenerations.ToList()));
+        _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ChatModel>>([]));
+        _files.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns([1, 2, 3]);
 
         var sessionService = new SessionService(_sessions, _messages, _runs, _files, time);
+        var attachments = new AttachmentService(_chatAttachments, _files, time);
         _generations = new GenerationService(
-            _sessions, _runs, _providers, _files, catalog, _seeds, time, NullLogger<GenerationService>.Instance);
+            _sessions, _runs, _providers, _files, catalog, _seeds, attachments, time, NullLogger<GenerationService>.Instance);
+        var chatModels = new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance);
         _service = new AssistantService(
-            sessionService, _messages, _runs, _providers, _generations, time, _logger);
+            sessionService, _messages, _runs, _providers, _generations, chatModels, _files, attachments, time, _logger);
     }
 
     private ChatMessage AssistantMessage => _stored.Last();
+
+    private static readonly DateTimeOffset ImagesNow = new(2026, 10, 28, 12, 0, 0, TimeSpan.Zero);
+
+    /// <summary>Stores a run with the given generations (sort order, status, image path); the last stored run is the current one.</summary>
+    private void AddRunWithGenerations(params (int SortOrder, GenerationStatus Status, string? ImagePath)[] generations)
+    {
+        var run = new Run
+        {
+            Id = Guid.NewGuid(),
+            SessionId = _session.Id,
+            Prompt = "fox",
+            Origin = RunOrigin.Assistant,
+            CreatedAt = ImagesNow.AddMinutes(-5),
+        };
+        _storedRuns.Add(run);
+        _storedGenerations.AddRange(generations.Select(g => new Generation
+        {
+            Id = Guid.NewGuid(),
+            RunId = run.Id,
+            SessionId = _session.Id,
+            ProviderId = ProviderIds.OpenRouter,
+            ModelId = ImageModel,
+            Prompt = "fox",
+            Seed = 1,
+            SeedApplied = true,
+            Status = g.Status,
+            ImagePath = g.ImagePath,
+            MediaType = "image/png",
+            CreatedAt = ImagesNow,
+            SortOrder = g.SortOrder,
+        }));
+    }
+
+    private void AssistantAcceptsImages() =>
+        _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ChatModel>>(
+            [new ChatModel(AssistantModel, "Assistant", SupportsImageInput: true, ContextLength: 1000)]));
+
+    private ChatAttachment UserAttachment()
+    {
+        var attachment = new ChatAttachment
+        {
+            Id = Guid.NewGuid(),
+            SessionId = _session.Id,
+            RelativePath = $"images/{_session.Id:N}/attachments/{Guid.NewGuid():N}.png",
+            MediaType = "image/png",
+            CreatedAt = ImagesNow,
+        };
+        _chatAttachments.GetAsync(attachment.Id, Arg.Any<CancellationToken>()).Returns(attachment);
+        _files.ReadAsync(attachment.RelativePath, Arg.Any<CancellationToken>()).Returns([7, 7]);
+        return attachment;
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_WithAttachment_LinksItAndSendsItToAssistantThatTakesImages()
+    {
+        AssistantAcceptsImages();
+        var attachment = UserAttachment();
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "look at this", [attachment.Id], TestContext.Current.CancellationToken);
+
+        await _chatAttachments.Received(1).LinkToMessageAsync(
+            Arg.Is<IReadOnlyList<Guid>>(ids => ids.SequenceEqual(new[] { attachment.Id })),
+            result.UserMessage.Id,
+            Arg.Any<CancellationToken>());
+        var user = LastRequest.Messages.Last(m => m.Role == AssistantChatMessage.UserRole);
+        Assert.Equal("data:image/png;base64,Bwc=", Assert.Single(user.ImageDataUrls));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_OnlyAttachmentAndNoText_IsAccepted()
+    {
+        AssistantAcceptsImages();
+        var attachment = UserAttachment();
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, " ", [attachment.Id], TestContext.Current.CancellationToken);
+
+        Assert.Equal(string.Empty, result.UserMessage.Text);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_NoTextAndNoAttachment_Throws()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.SendUserMessageAsync(_session.Id, " ", [], TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_MoreThanFourAttachments_Throws()
+    {
+        var ids = Enumerable.Range(0, 5).Select(_ => Guid.NewGuid()).ToList();
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.SendUserMessageAsync(_session.Id, "x", ids, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_GenerateWithAttachmentsAndNoReferenceModel_ReplyIsErrorWithReason()
+    {
+        var attachment = UserAttachment();
+        ReplyWithToolCall("{\"prompt\":\"a fox\"}");
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "draw", [attachment.Id], TestContext.Current.CancellationToken);
+
+        Assert.Null(result.Run);
+        Assert.True(result.AssistantMessage.IsError);
+        Assert.Contains("does not take reference images", result.AssistantMessage.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_AssistantAcceptsImages_AttachesRunImagesToCurrentUserMessage()
+    {
+        AssistantAcceptsImages();
+        AddRunWithGenerations((1, GenerationStatus.Succeeded, "images/b.png"), (0, GenerationStatus.Succeeded, "images/a.png"));
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "make it red", TestContext.Current.CancellationToken);
+
+        var user = LastRequest.Messages.Last(m => m.Role == AssistantChatMessage.UserRole);
+        Assert.Equal("make it red", user.Text);
+        Assert.Equal(2, user.ImageDataUrls.Count);
+        Assert.All(user.ImageDataUrls, url => Assert.StartsWith("data:image/png;base64,", url, StringComparison.Ordinal));
+        await _files.Received(1).ReadAsync("images/a.png", Arg.Any<CancellationToken>());
+        await _files.Received(1).ReadAsync("images/b.png", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_AssistantWithoutImageInput_SendsNoImagesAndReadsNoFiles()
+    {
+        AddRunWithGenerations((0, GenerationStatus.Succeeded, "images/a.png"));
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "make it red", TestContext.Current.CancellationToken);
+
+        Assert.All(LastRequest.Messages, m => Assert.Empty(m.ImageDataUrls));
+        await _files.DidNotReceive().ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_MoreThanFourSucceeded_SendsFirstFourBySortOrder()
+    {
+        AssistantAcceptsImages();
+        AddRunWithGenerations(
+            (0, GenerationStatus.Succeeded, "images/0.png"),
+            (1, GenerationStatus.Succeeded, "images/1.png"),
+            (2, GenerationStatus.Succeeded, "images/2.png"),
+            (3, GenerationStatus.Succeeded, "images/3.png"),
+            (4, GenerationStatus.Succeeded, "images/4.png"),
+            (5, GenerationStatus.Succeeded, "images/5.png"));
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "more", TestContext.Current.CancellationToken);
+
+        Assert.Equal(4, LastRequest.Messages.Last(m => m.Role == AssistantChatMessage.UserRole).ImageDataUrls.Count);
+        await _files.DidNotReceive().ReadAsync("images/4.png", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_OnlyFailedGenerations_SendsNoImages()
+    {
+        AssistantAcceptsImages();
+        AddRunWithGenerations(
+            (0, GenerationStatus.Failed, null),
+            (1, GenerationStatus.Filtered, null),
+            (2, GenerationStatus.Queued, null));
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "more", TestContext.Current.CancellationToken);
+
+        Assert.All(LastRequest.Messages, m => Assert.Empty(m.ImageDataUrls));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_NoRuns_SendsNoImages()
+    {
+        AssistantAcceptsImages();
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "first", TestContext.Current.CancellationToken);
+
+        Assert.All(LastRequest.Messages, m => Assert.Empty(m.ImageDataUrls));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_OneImageFileMissing_SendsTheOthersWithoutError()
+    {
+        AssistantAcceptsImages();
+        AddRunWithGenerations((0, GenerationStatus.Succeeded, "images/gone.png"), (1, GenerationStatus.Succeeded, "images/kept.png"));
+        _files.ReadAsync("images/gone.png", Arg.Any<CancellationToken>())
+            .Returns<byte[]>(_ => throw new FileNotFoundException("gone"));
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "more", TestContext.Current.CancellationToken);
+
+        Assert.Single(LastRequest.Messages.Last(m => m.Role == AssistantChatMessage.UserRole).ImageDataUrls);
+        Assert.False(result.AssistantMessage.IsError);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_CatalogFails_SendsNoImagesAndNoError()
+    {
+        AddRunWithGenerations((0, GenerationStatus.Succeeded, "images/a.png"));
+        _chat.ListChatModelsAsync(Arg.Any<CancellationToken>())
+            .Returns<Task<IReadOnlyList<ChatModel>>>(_ => throw new ProviderException(ErrorKind.Network, "down"));
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "more", TestContext.Current.CancellationToken);
+
+        Assert.All(LastRequest.Messages, m => Assert.Empty(m.ImageDataUrls));
+        Assert.False(result.AssistantMessage.IsError);
+    }
 
     [Fact]
     public async Task SendUserMessageAsync_Information_DoesNotLogUserText()

@@ -52,12 +52,14 @@ public static class AppServices
         services.AddSingleton<AppInitializer>();
         services.AddSingleton<IMainThread, AvaloniaMainThread>();
         services.AddSingleton<IDialogService>(dialogs ?? new AvaloniaDialogService(MainWindowOwner));
+        services.AddSingleton<IFilePickerService>(new AvaloniaFilePickerService(MainWindowOwner));
 
         services.AddSingleton(sp => new PageRoutes()
             .Add(Routes.Sessions, _ => new SessionsView { DataContext = sp.GetRequiredService<SessionsPageModel>() })
             .Add(Routes.ApiKey, _ => new ApiKeyView { DataContext = sp.GetRequiredService<ApiKeyPageModel>() })
             .Add(Routes.Chat, query => Page(sp.GetRequiredService<ChatPageModel>(), query, model => new ChatView { DataContext = model }))
-            .Add(Routes.SessionModels, query => Page(sp.GetRequiredService<SessionModelsPageModel>(), query, model => new SessionModelsView { DataContext = model })));
+            .Add(Routes.SessionModels, query => Page(sp.GetRequiredService<SessionModelsPageModel>(), query, model => new SessionModelsView { DataContext = model }))
+            .Add(Routes.SessionParameters, query => Page(sp.GetRequiredService<SessionParametersPageModel>(), query, model => new SessionParametersView { DataContext = model })));
         services.AddSingleton<AvaloniaNavigationService>();
         services.AddSingleton<INavigationService>(sp => sp.GetRequiredService<AvaloniaNavigationService>());
 
@@ -65,6 +67,7 @@ public static class AppServices
         services.AddTransient<ApiKeyPageModel>();
         services.AddTransient<ChatPageModel>();
         services.AddTransient<SessionModelsPageModel>();
+        services.AddTransient<SessionParametersPageModel>();
 
         return services.BuildServiceProvider(new ServiceProviderOptions
         {
@@ -85,6 +88,9 @@ public static class AppServices
                 break;
             case SessionModelsPageModel models:
                 models.ApplyQueryAttributes(values);
+                break;
+            case SessionParametersPageModel parameters:
+                parameters.ApplyQueryAttributes(values);
                 break;
         }
 

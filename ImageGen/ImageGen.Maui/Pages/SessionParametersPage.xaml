@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels"
+             xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
+             x:Class="ImageGen.Maui.Pages.SessionParametersPage"
+             x:DataType="pm:SessionParametersPageModel"
+             Title="{x:Static strings:AppResources.SessionParametersTitle}">
+    <Grid RowDefinitions="Auto,*,Auto" Padding="16" RowSpacing="8">
+        <Label Text="{x:Static strings:AppResources.SessionParametersDescription}" />
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="8">
+                <ActivityIndicator IsRunning="{Binding IsBusy}"
+                                   IsVisible="{Binding IsBusy}" />
+
+                <Label Text="{x:Static strings:AppResources.ParameterAspectRatio}" />
+                <Picker ItemsSource="{Binding AspectRatioOptions}"
+                        ItemDisplayBinding="{Binding Label}"
+                        SelectedItem="{Binding SelectedAspectRatio, Mode=TwoWay}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.ParameterAspectRatio}" />
+
+                <Label Text="{x:Static strings:AppResources.ParameterResolution}" />
+                <Picker ItemsSource="{Binding ResolutionOptions}"
+                        ItemDisplayBinding="{Binding Label}"
+                        SelectedItem="{Binding SelectedResolution, Mode=TwoWay}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.ParameterResolution}" />
+
+                <Label Text="{x:Static strings:AppResources.ParameterOutputFormat}" />
+                <Picker ItemsSource="{Binding OutputFormatOptions}"
+                        ItemDisplayBinding="{Binding Label}"
+                        SelectedItem="{Binding SelectedOutputFormat, Mode=TwoWay}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.ParameterOutputFormat}" />
+
+                <Label Text="{x:Static strings:AppResources.ParameterQuality}" />
+                <Picker ItemsSource="{Binding QualityOptions}"
+                        ItemDisplayBinding="{Binding Label}"
+                        SelectedItem="{Binding SelectedQuality, Mode=TwoWay}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.ParameterQuality}" />
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Button Grid.Row="2"
+                Text="{x:Static strings:AppResources.ParameterSave}"
+                Command="{Binding SaveCommand}"
+                SemanticProperties.Description="{x:Static strings:AppResources.ParameterSave}" />
+    </Grid>
+</ContentPage>

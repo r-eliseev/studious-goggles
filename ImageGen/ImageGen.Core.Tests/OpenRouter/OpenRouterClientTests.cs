@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json.Nodes;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Keys;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.OpenRouter;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
@@ -123,6 +124,115 @@ public class OpenRouterClientTests
         Assert.False(JsonNode.Parse(handler.RequestBodies[0])!.AsObject().ContainsKey("seed"));
         Assert.Equal("image/png", result.MediaType);
         Assert.Null(result.CostUsd);
+    }
+
+    [Fact]
+    public async Task ListImageModelsAsync_EnumRangeAndBooleanParameters_MapsCatalog()
+    {
+        const string json = """
+            {"data":[{"id":"m/x","name":"X",
+              "supported_parameters":{
+                "aspect_ratio":{"type":"enum","values":["1:1","3:2","auto"]},
+                "resolution":{"type":"enum","values":["1K","2K"]},
+                "n":{"type":"range","min":1,"max":4},
+                "seed":{"type":"boolean"}}}]}
+            """;
+        var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, json));
+
+        var models = await client.ListImageModelsAsync(TestContext.Current.CancellationToken);
+
+        var parameters = models[0].Parameters!;
+        Assert.Equal(4, parameters.Count);
+        var aspect = parameters.Single(p => p.Name == "aspect_ratio");
+        Assert.Equal(ParameterKind.Enum, aspect.Kind);
+        Assert.Equal(["1:1", "3:2", "auto"], aspect.Values);
+        var count = parameters.Single(p => p.Name == "n");
+        Assert.Equal(ParameterKind.Range, count.Kind);
+        Assert.Equal(1, count.Min);
+        Assert.Equal(4, count.Max);
+        Assert.Equal(ParameterKind.Boolean, parameters.Single(p => p.Name == "seed").Kind);
+    }
+
+    [Fact]
+    public async Task ListImageModelsAsync_UnknownParameterType_SkipsOnlyThatParameter()
+    {
+        const string json = """
+            {"data":[{"id":"m/x","name":"X",
+              "supported_parameters":{"size":{"type":"object"},"flag":true,"output_format":{"type":"enum","values":["png"]}}}]}
+            """;
+        var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, json));
+
+        var models = await client.ListImageModelsAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("output_format", Assert.Single(models[0].Parameters!).Name);
+    }
+
+    [Fact]
+    public async Task ListImageModelsAsync_NoSupportedParameters_EmptyListNotNull()
+    {
+        const string json = """{"data":[{"id":"m/x","name":"X"}]}""";
+        var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, json));
+
+        var models = await client.ListImageModelsAsync(TestContext.Current.CancellationToken);
+
+        Assert.NotNull(models[0].Parameters);
+        Assert.Empty(models[0].Parameters!);
+    }
+
+    [Fact]
+    public async Task GenerateImageAsync_PlannedParameters_SentUnderCatalogNames()
+    {
+        var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"data":[{"b64_json":"AQID"}]}""");
+        var client = CreateClient(handler);
+
+        await client.GenerateAsync(
+            new ImageGenerationRequest("m/x", "p", null, AspectRatio: "3:2", Resolution: "1K", OutputFormat: "png", Quality: "high"),
+            TestContext.Current.CancellationToken);
+
+        var body = JsonNode.Parse(handler.RequestBodies[0])!;
+        Assert.Equal("3:2", body["aspect_ratio"]!.GetValue<string>());
+        Assert.Equal("1K", body["resolution"]!.GetValue<string>());
+        Assert.Equal("png", body["output_format"]!.GetValue<string>());
+        Assert.Equal("high", body["quality"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task GenerateImageAsync_NoPlannedParameters_NoParameterFieldsSent()
+    {
+        var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"data":[{"b64_json":"AQID"}]}""");
+        var client = CreateClient(handler);
+
+        await client.GenerateAsync(new ImageGenerationRequest("m/x", "p", null), TestContext.Current.CancellationToken);
+
+        var body = JsonNode.Parse(handler.RequestBodies[0])!.AsObject();
+        Assert.False(body.ContainsKey("aspect_ratio"));
+        Assert.False(body.ContainsKey("resolution"));
+        Assert.False(body.ContainsKey("output_format"));
+        Assert.False(body.ContainsKey("quality"));
+    }
+
+    [Fact]
+    public async Task ListChatModelsAsync_ReadsInputModalitiesAndContextLength()
+    {
+        const string json = """
+            {"data":[
+              {"id":"vendor/vision","name":"Vision","context_length":262144,
+               "architecture":{"input_modalities":["text","image"],"output_modalities":["text"]}},
+              {"id":"vendor/text","name":"Text","context_length":8000,
+               "architecture":{"input_modalities":["text"],"output_modalities":["text"]}},
+              {"name":"No id","architecture":{"input_modalities":["image"]}}
+            ]}
+            """;
+        var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, json);
+        var client = CreateClient(handler);
+
+        var models = await client.ListChatModelsAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("https://openrouter.ai/api/v1/models", handler.Requests[0].RequestUri!.ToString());
+        Assert.Equal(2, models.Count);
+        Assert.True(models[0].SupportsImageInput);
+        Assert.Equal(262144, models[0].ContextLength);
+        Assert.False(models[1].SupportsImageInput);
     }
 
     [Fact]

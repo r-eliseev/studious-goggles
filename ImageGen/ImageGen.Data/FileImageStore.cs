@@ -28,6 +28,46 @@ public sealed class FileImageStore(IAppPaths appPaths, ILogger<FileImageStore> l
         return relativePath;
     }
 
+    /// <summary>Writes an image the user attached, under <c>images/{sessionId}/attachments/{attachmentId}.{ext}</c>.</summary>
+    public async Task<string> SaveAttachmentAsync(
+        Guid sessionId,
+        Guid attachmentId,
+        byte[] content,
+        string mediaType,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        ArgumentException.ThrowIfNullOrWhiteSpace(mediaType);
+        var relativePath = $"{ImagesFolder}/{sessionId:N}/attachments/{attachmentId:N}{GetExtension(mediaType)}";
+        var fullPath = GetFullPath(relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllBytesAsync(fullPath, content, cancellationToken);
+        return relativePath;
+    }
+
+    public Task DeleteFileAsync(string relativePath, CancellationToken cancellationToken)
+    {
+        var fullPath = GetFullPath(relativePath);
+        if (File.Exists(fullPath))
+        {
+            File.Delete(fullPath);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task<byte[]> ReadAsync(string relativePath, CancellationToken cancellationToken)
+    {
+        var fullPath = GetFullPath(relativePath);
+        // A missing folder gives DirectoryNotFoundException from the framework; the contract is FileNotFoundException.
+        if (!File.Exists(fullPath))
+        {
+            throw new FileNotFoundException("The image file does not exist.", fullPath);
+        }
+
+        return File.ReadAllBytesAsync(fullPath, cancellationToken);
+    }
+
     public string GetFullPath(string relativePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);

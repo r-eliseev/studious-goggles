@@ -1,8 +1,8 @@
 ---
 id: 020
-status: approved
-assignee:
-claimed:
+status: done
+assignee: 
+claimed: 2026-10-28T12:00:21Z
 created: 2026-10-27
 ---
 
@@ -196,6 +196,37 @@ scripts/check.sh
 Файлы: ImageGen/ImageGen.Core/Domain/Models/ModelParameter.cs, ImageGen/ImageGen.Core/Domain/Models/ImageModel.cs, ImageGen/ImageGen.Core/Domain/Sessions/GenerationParameters.cs, ImageGen/ImageGen.Core/Domain/Sessions/SessionSettings.cs, ImageGen/ImageGen.Core/Domain/Generations/ParameterOutcome.cs, ImageGen/ImageGen.Core/Domain/Generations/Run.cs, ImageGen/ImageGen.Core/Domain/Generations/Generation.cs, ImageGen/ImageGen.Core/Providers/ImageGenerationRequest.cs, ImageGen/ImageGen.Core/Services/GenerationParameterPlanner.cs, ImageGen/ImageGen.Core/Services/SessionService.cs, ImageGen/ImageGen.Core/Services/GenerationService.cs, ImageGen/ImageGen.Core/Services/ModelCatalogService.cs, ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs, ImageGen/ImageGen.Core/Serialization/CoreJsonContext.cs, ImageGen/ImageGen.Data/Migrations/NNNN_generation_parameters.sql, ImageGen/ImageGen.Data/Migrations.cs, ImageGen/ImageGen.Data/Repositories/ImageModelRepository.cs, ImageGen/ImageGen.Data/Repositories/RunRepository.cs, ImageGen/ImageGen.Maui/Pages/SessionParametersPage.xaml, ImageGen/ImageGen.Maui/Pages/SessionParametersPage.xaml.cs, ImageGen/ImageGen.Maui/PageModels/SessionParametersPageModel.cs, ImageGen/ImageGen.Maui/PageModels/ChatPageModel.cs, ImageGen/ImageGen.Maui/Pages/ChatPage.xaml, ImageGen/ImageGen.Maui/PageModels/GenerationItemViewModel.cs, ImageGen/ImageGen.Maui/Routes.cs, ImageGen/ImageGen.Maui/MauiProgram.cs, ImageGen/ImageGen.Maui/Resources/Strings/AppResources.resx
 
 ## Отчёт
+
+Исполнитель: claude-07d6. Ветка: `ccr-07d63c19-ma1lxw` (от `origin/main`, после мерджа #23).
+
+### Что сделано
+- **Ядро:** типы `ModelParameter`, `ParameterKind`, `GenerationParameters` (`AspectRatio`, `Resolution`, `OutputFormat`, `Quality`), `ParameterOutcome` (`Applied`/`Replaced`/`Dropped`, причины `NotSupported`/`NoAllowedValue`/`CatalogUnknown`). `GenerationParameterPlanner` — чистый планировщик по правилам плана. `ImageModel.Parameters`, `SessionSettings.Parameters`, `Run.Parameters`, `Generation.Outcomes`, `ImageGenerationRequest` с четырьмя новыми полями.
+- **Каталог OpenRouter:** `supported_parameters` разбирается в `ModelParameter` (`enum`, `range`, `boolean`; неизвестные и не-объектные записи пропускаются). Тело `POST images` получает принятые поля под именами каталога, без них поля нет.
+- **Сессия:** `UpdateGenerationParametersAsync` с проверкой значений; `UpdateSettingsAsync` сохраняет параметры из базы (экран моделей их не теряет).
+- **Прогон:** план строится для каждой генерации; Repeat, New seed и Edit берут параметры прогона-источника. Кеш каталога без параметров (старые строки) перезагружается.
+- **Хранилище:** миграция `0003_generation_parameters.sql` (три колонки JSON); `ParameterJson` через `CoreJsonContext`; репозитории пишут и читают параметры. Старые строки читаются как «без параметров».
+- **Presentation:** `SessionParametersPageModel` (варианты из выбранных моделей, сохранённое значение всегда доступно, «по умолчанию» = `null`), `ParameterOption`, маршрут `parameters`, команда `OpenParametersCommand` в чате. `GenerationItemViewModel` добавляет строки «Соотношение сторон: 3:2 → 4:3» и «Формат webp: не отправлено (причина)». Строки в `AppResources.resx` и `AppResources.cs`.
+- **Avalonia:** `SessionParametersView` (выбор через `ComboBox`), маршрут в `AppServices`, кнопка «Параметры» в шапке чата.
+- **MAUI:** `SessionParametersPage` (`Picker`), регистрация в `MauiProgram`, кнопка в `ChatPage`.
+- **Документы:** ADR 0011 (план в генерации); в `docs/specs/image-client.md` исправлен пример «1:1 → 1:1 (замена)» по пункту владельца 9.
+
+### Проверка
+- `dotnet test`: Core (все), Data (все, в том числе миграция с версии 2 с сохранением данных), Presentation (все), Avalonia (все, включая новый поток «чат → параметры → сохранение → чат»).
+- `dotnet build ImageGen/ImageGen.Maui -f net10.0-android`: успешно.
+- `dotnet format --verify-no-changes`: все изменённые проекты чистые.
+- `scripts/check.sh`: проходит.
+
+### Отличия от плана
+1. Пикер «качество» (`quality`) включён по решению владельца (вопрос 2); в плане его не было.
+2. Проверка значений качества: непустая строка до 32 символов (план не задавал правило).
+3. Тест на Avalonia-поток нашёл ошибку разбора: значение-флаг в `supported_parameters` (`"seed": true`) роняло разбор каталога. Исправлено (такие записи пропускаются), добавлен тест.
+4. Тесты экрана моделей и чата получили `GetRunAsync`/`Parameters` в моках; существующие тесты не менялись по смыслу.
+
+### Не проверено в этой среде
+- Форма тела `POST /api/v1/images` для новых полей на живом OpenRouter (допущение владельца; ручная проверка одним платным запросом, см. `docs/status.md`).
+- Значения `512` и `768` у разрешения: единица не подтверждена.
+- Сборка MAUI под Windows и вид экрана на Windows (XAML-компилятор только под Windows): пункт добавлен в ручную проверку 016.
+- Вид экрана параметров в Avalonia на Linux-рабочем столе: пункт добавлен в ручную проверку 046.
 
 ## Комментарии
 

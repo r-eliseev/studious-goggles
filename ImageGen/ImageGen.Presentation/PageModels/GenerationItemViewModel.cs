@@ -1,7 +1,9 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ImageGen.Core.Domain.Descriptions;
 using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
 using ImageGen.Presentation.Resources.Strings;
 
@@ -17,13 +19,15 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     private readonly Func<GenerationItemViewModel, Task> _repeat;
     private readonly Func<GenerationItemViewModel, Task> _newSeed;
     private readonly Func<GenerationItemViewModel, Task> _edit;
+    private readonly Func<GenerationItemViewModel, DescriptionMode, Task> _describe;
 
     public GenerationItemViewModel(
         Generation generation,
         IImageFileStore files,
         Func<GenerationItemViewModel, Task> repeat,
         Func<GenerationItemViewModel, Task> newSeed,
-        Func<GenerationItemViewModel, Task> edit)
+        Func<GenerationItemViewModel, Task> edit,
+        Func<GenerationItemViewModel, DescriptionMode, Task> describe)
     {
         ArgumentNullException.ThrowIfNull(generation);
         ArgumentNullException.ThrowIfNull(files);
@@ -34,6 +38,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         _repeat = repeat;
         _newSeed = newSeed;
         _edit = edit;
+        _describe = describe;
         Id = generation.Id;
         Prompt = generation.Prompt;
         Update(generation);
@@ -80,6 +85,8 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(RepeatCommand))]
     [NotifyCanExecuteChangedFor(nameof(NewSeedCommand))]
     [NotifyCanExecuteChangedFor(nameof(EditCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DescribeCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DescribePromptCommand))]
     public partial bool IsFinished { get; set; }
 
     [RelayCommand(CanExecute = nameof(IsFinished))]
@@ -90,6 +97,13 @@ public sealed partial class GenerationItemViewModel : ObservableObject
 
     [RelayCommand(CanExecute = nameof(IsFinished))]
     private Task EditAsync() => _edit(this);
+
+    /// <summary>Describes this picture (task 019): the text is shown, and it goes into the input field only on the user's action.</summary>
+    [RelayCommand(CanExecute = nameof(IsFinished))]
+    private Task DescribeAsync() => _describe(this, DescriptionMode.Description);
+
+    [RelayCommand(CanExecute = nameof(IsFinished))]
+    private Task DescribePromptAsync() => _describe(this, DescriptionMode.Prompt);
 
     /// <summary>Recomputes every displayed value from the saved generation.</summary>
     public void Update(Generation generation)
@@ -139,6 +153,52 @@ public sealed partial class GenerationItemViewModel : ObservableObject
             parts.Add(string.Format(CultureInfo.InvariantCulture, AppResources.CostFormat, price));
         }
 
+        if (generation.ReferenceAttachmentIds.Count > 0)
+        {
+            parts.Add(string.Format(CultureInfo.CurrentCulture, AppResources.ReferenceFormat, generation.ReferenceAttachmentIds.Count));
+        }
+
+        parts.AddRange(ParameterLines(generation.Outcomes));
         return string.Join(" · ", parts);
     }
+
+    /// <summary>One line per replaced or dropped parameter (F4.3). An applied parameter needs no line.</summary>
+    private static IEnumerable<string> ParameterLines(IEnumerable<ParameterOutcome> outcomes)
+    {
+        foreach (var outcome in outcomes)
+        {
+            var label = ParameterLabel(outcome.Name);
+            switch (outcome.Kind)
+            {
+                case ParameterOutcomeKind.Replaced:
+                    yield return string.Format(CultureInfo.CurrentCulture, AppResources.ParameterReplacedFormat, label, outcome.Requested, outcome.Sent);
+                    break;
+                case ParameterOutcomeKind.Dropped:
+                    yield return string.Format(
+                        CultureInfo.CurrentCulture,
+                        AppResources.ParameterDroppedFormat,
+                        label,
+                        outcome.Requested,
+                        ReasonText(outcome.Reason));
+                    break;
+            }
+        }
+    }
+
+    private static string ParameterLabel(string name) => name switch
+    {
+        GenerationParameterPlanner.AspectRatioName => AppResources.ParameterAspectRatio,
+        GenerationParameterPlanner.ResolutionName => AppResources.ParameterResolution,
+        GenerationParameterPlanner.OutputFormatName => AppResources.ParameterOutputFormat,
+        GenerationParameterPlanner.QualityName => AppResources.ParameterQuality,
+        _ => name,
+    };
+
+    private static string ReasonText(ParameterDropReason? reason) => reason switch
+    {
+        ParameterDropReason.NotSupported => AppResources.ReasonNotSupported,
+        ParameterDropReason.NoAllowedValue => AppResources.ReasonNoAllowedValue,
+        ParameterDropReason.CatalogUnknown => AppResources.ReasonCatalogUnknown,
+        _ => string.Empty,
+    };
 }

@@ -26,6 +26,47 @@ public sealed class FileImageStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveAttachmentAsync_WritesIntoSessionAttachmentFolder()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var sessionId = Guid.NewGuid();
+        var attachmentId = Guid.NewGuid();
+
+        var relativePath = await _store.SaveAttachmentAsync(sessionId, attachmentId, [5, 6], "image/webp", ct);
+
+        Assert.Equal($"images/{sessionId:N}/attachments/{attachmentId:N}.webp", relativePath);
+        Assert.Equal([5, 6], await _store.ReadAsync(relativePath, ct));
+    }
+
+    [Fact]
+    public async Task DeleteFileAsync_RemovesFileAndIgnoresMissing()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var relativePath = await _store.SaveAttachmentAsync(Guid.NewGuid(), Guid.NewGuid(), [1], "image/png", ct);
+
+        await _store.DeleteFileAsync(relativePath, ct);
+        await _store.DeleteFileAsync(relativePath, ct);
+
+        Assert.False(File.Exists(_store.GetFullPath(relativePath)));
+    }
+
+    [Fact]
+    public async Task ReadAsync_SavedFile_ReturnsSameBytes()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var relativePath = await _store.SaveAsync(Guid.NewGuid(), Guid.NewGuid(), [9, 8, 7, 0], "image/png", ct);
+
+        Assert.Equal([9, 8, 7, 0], await _store.ReadAsync(relativePath, ct));
+    }
+
+    [Fact]
+    public async Task ReadAsync_MissingFile_ThrowsFileNotFound()
+    {
+        await Assert.ThrowsAsync<FileNotFoundException>(
+            () => _store.ReadAsync("images/none/none.png", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task SaveAsync_Png_LogsDebugWithSizeAndNoContent()
     {
         var ct = TestContext.Current.CancellationToken;

@@ -74,7 +74,7 @@ ImageGen/
 **Обновление экрана.** `ChatPageModel` после каждого своего действия перечитывает ленту сессии (`SessionService.GetTimelineAsync`), а событие `GenerationUpdated` обновляет одну карточку в UI-потоке (`IMainThread.BeginInvokeOnMainThread`; реализации `MauiMainThread` и `AvaloniaMainThread`).
 
 ## Скелет v0.1: хранение
-SQLite-файл `imagegen.db` в `IAppPaths.DataDirectory`, схема в `ImageGen.Data/Migrations/NNNN_имя.sql` — встроенные ресурсы, применяются по номеру без списка в коде (`Migrations.cs`, ADR 0002). Картинки: `images/<sessionId>/<generationId>.<ext>` в той же папке; в БД хранится относительный путь. Ключ OpenRouter хранится только за `ISecretStore` и в открытом виде не попадает ни в БД, ни в настройки, ни в файлы: в MAUI — `SecureStorage` (`MauiSecretStore`), в Avalonia — `DesktopSecretStore` (Secret Service на Linux, DPAPI на Windows, Keychain на macOS; без них — только в памяти до выхода, ADR 0008).
+SQLite-файл `imagegen.db` в `IAppPaths.DataDirectory`, схема в `ImageGen.Data/Migrations/NNNN_имя.sql` — встроенные ресурсы, применяются по номеру без списка в коде (`Migrations.cs`, ADR 0002). Картинки: `images/<sessionId>/<generationId>.<ext>` в той же папке; в БД хранится относительный путь. Вложения сообщений (картинки, которые пользователь прикрепил в чате, ADR 0012) лежат в `images/<sessionId>/attachments/<attachmentId>.<ext>`, строки в `chat_attachments`. Ключ OpenRouter хранится только за `ISecretStore` и в открытом виде не попадает ни в БД, ни в настройки, ни в файлы: в MAUI — `SecureStorage` (`MauiSecretStore`), в Avalonia — `DesktopSecretStore` (Secret Service на Linux, DPAPI на Windows, Keychain на macOS; без них — только в памяти до выхода, ADR 0008).
 
 Известное упрощение скелета: удаление сессии удаляет её генерации вместе с ценами. Правило ADR 0002 «удаление картинки не удаляет запись о расходах» вводится вместе с учётом расходов (backlog).
 
@@ -103,7 +103,7 @@ Dockerfile, docker-compose.yml   том /data
 - Страницы MAUI и view Avalonia знают только свой `PageModel`; `PageModel` знает сервисы ядра.
 
 ## Внешние системы
-OpenRouter (HTTP API: `/api/v1/key`, `/api/v1/images/models`, `/api/v1/images`, `/api/v1/chat/completions`). Подключаемые через конфиг (`providers.json`): API в формате OpenAI (`images/generations`, `chat/completions`) и Anthropic Messages API (чат). Позже fal.ai и Replicate.
+OpenRouter (HTTP API: `/api/v1/key`, `/api/v1/models` (чат-модели: входные модальности и окно контекста), `/api/v1/images/models`, `/api/v1/images`, `/api/v1/chat/completions`). Подключаемые через конфиг (`providers.json`): API в формате OpenAI (`images/generations`, `chat/completions`) и Anthropic Messages API (чат). Позже fal.ai и Replicate.
 
 ## Ограничения
 - Платформы: у MAUI нет цели Linux; Linux-десктоп обслуживает Avalonia-оболочка (ADR 0006), браузер и Docker — Web-оболочка. Цель Windows у MAUI собирается только на Windows (`docs/knowledge/dev-environment.md`).

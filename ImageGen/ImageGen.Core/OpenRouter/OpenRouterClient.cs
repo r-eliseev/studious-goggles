@@ -6,6 +6,7 @@ using ImageGen.Core.Domain.Models;
 using ImageGen.Core.OpenAiCompatible;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
+using ImageGen.Core.Services;
 
 namespace ImageGen.Core.OpenRouter;
 
@@ -54,6 +55,7 @@ public sealed class OpenRouterClient(
                 SupportsSeed = parameters?.ContainsKey("seed") == true,
                 SupportsImageInput = inputModalities?.Any(m => m?.GetValue<string>() == "image") == true,
                 MaxImagesPerRequest = ReadMaxImages(parameters),
+                Parameters = ReadParameters(parameters),
                 FetchedAt = fetchedAt,
             });
         }
@@ -75,6 +77,16 @@ public sealed class OpenRouterClient(
             body["seed"] = request.Seed.Value;
         }
 
+        SetIfNotNull(body, GenerationParameterPlanner.AspectRatioName, request.AspectRatio);
+        SetIfNotNull(body, GenerationParameterPlanner.ResolutionName, request.Resolution);
+        SetIfNotNull(body, GenerationParameterPlanner.OutputFormatName, request.OutputFormat);
+        SetIfNotNull(body, GenerationParameterPlanner.QualityName, request.Quality);
+        if (request.ReferenceImageDataUrls is { Count: > 0 } references)
+        {
+            // Form assumed, not yet checked against the live API (task 018, owner decision).
+            body[ReferenceImageLimit.ParameterName] = new JsonArray(references.Select(url => (JsonNode)JsonValue.Create(url)!).ToArray());
+        }
+
         using var message = await CreateAuthorizedRequestAsync(HttpMethod.Post, "images", body, cancellationToken);
         var root = await SendJsonAsync(message, cancellationToken);
         var first = (root["data"] as JsonArray)?.FirstOrDefault();
@@ -89,6 +101,36 @@ public sealed class OpenRouterClient(
             Convert.FromBase64String(base64),
             string.IsNullOrWhiteSpace(mediaType) ? DefaultMediaType : mediaType,
             ReadCost(root));
+    }
+
+    /// <summary>Chat models of OpenRouter with their input modalities and context window. Entries without an id are skipped.</summary>
+    public async Task<IReadOnlyList<ChatModel>> ListChatModelsAsync(CancellationToken cancellationToken)
+    {
+        using var request = await CreateAuthorizedRequestAsync(HttpMethod.Get, "models", null, cancellationToken);
+        var root = await SendJsonAsync(request, cancellationToken);
+        var result = new List<ChatModel>();
+        if (root["data"] is not JsonArray data)
+        {
+            return result;
+        }
+
+        foreach (var item in data)
+        {
+            var id = ReadString(item?["id"]);
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                continue;
+            }
+
+            var inputModalities = item!["architecture"]?["input_modalities"] as JsonArray;
+            result.Add(new ChatModel(
+                id,
+                ReadString(item["name"]) ?? id,
+                inputModalities?.Any(m => ReadString(m) == "image") == true,
+                ReadInt(item["context_length"])));
+        }
+
+        return result;
     }
 
     public async Task<AssistantChatResult> CompleteChatAsync(AssistantChatRequest request, CancellationToken cancellationToken)
@@ -118,6 +160,62 @@ public sealed class OpenRouterClient(
             ? parsed
             : null;
     }
+
+    /// <summary>Maps the catalog's <c>supported_parameters</c>. Unknown kinds are skipped; a missing object gives an empty list.</summary>
+    private static IReadOnlyList<ModelParameter> ReadParameters(JsonObject? parameters)
+    {
+        var result = new List<ModelParameter>();
+        if (parameters is null)
+        {
+            return result;
+        }
+
+        foreach (var (name, definition) in parameters)
+        {
+            // A definition that is not an object (for example a bare flag) is not a parameter kind we know: skip it.
+            if (definition is not JsonObject)
+            {
+                continue;
+            }
+
+            switch (ReadString(definition["type"]))
+            {
+                case "enum":
+                    var values = (definition["values"] as JsonArray)?
+                        .Select(ReadString)
+                        .OfType<string>()
+                        .ToList() ?? [];
+                    result.Add(new ModelParameter(name, ParameterKind.Enum, values));
+                    break;
+                case "range":
+                    result.Add(new ModelParameter(
+                        name, ParameterKind.Range, [], ReadNumber(definition["min"]), ReadNumber(definition["max"])));
+                    break;
+                case "boolean":
+                    result.Add(new ModelParameter(name, ParameterKind.Boolean, []));
+                    break;
+            }
+        }
+
+        return result;
+    }
+
+    private static string? ReadString(JsonNode? node) =>
+        node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
+
+    private static double? ReadNumber(JsonNode? node) =>
+        node is JsonValue value && value.TryGetValue<double>(out var number) ? number : null;
+
+    private static void SetIfNotNull(JsonObject body, string name, string? value)
+    {
+        if (value is not null)
+        {
+            body[name] = value;
+        }
+    }
+
+    private static int? ReadInt(JsonNode? node) =>
+        node is JsonValue value && value.TryGetValue<int>(out var number) ? number : null;
 
     private static int ReadMaxImages(JsonObject? parameters)
     {

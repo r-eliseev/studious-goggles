@@ -35,7 +35,7 @@ public class RunItemViewModelTests
             SortOrder = sortOrder,
         };
         var files = Substitute.For<IImageFileStore>();
-        return new GenerationItemViewModel(generation, files, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask);
+        return new GenerationItemViewModel(generation, files, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, (_, _) => Task.CompletedTask);
     }
 
     [Fact]

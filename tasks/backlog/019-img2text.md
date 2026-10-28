@@ -1,8 +1,8 @@
 ---
 id: 019
-status: approved
-assignee:
-claimed:
+status: done
+assignee: 
+claimed: 2026-10-28T12:40:39Z
 created: 2026-10-27
 ---
 
@@ -114,6 +114,32 @@ UI (MAUI, Windows и Android):
 Файлы: `ImageGen/ImageGen.Core/Domain/Descriptions/DescriptionMode.cs` (новый), `ImageGen/ImageGen.Core/Domain/Descriptions/ImageDescription.cs` (новый), `ImageGen/ImageGen.Core/Storage/IImageDescriptionRepository.cs` (новый), `ImageGen/ImageGen.Core/Services/DescriptionPrompts.cs` (новый), `ImageGen/ImageGen.Core/Services/ImageDescriptionService.cs` (новый), `ImageGen/ImageGen.Data/Migrations/NNNN_image_descriptions.sql` (новый; номер — следующий свободный), `ImageGen/ImageGen.Data/Migrations.cs`, `ImageGen/ImageGen.Data/Repositories/ImageDescriptionRepository.cs` (новый), `ImageGen/ImageGen.Data/DataServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/ImageDescriptionRepositoryTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/ImageDescriptionServiceTests.cs` (новый), `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Maui/PageModels/GenerationItemViewModel.cs`, `ImageGen/ImageGen.Maui/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Maui/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Core.Tests/MauiLinked/ChatPageModelTests.cs`, `docs/architecture.md` (раздел «Хранение»: таблица описаний)
 
 ## Отчёт
+
+Исполнитель: claude-07d6. Ветка: `ccr-07d63c19-ma1lxw`. Решения владельца — в «Комментариях» и ADR 0013.
+
+### Что сделано
+- **Ядро:** `DescriptionMode` (описание и промпт), `DescriptionError` (модель без картинок, файл пропал, пустой ответ), `ImageDescription` (сессия, источник-генерация, режим, провайдер, модель, текст, цена `decimal?`, время). `ImageDescriptionService.DescribeAsync`: проверка модели через `ChatModelCatalogService`, чтение картинки результата, один запрос с системным текстом режима и картинкой, сохранение только успешного непустого ответа. `DescriptionPrompts`: описание на языке интерфейса, промпт по-английски. `ImageDescriptionException` с кодом ошибки.
+- **Данные:** миграция `0005_image_descriptions.sql` (таблица, индекс по сессии, каскад с сессией); `ImageDescriptionRepository` (цена читается как `null`, если не сохранена).
+- **Presentation:** команды `DescribeCommand` и `DescribePromptCommand` на карточке (доступны у готовой генерации); `ChatPageModel.DescribeCardAsync` и `ShowDescriptionAsync`: диалог с текстом, провайдером, моделью и ценой (или «cost unknown»); подстановка только по кнопке; при заполненном поле — выбор «заменить» или «дописать». Строки в `AppResources`.
+- **Avalonia и MAUI:** кнопки «Describe» и «Prompt» на карточке после «Edit».
+- **Документы:** ADR 0013.
+
+### Проверка
+- `dotnet test`: Core (все, включая семь сценариев описания), Data (все, включая репозиторий с ценой и без неё), Presentation (все, включая показ описания, подстановку и замену/дописывание, команды карточки), Avalonia (все).
+- `dotnet build ImageGen/ImageGen.Maui -f net10.0-android`: успешно.
+- `dotnet format --verify-no-changes`: все изменённые проекты чистые.
+- `scripts/check.sh`: проходит.
+
+### Отличия от плана
+1. Файл «`ImageGen.Core.Tests/MauiLinked/ChatPageModelTests.cs`» из плана не создавался: тесты страницы чата остаются в `ImageGen.Presentation.Tests` (ADR 0006, задача 038).
+2. Источник «своей» картинки (вложение, 018) не реализован: по решению владельца сначала картинки результатов. `SourceAttachmentId` не добавлялся.
+3. Поле `ProviderName` заменено на `ProviderId` (как в остальных записях; название показывается как есть).
+4. Модель описания — модель ассистента; отдельного выбора нет (как решил владелец).
+
+### Не проверено в этой среде
+- Живой запрос описания на реальном OpenRouter и ответ модели с картинкой: проверки на заглушках.
+- Цена описания на реальных данных и тарифицирование неудачных запросов (вопрос 6 владельца, «неизвестно»).
+- Диалог и кнопки на Windows (MAUI) и на Linux-рабочем столе (Avalonia): добавлено в ручные проверки 046 (пункт 20) и 016.
 
 ## Комментарии
 

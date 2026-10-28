@@ -105,6 +105,70 @@ public static class AppResources
 
     public static string Refresh => Get(nameof(Refresh));
 
+    public static string SessionParametersTitle => Get(nameof(SessionParametersTitle));
+
+    public static string SessionParametersDescription => Get(nameof(SessionParametersDescription));
+
+    public static string ParameterModelDefault => Get(nameof(ParameterModelDefault));
+
+    public static string ParameterAspectRatio => Get(nameof(ParameterAspectRatio));
+
+    public static string ParameterResolution => Get(nameof(ParameterResolution));
+
+    public static string ParameterOutputFormat => Get(nameof(ParameterOutputFormat));
+
+    public static string ParameterQuality => Get(nameof(ParameterQuality));
+
+    public static string ParameterSave => Get(nameof(ParameterSave));
+
+    public static string ParameterReplacedFormat => Get(nameof(ParameterReplacedFormat));
+
+    public static string ParameterDroppedFormat => Get(nameof(ParameterDroppedFormat));
+
+    public static string ReasonNotSupported => Get(nameof(ReasonNotSupported));
+
+    public static string ReasonNoAllowedValue => Get(nameof(ReasonNoAllowedValue));
+
+    public static string ReasonCatalogUnknown => Get(nameof(ReasonCatalogUnknown));
+
+    public static string ChatParametersButton => Get(nameof(ChatParametersButton));
+
+    public static string AttachImageButton => Get(nameof(AttachImageButton));
+
+    public static string AttachmentsCountFormat => Get(nameof(AttachmentsCountFormat));
+
+    public static string AttachmentLimitMessage => Get(nameof(AttachmentLimitMessage));
+
+    public static string ImageConsentTitle => Get(nameof(ImageConsentTitle));
+
+    public static string ImageConsentMessage => Get(nameof(ImageConsentMessage));
+
+    public static string ImageConsentAccept => Get(nameof(ImageConsentAccept));
+
+    public static string ReferenceFormat => Get(nameof(ReferenceFormat));
+
+    public static string RemoveAttachment => Get(nameof(RemoveAttachment));
+
+    public static string DescribeButton => Get(nameof(DescribeButton));
+
+    public static string DescribePromptButton => Get(nameof(DescribePromptButton));
+
+    public static string DescriptionTitle => Get(nameof(DescriptionTitle));
+
+    public static string DescriptionCostUnknown => Get(nameof(DescriptionCostUnknown));
+
+    public static string DescriptionFromFormat => Get(nameof(DescriptionFromFormat));
+
+    public static string DescriptionInsert => Get(nameof(DescriptionInsert));
+
+    public static string DescriptionClose => Get(nameof(DescriptionClose));
+
+    public static string DescriptionReplace => Get(nameof(DescriptionReplace));
+
+    public static string DescriptionAppend => Get(nameof(DescriptionAppend));
+
+    public static string DescriptionReplaceQuestion => Get(nameof(DescriptionReplaceQuestion));
+
     private static string Get(string name) =>
         ResourceManager.GetString(name, CultureInfo.CurrentUICulture)
         ?? throw new InvalidOperationException($"Missing string resource '{name}'.");

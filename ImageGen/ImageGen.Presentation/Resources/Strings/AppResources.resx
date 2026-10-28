@@ -150,4 +150,100 @@
   <data name="Refresh" xml:space="preserve">
     <value>Refresh</value>
   </data>
+  <data name="SessionParametersTitle" xml:space="preserve">
+    <value>Parameters</value>
+  </data>
+  <data name="SessionParametersDescription" xml:space="preserve">
+    <value>They apply to the next runs of this session. A model that does not support a value skips it.</value>
+  </data>
+  <data name="ParameterModelDefault" xml:space="preserve">
+    <value>Model default</value>
+  </data>
+  <data name="ParameterAspectRatio" xml:space="preserve">
+    <value>Aspect ratio</value>
+  </data>
+  <data name="ParameterResolution" xml:space="preserve">
+    <value>Resolution</value>
+  </data>
+  <data name="ParameterOutputFormat" xml:space="preserve">
+    <value>Output format</value>
+  </data>
+  <data name="ParameterQuality" xml:space="preserve">
+    <value>Quality</value>
+  </data>
+  <data name="ParameterSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="ParameterReplacedFormat" xml:space="preserve">
+    <value>{0}: {1} → {2}</value>
+  </data>
+  <data name="ParameterDroppedFormat" xml:space="preserve">
+    <value>{0} {1}: not sent ({2})</value>
+  </data>
+  <data name="ReasonNotSupported" xml:space="preserve">
+    <value>the model does not support it</value>
+  </data>
+  <data name="ReasonNoAllowedValue" xml:space="preserve">
+    <value>no allowed value is close enough</value>
+  </data>
+  <data name="ReasonCatalogUnknown" xml:space="preserve">
+    <value>the model's parameters are unknown</value>
+  </data>
+  <data name="ChatParametersButton" xml:space="preserve">
+    <value>Parameters</value>
+  </data>
+  <data name="AttachImageButton" xml:space="preserve">
+    <value>Attach image</value>
+  </data>
+  <data name="AttachmentsCountFormat" xml:space="preserve">
+    <value>{0} of {1} images attached</value>
+  </data>
+  <data name="AttachmentLimitMessage" xml:space="preserve">
+    <value>At most {0} images can be attached to one message.</value>
+  </data>
+  <data name="ImageConsentTitle" xml:space="preserve">
+    <value>Send images to the provider?</value>
+  </data>
+  <data name="ImageConsentMessage" xml:space="preserve">
+    <value>The images you attach are sent to the provider of the assistant and of the image models. They are not sent anywhere else.</value>
+  </data>
+  <data name="ImageConsentAccept" xml:space="preserve">
+    <value>Attach</value>
+  </data>
+  <data name="ReferenceFormat" xml:space="preserve">
+    <value>Reference images: {0}</value>
+  </data>
+  <data name="RemoveAttachment" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="DescribeButton" xml:space="preserve">
+    <value>Describe</value>
+  </data>
+  <data name="DescribePromptButton" xml:space="preserve">
+    <value>Prompt</value>
+  </data>
+  <data name="DescriptionTitle" xml:space="preserve">
+    <value>Image description</value>
+  </data>
+  <data name="DescriptionCostUnknown" xml:space="preserve">
+    <value>cost unknown</value>
+  </data>
+  <data name="DescriptionFromFormat" xml:space="preserve">
+    <value>{0} / {1} · {2}</value>
+  </data>
+  <data name="DescriptionInsert" xml:space="preserve">
+    <value>Insert into input</value>
+  </data>
+  <data name="DescriptionClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="DescriptionReplace" xml:space="preserve">
+    <value>Replace</value>
+  </data>
+  <data name="DescriptionAppend" xml:space="preserve">
+    <value>Append</value>
+  </data>
+  <data name="DescriptionReplaceQuestion" xml:space="preserve">
+    <value>Replace the text in the input field?</value>
+  </data>
 </root>

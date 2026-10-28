@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ImageGen.Core.Domain.Descriptions;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
@@ -22,9 +23,13 @@ public sealed partial class ChatPageModel(
     IImageFileStore files,
     INavigationService navigation,
     IDialogService dialogs,
-    IMainThread mainThread) : ObservableObject
+    IMainThread mainThread,
+    AttachmentService attachments,
+    IFilePickerService filePicker,
+    ImageDescriptionService descriptions) : ObservableObject
 {
     private readonly Dictionary<Guid, GenerationItemViewModel> _cards = [];
+    private bool _imageConsentGiven;
     private Guid _sessionId;
     private bool _subscribed;
 
@@ -42,6 +47,7 @@ public sealed partial class ChatPageModel(
     public partial string InputText { get; set; } = "";
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AttachImageCommand))]
     [NotifyCanExecuteChangedFor(nameof(SendCommand))]
     public partial bool IsBusy { get; set; }
 
@@ -106,21 +112,106 @@ public sealed partial class ChatPageModel(
         }
     }
 
+    /// <summary>Images attached to the message being written (up to 4). They are sent with the message.</summary>
+    public ObservableCollection<PendingAttachment> PendingAttachments { get; } = [];
+
+    [ObservableProperty]
+    public partial string AttachmentsText { get; set; } = "";
+
+    [RelayCommand(CanExecute = nameof(CanAttach))]
+    private async Task AttachImageAsync()
+    {
+        try
+        {
+            if (PendingAttachments.Count >= AttachmentService.MaxAttachmentsPerMessage)
+            {
+                await dialogs.AlertAsync(
+                    AppResources.ErrorTitle,
+                    string.Format(CultureInfo.CurrentCulture, AppResources.AttachmentLimitMessage, AttachmentService.MaxAttachmentsPerMessage));
+                return;
+            }
+
+            // The provider sees the images, so the user confirms once before the first one goes out (F10.6).
+            if (!_imageConsentGiven)
+            {
+                var accepted = await dialogs.ConfirmAsync(
+                    AppResources.ImageConsentTitle, AppResources.ImageConsentMessage, AppResources.ImageConsentAccept, AppResources.Cancel);
+                if (!accepted)
+                {
+                    return;
+                }
+
+                _imageConsentGiven = true;
+            }
+
+            var picked = await filePicker.PickImageAsync(CancellationToken.None);
+            if (picked is null)
+            {
+                return;
+            }
+
+            var attachment = await attachments.AddImageAsync(_sessionId, picked.Content, picked.MediaType, CancellationToken.None);
+            PendingAttachments.Add(new PendingAttachment(attachment.Id, picked.FileName, RemoveAttachmentCommand));
+            RefreshAttachments();
+        }
+        catch (Exception ex)
+        {
+            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    private void RemoveAttachment(PendingAttachment? attachment)
+    {
+        if (attachment is not null && PendingAttachments.Remove(attachment))
+        {
+            RefreshAttachments();
+        }
+    }
+
+    private bool CanAttach() => !IsBusy;
+
+    private void RefreshAttachments()
+    {
+        AttachmentsText = PendingAttachments.Count == 0
+            ? ""
+            : string.Format(
+                CultureInfo.CurrentCulture,
+                AppResources.AttachmentsCountFormat,
+                PendingAttachments.Count,
+                AttachmentService.MaxAttachmentsPerMessage);
+        SendCommand.NotifyCanExecuteChanged();
+        AttachImageCommand.NotifyCanExecuteChanged();
+    }
+
     [RelayCommand(CanExecute = nameof(CanSend))]
     private async Task SendAsync()
     {
         var text = InputText;
+        var pending = PendingAttachments.ToList();
         InputText = "";
+        PendingAttachments.Clear();
+        RefreshAttachments();
         IsBusy = true;
         try
         {
-            await assistant.SendUserMessageAsync(_sessionId, text, CancellationToken.None);
+            await assistant.SendUserMessageAsync(_sessionId, text, pending.Select(a => a.Id).ToList(), CancellationToken.None);
         }
         catch (Exception ex)
         {
             if (InputText.Length == 0)
             {
                 InputText = text;
+            }
+
+            if (PendingAttachments.Count == 0)
+            {
+                foreach (var attachment in pending)
+                {
+                    PendingAttachments.Add(attachment);
+                }
+
+                RefreshAttachments();
             }
 
             await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
@@ -133,7 +224,20 @@ public sealed partial class ChatPageModel(
         await ReloadAsync();
     }
 
-    private bool CanSend() => !IsBusy && !string.IsNullOrWhiteSpace(InputText);
+    private bool CanSend() => !IsBusy && (!string.IsNullOrWhiteSpace(InputText) || PendingAttachments.Count > 0);
+
+    [RelayCommand]
+    private async Task OpenParametersAsync()
+    {
+        try
+        {
+            await navigation.GoToAsync(Routes.SessionParametersFor(_sessionId));
+        }
+        catch (Exception ex)
+        {
+            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+        }
+    }
 
     [RelayCommand]
     private async Task OpenModelsAsync()
@@ -185,9 +289,59 @@ public sealed partial class ChatPageModel(
 
     private GenerationItemViewModel CreateCard(Generation generation)
     {
-        var card = new GenerationItemViewModel(generation, files, RepeatCardAsync, NewSeedCardAsync, EditCardAsync);
+        var card = new GenerationItemViewModel(generation, files, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync);
         _cards[generation.Id] = card;
         return card;
+    }
+
+    /// <summary>Describes a card's picture with the assistant model, then shows the text (task 019).</summary>
+    public async Task DescribeCardAsync(GenerationItemViewModel card, DescriptionMode mode)
+    {
+        try
+        {
+            var language = CultureInfo.CurrentUICulture.EnglishName;
+            var description = await descriptions.DescribeAsync(_sessionId, card.Id, mode, language, CancellationToken.None);
+            await ShowDescriptionAsync(description);
+        }
+        catch (Exception ex)
+        {
+            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Shows the description with its model, provider and price. The text goes into the input field only when the user
+    /// chooses it; if the field has text, the user chooses between replacing it and appending.
+    /// </summary>
+    public async Task ShowDescriptionAsync(ImageDescription description)
+    {
+        ArgumentNullException.ThrowIfNull(description);
+        var price = description.CostUsd is { } cost
+            ? "$" + cost.ToString("0.####", CultureInfo.InvariantCulture)
+            : AppResources.DescriptionCostUnknown;
+        var source = string.Format(CultureInfo.CurrentCulture, AppResources.DescriptionFromFormat, description.ProviderId, description.ModelId, price);
+        var insert = await dialogs.ConfirmAsync(
+            AppResources.DescriptionTitle,
+            description.Text + "\n\n" + source,
+            AppResources.DescriptionInsert,
+            AppResources.DescriptionClose);
+        if (!insert)
+        {
+            return;
+        }
+
+        if (InputText.Trim().Length == 0)
+        {
+            InputText = description.Text;
+            return;
+        }
+
+        var replace = await dialogs.ConfirmAsync(
+            AppResources.DescriptionTitle,
+            AppResources.DescriptionReplaceQuestion,
+            AppResources.DescriptionReplace,
+            AppResources.DescriptionAppend);
+        InputText = replace ? description.Text : InputText + "\n" + description.Text;
     }
 
     /// <summary>Raised on a background thread. Only the card of this session is updated, on the UI thread.</summary>

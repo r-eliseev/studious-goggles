@@ -1,8 +1,8 @@
 ---
 id: 018
-status: approved
-assignee:
-claimed:
+status: done
+assignee: 
+claimed: 2026-10-28T12:29:49Z
 created: 2026-10-27
 ---
 
@@ -108,6 +108,35 @@ created: 2026-10-27
 Файлы: `ImageGen/ImageGen.Core/Domain/Chat/ChatAttachment.cs` (новый), `ImageGen/ImageGen.Core/Storage/IChatAttachmentRepository.cs` (новый), `ImageGen/ImageGen.Core/Storage/IImageFileStore.cs`, `ImageGen/ImageGen.Core/Domain/Models/ImageModel.cs`, `ImageGen/ImageGen.Core/Domain/Generations/Generation.cs`, `ImageGen/ImageGen.Core/Providers/ImageGenerationRequest.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Services/AttachmentService.cs` (новый), `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core/Services/StartRunResult.cs` (новый), `ImageGen/ImageGen.Data/Migrations/NNNN_chat_attachments.sql` (новый), `ImageGen/ImageGen.Data/Migrations.cs`, `ImageGen/ImageGen.Data/FileImageStore.cs`, `ImageGen/ImageGen.Data/Repositories/ChatAttachmentRepository.cs` (новый), `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Data/Repositories/ImageModelRepository.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/ChatAttachmentRepositoryTests.cs` (новый), `ImageGen/ImageGen.Data.Tests/FileImageStoreTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/AttachmentServiceTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `ImageGen/ImageGen.Maui/Services/IFilePickerService.cs` (новый), `ImageGen/ImageGen.Maui/Services/MauiFilePickerService.cs` (новый), `ImageGen/ImageGen.Maui/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Maui/PageModels/ChatItemTemplateChoice.cs`, `ImageGen/ImageGen.Maui/PageModels/GenerationItemViewModel.cs`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Maui/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Maui/MauiProgram.cs`, `docs/architecture.md` (раздел «Хранение»: папка вложений)
 
 ## Отчёт
+
+Исполнитель: claude-07d6. Ветка: `ccr-07d63c19-ma1lxw`. Решения владельца — в «Комментариях» и ADR 0012.
+
+### Что сделано
+- **Ядро:** `ChatAttachment` (домен), `IChatAttachmentRepository`, `AttachmentService` (проверка типа, размера и пустоты; файл пишется до строки, при ошибке строки файл удаляется; `ReadDataUrlAsync`; `LinkToMessageAsync`). `ReferenceImageLimit` — лимит из каталога (`input_references.max`). `GenerationService.StartRunWithAttachmentsAsync` возвращает `StartRunResult` с пропущенными моделями (`NoReferenceSupport`) и числом не отправленных картинок; генерация хранит `ReferenceAttachmentIds`; Repeat, New seed и Edit повторяют их; отсутствующий файл даёт `Failed`. `ImageGenerationRequest.ReferenceImageDataUrls` уходит в `input_references`.
+- `AssistantService`: сообщение с вложениями (текст может быть пустым, не больше 4); вложения привязываются к сообщению; картинки пользователя и картинки последнего прогона уходят ассистенту только если его модель принимает картинки (всего не больше 4); запуск прогона с референсами; текст ответа называет пропущенные модели и не отправленные картинки.
+- **Данные:** миграция `0004_chat_attachments.sql` (таблица `chat_attachments`, колонка `generations.reference_attachment_ids_json`); `ChatAttachmentRepository`; `FileImageStore.SaveAttachmentAsync`, `DeleteFileAsync`, `ReadAsync` с `FileNotFoundException`.
+- **Presentation:** `IFilePickerService` и `PickedImage`; `ImageMediaType` (тип по расширению); `ChatPageModel`: `AttachImageCommand` (согласие F10.6 один раз на экран), `PendingAttachments` (до 4), `RemoveAttachmentCommand`, отправка с вложениями и их восстановление при ошибке; карточка показывает «Reference images: N».
+- **Avalonia:** `AvaloniaFilePickerService` (системный диалог окна), кнопка «Attach image», счётчик и список вложений с кнопкой удаления в `ChatView`.
+- **MAUI:** `MauiFilePickerService` (`FilePicker`), те же элементы в `ChatPage`, регистрация в `MauiProgram`.
+- **Документы:** ADR 0012; раздел «Хранение» в `docs/architecture.md`.
+
+### Проверка
+- `dotnet test`: Core (все, включая новые сценарии вложений и референсов), Data (все, включая миграцию, репозиторий вложений и референсы генерации), Presentation (все, включая согласие, лимит 4, отправку вложения и удаление), Avalonia (все).
+- `dotnet build ImageGen/ImageGen.Maui -f net10.0-android`: успешно.
+- `dotnet format --verify-no-changes`: все изменённые проекты чистые.
+- `scripts/check.sh`: проходит.
+
+### Отличия от плана
+1. Миниатюры вложений в ленте сообщений не показываются: вложение видно как имя файла в поле ввода до отправки. Сообщения с вложениями в истории отображаются только текстом.
+2. Согласие F10.6 хранится в памяти экрана чата, а не между запусками (ADR 0012).
+3. Лимит референсов берётся из `ImageModel.Parameters` (план предполагал отдельное поле `MaxReferenceImages` и очистку кеша миграцией; параметры введены задачей 020, поэтому миграция кеша не нужна).
+4. Пункт плана «при ошибке записи в БД файл удаляется или помечается как осиротевший (вопрос)»: удаляется.
+5. `AttachmentService` использует `IChatAttachmentRepository` напрямую, отдельного сервиса выбора файла в Core нет (выбор — в оболочках через `IFilePickerService`).
+
+### Не проверено в этой среде
+- Форма `input_references` в `POST /api/v1/images` на живом OpenRouter (допущение владельца; ручная проверка одним платным запросом).
+- Диалог выбора файла и отображение на Windows (MAUI) и на Linux-рабочем столе (Avalonia): добавлено в ручные проверки 046 и 016.
+- Размер запроса с четырьмя картинками (владелец: без уменьшения).
 
 ## Комментарии
 

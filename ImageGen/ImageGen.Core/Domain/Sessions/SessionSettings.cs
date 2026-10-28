@@ -17,6 +17,9 @@ public sealed class SessionSettings
 
     public int RunsPerModel { get; set; } = MinRunsPerModel;
 
+    /// <summary>Parameters asked for every run of the session. Changing the models does not change them.</summary>
+    public GenerationParameters Parameters { get; set; } = GenerationParameters.Empty;
+
     /// <summary>Assistant chat model. Stored under the legacy name <c>assistantModelId</c>.</summary>
     [property: JsonPropertyName("assistantModelId")]
     public ModelRef AssistantModel { get; set; } = new(ProviderIds.OpenRouter, DefaultAssistantModelId);
