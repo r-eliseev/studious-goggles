@@ -31,6 +31,12 @@ public sealed class AssistantService(
             ?? throw new InvalidOperationException($"Session {sessionId} not found.");
 
         var trimmed = text.Trim();
+        logger.LogInformation(
+            "Assistant turn in session {SessionId} with model {ProviderId}/{ModelId}.",
+            sessionId,
+            session.Settings.AssistantModel.ProviderId,
+            session.Settings.AssistantModel.ModelId);
+        logger.LogDebug("User message in session {SessionId}: {Text}", sessionId, trimmed);
         var userMessage = NewMessage(sessionId, ChatRole.User, trimmed);
         await messages.AddAsync(userMessage, cancellationToken);
         await sessions.SetTitleFromFirstMessageAsync(sessionId, trimmed, cancellationToken);
@@ -38,11 +44,16 @@ public sealed class AssistantService(
         Run? run = null;
         string replyText;
         var isError = false;
+        var messageCount = 0;
+        var toolCallCount = 0;
         try
         {
             var chatClient = providers.GetChatClient(session.Settings.AssistantModel.ProviderId);
-            var reply = await chatClient.CompleteChatAsync(
-                await BuildRequestAsync(session, cancellationToken), cancellationToken);
+            var request = await BuildRequestAsync(session, cancellationToken);
+            messageCount = request.Messages.Count;
+            var reply = await chatClient.CompleteChatAsync(request, cancellationToken);
+            toolCallCount = reply.ToolCalls.Count;
+            logger.LogDebug("Assistant reply in session {SessionId}: {Text}", sessionId, reply.Text);
             var call = reply.ToolCalls.FirstOrDefault(c => c.Name == AssistantPrompts.GenerateImagesToolName);
             if (call is not null)
             {
@@ -78,6 +89,13 @@ public sealed class AssistantService(
         assistantMessage.RunId = run?.Id;
         assistantMessage.IsError = isError;
         await messages.AddAsync(assistantMessage, cancellationToken);
+        logger.LogInformation(
+            "Assistant turn in session {SessionId} finished: {MessageCount} messages sent, {ToolCallCount} tool calls, run {RunId}, error {IsError}.",
+            sessionId,
+            messageCount,
+            toolCallCount,
+            run?.Id,
+            isError);
         return new AssistantTurnResult(userMessage, assistantMessage, run);
     }
 

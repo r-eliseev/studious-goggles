@@ -13,6 +13,7 @@ using ImageGen.Presentation;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace ImageGen.Avalonia.Composition;
 
@@ -22,14 +23,15 @@ public static class AppServices
     /// Builds the container of the desktop app: core, storage, the shared presentation layer, the Avalonia pages and the
     /// platform services. Validates the registrations at build time.
     /// <paramref name="openRouterHandler"/> and <paramref name="dialogs"/> replace the network and the dialog windows
-    /// (tests); the app itself passes nothing.
+    /// (tests); the app itself passes nothing. <paramref name="configureLogging"/> adds the log providers (the app adds the file log).
     /// </summary>
     public static ServiceProvider Create(
         IAppPaths paths,
         ISecretStore secrets,
         ISecretPersistence persistence,
         HttpMessageHandler? openRouterHandler = null,
-        IDialogService? dialogs = null)
+        IDialogService? dialogs = null,
+        Action<ILoggingBuilder>? configureLogging = null)
     {
         ArgumentNullException.ThrowIfNull(paths);
         ArgumentNullException.ThrowIfNull(secrets);
@@ -39,6 +41,7 @@ public static class AppServices
         services.AddSingleton(paths);
         services.AddSingleton(secrets);
         services.AddSingleton(persistence);
+        services.AddLogging(builder => configureLogging?.Invoke(builder));
         services.AddImageGenCore();
         services.AddImageGenData();
         if (openRouterHandler is not null)

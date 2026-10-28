@@ -1,7 +1,9 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using ImageGen.Avalonia.Services.Navigation;
+using ImageGen.Avalonia.Tests.TestDoubles;
 using ImageGen.Avalonia.Views;
+using Microsoft.Extensions.Logging;
 
 namespace ImageGen.Avalonia.Tests.Services.Navigation;
 
@@ -10,6 +12,21 @@ public class AvaloniaNavigationServiceTests
     private static PageRoutes Routes() => new PageRoutes()
         .Add("first", _ => new CountingPage())
         .Add("second", _ => new CountingPage());
+
+    [AvaloniaFact]
+    public async Task GoToAsync_KnownRoute_LogsRouteAtInformation()
+    {
+        var logger = new CapturingLogger<AvaloniaNavigationService>();
+        var host = new ContentControl();
+        var navigation = new AvaloniaNavigationService(Routes(), logger);
+        navigation.AttachHost(host);
+
+        await navigation.GoToAsync("first");
+
+        var entry = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Information, entry.Level);
+        Assert.Contains("first", entry.Message, StringComparison.Ordinal);
+    }
 
     [AvaloniaFact]
     public async Task GoToAsync_KnownRoute_ShowsPageAndCallsOnAppearing()

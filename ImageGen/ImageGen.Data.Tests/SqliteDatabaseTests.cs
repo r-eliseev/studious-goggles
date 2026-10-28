@@ -1,9 +1,36 @@
+using ImageGen.Data.Tests.TestDoubles;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 
 namespace ImageGen.Data.Tests;
 
 public class SqliteDatabaseTests
 {
+    [Fact]
+    public async Task InitializeAsync_NewFile_LogsSchemaVersionChangeFromZero()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var directory = Path.Combine(Path.GetTempPath(), "imagegen-tests", Guid.NewGuid().ToString("N"));
+        var logger = new CapturingLogger<SqliteDatabase>();
+        var database = new SqliteDatabase(Path.Combine(directory, SqliteDatabase.FileName), logger);
+        try
+        {
+            await database.InitializeAsync(cancellationToken);
+
+            var ready = Assert.Single(logger.Entries, e => e.Message.StartsWith("Database ready", StringComparison.Ordinal));
+            Assert.Equal(LogLevel.Information, ready.Level);
+            Assert.Contains($"schema version {Migrations.All.Count} (was 0)", ready.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
     [Fact]
     public async Task InitializeAsync_NewFile_SetsSchemaVersionToMigrationCount()
     {

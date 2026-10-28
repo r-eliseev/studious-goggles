@@ -6,6 +6,7 @@ using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
 using ImageGen.Presentation.Tests.TestDoubles;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute.ExceptionExtensions;
 
 namespace ImageGen.Presentation.Tests.PageModels;
@@ -19,7 +20,7 @@ public class ApiKeyPageModelTests
     private readonly ISecretPersistence _persistence = Substitute.For<ISecretPersistence>();
 
     private ApiKeyPageModel CreateModel() =>
-        new(new ApiKeyService(ProviderDoubles.Router(_provider), _secrets), _navigation, _dialogs, _persistence);
+        new(new ApiKeyService(ProviderDoubles.Router(_provider), _secrets, NullLogger<ApiKeyService>.Instance), _navigation, _dialogs, _persistence);
 
     [Fact]
     public async Task OnAppearingAsync_NotPersistent_ShowsNotPersistedWarning()

@@ -13,6 +13,7 @@ public class DataServiceCollectionExtensionsTests
         paths.DataDirectory.Returns(Path.GetTempPath());
         var services = new ServiceCollection();
         services.AddSingleton(paths);
+        services.AddLogging();
 
         services.AddImageGenData();
         using var provider = services.BuildServiceProvider();

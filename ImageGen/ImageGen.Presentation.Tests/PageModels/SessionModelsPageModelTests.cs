@@ -8,6 +8,7 @@ using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
 using ImageGen.Presentation.Tests.TestDoubles;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute.ExceptionExtensions;
 
 namespace ImageGen.Presentation.Tests.PageModels;
@@ -44,7 +45,7 @@ public class SessionModelsPageModelTests
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
         _sessionService = new SessionService(_sessions, _messages, _runs, _files, time);
-        _catalog = new ModelCatalogService(ProviderDoubles.Router(_provider), _modelRepository);
+        _catalog = new ModelCatalogService(ProviderDoubles.Router(_provider), _modelRepository, NullLogger<ModelCatalogService>.Instance);
 
         _session = new Session
         {

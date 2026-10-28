@@ -3,6 +3,7 @@ using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
+using ImageGen.Core.Tests.TestDoubles;
 
 namespace ImageGen.Core.Tests.Services;
 
@@ -11,13 +12,27 @@ public class ModelCatalogServiceTests
     private readonly IModelProvider _client = Substitute.For<IModelProvider>();
     private readonly IImageModelRepository _repository = Substitute.For<IImageModelRepository>();
     private readonly IProviderRouter _providers = Substitute.For<IProviderRouter>();
+    private readonly CapturingLogger<ModelCatalogService> _logger = new();
     private readonly ModelCatalogService _service;
 
     public ModelCatalogServiceTests()
     {
         _providers.GetImageProvider(ProviderIds.OpenRouter).Returns(_client);
         _providers.ImageProviderIds.Returns([ProviderIds.OpenRouter]);
-        _service = new ModelCatalogService(_providers, _repository);
+        _service = new ModelCatalogService(_providers, _repository, _logger);
+    }
+
+    [Fact]
+    public async Task GetImageModelsAsync_CacheEmpty_LogsCountAndProviderAsSource()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        _repository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<ImageModel>>([]));
+        _client.ListImageModelsAsync(Arg.Any<CancellationToken>()).Returns([Model("a", "A")]);
+
+        await _service.GetImageModelsAsync(ProviderIds.OpenRouter, forceRefresh: false, ct);
+
+        Assert.Contains("Image models of provider openrouter: 1 from provider.", _logger.AllText, StringComparison.Ordinal);
     }
 
     public static ImageModel Model(string id, string name, bool supportsSeed = true, string providerId = ProviderIds.OpenRouter) => new()

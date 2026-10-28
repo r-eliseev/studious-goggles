@@ -1,5 +1,7 @@
 using Avalonia.Controls;
 using ImageGen.Presentation.Services;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Avalonia.Services.Navigation;
 
@@ -8,8 +10,9 @@ namespace ImageGen.Avalonia.Services.Navigation;
 /// going back shows the previous page again, and that page is told it appears (<see cref="IAppearing"/>). A page that is
 /// covered or popped is told it disappears (<see cref="IDisappearing"/>).
 /// </summary>
-public sealed class AvaloniaNavigationService(PageRoutes routes) : INavigationService
+public sealed class AvaloniaNavigationService(PageRoutes routes, ILogger<AvaloniaNavigationService>? logger = null) : INavigationService
 {
+    private readonly ILogger<AvaloniaNavigationService> _logger = logger ?? NullLogger<AvaloniaNavigationService>.Instance;
     private readonly List<(string Route, Control View)> _stack = [];
     private ContentControl? _host;
 
@@ -36,6 +39,7 @@ public sealed class AvaloniaNavigationService(PageRoutes routes) : INavigationSe
         }
 
         _stack.Add((route, view));
+        _logger.LogInformation("Navigation to {Route}.", route);
         Show(host, view);
         return Task.CompletedTask;
     }
@@ -50,6 +54,7 @@ public sealed class AvaloniaNavigationService(PageRoutes routes) : INavigationSe
         var host = RequireHost();
         Leave(_stack[^1].View);
         _stack.RemoveAt(_stack.Count - 1);
+        _logger.LogInformation("Navigation back to {Route}.", _stack[^1].Route);
         Show(host, _stack[^1].View);
         return Task.CompletedTask;
     }

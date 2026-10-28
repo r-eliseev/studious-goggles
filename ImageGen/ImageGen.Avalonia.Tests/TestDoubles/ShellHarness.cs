@@ -8,9 +8,11 @@ using ImageGen.Avalonia.Views;
 using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.Services;
 using ImageGen.Presentation;
+using ImageGen.Presentation.Logging;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 
 namespace ImageGen.Avalonia.Tests.TestDoubles;
@@ -21,15 +23,24 @@ namespace ImageGen.Avalonia.Tests.TestDoubles;
 /// </summary>
 public sealed class ShellHarness : IDisposable
 {
+    /// <param name="fileLogging">Writes the log to the data folder at Debug, as the app does in a debug build.</param>
     public ShellHarness(
         StubHttpMessageHandler? openRouter = null,
-        IDialogService? dialogs = null)
+        IDialogService? dialogs = null,
+        bool fileLogging = false)
     {
         Paths = new TempAppPaths();
         Secrets = new DesktopSecretStore(backend: null);
         OpenRouter = openRouter ?? StubHttpMessageHandler.Status(HttpStatusCode.OK);
         Dialogs = dialogs ?? Substitute.For<IDialogService>();
-        Provider = AppServices.Create(Paths, Secrets, Secrets, OpenRouter, Dialogs);
+        var logDirectory = ImageGenLogging.LogDirectoryFor(Paths.DataDirectory);
+        Provider = AppServices.Create(
+            Paths,
+            Secrets,
+            Secrets,
+            OpenRouter,
+            Dialogs,
+            fileLogging ? builder => builder.AddImageGenFileLogging(logDirectory, LogLevel.Debug) : null);
         Window = new MainWindow();
         Navigation = Provider.GetRequiredService<AvaloniaNavigationService>();
         Navigation.AttachHost(Window.PageArea);

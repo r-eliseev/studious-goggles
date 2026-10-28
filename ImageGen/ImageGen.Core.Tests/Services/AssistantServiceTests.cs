@@ -5,6 +5,8 @@ using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
+using ImageGen.Core.Tests.TestDoubles;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Core.Tests.Services;
@@ -30,6 +32,7 @@ public class AssistantServiceTests
     private readonly List<Run> _storedRuns = [];
     private readonly Session _session;
     private readonly GenerationService _generations;
+    private readonly CapturingLogger<AssistantService> _logger = new();
     private readonly AssistantService _service;
 
     public AssistantServiceTests()
@@ -42,7 +45,7 @@ public class AssistantServiceTests
         _providers.ImageProviderIds.Returns([ProviderIds.OpenRouter]);
         _providers.GetImageProvider(ProviderIds.OpenRouter).Returns(_generator);
         _providers.GetChatClient(ProviderIds.OpenRouter).Returns(_chat);
-        var catalog = new ModelCatalogService(_providers, _modelRepository);
+        var catalog = new ModelCatalogService(_providers, _modelRepository, NullLogger<ModelCatalogService>.Instance);
         _seeds.NextSeed().Returns(7L);
         _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>())
             .Returns(new ImageGenerationResult(Image, "image/png", 0.01m));
@@ -85,10 +88,47 @@ public class AssistantServiceTests
         _generations = new GenerationService(
             _sessions, _runs, _providers, _files, catalog, _seeds, time, NullLogger<GenerationService>.Instance);
         _service = new AssistantService(
-            sessionService, _messages, _runs, _providers, _generations, time, NullLogger<AssistantService>.Instance);
+            sessionService, _messages, _runs, _providers, _generations, time, _logger);
     }
 
     private ChatMessage AssistantMessage => _stored.Last();
+
+    [Fact]
+    public async Task SendUserMessageAsync_Information_DoesNotLogUserText()
+    {
+        ReplyWith(new AssistantChatResult("Reply text", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "my private prompt", TestContext.Current.CancellationToken);
+
+        Assert.DoesNotContain(
+            _logger.Entries.Where(e => e.Level >= LogLevel.Information),
+            e => e.Message.Contains("my private prompt", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_Debug_LogsUserTextAndReply()
+    {
+        ReplyWith(new AssistantChatResult("Reply text", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "my private prompt", TestContext.Current.CancellationToken);
+
+        Assert.Contains(_logger.Entries, e => e.Level == LogLevel.Debug && e.Message.Contains("my private prompt", StringComparison.Ordinal));
+        Assert.Contains(_logger.Entries, e => e.Level == LogLevel.Debug && e.Message.Contains("Reply text", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_ToolCall_LogsTurnWithRunAndToolCallCount()
+    {
+        ReplyWithToolCall("{\"prompt\":\"a fox\"}");
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "draw a fox", TestContext.Current.CancellationToken);
+
+        var finished = Assert.Single(_logger.Entries, e => e.Message.Contains("finished", StringComparison.Ordinal));
+        Assert.Equal(LogLevel.Information, finished.Level);
+        Assert.Contains($"run {result.Run!.Id}", finished.Message, StringComparison.Ordinal);
+        Assert.Contains("1 tool calls", finished.Message, StringComparison.Ordinal);
+    }
+
 
     private AssistantChatRequest LastRequest =>
         (AssistantChatRequest)_chat.ReceivedCalls().Last().GetArguments()[0]!;

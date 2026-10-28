@@ -159,8 +159,15 @@ public sealed class GenerationService(
         }
 
         await runs.AddRunAsync(run, generations, cancellationToken);
+        logger.LogInformation(
+            "Run {RunId} created in session {SessionId} ({Origin}): {GenerationCount} generations.",
+            run.Id,
+            sessionId,
+            origin,
+            generations.Count);
         foreach (var generation in generations)
         {
+            LogStatus(generation);
             Launch(generation);
         }
 
@@ -253,9 +260,31 @@ public sealed class GenerationService(
         }
     }
 
+    /// <summary>
+    /// Logs a state change of one generation with its id. Filtered is a normal result of a provider's moderation,
+    /// so only Failed is logged as a warning. The prompt is not logged here (it is user data).
+    /// </summary>
+    private void LogStatus(Generation generation)
+    {
+        const string Template =
+            "Generation {GenerationId} is {Status} (run {RunId}, model {ProviderId}/{ModelId}, duration {DurationMs} ms, error {ErrorKind})";
+        var durationMs = generation.CompletedAt is { } completed
+            ? (long)(completed - generation.CreatedAt).TotalMilliseconds
+            : (long?)null;
+        if (generation.Status == GenerationStatus.Failed)
+        {
+            logger.LogWarning(Template, generation.Id, generation.Status, generation.RunId, generation.ProviderId, generation.ModelId, durationMs, generation.ErrorKind);
+        }
+        else
+        {
+            logger.LogInformation(Template, generation.Id, generation.Status, generation.RunId, generation.ProviderId, generation.ModelId, durationMs, generation.ErrorKind);
+        }
+    }
+
     /// <summary>Saves the generation, then raises the event with a copy. A failed save is logged and not reported.</summary>
     private async Task SaveAndNotifyAsync(Generation generation)
     {
+        LogStatus(generation);
         try
         {
             await runs.UpdateGenerationAsync(generation, CancellationToken.None).ConfigureAwait(false);

@@ -176,7 +176,7 @@ public class SessionsPageModelTests : IDisposable
     private SessionsPageModel CreateModel()
     {
         var sessions = new SessionService(_sessionRepository, Substitute.For<IChatMessageRepository>(), _runs, _files, TimeProvider.System);
-        var apiKeys = new ApiKeyService(ProviderDoubles.Router(_provider), _secrets);
+        var apiKeys = new ApiKeyService(ProviderDoubles.Router(_provider), _secrets, NullLogger<ApiKeyService>.Instance);
         return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs);
     }
 
@@ -191,7 +191,7 @@ public class SessionsPageModelTests : IDisposable
 
     private AppInitializer CreateInitializer()
     {
-        var catalog = new ModelCatalogService(ProviderDoubles.Router(), Substitute.For<IImageModelRepository>());
+        var catalog = new ModelCatalogService(ProviderDoubles.Router(), Substitute.For<IImageModelRepository>(), NullLogger<ModelCatalogService>.Instance);
         var generation = new GenerationService(
             Substitute.For<ISessionRepository>(),
             _runs,
