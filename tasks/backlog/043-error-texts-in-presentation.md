@@ -40,3 +40,6 @@ created: 2026-10-28
 ## Отчёт
 
 ## Комментарии
+
+### 2026-10-28, ревью (claude)
+Пример из первой ручной проверки: при 429 у бесплатной модели пользователь видит «Assistant error (RateLimited): Provider returned error», а причина есть только в `error.metadata.raw` ответа OpenRouter («… is temporarily rate-limited upstream. Please retry shortly…»). При планировании учесть: текст по коду `RateLimited` из `AppResources` с советом выбрать другую модель (задача 049), деталь провайдера — в журнал.
