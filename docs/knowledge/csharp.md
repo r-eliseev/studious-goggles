@@ -58,6 +58,8 @@
 - xUnit v3 на .NET 10 SDK работает только в новом режиме `dotnet test` (Microsoft.Testing.Platform): в корне репозитория `global.json` с `{"test": {"runner": "Microsoft.Testing.Platform"}}`, тестовый проект с `<OutputType>Exe</OutputType>`. Иначе ошибка «Testing with VSTest target is no longer supported». Запуск: `dotnet test --project <путь к csproj>` (проверено 2026-10-27).
 - В режиме Microsoft.Testing.Platform `dotnet test --solution <slnx>` собирает все проекты решения, включая MAUI; для ядра запускать `--project`.
 - HTTP в тестах подменяется своим наследником `HttpMessageHandler` (NSubstitute не подменяет защищённый `SendAsync`).
+- На Windows открытый файл SQLite нельзя удалить (`IOException: … being used by another process`), на Linux можно: тест, который удаляет временную папку, пока фоновая генерация ещё пишет в базу, падает только на Windows. `SqliteConnection.ClearAllPools()` не помогает, если соединение занято; нужно дождаться работы (`GenerationService.WhenIdleAsync`) (проверено 2026-10-28, задача 053).
+- `CultureInfo.CurrentCulture` на машине владельца — `pl-PL` (запятая в дробных числах); CI — английская культура. Форматирование «по текущей культуре» проходит в CI и падает локально (проверено 2026-10-28).
 
 ## Команды dotnet
 ```

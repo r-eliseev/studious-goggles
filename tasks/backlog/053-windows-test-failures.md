@@ -1,8 +1,8 @@
 ---
 id: 053
-status: in-progress
-assignee: claude-win
-claimed: 2026-10-28T14:29:25Z
+status: done
+assignee:
+claimed:
 created: 2026-10-28
 ---
 
@@ -48,6 +48,22 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Presentation/PageModels/AssistantModelOptionViewModel.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/AssistantModelOptionViewModelTests.cs` (новый или существующий), `ImageGen/ImageGen.Avalonia.Tests/TestDoubles/ShellHarness.cs`, `ImageGen/ImageGen.Avalonia.Tests/TestDoubles/TempAppPaths.cs`, `ImageGen/ImageGen.Avalonia.Tests/Flows/ChatKeyboardFlowTests.cs`, `ImageGen/ImageGen.Data/*` (если держит код приложения), `.github/workflows/build.yml`, `docs/conventions.md`, `docs/knowledge/csharp.md`
 
 ## Отчёт
+Исполнитель: claude-win (Windows 11, культура `pl-PL`, SDK 10.0.402). Ветка: `task/053-windows-test-failures`.
+
+### Что сделано
+- **Цена модели ассистента** (`AssistantModelOptionViewModel.PriceText`): `InvariantCulture` вместо `CurrentCulture`, как у остальных цен интерфейса. Новый тест `AssistantModelOptionViewModelTests.DetailsText_PolishCulture_UsesPointAsDecimalSeparator` (под `pl-PL`, сначала падал).
+- **Блокировка временной базы** (`ShellHarness.Dispose`): причина — фейковый ассистент отвечает вызовом `generate_images`, и генерация в фоне ещё пишет в базу и папку картинок, когда тест удаляет временную папку; на Windows открытый файл не удалить. Харнес перед удалением ждёт `GenerationService.WhenIdleAsync()`, прокачивая очередь UI-потока, с пределом 10 секунд. `GenerationService` берётся в конструкторе харнеса: `LoggingFlowTests` сам освобождает контейнер до `Dispose` (первая версия правки уронила этот тест, исправлено).
+- **CI:** новая задача `windows-tests` (`windows-latest`) — сборка и тесты Core, Data, Presentation, Avalonia.
+- **Документы:** `docs/conventions.md` («Тесты»: культура, ожидание фоновой работы, CI на Windows), `docs/knowledge/csharp.md` (два факта: блокировка SQLite-файла на Windows, культура машины против CI).
+
+### Проверка
+- Тесты на Windows: Core 262, Data 59, Presentation 140 из 140, Avalonia 60 из 61 (1 пропуск — интеграционный Secret Service); Avalonia — три прогона подряд без сбоев.
+- `dotnet format --verify-no-changes` для `ImageGen.Presentation`, `ImageGen.Presentation.Tests`, `ImageGen.Avalonia.Tests` — без изменений; `scripts/check.sh` — пройден.
+- Не проверено здесь: задача `windows-tests` в GitHub Actions — смотреть в PR.
+
+### Отличия от плана
+- Код приложения (`ImageGen.Data`) не менялся: соединение держала фоновая генерация теста, а не утечка в `SqliteDatabase`. Отдельного теста в `Data.Tests` не понадобилось.
+- Культура раннера в CI не меняется; тест на `pl-PL` задаёт её сам.
 
 ## Комментарии
 
