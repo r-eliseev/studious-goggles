@@ -49,6 +49,18 @@ scripts/check.sh
 
 ## Отчёт
 
+Частично: Avalonia и подсказка сделаны, MAUI-часть (Windows и Android) — нет. Задача остаётся открытой, статус `approved`.
+
+Сделано:
+- Avalonia (`ChatView.axaml`, `ChatView.axaml.cs`): обработчик Enter перенесён из XAML в туннельную фазу (`AddHandler(..., RoutingStrategies.Tunnel)` в конструкторе). Enter без Shift ставит `Handled` и отправляет, если отправка доступна; Shift+Enter не трогается, перевод строки остаётся за `TextBox`. Причина туннельной фазы — в `docs/knowledge/avalonia.md`.
+- Подсказка в поле ввода (`AppResources.resx`, `ChatPlaceholder`): «Describe the image you want (Enter — send, Shift+Enter — new line)».
+- Тесты `ChatKeyboardFlowTests` (headless, 3 сценария): Enter отправляет и не добавляет строку; Shift+Enter не обработан; Enter на пустом поле ничего не делает и не добавляет строку. Все 61 тест Avalonia проходят.
+
+Не сделано (нужна работа на Windows, отсюда не собирается, WinUI-код нельзя проверить на Linux):
+- MAUI на Windows: обработчик Enter для поля чата в `Platforms/Windows` (перехват `PreviewKeyDown` у нативного поля, отправка через команду `SendCommand`).
+- MAUI на Android: действие клавиатуры «Отправить» у поля (в `Editor` нет `ReturnType`, нужна платформенная настройка), перевод строки на экранной клавиатуре — решение при реализации.
+- Эти пункты проверяются вручную (задача 016) после реализации.
+
 ## Комментарии
 
 ### 2026-10-28, владелец (в чате, записал ревью)

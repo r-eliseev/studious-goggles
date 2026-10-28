@@ -20,6 +20,9 @@
                     Command="{Binding OpenModelsCommand}"
                     MinHeight="44"
                     AutomationProperties.Name="{Binding ModelsButtonText}" />
+            <TextBlock Text="{Binding AssistantText}"
+                       VerticalAlignment="Center"
+                       AutomationProperties.Name="{Binding AssistantText}" />
             <Button Content="{markup:Res ChatParametersButton}"
                     Command="{Binding OpenParametersCommand}"
                     MinHeight="44"
@@ -146,14 +149,14 @@
                 </ItemsControl.DataTemplates>
             </ItemsControl>
             <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <TextBox Text="{Binding InputText, Mode=TwoWay}"
+                <TextBox Name="Input"
+                         Text="{Binding InputText, Mode=TwoWay}"
                          AcceptsReturn="True"
                          TextWrapping="Wrap"
                          MaxHeight="160"
                          MinHeight="44"
                          PlaceholderText="{markup:Res ChatPlaceholder}"
-                         AutomationProperties.Name="{markup:Res ChatPlaceholder}"
-                         KeyDown="OnInputKeyDown" />
+                         AutomationProperties.Name="{markup:Res ChatPlaceholder}" />
 
                 <Button Grid.Column="1"
                         Content="{markup:Res Send}"

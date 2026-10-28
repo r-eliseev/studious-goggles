@@ -1,6 +1,7 @@
 using System.Collections.Specialized;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using ImageGen.Avalonia.Services.Navigation;
@@ -9,12 +10,14 @@ using ImageGen.Presentation.Utilities;
 
 namespace ImageGen.Avalonia.Views;
 
-/// <summary>Chat of one session. Ctrl+Enter sends the message; Enter starts a new line.</summary>
+/// <summary>Chat of one session. Enter sends the message; Shift+Enter starts a new line.</summary>
 public partial class ChatView : UserControl, IAppearing, IDisappearing
 {
     public ChatView()
     {
         AvaloniaXamlLoader.Load(this);
+        // Tunnel phase: Enter is taken before the TextBox turns it into a new line.
+        this.FindControl<TextBox>("Input")?.AddHandler(KeyDownEvent, OnInputKeyDown, RoutingStrategies.Tunnel);
     }
 
     public void OnAppearing()
@@ -42,15 +45,16 @@ public partial class ChatView : UserControl, IAppearing, IDisappearing
 
     private void OnInputKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter || !e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        if (e.Key != Key.Enter || e.KeyModifiers.HasFlag(KeyModifiers.Shift))
         {
             return;
         }
 
+        // Handled even when nothing is sent: an empty or busy input must not add a new line either.
+        e.Handled = true;
         if (DataContext is ChatPageModel model && model.SendCommand.CanExecute(null))
         {
             model.SendCommand.Execute(null);
-            e.Handled = true;
         }
     }
 
