@@ -23,6 +23,9 @@ public partial class App : Application
     /// <summary>Composition root of the running app, set when the framework is initialized.</summary>
     public ServiceProvider? Services { get; private set; }
 
+    /// <summary>Data folder and key store instead of the real ones. Tests set it before the app starts; the real app leaves it null.</summary>
+    public static AppHostOverrides? HostOverrides { get; set; }
+
     /// <summary>The main window, created at startup whether or not the platform has a desktop lifetime.</summary>
     public MainWindow? MainWindow { get; private set; }
 
@@ -38,8 +41,8 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        var paths = new DesktopAppPaths();
-        var secrets = DesktopSecretStore.ForCurrentPlatform(paths);
+        var paths = HostOverrides?.Paths ?? new DesktopAppPaths();
+        var secrets = HostOverrides?.Secrets ?? DesktopSecretStore.ForCurrentPlatform(paths);
         var logDirectory = ImageGenLogging.LogDirectoryFor(paths.DataDirectory);
         var level = LogLevelSettings.Load(
             paths.DataDirectory,

@@ -236,6 +236,33 @@ public class OpenRouterClientTests
     }
 
     [Fact]
+    public async Task ListChatModelsAsync_ReadsToolsAndPricePerMillionTokens()
+    {
+        const string json = """
+            {"data":[
+              {"id":"anthropic/claude-haiku-5.5","name":"Claude Haiku 5.5",
+               "supported_parameters":["max_tokens","tools","tool_choice","seed"],
+               "pricing":{"prompt":"0.0000001","completion":"0.0000005"},
+               "architecture":{"input_modalities":["text","image"],"output_modalities":["text"]}},
+              {"id":"google/gemma-4-31b-it:free","name":"Gemma",
+               "supported_parameters":["max_tokens"],
+               "pricing":{"prompt":"0","completion":"0"},
+               "architecture":{"input_modalities":["text"],"output_modalities":["text"]}}
+            ]}
+            """;
+        var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, json));
+
+        var models = await client.ListChatModelsAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(models[0].SupportsTools);
+        Assert.Equal(0.1m, models[0].PromptPricePerMillion);
+        Assert.Equal(0.5m, models[0].CompletionPricePerMillion);
+        Assert.False(models[0].IsFree);
+        Assert.False(models[1].SupportsTools);
+        Assert.True(models[1].IsFree);
+    }
+
+    [Fact]
     public async Task GenerateImageAsync_EmptyData_ThrowsEmptyResponse()
     {
         var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"data":[]}"""));

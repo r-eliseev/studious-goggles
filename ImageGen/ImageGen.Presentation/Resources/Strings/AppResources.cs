@@ -105,6 +105,20 @@ public static class AppResources
 
     public static string Refresh => Get(nameof(Refresh));
 
+    public static string AssistantModelTitle => Get(nameof(AssistantModelTitle));
+
+    public static string AssistantLabelFormat => Get(nameof(AssistantLabelFormat));
+
+    public static string AssistantPriceFormat => Get(nameof(AssistantPriceFormat));
+
+    public static string AssistantPriceUnknown => Get(nameof(AssistantPriceUnknown));
+
+    public static string AssistantFree => Get(nameof(AssistantFree));
+
+    public static string AssistantTakesImages => Get(nameof(AssistantTakesImages));
+
+    public static string AssistantSelected => Get(nameof(AssistantSelected));
+
     public static string SessionParametersTitle => Get(nameof(SessionParametersTitle));
 
     public static string SessionParametersDescription => Get(nameof(SessionParametersDescription));

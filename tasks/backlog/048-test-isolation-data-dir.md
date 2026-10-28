@@ -1,8 +1,8 @@
 ---
 id: 048
-status: approved
-assignee:
-claimed:
+status: done
+assignee: 
+claimed: 2026-10-28T13:24:05Z
 created: 2026-10-28
 ---
 
@@ -54,6 +54,27 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Avalonia/App.axaml.cs`, `ImageGen/ImageGen.Avalonia/Platform/DesktopAppPaths.cs`, `ImageGen/ImageGen.Avalonia.Tests/TestAppBuilder.cs`, `ImageGen/ImageGen.Avalonia.Tests/**` (новые тесты), `docs/knowledge/dev-environment.md`, `docs/knowledge/avalonia.md`, `AGENTS.md`
 
 ## Отчёт
+
+Исполнитель: claude-07d6. Ветка: `ccr-07d63c19-ma1lxw`.
+
+### Что сделано
+- `DesktopAppPaths`: переменная `IMAGEGEN_DATA_DIR` задаёт папку данных (полный путь, пустое значение — как раньше).
+- `App.HostOverrides` (`AppHostOverrides(Paths, Secrets)`): подмена папки и хранилища ключей; `OnFrameworkInitializationCompleted` берёт их, если заданы. Рабочий запуск их не задаёт.
+- `TestAppBuilder`: ставит временную папку на процесс (удаляется при выходе процесса) и хранилище ключей в памяти до запуска приложения.
+- Тесты: `DesktopAppPathsTests` (переопределение, пустое значение, переменная окружения), `AppStartupTests.Startup_UsesTemporaryDataFolderAndInMemoryKeys`.
+- Документация: `AGENTS.md` и `docs/knowledge/dev-environment.md` (переменная).
+
+### Проверка
+- `dotnet test ImageGen.Avalonia.Tests` — все проходят.
+- Linux: `~/.local/share/ImageGen` до и после прогона — тот же `imagegen.db` (mtime не изменился), число файлов в папке не изменилось (2 → 2). Старые файлы из прошлого запуска до исправления не удалял.
+- `dotnet format --verify-no-changes` для `ImageGen.Avalonia` и `ImageGen.Avalonia.Tests`; `scripts/check.sh`.
+
+### Отличия от плана
+1. Пункт 4 (метод `Shutdown`/`Dispose` у `App`) не сделан: после подмены в процессе теста один экземпляр `App` и один файловый логгер, поэтому суффиксов `_001` не появляется. Освобождение при выходе из `desktop.Exit` уже есть.
+2. Отдельный тест «два теста подряд — один файл логов» не писан: одного экземпляра `App` достаточно, файл проверяется структурой ни в одном тесте.
+
+### Не проверено в этой среде
+- Прогон на Windows (критерий «до и после» на `%LOCALAPPDATA%\ImageGen`): нужен ручной прогон владельца.
 
 ## Комментарии
 

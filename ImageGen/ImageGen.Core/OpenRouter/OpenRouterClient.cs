@@ -123,11 +123,15 @@ public sealed class OpenRouterClient(
             }
 
             var inputModalities = item!["architecture"]?["input_modalities"] as JsonArray;
+            var supportedParameters = item["supported_parameters"] as JsonArray;
             result.Add(new ChatModel(
                 id,
                 ReadString(item["name"]) ?? id,
                 inputModalities?.Any(m => ReadString(m) == "image") == true,
-                ReadInt(item["context_length"])));
+                ReadInt(item["context_length"]),
+                SupportsTools: supportedParameters?.Any(p => ReadString(p) == "tools") == true,
+                PromptPricePerMillion: PricePerMillion(item["pricing"]?["prompt"]),
+                CompletionPricePerMillion: PricePerMillion(item["pricing"]?["completion"])));
         }
 
         return result;
@@ -213,6 +217,12 @@ public sealed class OpenRouterClient(
             body[name] = value;
         }
     }
+
+    /// <summary>OpenRouter gives the price per token as a decimal string; the app shows it per million tokens.</summary>
+    private static decimal? PricePerMillion(JsonNode? perToken) =>
+        decimal.TryParse(ReadString(perToken), NumberStyles.Float, CultureInfo.InvariantCulture, out var price)
+            ? price * 1_000_000m
+            : null;
 
     private static int? ReadInt(JsonNode? node) =>
         node is JsonValue value && value.TryGetValue<int>(out var number) ? number : null;

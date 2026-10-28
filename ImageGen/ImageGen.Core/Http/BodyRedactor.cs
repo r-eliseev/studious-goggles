@@ -7,7 +7,10 @@ internal static partial class BodyRedactor
 {
     public const int MaxLength = 4096;
 
-    /// <summary>Replaces image payloads (JSON <c>b64_json</c> fields and data URLs) and cuts the text to <see cref="MaxLength"/>.</summary>
+    /// <summary>
+    /// Replaces image payloads (JSON <c>b64_json</c> fields and data URLs), the values of account fields
+    /// (<c>label</c>, <c>key</c>, <c>api_key</c>, <c>*_user_id</c>) and cuts the text to <see cref="MaxLength"/>.
+    /// </summary>
     public static string Redact(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -15,6 +18,7 @@ internal static partial class BodyRedactor
             $"\"{match.Groups["name"].Value}\":\"<base64, {DecodedBytes(match.Groups["data"].Value)} bytes>\"");
         redacted = DataUrl().Replace(redacted, match =>
             $"<data url, {match.Groups["type"].Value}, {DecodedBytes(match.Groups["data"].Value)} bytes>");
+        redacted = SecretJsonField().Replace(redacted, match => $"\"{match.Groups["name"].Value}\":\"<redacted>\"");
 
         if (redacted.Length <= MaxLength)
         {
@@ -36,4 +40,7 @@ internal static partial class BodyRedactor
 
     [GeneratedRegex("data:(?<type>[a-zA-Z0-9.+-]+/[a-zA-Z0-9.+-]+);base64,(?<data>[A-Za-z0-9+/=]+)")]
     private static partial Regex DataUrl();
+
+    [GeneratedRegex("\"(?<name>label|key|api_key|[a-z_]*user_id)\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\"")]
+    private static partial Regex SecretJsonField();
 }

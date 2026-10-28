@@ -42,6 +42,10 @@ public sealed partial class ChatPageModel(
     [ObservableProperty]
     public partial string ModelsButtonText { get; set; } = "";
 
+    /// <summary>The assistant model of the session, shown next to the models button.</summary>
+    [ObservableProperty]
+    public partial string AssistantText { get; set; } = "";
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SendCommand))]
     public partial string InputText { get; set; } = "";
@@ -90,6 +94,7 @@ public sealed partial class ChatPageModel(
                 AppResources.ModelsButtonFormat,
                 settings.ImageModels.Count,
                 settings.RunsPerModel);
+            AssistantText = string.Format(CultureInfo.CurrentCulture, AppResources.AssistantLabelFormat, settings.AssistantModel.ModelId);
 
             Items.Clear();
             _cards.Clear();

@@ -50,7 +50,7 @@ public sealed class LoggingHttpHandler(ILogger<LoggingHttpHandler> logger) : Del
             ElapsedMs(started),
             size);
 
-        if (logger.IsEnabled(LogLevel.Debug))
+        if (logger.IsEnabled(LogLevel.Debug) && !IsCredentialCheck(path))
         {
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             logger.LogDebug("Response body {Method} {Path}: {Body}", method, path, BodyRedactor.Redact(body));
@@ -58,6 +58,12 @@ public sealed class LoggingHttpHandler(ILogger<LoggingHttpHandler> logger) : Del
 
         return response;
     }
+
+    /// <summary>
+    /// The key check (<c>GET /api/v1/key</c> at OpenRouter) answers with the key label and the account id.
+    /// Its body is never logged, at any level; only the method, path, status and duration are.
+    /// </summary>
+    private static bool IsCredentialCheck(string path) => path.EndsWith("/key", StringComparison.Ordinal);
 
     private static long ElapsedMs(long started) => (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
 }

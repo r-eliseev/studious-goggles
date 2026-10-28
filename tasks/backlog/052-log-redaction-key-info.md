@@ -1,6 +1,6 @@
 ---
 id: 052
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -38,6 +38,21 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Http/LoggingHttpHandler.cs`, `ImageGen/ImageGen.Core/Http/BodyRedactor.cs`, `ImageGen/ImageGen.Core.Tests/Http/*`, `docs/conventions.md`
 
 ## Отчёт
+
+Сделано по плану, без отступлений.
+
+Журнал (ADR 0010 не менялся):
+- `LoggingHttpHandler`: тело ответа путей, оканчивающихся на `/key`, не пишется ни на каком уровне (`IsCredentialCheck`). Information по-прежнему пишет метод, путь, код, длительность и размер.
+- `BodyRedactor`: значения полей `label`, `key`, `api_key`, `*_user_id` заменяются на `<redacted>`. Остальные поля и base64/data URL-правила не менялись.
+
+Тесты (`LoggingHttpHandlerTests`, сначала падали):
+- `SendAsync_KeyCheckResponse_BodyIsNotLoggedAtDebug`: ответ `/key` с `label` и `creator_user_id` → значений нет в журнале, тело для клиента не изменилось.
+- `Redact_ApiKeyAndUserIdFields_ReplacesValuesWithPlaceholder`: `api_key` и `creator_user_id` → `<redacted>`, `model` не тронут.
+- Существующие тесты base64 и обрезки проходят.
+
+Проверка: `dotnet test` для ImageGen.Core.Tests — 255 passed; `dotnet format --verify-no-changes` для ImageGen.Core и ImageGen.Core.Tests — без изменений.
+
+Не сделано: `workspace_id` и лимиты из ответа `/key` в редакторе не маскируются, потому что `/key` целиком не пишется. Другие пути проверки ключа в `ProviderClientBase` не искались отдельно: суффикс `/key` покрывает OpenRouter.
 
 ## Комментарии
 

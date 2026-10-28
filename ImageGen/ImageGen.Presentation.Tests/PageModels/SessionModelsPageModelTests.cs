@@ -35,17 +35,27 @@ public class SessionModelsPageModelTests
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
     private readonly INavigationService _navigation = Substitute.For<INavigationService>();
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
+    private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
     private readonly Session _session;
     private readonly SessionService _sessionService;
     private readonly ModelCatalogService _catalog;
+    private readonly ChatModelCatalogService _chatModels;
     private Session? _saved;
 
     public SessionModelsPageModelTests()
     {
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
-        _sessionService = new SessionService(_sessions, _messages, _runs, _files, time);
+        _chatModels = new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance);
+        _sessionService = new SessionService(_sessions, _messages, _runs, _files, _chatModels, time);
         _catalog = new ModelCatalogService(ProviderDoubles.Router(_provider), _modelRepository, NullLogger<ModelCatalogService>.Instance);
+        _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ChatModel>>(
+        [
+            new ChatModel("vendor/zed", "Zed", SupportsImageInput: false, ContextLength: 1000, SupportsTools: true),
+            new ChatModel(AssistantModel, "Assistant", SupportsImageInput: true, ContextLength: 1000, SupportsTools: true,
+                PromptPricePerMillion: 0.1m, CompletionPricePerMillion: 0.5m),
+            new ChatModel("vendor/no-tools", "Plain", SupportsImageInput: false, ContextLength: 1000),
+        ]));
 
         _session = new Session
         {
@@ -68,7 +78,7 @@ public class SessionModelsPageModelTests
 
     private SessionModelsPageModel CreateModel()
     {
-        var model = new SessionModelsPageModel(_sessionService, _catalog, _navigation, _dialogs);
+        var model = new SessionModelsPageModel(_sessionService, _catalog, _chatModels, _navigation, _dialogs);
         model.ApplyQueryAttributes(new Dictionary<string, object> { [Routes.SessionIdParameter] = SessionId.ToString("D") });
         return model;
     }
@@ -103,6 +113,57 @@ public class SessionModelsPageModelTests
 
         await _modelRepository.Received(1).ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>());
         await _provider.DidNotReceive().ListImageModelsAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_AssistantListHasOnlyModelsWithToolsSortedByName()
+    {
+        var model = await OpenAsync();
+
+        Assert.Equal(new[] { "vendor/assistant", "vendor/zed" }, model.AssistantModels.Select(m => m.Reference.ModelId));
+        Assert.Equal("Assistant", model.AssistantModels[0].Name);
+        Assert.Equal("vendor/assistant · 0.10 in, 0.50 out per 1M tokens (USD) · takes images", model.AssistantModels[0].DetailsText);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_MarksSavedAssistantAsSelected()
+    {
+        var model = await OpenAsync();
+
+        Assert.Equal(new[] { true, false }, model.AssistantModels.Select(m => m.IsSelected));
+        Assert.Equal("✓ Assistant", model.AssistantModels[0].DisplayName);
+    }
+
+    [Fact]
+    public async Task SaveAsync_AssistantChosenInList_SavesIt()
+    {
+        var model = await OpenAsync();
+        model.AssistantModels[1].SelectCommand.Execute(null);
+
+        await model.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(Ref("vendor/zed"), _saved!.Settings.AssistantModel);
+        Assert.Equal(new[] { false, true }, model.AssistantModels.Select(m => m.IsSelected));
+    }
+
+    [Fact]
+    public async Task SaveAsync_NoAssistantChosen_KeepsSavedAssistant()
+    {
+        var model = await OpenAsync();
+
+        await model.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(Ref(AssistantModel), _saved!.Settings.AssistantModel);
+    }
+
+    [Fact]
+    public async Task SearchText_FiltersAssistantsToo()
+    {
+        var model = await OpenAsync();
+
+        model.SearchText = "zed";
+
+        Assert.Equal(new[] { "vendor/zed" }, model.AssistantModels.Select(m => m.Reference.ModelId));
     }
 
     [Fact]
@@ -300,7 +361,7 @@ public class SessionModelsPageModelTests
     [Fact]
     public void ApplyQueryAttributes_InvalidSessionId_Throws()
     {
-        var model = new SessionModelsPageModel(_sessionService, _catalog, _navigation, _dialogs);
+        var model = new SessionModelsPageModel(_sessionService, _catalog, _chatModels, _navigation, _dialogs);
 
         Assert.Throws<ArgumentException>(() =>
             model.ApplyQueryAttributes(new Dictionary<string, object> { [Routes.SessionIdParameter] = "not-a-guid" }));

@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Storage;
 
@@ -9,6 +10,7 @@ public sealed class SessionService(
     IChatMessageRepository messages,
     IRunRepository runs,
     IImageFileStore files,
+    ChatModelCatalogService chatModels,
     TimeProvider timeProvider)
 {
     public async Task<Session> CreateAsync(CancellationToken cancellationToken)
@@ -46,6 +48,8 @@ public sealed class SessionService(
         ArgumentOutOfRangeException.ThrowIfGreaterThan(settings.RunsPerModel, SessionSettings.MaxRunsPerModel);
         ArgumentNullException.ThrowIfNull(settings.AssistantModel);
 
+        await EnsureAssistantCanUseToolsAsync(settings.AssistantModel, cancellationToken);
+
         var session = await sessions.GetAsync(sessionId, cancellationToken)
             ?? throw new InvalidOperationException($"Session {sessionId} not found.");
         session.Settings = new SessionSettings
@@ -62,6 +66,21 @@ public sealed class SessionService(
         session.UpdatedAt = timeProvider.GetUtcNow();
         await sessions.UpdateAsync(session, cancellationToken);
         return session;
+    }
+
+    /// <summary>
+    /// The assistant starts runs through tools, so a model without them is refused. When the catalog cannot be
+    /// loaded the check is skipped: the choice is saved and the next message shows the provider's answer.
+    /// </summary>
+    private async Task EnsureAssistantCanUseToolsAsync(ModelRef assistant, CancellationToken cancellationToken)
+    {
+        var models = await chatModels.FindModelsAsync(assistant.ProviderId, cancellationToken);
+        if (models is not null && !models.Any(m => m.Id == assistant.ModelId && m.SupportsTools))
+        {
+            throw new ArgumentException(
+                $"Model {assistant.ModelId} cannot be the assistant: the provider does not list tools for it.",
+                nameof(assistant));
+        }
     }
 
     /// <summary>

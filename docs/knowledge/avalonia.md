@@ -36,3 +36,7 @@
 - В `Tmds.DBus` 0.95.1 вариант (`v`) передаётся как `object`, словари `a{ss}` и `a{sv}` — как `IDictionary<string, string>` и `IDictionary<string, object>`. Подключение: `Connection.Session` и `ConnectAsync()`.
 - Тесты Secret Service пропускаются без сессии D-Bus (`Assert.Skip`); в CI их нет. Внутри `dbus-run-session` с gnome-keyring все тесты проходят: 15 из 16, пропущен DPAPI (нужен Windows).
 - macOS-бэкенд и DPAPI на Windows не проверены: нет машин.
+
+## Enter в поле чата (задача 050)
+- Обработчик `KeyDown`, объявленный в XAML, на `TextBox` с `AcceptsReturn` не успевает перехватить Enter: поле вставляет перевод строки раньше. Поэтому обработчик добавлен из кода конструктора туннельным (`AddHandler(KeyDownEvent, …, RoutingStrategies.Tunnel)`) и ставит `Handled` на Enter без Shift.
+- В headless-тестах клавиша поднимается через `RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, … })`; перевод строки от клавиатуры в headless не моделируется, проверяется `Handled`.

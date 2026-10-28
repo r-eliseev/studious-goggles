@@ -15,7 +15,7 @@ public class SessionSettingsTests
 
         Assert.Equal([new ModelRef(ProviderIds.OpenRouter, "black-forest-labs/flux.2-klein-4b")], settings.ImageModels);
         Assert.Equal(1, settings.RunsPerModel);
-        Assert.Equal(new ModelRef(ProviderIds.OpenRouter, "google/gemma-4-31b-it:free"), settings.AssistantModel);
+        Assert.Equal(new ModelRef(ProviderIds.OpenRouter, "anthropic/claude-haiku-5.5"), settings.AssistantModel);
     }
 
     [Fact]

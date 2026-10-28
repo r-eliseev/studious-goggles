@@ -104,6 +104,9 @@
             <Button Text="{Binding ModelsButtonText}"
                     Command="{Binding OpenModelsCommand}"
                     SemanticProperties.Description="{Binding ModelsButtonText}" />
+            <Label Text="{Binding AssistantText}"
+                   VerticalOptions="Center"
+                   SemanticProperties.Description="{Binding AssistantText}" />
             <Button Text="{x:Static strings:AppResources.ChatParametersButton}"
                     Command="{Binding OpenParametersCommand}"
                     SemanticProperties.Description="{x:Static strings:AppResources.ChatParametersButton}" />

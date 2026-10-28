@@ -7,7 +7,7 @@ namespace ImageGen.Core.Domain.Sessions;
 public sealed class SessionSettings
 {
     public const string DefaultImageModelId = "black-forest-labs/flux.2-klein-4b";
-    public const string DefaultAssistantModelId = "google/gemma-4-31b-it:free";
+    public const string DefaultAssistantModelId = "anthropic/claude-haiku-5.5";
     public const int MinRunsPerModel = 1;
     public const int MaxRunsPerModel = 10;
 

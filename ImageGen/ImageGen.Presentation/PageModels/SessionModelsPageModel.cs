@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
+using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
@@ -11,23 +12,29 @@ using ImageGen.Presentation.Services;
 namespace ImageGen.Presentation.PageModels;
 
 /// <summary>
-/// Image models of one session: search, checkboxes, runs per model, refresh from the catalog and save.
+/// Models of one session: search, image model checkboxes, runs per model, the assistant model (one choice from the
+/// models that list tools), refresh from the catalog and save.
 /// The page forwards the Shell query to <see cref="ApplyQueryAttributes"/> and calls <see cref="OnAppearingAsync"/>
 /// on its first appearance.
 /// </summary>
 public sealed partial class SessionModelsPageModel(
     SessionService sessionService,
     ModelCatalogService catalog,
+    ChatModelCatalogService chatModels,
     INavigationService navigation,
     IDialogService dialogs) : ObservableObject
 {
     private readonly List<ModelOptionViewModel> _all = [];
+    private readonly List<AssistantModelOptionViewModel> _assistants = [];
     private Guid _sessionId;
     private Session? _session;
     private bool _loaded;
 
-    /// <summary>Rows shown now: the catalog filtered by <see cref="SearchText"/>.</summary>
+    /// <summary>Image model rows shown now: the catalog filtered by <see cref="SearchText"/>.</summary>
     public ObservableCollection<ModelOptionViewModel> Models { get; } = [];
+
+    /// <summary>Assistant model rows shown now: the models with tools filtered by <see cref="SearchText"/>.</summary>
+    public ObservableCollection<AssistantModelOptionViewModel> AssistantModels { get; } = [];
 
     [ObservableProperty]
     public partial string SearchText { get; set; } = "";
@@ -86,7 +93,8 @@ public sealed partial class SessionModelsPageModel(
             {
                 ImageModels = _all.Where(m => m.IsSelected).Select(m => m.Reference).Concat(unknownSelected).ToList(),
                 RunsPerModel = (int)Math.Round(RunsPerModel),
-                AssistantModel = session.Settings.AssistantModel,
+                // Without a row chosen (the list is empty or failed to load) the saved assistant stays.
+                AssistantModel = _assistants.FirstOrDefault(a => a.IsSelected)?.Reference ?? session.Settings.AssistantModel,
             };
             await sessionService.UpdateSettingsAsync(_sessionId, settings, CancellationToken.None);
             await navigation.GoBackAsync();
@@ -110,10 +118,13 @@ public sealed partial class SessionModelsPageModel(
                 ?? throw new InvalidOperationException($"Session {_sessionId} not found.");
             _session = session;
 
-            // After the first load the checkboxes are the source of truth (they may hold unsaved changes).
+            // After the first load the checkboxes and the chosen row are the source of truth (they may hold unsaved changes).
             var selected = _loaded
                 ? _all.Where(m => m.IsSelected).Select(m => m.Reference).ToHashSet()
                 : session.Settings.ImageModels.ToHashSet();
+            var assistant = _loaded
+                ? _assistants.FirstOrDefault(a => a.IsSelected)?.Reference
+                : session.Settings.AssistantModel;
             if (!_loaded)
             {
                 RunsPerModel = session.Settings.RunsPerModel;
@@ -122,6 +133,15 @@ public sealed partial class SessionModelsPageModel(
             var models = await catalog.GetAllImageModelsAsync(forceRefresh, CancellationToken.None);
             _all.Clear();
             _all.AddRange(models.Select(m => new ModelOptionViewModel(m, selected.Contains(new ModelRef(m.ProviderId, m.Id)))));
+
+            var assistants = await chatModels.ListAssistantModelsAsync(ProviderIds.OpenRouter, CancellationToken.None);
+            _assistants.Clear();
+            _assistants.AddRange(assistants.Select(m =>
+            {
+                var reference = new ModelRef(ProviderIds.OpenRouter, m.Id);
+                return new AssistantModelOptionViewModel(reference, m, reference == assistant, SelectAssistant);
+            }));
+
             _loaded = true;
             ApplyFilter();
         }
@@ -135,18 +155,33 @@ public sealed partial class SessionModelsPageModel(
         }
     }
 
+    /// <summary>One assistant model at a time: the chosen row is selected, the others are cleared.</summary>
+    private void SelectAssistant(AssistantModelOptionViewModel chosen)
+    {
+        foreach (var row in _assistants)
+        {
+            row.IsSelected = row == chosen;
+        }
+    }
+
     private void ApplyFilter()
     {
         var search = SearchText.Trim();
         Models.Clear();
-        foreach (var model in _all)
+        foreach (var model in _all.Where(m => Matches(search, m.Name, m.Id)))
         {
-            if (search.Length == 0
-                || model.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
-                || model.Id.Contains(search, StringComparison.OrdinalIgnoreCase))
-            {
-                Models.Add(model);
-            }
+            Models.Add(model);
+        }
+
+        AssistantModels.Clear();
+        foreach (var model in _assistants.Where(m => Matches(search, m.Name, m.Reference.ModelId)))
+        {
+            AssistantModels.Add(model);
         }
     }
+
+    private static bool Matches(string search, string name, string id) =>
+        search.Length == 0
+        || name.Contains(search, StringComparison.OrdinalIgnoreCase)
+        || id.Contains(search, StringComparison.OrdinalIgnoreCase);
 }

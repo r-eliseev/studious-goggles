@@ -64,7 +64,7 @@
     <value>Delete this session with all its images?</value>
   </data>
   <data name="ChatPlaceholder" xml:space="preserve">
-    <value>Describe the image you want...</value>
+    <value>Describe the image you want (Enter — send, Shift+Enter — new line)</value>
   </data>
   <data name="Send" xml:space="preserve">
     <value>Send</value>
@@ -245,5 +245,26 @@
   </data>
   <data name="DescriptionReplaceQuestion" xml:space="preserve">
     <value>Replace the text in the input field?</value>
+  </data>
+  <data name="AssistantModelTitle" xml:space="preserve">
+    <value>Assistant model</value>
+  </data>
+  <data name="AssistantLabelFormat" xml:space="preserve">
+    <value>Assistant: {0}</value>
+  </data>
+  <data name="AssistantPriceFormat" xml:space="preserve">
+    <value>{0} in, {1} out per 1M tokens (USD)</value>
+  </data>
+  <data name="AssistantPriceUnknown" xml:space="preserve">
+    <value>price unknown</value>
+  </data>
+  <data name="AssistantFree" xml:space="preserve">
+    <value>free, limits possible</value>
+  </data>
+  <data name="AssistantTakesImages" xml:space="preserve">
+    <value>takes images</value>
+  </data>
+  <data name="AssistantSelected" xml:space="preserve">
+    <value>selected</value>
   </data>
 </root>
