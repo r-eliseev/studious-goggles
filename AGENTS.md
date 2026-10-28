@@ -6,7 +6,8 @@
 ## Команды
 - Среда: задачи ядра и хранилища идут на Linux или Windows, MAUI-задачи только на Windows (строка «Среда» в задаче, `docs/knowledge/dev-environment.md`)
 - Сборка ядра: `dotnet build ImageGen/ImageGen.Core/ImageGen.Core.csproj`; всё решение только на Windows с MAUI-нагрузками (долго): `dotnet build ImageGen/ImageGen.slnx`
-- Тесты: `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj` и, после задачи 003, `dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj`
+- Тесты: `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`, `dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj`, `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj`, `dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj` (headless, на Linux)
+- Сборка Avalonia (десктоп Linux, Windows, macOS, после задачи 039): `dotnet build ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj`; запуск: `dotnet run --project ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj` (нужен дисплей)
 - Сборка MAUI (Windows, после задачи 034): `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0` (и `-f net10.0-android`)
 - Запуск под Windows: после сборки `ImageGen/ImageGen.Maui/bin/Debug/net10.0-windows10.0.19041.0/win-x64/ImageGen.Maui.exe`
 - Линтер/форматирование: по каждому изменённому проекту `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes` (решение целиком не форматировать: на Linux MAUI-проект не загружается)
