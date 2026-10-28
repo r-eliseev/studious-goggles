@@ -1,3 +1,4 @@
+using ImageGen.Presentation.Services;
 using Microsoft.Maui.ApplicationModel;
 
 namespace ImageGen.Maui.Services;

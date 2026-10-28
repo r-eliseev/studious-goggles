@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:pm="clr-namespace:ImageGen.Maui.PageModels"
-             xmlns:strings="clr-namespace:ImageGen.Maui.Resources.Strings"
+             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels"
+             xmlns:pmui="clr-namespace:ImageGen.Maui.PageModels"
+             xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
              xmlns:converters="clr-namespace:ImageGen.Maui.Converters"
              x:Class="ImageGen.Maui.Pages.ChatPage"
              x:DataType="pm:ChatPageModel"
@@ -11,8 +12,8 @@
         <ResourceDictionary>
             <converters:FilePathToImageSourceConverter x:Key="FilePathToImageSource" />
 
-            <pm:ChatItemTemplateSelector x:Key="ChatItemSelector">
-                <pm:ChatItemTemplateSelector.MessageTemplate>
+            <pmui:ChatItemTemplateSelector x:Key="ChatItemSelector">
+                <pmui:ChatItemTemplateSelector.MessageTemplate>
                     <DataTemplate x:DataType="pm:MessageItemViewModel">
                         <VerticalStackLayout Spacing="2" Padding="0,4" SemanticProperties.Description="{Binding Text}">
                             <Label Text="{Binding RoleText}" FontAttributes="Bold" FontSize="12" />
@@ -25,9 +26,9 @@
                             </Label>
                         </VerticalStackLayout>
                     </DataTemplate>
-                </pm:ChatItemTemplateSelector.MessageTemplate>
+                </pmui:ChatItemTemplateSelector.MessageTemplate>
 
-                <pm:ChatItemTemplateSelector.RunTemplate>
+                <pmui:ChatItemTemplateSelector.RunTemplate>
                     <DataTemplate x:DataType="pm:RunItemViewModel">
                         <VerticalStackLayout Spacing="8" Padding="0,4" SemanticProperties.Description="{Binding PromptText}">
                             <Label Text="{Binding PromptText}" FontAttributes="Italic" LineBreakMode="WordWrap" />
@@ -85,8 +86,8 @@
                             </FlexLayout>
                         </VerticalStackLayout>
                     </DataTemplate>
-                </pm:ChatItemTemplateSelector.RunTemplate>
-            </pm:ChatItemTemplateSelector>
+                </pmui:ChatItemTemplateSelector.RunTemplate>
+            </pmui:ChatItemTemplateSelector>
         </ResourceDictionary>
     </ContentPage.Resources>
 

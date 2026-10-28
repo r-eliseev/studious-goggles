@@ -1,3 +1,5 @@
+using ImageGen.Presentation.PageModels;
+
 namespace ImageGen.Maui.PageModels;
 
 /// <summary>Picks the template of a chat row: <see cref="RunTemplate"/> for runs, <see cref="MessageTemplate"/> otherwise.</summary>

@@ -1,5 +1,5 @@
-using ImageGen.Maui.PageModels;
-using ImageGen.Maui.Utilities;
+using ImageGen.Presentation.PageModels;
+using ImageGen.Presentation.Utilities;
 
 namespace ImageGen.Maui.Pages;
 
