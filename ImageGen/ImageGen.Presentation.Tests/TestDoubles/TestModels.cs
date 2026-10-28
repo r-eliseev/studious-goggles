@@ -15,5 +15,6 @@ public static class TestModels
         SupportsImageInput = false,
         MaxImagesPerRequest = 1,
         FetchedAt = DateTimeOffset.UnixEpoch,
+        Parameters = [],
     };
 }

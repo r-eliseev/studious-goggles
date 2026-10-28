@@ -105,6 +105,34 @@ public static class AppResources
 
     public static string Refresh => Get(nameof(Refresh));
 
+    public static string SessionParametersTitle => Get(nameof(SessionParametersTitle));
+
+    public static string SessionParametersDescription => Get(nameof(SessionParametersDescription));
+
+    public static string ParameterModelDefault => Get(nameof(ParameterModelDefault));
+
+    public static string ParameterAspectRatio => Get(nameof(ParameterAspectRatio));
+
+    public static string ParameterResolution => Get(nameof(ParameterResolution));
+
+    public static string ParameterOutputFormat => Get(nameof(ParameterOutputFormat));
+
+    public static string ParameterQuality => Get(nameof(ParameterQuality));
+
+    public static string ParameterSave => Get(nameof(ParameterSave));
+
+    public static string ParameterReplacedFormat => Get(nameof(ParameterReplacedFormat));
+
+    public static string ParameterDroppedFormat => Get(nameof(ParameterDroppedFormat));
+
+    public static string ReasonNotSupported => Get(nameof(ReasonNotSupported));
+
+    public static string ReasonNoAllowedValue => Get(nameof(ReasonNoAllowedValue));
+
+    public static string ReasonCatalogUnknown => Get(nameof(ReasonCatalogUnknown));
+
+    public static string ChatParametersButton => Get(nameof(ChatParametersButton));
+
     private static string Get(string name) =>
         ResourceManager.GetString(name, CultureInfo.CurrentUICulture)
         ?? throw new InvalidOperationException($"Missing string resource '{name}'.");

@@ -15,11 +15,16 @@
     </UserControl.Styles>
 
     <Grid RowDefinitions="Auto,*,Auto,Auto" Margin="16" RowSpacing="12">
-        <Button Content="{Binding ModelsButtonText}"
-                Command="{Binding OpenModelsCommand}"
-                HorizontalAlignment="Left"
-                MinHeight="44"
-                AutomationProperties.Name="{Binding ModelsButtonText}" />
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="{Binding ModelsButtonText}"
+                    Command="{Binding OpenModelsCommand}"
+                    MinHeight="44"
+                    AutomationProperties.Name="{Binding ModelsButtonText}" />
+            <Button Content="{markup:Res ChatParametersButton}"
+                    Command="{Binding OpenParametersCommand}"
+                    MinHeight="44"
+                    AutomationProperties.Name="{markup:Res ChatParametersButton}" />
+        </StackPanel>
 
         <ScrollViewer Grid.Row="1" Name="Transcript">
             <ItemsControl ItemsSource="{Binding Items}">

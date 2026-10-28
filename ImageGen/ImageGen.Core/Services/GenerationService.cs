@@ -50,23 +50,25 @@ public sealed class GenerationService(
             }
         }
 
-        return await CreateRunAsync(sessionId, text, RunOrigin.Assistant, pairs, cancellationToken);
+        return await CreateRunAsync(sessionId, text, RunOrigin.Assistant, pairs, session.Settings.Parameters, cancellationToken);
     }
 
     /// <summary>New run from one generation: same prompt, model and seed.</summary>
     public async Task<Run> RepeatAsync(Guid generationId, CancellationToken cancellationToken)
     {
         var source = await GetSourceAsync(generationId, cancellationToken);
+        var requested = await GetRunParametersAsync(source.RunId, cancellationToken);
         return await CreateRunAsync(source.SessionId, source.Prompt, RunOrigin.Repeat,
-            [(SourceModel(source), source.Seed)], cancellationToken);
+            [(SourceModel(source), source.Seed)], requested, cancellationToken);
     }
 
     /// <summary>New run from one generation: same prompt and model, new random seed.</summary>
     public async Task<Run> NewSeedAsync(Guid generationId, CancellationToken cancellationToken)
     {
         var source = await GetSourceAsync(generationId, cancellationToken);
+        var requested = await GetRunParametersAsync(source.RunId, cancellationToken);
         return await CreateRunAsync(source.SessionId, source.Prompt, RunOrigin.NewSeed,
-            [(SourceModel(source), seeds.NextSeed())], cancellationToken);
+            [(SourceModel(source), seeds.NextSeed())], requested, cancellationToken);
     }
 
     /// <summary>New run from one generation: new prompt, same model and seed.</summary>
@@ -74,8 +76,9 @@ public sealed class GenerationService(
     {
         var text = NormalizePrompt(newPrompt);
         var source = await GetSourceAsync(generationId, cancellationToken);
+        var requested = await GetRunParametersAsync(source.RunId, cancellationToken);
         return await CreateRunAsync(source.SessionId, text, RunOrigin.Edit,
-            [(SourceModel(source), source.Seed)], cancellationToken);
+            [(SourceModel(source), source.Seed)], requested, cancellationToken);
     }
 
     /// <summary>Marks generations left unfinished by a previous app session as Failed with <see cref="ErrorKind.Interrupted"/>.</summary>
@@ -114,11 +117,17 @@ public sealed class GenerationService(
         await runs.GetGenerationAsync(generationId, cancellationToken)
         ?? throw new InvalidOperationException($"Generation {generationId} not found.");
 
+    /// <summary>Parameters the source run asked for. Repeat, new seed and edit use them, not the current session settings.</summary>
+    private async Task<GenerationParameters> GetRunParametersAsync(Guid runId, CancellationToken cancellationToken) =>
+        (await runs.GetRunAsync(runId, cancellationToken))?.Parameters
+        ?? throw new InvalidOperationException($"Run {runId} not found.");
+
     private async Task<Run> CreateRunAsync(
         Guid sessionId,
         string prompt,
         RunOrigin origin,
         IReadOnlyList<(ModelRef Model, long Seed)> pairs,
+        GenerationParameters requested,
         CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
@@ -129,17 +138,18 @@ public sealed class GenerationService(
             Prompt = prompt,
             Origin = origin,
             CreatedAt = now,
+            Parameters = requested,
         };
 
-        var seedSupport = new Dictionary<ModelRef, bool>();
+        var models = new Dictionary<ModelRef, ImageModel?>();
         var generations = new List<Generation>(pairs.Count);
         for (var index = 0; index < pairs.Count; index++)
         {
             var (model, seed) = pairs[index];
-            if (!seedSupport.TryGetValue(model, out var supportsSeed))
+            if (!models.TryGetValue(model, out var image))
             {
-                supportsSeed = await ReadSeedSupportAsync(model, cancellationToken);
-                seedSupport[model] = supportsSeed;
+                image = await ReadModelAsync(model, cancellationToken);
+                models[model] = image;
             }
 
             generations.Add(new Generation
@@ -151,10 +161,11 @@ public sealed class GenerationService(
                 ModelId = model.ModelId,
                 Prompt = prompt,
                 Seed = seed,
-                SeedApplied = supportsSeed,
+                SeedApplied = image?.SupportsSeed ?? false,
                 Status = GenerationStatus.Queued,
                 CreatedAt = now,
                 SortOrder = index,
+                Outcomes = GenerationParameterPlanner.Plan(requested, image),
             });
         }
 
@@ -174,16 +185,16 @@ public sealed class GenerationService(
         return run;
     }
 
-    /// <summary>An unknown provider or model does not send a seed; the generation itself reports the error later.</summary>
-    private async Task<bool> ReadSeedSupportAsync(ModelRef model, CancellationToken cancellationToken)
+    /// <summary>An unknown provider or model gives null: no seed is sent and every requested parameter is dropped as unknown.</summary>
+    private async Task<ImageModel?> ReadModelAsync(ModelRef model, CancellationToken cancellationToken)
     {
         try
         {
-            return (await catalog.FindAsync(model, cancellationToken))?.SupportsSeed ?? false;
+            return await catalog.FindAsync(model, cancellationToken);
         }
         catch (ProviderException)
         {
-            return false;
+            return null;
         }
     }
 
@@ -231,10 +242,18 @@ public sealed class GenerationService(
     {
         try
         {
+            // Only the values the plan accepted are sent: a dropped parameter is not in the request.
+            var sent = generation.Outcomes
+                .Where(o => o.Sent is not null)
+                .ToDictionary(o => o.Name, o => o.Sent!, StringComparer.Ordinal);
             var request = new ImageGenerationRequest(
                 generation.ModelId,
                 generation.Prompt,
-                generation.SeedApplied ? generation.Seed : null);
+                generation.SeedApplied ? generation.Seed : null,
+                sent.GetValueOrDefault(GenerationParameterPlanner.AspectRatioName),
+                sent.GetValueOrDefault(GenerationParameterPlanner.ResolutionName),
+                sent.GetValueOrDefault(GenerationParameterPlanner.OutputFormatName),
+                sent.GetValueOrDefault(GenerationParameterPlanner.QualityName));
             var provider = providers.GetImageProvider(generation.ProviderId);
             var result = await provider.GenerateAsync(request, CancellationToken.None).ConfigureAwait(false);
 
@@ -324,5 +343,6 @@ public sealed class GenerationService(
         CreatedAt = g.CreatedAt,
         CompletedAt = g.CompletedAt,
         SortOrder = g.SortOrder,
+        Outcomes = g.Outcomes,
     };
 }

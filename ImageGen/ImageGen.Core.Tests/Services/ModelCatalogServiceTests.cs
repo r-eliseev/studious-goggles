@@ -23,6 +23,22 @@ public class ModelCatalogServiceTests
     }
 
     [Fact]
+    public async Task GetImageModelsAsync_CachedRowWithoutParameters_ReloadsFromProvider()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var legacy = Model("a", "A");
+        legacy.Parameters = null;
+        _repository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<ImageModel>>([legacy]));
+        _client.ListImageModelsAsync(Arg.Any<CancellationToken>()).Returns([Model("a", "A")]);
+
+        var models = await _service.GetImageModelsAsync(ProviderIds.OpenRouter, forceRefresh: false, ct);
+
+        await _client.Received(1).ListImageModelsAsync(Arg.Any<CancellationToken>());
+        Assert.NotNull(Assert.Single(models).Parameters);
+    }
+
+    [Fact]
     public async Task GetImageModelsAsync_CacheEmpty_LogsCountAndProviderAsSource()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -44,6 +60,7 @@ public class ModelCatalogServiceTests
         SupportsImageInput = false,
         MaxImagesPerRequest = 1,
         FetchedAt = DateTimeOffset.UnixEpoch,
+        Parameters = [],
     };
 
     [Fact]

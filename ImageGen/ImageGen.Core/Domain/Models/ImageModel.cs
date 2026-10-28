@@ -16,4 +16,10 @@ public sealed class ImageModel
     public required int MaxImagesPerRequest { get; set; }
 
     public required DateTimeOffset FetchedAt { get; set; }
+
+    /// <summary>
+    /// Parameters the provider's catalog declares. Null means unknown (an old cache row or a model without a catalog);
+    /// an empty list means the provider declared none.
+    /// </summary>
+    public IReadOnlyList<ModelParameter>? Parameters { get; set; }
 }

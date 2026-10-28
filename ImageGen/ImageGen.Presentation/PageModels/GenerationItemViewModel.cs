@@ -2,6 +2,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
 using ImageGen.Presentation.Resources.Strings;
 
@@ -139,6 +140,47 @@ public sealed partial class GenerationItemViewModel : ObservableObject
             parts.Add(string.Format(CultureInfo.InvariantCulture, AppResources.CostFormat, price));
         }
 
+        parts.AddRange(ParameterLines(generation.Outcomes));
         return string.Join(" · ", parts);
     }
+
+    /// <summary>One line per replaced or dropped parameter (F4.3). An applied parameter needs no line.</summary>
+    private static IEnumerable<string> ParameterLines(IEnumerable<ParameterOutcome> outcomes)
+    {
+        foreach (var outcome in outcomes)
+        {
+            var label = ParameterLabel(outcome.Name);
+            switch (outcome.Kind)
+            {
+                case ParameterOutcomeKind.Replaced:
+                    yield return string.Format(CultureInfo.CurrentCulture, AppResources.ParameterReplacedFormat, label, outcome.Requested, outcome.Sent);
+                    break;
+                case ParameterOutcomeKind.Dropped:
+                    yield return string.Format(
+                        CultureInfo.CurrentCulture,
+                        AppResources.ParameterDroppedFormat,
+                        label,
+                        outcome.Requested,
+                        ReasonText(outcome.Reason));
+                    break;
+            }
+        }
+    }
+
+    private static string ParameterLabel(string name) => name switch
+    {
+        GenerationParameterPlanner.AspectRatioName => AppResources.ParameterAspectRatio,
+        GenerationParameterPlanner.ResolutionName => AppResources.ParameterResolution,
+        GenerationParameterPlanner.OutputFormatName => AppResources.ParameterOutputFormat,
+        GenerationParameterPlanner.QualityName => AppResources.ParameterQuality,
+        _ => name,
+    };
+
+    private static string ReasonText(ParameterDropReason? reason) => reason switch
+    {
+        ParameterDropReason.NotSupported => AppResources.ReasonNotSupported,
+        ParameterDropReason.NoAllowedValue => AppResources.ReasonNoAllowedValue,
+        ParameterDropReason.CatalogUnknown => AppResources.ReasonCatalogUnknown,
+        _ => string.Empty,
+    };
 }

@@ -42,6 +42,9 @@ public sealed class Generation
     /// <summary>Order inside the run, starting at 0.</summary>
     public required int SortOrder { get; set; }
 
+    /// <summary>What happened to each requested parameter. Empty when none was requested or for old records.</summary>
+    public IReadOnlyList<ParameterOutcome> Outcomes { get; set; } = [];
+
     public bool IsFinished => Status is GenerationStatus.Succeeded or GenerationStatus.Failed
         or GenerationStatus.Cancelled or GenerationStatus.Filtered;
 }

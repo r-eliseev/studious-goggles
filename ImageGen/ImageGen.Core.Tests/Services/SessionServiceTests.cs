@@ -109,6 +109,56 @@ public class SessionServiceTests
     }
 
     [Fact]
+    public async Task UpdateGenerationParametersAsync_ValidAspectRatio_SavesParametersKeepsModelsAndRuns()
+    {
+        var session = ExistingSession();
+        var models = session.Settings.ImageModels.ToList();
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+
+        var saved = await _service.UpdateGenerationParametersAsync(
+            session.Id, new GenerationParameters { AspectRatio = "3:2" }, TestContext.Current.CancellationToken);
+
+        Assert.Equal("3:2", saved.Settings.Parameters.AspectRatio);
+        Assert.Equal(models, saved.Settings.ImageModels);
+        Assert.Equal(SessionSettings.MinRunsPerModel, saved.Settings.RunsPerModel);
+        await _sessions.Received(1).UpdateAsync(session, Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("gif", null)]
+    [InlineData(null, "0x")]
+    public async Task UpdateGenerationParametersAsync_InvalidValue_ThrowsAndDoesNotSave(string? outputFormat, string? aspectRatio)
+    {
+        var session = ExistingSession();
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        var parameters = new GenerationParameters { OutputFormat = outputFormat, AspectRatio = aspectRatio };
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.UpdateGenerationParametersAsync(session.Id, parameters, TestContext.Current.CancellationToken));
+
+        await _sessions.DidNotReceive().UpdateAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_KeepsSavedParameters()
+    {
+        var session = ExistingSession();
+        session.Settings.Parameters = new GenerationParameters { AspectRatio = "3:2" };
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        var newSettings = new SessionSettings
+        {
+            ImageModels = [new ModelRef(ProviderIds.OpenRouter, "vendor/other")],
+            RunsPerModel = 2,
+            AssistantModel = session.Settings.AssistantModel,
+        };
+
+        var updated = await _service.UpdateSettingsAsync(session.Id, newSettings, TestContext.Current.CancellationToken);
+
+        Assert.Equal("3:2", updated.Settings.Parameters.AspectRatio);
+        Assert.Equal("vendor/other", updated.Settings.ImageModels.Single().ModelId);
+    }
+
+    [Fact]
     public async Task GetTimelineAsync_ReturnsAllParts()
     {
         var session = ExistingSession();

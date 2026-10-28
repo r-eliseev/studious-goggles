@@ -150,4 +150,46 @@
   <data name="Refresh" xml:space="preserve">
     <value>Refresh</value>
   </data>
+  <data name="SessionParametersTitle" xml:space="preserve">
+    <value>Parameters</value>
+  </data>
+  <data name="SessionParametersDescription" xml:space="preserve">
+    <value>They apply to the next runs of this session. A model that does not support a value skips it.</value>
+  </data>
+  <data name="ParameterModelDefault" xml:space="preserve">
+    <value>Model default</value>
+  </data>
+  <data name="ParameterAspectRatio" xml:space="preserve">
+    <value>Aspect ratio</value>
+  </data>
+  <data name="ParameterResolution" xml:space="preserve">
+    <value>Resolution</value>
+  </data>
+  <data name="ParameterOutputFormat" xml:space="preserve">
+    <value>Output format</value>
+  </data>
+  <data name="ParameterQuality" xml:space="preserve">
+    <value>Quality</value>
+  </data>
+  <data name="ParameterSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="ParameterReplacedFormat" xml:space="preserve">
+    <value>{0}: {1} → {2}</value>
+  </data>
+  <data name="ParameterDroppedFormat" xml:space="preserve">
+    <value>{0} {1}: not sent ({2})</value>
+  </data>
+  <data name="ReasonNotSupported" xml:space="preserve">
+    <value>the model does not support it</value>
+  </data>
+  <data name="ReasonNoAllowedValue" xml:space="preserve">
+    <value>no allowed value is close enough</value>
+  </data>
+  <data name="ReasonCatalogUnknown" xml:space="preserve">
+    <value>the model's parameters are unknown</value>
+  </data>
+  <data name="ChatParametersButton" xml:space="preserve">
+    <value>Parameters</value>
+  </data>
 </root>

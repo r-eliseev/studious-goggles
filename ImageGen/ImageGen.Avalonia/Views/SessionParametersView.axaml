@@ -1,0 +1,77 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:markup="clr-namespace:ImageGen.Avalonia.Markup"
+             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels;assembly=ImageGen.Presentation"
+             x:Class="ImageGen.Avalonia.Views.SessionParametersView"
+             x:DataType="pm:SessionParametersPageModel">
+    <Grid RowDefinitions="Auto,*,Auto" Margin="16" RowSpacing="8">
+        <TextBlock Text="{markup:Res SessionParametersDescription}" TextWrapping="Wrap" />
+
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="8">
+                <ProgressBar IsIndeterminate="True"
+                             IsVisible="{Binding IsBusy}"
+                             AutomationProperties.Name="{markup:Res SessionParametersTitle}" />
+
+                <TextBlock Text="{markup:Res ParameterAspectRatio}" />
+                <ComboBox ItemsSource="{Binding AspectRatioOptions}"
+                          SelectedItem="{Binding SelectedAspectRatio, Mode=TwoWay}"
+                          MinHeight="44"
+                          HorizontalAlignment="Stretch"
+                          AutomationProperties.Name="{markup:Res ParameterAspectRatio}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="pm:ParameterOption" x:DataType="pm:ParameterOption">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <TextBlock Text="{markup:Res ParameterResolution}" />
+                <ComboBox ItemsSource="{Binding ResolutionOptions}"
+                          SelectedItem="{Binding SelectedResolution, Mode=TwoWay}"
+                          MinHeight="44"
+                          HorizontalAlignment="Stretch"
+                          AutomationProperties.Name="{markup:Res ParameterResolution}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="pm:ParameterOption" x:DataType="pm:ParameterOption">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <TextBlock Text="{markup:Res ParameterOutputFormat}" />
+                <ComboBox ItemsSource="{Binding OutputFormatOptions}"
+                          SelectedItem="{Binding SelectedOutputFormat, Mode=TwoWay}"
+                          MinHeight="44"
+                          HorizontalAlignment="Stretch"
+                          AutomationProperties.Name="{markup:Res ParameterOutputFormat}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="pm:ParameterOption" x:DataType="pm:ParameterOption">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <TextBlock Text="{markup:Res ParameterQuality}" />
+                <ComboBox ItemsSource="{Binding QualityOptions}"
+                          SelectedItem="{Binding SelectedQuality, Mode=TwoWay}"
+                          MinHeight="44"
+                          HorizontalAlignment="Stretch"
+                          AutomationProperties.Name="{markup:Res ParameterQuality}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="pm:ParameterOption" x:DataType="pm:ParameterOption">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Button Grid.Row="2"
+                Content="{markup:Res ParameterSave}"
+                Command="{Binding SaveCommand}"
+                HorizontalAlignment="Stretch"
+                MinHeight="44"
+                AutomationProperties.Name="{markup:Res ParameterSave}" />
+    </Grid>
+</UserControl>

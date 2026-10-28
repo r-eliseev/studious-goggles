@@ -136,6 +136,19 @@ public sealed partial class ChatPageModel(
     private bool CanSend() => !IsBusy && !string.IsNullOrWhiteSpace(InputText);
 
     [RelayCommand]
+    private async Task OpenParametersAsync()
+    {
+        try
+        {
+            await navigation.GoToAsync(Routes.SessionParametersFor(_sessionId));
+        }
+        catch (Exception ex)
+        {
+            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+        }
+    }
+
+    [RelayCommand]
     private async Task OpenModelsAsync()
     {
         try

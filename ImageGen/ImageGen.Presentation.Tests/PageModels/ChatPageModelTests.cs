@@ -114,6 +114,14 @@ public class ChatPageModelTests
                 return Task.FromResult(_rows.FirstOrDefault(g => g.Id == id));
             }
         });
+        _runRepository.GetRunAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(ci =>
+        {
+            var id = ci.Arg<Guid>();
+            lock (_gate)
+            {
+                return Task.FromResult(_runs.FirstOrDefault(r => r.Id == id));
+            }
+        });
         _runRepository.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
 
         _seeds.NextSeed().Returns(7L);
@@ -553,6 +561,14 @@ public class ChatPageModelTests
 
         await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, "disk full");
         Assert.Single(_model.Items.OfType<RunItemViewModel>());
+    }
+
+    [Fact]
+    public async Task OpenParametersCommand_NavigatesToSessionParameters()
+    {
+        await _model.OpenParametersCommand.ExecuteAsync(null);
+
+        await _navigation.Received(1).GoToAsync(Routes.SessionParametersFor(_session.Id));
     }
 
     [Fact]

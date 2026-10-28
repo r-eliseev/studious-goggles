@@ -6,6 +6,7 @@ using ImageGen.Core.Domain.Models;
 using ImageGen.Core.OpenAiCompatible;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
+using ImageGen.Core.Services;
 
 namespace ImageGen.Core.OpenRouter;
 
@@ -54,6 +55,7 @@ public sealed class OpenRouterClient(
                 SupportsSeed = parameters?.ContainsKey("seed") == true,
                 SupportsImageInput = inputModalities?.Any(m => m?.GetValue<string>() == "image") == true,
                 MaxImagesPerRequest = ReadMaxImages(parameters),
+                Parameters = ReadParameters(parameters),
                 FetchedAt = fetchedAt,
             });
         }
@@ -74,6 +76,11 @@ public sealed class OpenRouterClient(
         {
             body["seed"] = request.Seed.Value;
         }
+
+        SetIfNotNull(body, GenerationParameterPlanner.AspectRatioName, request.AspectRatio);
+        SetIfNotNull(body, GenerationParameterPlanner.ResolutionName, request.Resolution);
+        SetIfNotNull(body, GenerationParameterPlanner.OutputFormatName, request.OutputFormat);
+        SetIfNotNull(body, GenerationParameterPlanner.QualityName, request.Quality);
 
         using var message = await CreateAuthorizedRequestAsync(HttpMethod.Post, "images", body, cancellationToken);
         var root = await SendJsonAsync(message, cancellationToken);
@@ -117,6 +124,59 @@ public sealed class OpenRouterClient(
             && decimal.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
             ? parsed
             : null;
+    }
+
+    /// <summary>Maps the catalog's <c>supported_parameters</c>. Unknown kinds are skipped; a missing object gives an empty list.</summary>
+    private static IReadOnlyList<ModelParameter> ReadParameters(JsonObject? parameters)
+    {
+        var result = new List<ModelParameter>();
+        if (parameters is null)
+        {
+            return result;
+        }
+
+        foreach (var (name, definition) in parameters)
+        {
+            // A definition that is not an object (for example a bare flag) is not a parameter kind we know: skip it.
+            if (definition is not JsonObject)
+            {
+                continue;
+            }
+
+            switch (ReadString(definition["type"]))
+            {
+                case "enum":
+                    var values = (definition["values"] as JsonArray)?
+                        .Select(ReadString)
+                        .OfType<string>()
+                        .ToList() ?? [];
+                    result.Add(new ModelParameter(name, ParameterKind.Enum, values));
+                    break;
+                case "range":
+                    result.Add(new ModelParameter(
+                        name, ParameterKind.Range, [], ReadNumber(definition["min"]), ReadNumber(definition["max"])));
+                    break;
+                case "boolean":
+                    result.Add(new ModelParameter(name, ParameterKind.Boolean, []));
+                    break;
+            }
+        }
+
+        return result;
+    }
+
+    private static string? ReadString(JsonNode? node) =>
+        node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
+
+    private static double? ReadNumber(JsonNode? node) =>
+        node is JsonValue value && value.TryGetValue<double>(out var number) ? number : null;
+
+    private static void SetIfNotNull(JsonObject body, string name, string? value)
+    {
+        if (value is not null)
+        {
+            body[name] = value;
+        }
     }
 
     private static int ReadMaxImages(JsonObject? parameters)

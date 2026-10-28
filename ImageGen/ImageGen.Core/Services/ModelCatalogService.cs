@@ -20,7 +20,8 @@ public sealed class ModelCatalogService(
         CancellationToken cancellationToken)
     {
         var cached = await repository.ListAsync(providerId, cancellationToken);
-        if (!forceRefresh && cached.Count > 0)
+        // A row from before parameters were stored has no parameters: it is reloaded, not trusted.
+        if (!forceRefresh && cached.Count > 0 && cached.All(m => m.Parameters is not null))
         {
             logger.LogInformation("Image models of provider {ProviderId}: {Count} from cache.", providerId, cached.Count);
             return cached;

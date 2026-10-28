@@ -38,6 +38,8 @@ public sealed class OpenAiCompatibleClient(
                 SupportsSeed = m.SupportsSeed,
                 SupportsImageInput = false,
                 MaxImagesPerRequest = m.MaxImagesPerRequest,
+                // The config does not list parameters, and this client does not send any: an empty list, not unknown.
+                Parameters = [],
                 FetchedAt = fetchedAt,
             })
             .ToList();
