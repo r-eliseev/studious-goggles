@@ -1,6 +1,6 @@
 ---
 id: 119
-status: approved
+status: cancelled
 assignee:
 claimed:
 created: 2026-10-29
@@ -11,7 +11,7 @@ created: 2026-10-29
 ## Описание
 S3.8 и walking-skeleton summary говорят общей «Interrupted при старте». Code различает saved handle resume, no handle Interrupted и после 106 missing provider ModelUnavailable.
 
-Зависит от: 106, 117, 129.
+Зависит от: —
 Среда: Linux или Windows.
 
 ## Критерии готовности
@@ -21,24 +21,12 @@ S3.8 и walking-skeleton summary говорят общей «Interrupted при 
 - SQL `job_json IS [NOT] NULL` semantics не искажены.
 
 ## Анализ
-Общий docs conflict order 117 →119 →120. Historical docs не менять.
+Recovery docs должны совпадать с поведением 106, а не ждать отдельного документационного PR после 129. Требования не отменены: они переданы в 106 (recovery, S3.8, «Первый запуск») и 129 (единый queued lifecycle и финальное описание «Прогона»). По `docs/tasks.md`, раздел «Завершение», документацию обязан обновлять исполнитель изменения поведения. Отдельная задача дублировала эту обязанность и создавала ложную зависимость README/других задач. Исторические критерии выше сохранены для трассировки.
 
 ## План
-Для Haiku/Luna: только architecture+chat spec после rebase 117.
-
-1. Сверить RecoverInterrupted, Watch catch, ListResumable/MarkUnfinished SQL after106.
-2. Переписать S3.8 и строку «Ходячий скелет» с точными domain status/kind.
-3. Обновить architecture «Первый запуск» и «Прогон», без retry internals.
-4. Grep Interrupted/прерван; active docs consistent, historical untouched.
-
-### Проверка
-```
-grep -rn "Interrupted\|прерван" docs/architecture.md docs/specs --include='*.md'
-bash scripts/check.sh
-```
-
-Файлы: `docs/architecture.md`, `docs/specs/chat-sessions.md`
+Снята в ходе ревью по поручению владельца 2026-10-29. Не занимать и не выполнять отдельно. При выполнении задач 106 (recovery, S3.8, «Первый запуск») и 129 (единый queued lifecycle и финальное описание «Прогона») сверить соответствующие критерии выше с code/tests и обновить docs в той же ветке.
 
 ## Отчёт
+2026-10-29: отменена как дублирующая задача; код не менялся. Recovery docs должны совпадать с поведением 106, а не ждать отдельного документационного PR после 129. Ответственность перенесена в 106 (recovery, S3.8, «Первый запуск») и 129 (единый queued lifecycle и финальное описание «Прогона»). Это не утверждение о готовности будущего поведения.
 
 ## Комментарии
