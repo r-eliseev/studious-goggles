@@ -1,6 +1,6 @@
 # Архитектура
 
-Основной сценарий — сессии с ассистентом (`docs/specs/chat-sessions.md`, ADR 0004). Первый релиз v0.1 — ходячий скелет: только OpenRouter, только MAUI. Поверх скелета вынесен общий слой представления и добавлена оболочка Avalonia (ADR 0006): они входят в раздел «Текущая раскладка». Целевая раскладка с fal, Replicate и Web строится поверх этого (раздел «Целевая раскладка»).
+Основной сценарий — сессии с ассистентом (`docs/specs/chat-sessions.md`, ADR 0004). Первый релиз v0.1 — ходячий скелет: только OpenRouter, только MAUI. Поверх скелета вынесен общий слой представления и добавлена оболочка Avalonia (ADR 0006): они входят в раздел «Текущая раскладка». Целевая раскладка с fal, Together AI и Web строится поверх этого (раздел «Целевая раскладка»).
 
 Документ описывает задуманное устройство, а не ход работ: что уже сделано, видно по статусам задач. Правится, только когда код разошёлся с описанием (`AGENTS.md`, «Когда что обновлять»).
 
@@ -100,7 +100,7 @@ SQLite-файл `imagegen.db` в `IAppPaths.DataDirectory`, схема в `Image
 
 ## Целевая раскладка (после скелета)
 ```
-ImageGen.Core       + Providers/Fal, Providers/Replicate за контрактом ADR 0003; Catalog с фильтрами; расходы
+ImageGen.Core       + Providers/Fal за контрактом ADR 0003, Together AI как OpenAI-совместимый провайдер (ADR 0017); Catalog с фильтрами; расходы
 ImageGen.Data       + таблица расходов, теги, коллекции
 ImageGen.Presentation, ImageGen.Avalonia   + модели и экраны новых фич (раскладка — «Текущая раскладка»)
 ImageGen.Maui       + Галерея, Сравнение, Расходы, Настройки; сохранение в галерею Android и iOS; ru-локализация
@@ -110,7 +110,7 @@ ImageGen.Web/ClientApp   Vue 3 + Vite + TypeScript
 ImageGen.Web.Tests
 Dockerfile, docker-compose.yml   том /data
 ```
-- Провайдеры: контракт submit/poll/cancel (ADR 0003) уже есть (`IQueuedImageProvider`, fal), восстановление заданий после перезапуска тоже. По ADR 0005 OpenRouter тоже должен стать заданием в фоне в памяти процесса (`OpenRouterJobRunner`) за тем же контрактом, а узкий `IImageGenerator` — уйти. В коде этого нет: OpenRouter генерирует синхронно через `IImageGenerator`; выполнить ADR 0005 или заменить его — открытый вопрос в `docs/status.md`.
+- Провайдеры: контракт submit/poll/cancel (ADR 0003) уже есть (`IQueuedImageProvider`, fal), восстановление заданий после перезапуска тоже. По ADR 0005 OpenRouter тоже должен стать заданием в фоне в памяти процесса (`OpenRouterJobRunner`) за тем же контрактом, а узкий `IImageGenerator` — уйти. В коде этого нет: OpenRouter генерирует синхронно через `IImageGenerator`; владелец решил выполнить ADR 0005 (2026-10-29), до этого описание выше — задуманное, а не текущее.
 - События: для Web подписка через `Channel` вместо события .NET.
 - Web: однопользовательский, пароль из переменной окружения, cookie-сессия; секреты в файле под Data Protection; ключи шифрования и данные в томе Docker.
 - MAUI: на телефоне вкладки внизу, на широком экране боковая панель.
@@ -123,7 +123,7 @@ Dockerfile, docker-compose.yml   том /data
 - Страницы MAUI и view Avalonia знают только свой `PageModel`; `PageModel` знает сервисы ядра.
 
 ## Внешние системы
-OpenRouter (HTTP API: `/api/v1/key`, `/api/v1/models` (чат-модели: входные модальности и окно контекста), `/api/v1/images/models`, `/api/v1/images`, `/api/v1/chat/completions`). Подключаемые через конфиг (`providers.json`): API в формате OpenAI (`images/generations`, `chat/completions`) и Anthropic Messages API (чат). Позже fal.ai и Replicate.
+OpenRouter (HTTP API: `/api/v1/key`, `/api/v1/models` (чат-модели: входные модальности и окно контекста), `/api/v1/images/models`, `/api/v1/images`, `/api/v1/chat/completions`). Подключаемые через конфиг (`providers.json`): API в формате OpenAI (`images/generations`, `chat/completions`) и Anthropic Messages API (чат). Провайдер с очередью — fal.ai (ADR 0003); Together AI — через OpenAI-совместимый конфиг (ADR 0017).
 
 ## Ограничения
 - Платформы: у MAUI нет цели Linux; Linux-десктоп обслуживает Avalonia-оболочка (ADR 0006), браузер и Docker — Web-оболочка. Цель Windows у MAUI собирается только на Windows (`docs/knowledge/dev-environment.md`).
