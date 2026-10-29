@@ -89,9 +89,12 @@ created: 2026-10-29
      - `Group_Order_AlphabeticalOtherLast` — группы «Zeta», «alpha», «Other» → порядок «alpha», «Zeta», «Other»; внутри группы «b» и «A» → «A», «b».
      - `Group_Empty_ReturnsEmpty`.
 3. Модели групп. Новые файлы в `ImageGen/ImageGen.Presentation/PageModels/`.
-   - `ModelGroupViewModel.cs`: `public abstract partial class ModelGroupViewModel : ObservableObject`, конструктор `(string key, string name, bool isExpanded, Action<ModelGroupViewModel> expandedChanged)`. Члены:
-     - `string Key`, `string Name`;
-     - `[ObservableProperty] public partial bool IsExpanded { get; set; }`, начальное значение из конструктора, без вызова делегата. `partial void OnIsExpandedChanged(bool value)` вызывает `FillRows()`, затем `expandedChanged(this)` и уведомляет `AutomationName` и `ChevronGlyph`;
+   - Ловушка порядка конструирования (прочитай до кода). Если в конструкторе базового класса написать `IsExpanded = isExpanded`, сработает сгенерированный сеттер → `OnIsExpandedChanged` → абстрактный `FillRows()` производного класса, а `Rows` производного класса в этот момент ещё не создан (тело конструктора производного класса выполняется после базового) → `NullReferenceException`; кроме того, лишний раз вызовется `expandedChanged`. Поэтому начальное значение `IsExpanded` записывается в хранилище свойства напрямую, мимо сеттера, а `Rows` заполняется в конструкторе производного класса.
+   - Как в этом репозитории записать начальное значение мимо сеттера. CommunityToolkit.Mvvm 8.4.2, в `Presentation` основной стиль — частичное свойство: `[ObservableProperty] public partial T X { get; set; } = <значение>;`. Инициализатор частичного свойства пишет в сгенерированное хранилище напрямую (сеттер и `On…Changed` не вызываются). Образец — `ModelOptionViewModel.IsSelected` (`ImageGen/ImageGen.Presentation/PageModels/ModelOptionViewModel.cs`): класс с первичным конструктором `(ImageModel model, bool isSelected)` и свойство `IsSelected { get; set; } = isSelected;`. Поля `_isExpanded` при таком стиле нет, обращаться к нему нельзя.
+   - `ModelGroupViewModel.cs`: `public abstract partial class ModelGroupViewModel(string key, string name, bool isExpanded, Action<ModelGroupViewModel> expandedChanged) : ObservableObject` (первичный конструктор, как у `ModelOptionViewModel`). Члены:
+     - `string Key` (`= key`), `string Name` (`= name`);
+     - `[ObservableProperty] public partial bool IsExpanded { get; set; } = isExpanded;` — начальное значение только инициализатором; в теле конструктора `IsExpanded` не присваивать. `partial void OnIsExpandedChanged(bool value)` вызывает `FillRows()`, затем `expandedChanged(this)` и уведомляет `AutomationName` и `ChevronGlyph`. При создании объекта этот метод не вызывается — так и должно быть;
+     - запасной путь, только если инициализатор частичного свойства не компилируется: стиль поля, как `_title` в `SessionItemViewModel.cs` — `[ObservableProperty] private bool _isExpanded;`, и в конструкторе присвоить полю `_isExpanded = isExpanded` (не свойству `IsExpanded`); записать в «Отчёт»;
      - `[RelayCommand] private void Toggle()` — `IsExpanded = !IsExpanded`;
      - `public abstract string HeaderText { get; }`;
      - `public string AutomationName` — `"{HeaderText}, {ModelGroupExpanded}"` или `"{HeaderText}, {ModelGroupCollapsed}"`;
@@ -99,11 +102,16 @@ created: 2026-10-29
      - `protected abstract void FillRows()`.
    - `ImageModelGroupViewModel.cs`: `public sealed class ImageModelGroupViewModel : ModelGroupViewModel`, конструктор `(string key, string name, IReadOnlyList<ModelOptionViewModel> matches, bool isExpanded, Action<ModelGroupViewModel> expandedChanged)`. Члены:
      - `IReadOnlyList<ModelOptionViewModel> Matches`;
-     - `ObservableCollection<ModelOptionViewModel> Rows` — заполняется в конструкторе и в `FillRows()`: `Matches`, если раскрыта, иначе пусто;
+     - `ObservableCollection<ModelOptionViewModel> Rows` — создаётся и заполняется в конструкторе **этого** класса (по параметру `isExpanded`: `matches`, если `true`, иначе пустая коллекция); `FillRows()` очищает `Rows` и, если `IsExpanded`, добавляет `Matches`. Базовый класс `Rows` не знает и при создании `FillRows()` не вызывает;
      - `int SelectedCount` — число `Matches` с `IsSelected`;
      - `HeaderText` — `string.Format(CultureInfo.CurrentCulture, AppResources.ModelGroupImageHeaderFormat, Name, Matches.Count, SelectedCount)`;
      - `public void NotifySelectionChanged()` — `OnPropertyChanged` для `SelectedCount`, `HeaderText`, `AutomationName`. На строки не подписывается.
-   - `AssistantModelGroupViewModel.cs`: устроена так же, но с `AssistantModelOptionViewModel`, без `SelectedCount`; `HeaderText` — по `ModelGroupAssistantHeaderFormat` (`Name`, `Matches.Count`).
+   - `AssistantModelGroupViewModel.cs`: устроена так же (в том числе `Rows` заполняется в её конструкторе), но с `AssistantModelOptionViewModel`, без `SelectedCount`; `HeaderText` — по `ModelGroupAssistantHeaderFormat` (`Name`, `Matches.Count`).
+   - Тесты (сначала падают) в новом файле `ImageGen/ImageGen.Presentation.Tests/PageModels/ModelGroupViewModelTests.cs`; строки — `new ModelOptionViewModel(new ImageModel(...), isSelected)`, делегат считает вызовы:
+     - `Constructor_Expanded_FillsRowsWithoutCallback` — `isExpanded: true`, две строки → создание не бросает, `Rows` = обе строки, делегат не вызван;
+     - `Constructor_Collapsed_RowsEmpty` — `isExpanded: false` → `Rows` пуст, делегат не вызван;
+     - `Toggle_CallsCallbackOnceAndFillsRows` — свёрнутая группа, `ToggleCommand` → `IsExpanded = true`, `Rows` = строки, делегат вызван один раз, `PropertyChanged` для `AutomationName` и `ChevronGlyph`;
+     - `HeaderText_ImageGroup_ShowsCounts` — «vendor», две строки, одна выбрана → «vendor (2) · 1 selected».
 4. Группы в `SessionModelsPageModel` (сначала тесты).
    - Новые члены:
      - `public ObservableCollection<ImageModelGroupViewModel> ImageModelGroups { get; } = [];`
@@ -161,7 +169,7 @@ bash scripts/check.sh
 - В задачу 046 (Avalonia): то же; заголовок группы раскрывается с клавиатуры (Enter или пробел).
 - Android — в «Отчёт» этой задачи: «не проверено, проверить владельцу: группы на телефоне, скорость раскрытия большой группы».
 
-Файлы: `ImageGen/ImageGen.Presentation/PageModels/ModelVendors.cs`, `ImageGen/ImageGen.Presentation/PageModels/ModelGroupViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ImageModelGroupViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/AssistantModelGroupViewModel.cs` (новые), `ImageGen/ImageGen.Presentation/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml`, `ImageGen/ImageGen.Avalonia/Views/SessionModelsView.axaml`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ModelVendorsTests.cs` (новый), `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionModelsPageModelTests.cs`, `ImageGen/ImageGen.Avalonia.Tests/Flows/SessionModelsFlowTests.cs`, `docs/specs/chat-sessions.md`, `tasks/v0.1/016-*.md`, `tasks/backlog/046-*.md`.
+Файлы: `ImageGen/ImageGen.Presentation/PageModels/ModelVendors.cs`, `ImageGen/ImageGen.Presentation/PageModels/ModelGroupViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ImageModelGroupViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/AssistantModelGroupViewModel.cs` (новые), `ImageGen/ImageGen.Presentation/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml`, `ImageGen/ImageGen.Avalonia/Views/SessionModelsView.axaml`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ModelVendorsTests.cs` (новый), `ImageGen/ImageGen.Presentation.Tests/PageModels/ModelGroupViewModelTests.cs` (новый), `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionModelsPageModelTests.cs`, `ImageGen/ImageGen.Avalonia.Tests/Flows/SessionModelsFlowTests.cs`, `docs/specs/chat-sessions.md`, `tasks/v0.1/016-*.md`, `tasks/backlog/046-*.md`.
 
 ## Отчёт
 
@@ -174,3 +182,8 @@ bash scripts/check.sh
 
 ### 2026-10-29, владелец (в чате, записал claude-plan)
 План одобрен; допущения из комментариев claude-plan приняты как решения. План переписан под небольшую модель.
+### 2026-10-29, claude-review
+Владелец попросил сделать задачу исполнимой небольшой моделью. Изменён шаг 3 «Плана» и строка `Файлы:`:
+- описана ловушка: присвоение `IsExpanded` в конструкторе базового класса вызывает `OnIsExpandedChanged` → абстрактный `FillRows()` до создания `Rows` производного класса → `NullReferenceException`;
+- задан способ: `ModelGroupViewModel` с первичным конструктором и `[ObservableProperty] public partial bool IsExpanded { get; set; } = isExpanded;` (инициализатор пишет в хранилище мимо сеттера, образец — `ModelOptionViewModel.IsSelected`); запасной путь — стиль поля `_isExpanded` (как `_title` в `SessionItemViewModel`); `Rows` создаётся и заполняется в конструкторе производного класса;
+- добавлены тесты `ModelGroupViewModelTests.cs` (новый файл, внесён в `Файлы:`) на создание без `NullReferenceException` и без вызова делегата.

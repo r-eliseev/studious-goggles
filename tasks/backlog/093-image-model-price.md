@@ -52,6 +52,16 @@ fal, проверено 2026-10-29: в списке моделей цены не
 - Хранение: колонка `prices_json` в `image_models`. Миграция очищает кэш каталога (`DELETE FROM image_models`): это только кэш, и он перечитается при следующем открытии. Поэтому `ImageModel.Prices` не nullable, по умолчанию пустой.
 - Формат чисел инвариантный, `0.00##`, как у цены ассистента.
 
+Тестовые заглушки HTTP (проверено по коду 2026-10-29) устроены по-разному:
+- `ImageGen/ImageGen.Core.Tests/TestDoubles/StubHttpMessageHandler.cs`: `Requests` и `RequestBodies`, `SendAsync` асинхронный (`async`, читает тело через `ReadAsStringAsync`), запись в списки без блокировки.
+- `ImageGen/ImageGen.Avalonia.Tests/TestDoubles/StubHttpMessageHandler.cs`: только `Requests`, `RequestBodies` **нет**, `SendAsync` не `async` (возвращает `Task.FromResult(respond(request))`). Тела запросов в Avalonia-тестах никто не читает, поэтому `RequestBodies` туда не добавляется.
+- `OpenRouterFakes.Create` (Avalonia) уже потокобезопасен: единственный изменяемый счётчик `chatReplies` меняется через `Interlocked`.
+
+Пересечения с незавершёнными задачами (порядок любой, при `rebase` сохранять обе стороны):
+- 129 (единый queued-путь) меняет `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs` (путь генерации; здесь — `ListImageModelsAsync` и новый `ReadPricesAsync`), `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs` и `ImageGen/ImageGen.Core.Tests/OpenAiCompatible/OpenAiCompatibleClientTests.cs`.
+- 132 (Together AI) меняет `ImageGen/ImageGen.Core.Tests/OpenAiCompatible/OpenAiCompatibleClientTests.cs` и `ProviderClientBase.cs` (здесь его только читают).
+- 090, 091, 092 — `ModelOptionViewModel` и разметка экрана моделей, см. «Выполнять после».
+
 ## План
 Для исполнителя (план рассчитан на небольшую модель): делай шаги строго по порядку, по TDD (сначала падающий тест, потом минимальный код), после каждого шага — сборка и тесты из «Проверки». Имена файлов, типов, членов, ключей строк и тестов переноси дословно. Если шаг не получается так, как написано (API другое, компилятор не принимает разметку), не придумывай обход: опиши в «Комментариях», что пробовал, поставь `blocked` и остановись.
 
@@ -68,7 +78,10 @@ fal, проверено 2026-10-29: в списке моделей цены не
    - Новый файл `ImageGen/ImageGen.Core/Domain/Models/ImageModelPrice.cs`: `public sealed record ImageModelPrice(string Billable, ImagePriceUnit Unit, decimal CostUsd, string? Variant);`. XML-комментарий: `CostUsd` — за одну единицу провайдера, у `Token` — за один токен.
    - В `ImageModel` — `public IReadOnlyList<ImageModelPrice> Prices { get; set; } = [];` с комментарием «Prices from the provider's catalog; empty when the provider gives none».
    - В `CoreJsonContext` — `[JsonSerializable(typeof(List<ImageModelPrice>))]`.
-2. Потокобезопасные тестовые заглушки. В `ImageGen/ImageGen.Core.Tests/TestDoubles/StubHttpMessageHandler.cs` и `ImageGen/ImageGen.Avalonia.Tests/TestDoubles/StubHttpMessageHandler.cs`, в `SendAsync`: сначала прочитать тело запроса, затем под `lock` по приватному объекту добавить запрос в `Requests` и тело в `RequestBodies`. Причина: запросы цены идут параллельно. Все тесты зелёные.
+2. Потокобезопасные тестовые заглушки (причина: запросы цены идут параллельно, а `List<T>` при одновременной записи ломается). Заглушки разные — см. «Анализ»:
+   - Core (`ImageGen/ImageGen.Core.Tests/TestDoubles/StubHttpMessageHandler.cs`): в `SendAsync` сначала прочитать тело запроса в локальную переменную (`await` — вне блокировки, внутри `lock` `await` нельзя), затем под `lock` по новому приватному полю-объекту добавить запрос в `Requests` и тело в `RequestBodies`, затем вернуть ответ.
+   - Avalonia (`ImageGen/ImageGen.Avalonia.Tests/TestDoubles/StubHttpMessageHandler.cs`): только обернуть `Requests.Add(request)` в `lock` по новому приватному полю-объекту. `RequestBodies` не добавлять, `SendAsync` не делать `async`, конструктор и `Status(...)` не трогать.
+   - Все тесты зелёные (новых тестов на этом шаге нет).
 3. Разбор цены OpenRouter (сначала тесты в `OpenRouterClientTests`). Заглушка — `new StubHttpMessageHandler(req => …)`: путь, оканчивающийся на `/endpoints`, получает выдержку нужной модели (выбор по `AbsolutePath`), путь `/images/models` — список.
    - `ListImageModelsAsync_Endpoints_ParsesPrices` — список из `black-forest-labs/flux.2-klein-4b` и `qwen/qwen-image-2.1-turbo` с выдержками из «Анализа». У первой одна цена (`output_image`, `Megapixel`, 0.014, `null`); у второй три: `input_image`/`Image`/0/`null`, `output_image`/`Image`/0.0184/`1k`, `output_image`/`Image`/0.0184/`2k`.
    - `ListImageModelsAsync_EndpointsAddress_KeepsSlashInId` — среди запросов есть `https://openrouter.ai/api/v1/images/models/black-forest-labs/flux.2-klein-4b/endpoints`; первый запрос — `…/images/models`.
@@ -166,3 +179,7 @@ bash scripts/check.sh
 
 ### 2026-10-29, владелец (в чате, записал claude-plan)
 План одобрен; допущения из комментариев claude-plan приняты как решения. План переписан под небольшую модель.
+### 2026-10-29, claude-review
+Владелец попросил сделать задачу исполнимой небольшой моделью. Изменено:
+- шаг 2 «Плана»: Avalonia-заглушка `StubHttpMessageHandler` не имеет `RequestBodies` и асинхронного `SendAsync`; теперь в ней только `lock` вокруг `Requests.Add`, а чтение тела и `RequestBodies` — только в Core-заглушке (чтение тела до `lock`); в «Анализ» добавлено описание обеих заглушек;
+- в «Анализ» добавлены пересечения: 129 (`OpenRouterClient.cs`, `OpenRouterClientTests.cs`, `OpenAiCompatibleClientTests.cs`) и 132 (`OpenAiCompatibleClientTests.cs`); при `rebase` сохранять обе стороны.

@@ -109,7 +109,7 @@ created: 2026-10-29
    - Сборка Android.
 6. Документация.
    - `docs/specs/chat-sessions.md`, раздел S5: после S5.2 добавь пункт S5.3: экран моделей сессии (страница и боковая панель) — две вкладки «Image models» (открыта по умолчанию: число запусков, счётчик выбранных, список с галочками) и «Assistant model» (список с одним выбором), у каждой своя прокрутка; поле поиска и «Refresh» над вкладками, поиск фильтрует обе вкладки; «Save» и «Cancel» общие, под вкладками.
-   - `docs/architecture.md`, строка `ImageGen.Maui/`: после `Pages/` добавь `Controls/ (SessionsListView, StarterExamples, SessionModelsView — экран моделей сессии для страницы и панели)`.
+   - `docs/architecture.md`, строка `ImageGen.Maui/`: там уже есть `Controls/ (SessionsListView, StarterExamples, ChatEditor)`. Новую строку и второй `Controls/` не добавляй: допиши в существующий список в скобках `, SessionModelsView` после `ChatEditor` (получится `Controls/ (SessionsListView, StarterExamples, ChatEditor, SessionModelsView)`). Если строка стала длиннее соседних, перенеси хвост на следующую строку с тем же отступом, как уже сделано в этом блоке.
    - `docs/knowledge/maui.md`, пункт «Переключатель модели ассистента в MAUI (задача 070)»: допиши, что разметка экрана моделей общая (`Controls/SessionModelsView`), обработчик `CheckedChanged` и порядок кнопок — в её коде, группа задаётся `RadioButtonGroup.GroupName` на контейнере (или `GroupName`, если сработал запасной путь шага 2).
 7. Ручные пункты (см. «Ручная проверка») допиши в задачи 016 и 046.
 
@@ -139,3 +139,5 @@ Windows-цель MAUI собирает CI.
 
 ### 2026-10-29, владелец (в чате, записал claude-plan)
 План одобрен; допущения из комментариев claude-plan приняты как решения. План переписан под небольшую модель.
+### 2026-10-29, claude-review
+Владелец попросил сделать задачу исполнимой небольшой моделью. Изменён шаг 6 «Плана»: `docs/architecture.md` уже содержит в строке `ImageGen.Maui/` список `Controls/ (SessionsListView, StarterExamples, ChatEditor)`; вместо добавления новой строки (дубль `Controls/`) шаг теперь велит дописать `SessionModelsView` в существующий список.

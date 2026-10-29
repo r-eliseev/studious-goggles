@@ -38,13 +38,15 @@ created: 2026-10-29
 
 Пересечения с незавершёнными задачами:
 - 101 (поиск: опечатка в недописанном слове) — может менять `SessionsPageModel` (`SearchText`) и `SessionsPageModelTests`; основная правка 101 в `ImageGen.Core/Search/FuzzyMatcher.cs`. Порядок любой; если обе меняют `SessionsPageModel`, лучше 089 первой (её правка — новые члены, поиск она не трогает), при `rebase` сохранять обе стороны.
-- 096 (сводка прогона) меняет `RunItemViewModel` и, возможно, `GenerationService`-связанные тесты; с этой задачей файлы не пересекаются, кроме возможной правки `GenerationService.cs` — здесь только новый необязательный параметр и одна строка после `AddRunAsync`.
+- 126 (подключение координатора удаления) меняет те же места: первичный конструктор `SessionService` (добавляет **обязательный** параметр `ISessionGenerationCoordinator`), все вызовы `new SessionService(` в тестах (`SessionServiceTests`, `AssistantServiceTests`, `ChatPageModelTests`, `SessionModelsPageModelTests`, `SessionParametersPageModelTests`, `SessionsPageModelTests`) и `CoreServiceCollectionExtensions.cs`. В C# необязательный параметр должен стоять после обязательных, поэтому правило порядка, не зависящее от того, какая задача влита первой: `SessionChangeNotifier? changes = null` всегда **последний** параметр `SessionService`; обязательный параметр координатора из 126 стоит перед ним (после `IConversationSummaryRepository summaries`). В тестах `changes` передаётся только именованным аргументом (`changes: …`), чтобы позиционная вставка координатора не ломала вызовы. При `rebase` сохранять обе стороны: и аргумент координатора, и `changes:`.
+- 108, 121, 129 меняют `GenerationService.cs` в районе `CreateRunAsync` (между `runs.AddRunAsync(...)` и циклом `Launch`: 108 — аренда запуска и `RunningJob`, 121 — состояние `RunningJob`, 129 — путь запуска) и `GenerationServiceTests.cs`. Здесь в `GenerationService` только новый необязательный последний параметр конструктора и одна строка `changes?.Notify(sessionId)` сразу после журнала «Run {RunId} created…». При `rebase` сохранять обе стороны; если 108 обернула участок в аренду/блокировку, строку `Notify` ставить сразу после успешного `AddRunAsync` и журнала, до запуска генераций.
+- 096 (сводка прогона) меняет `RunItemViewModel`, `GenerationItemViewModel` и их тесты, `ChatPageModelTests`; с этой задачей файлы не пересекаются (`GenerationService.cs` в строке `Файлы:` у 096 нет).
 - 088 файлов этой задачи не трогает.
 
 ## План
 Для исполнителя (план рассчитан на небольшую модель): делай шаги строго по порядку, по TDD (сначала падающий тест, потом минимальный код), после каждого шага — сборка и тесты из «Проверки». Имена файлов, типов, членов, ключей строк и тестов переноси дословно. Если шаг не получается так, как написано (API другое, компилятор не принимает разметку), не придумывай обход: опиши в «Комментариях», что пробовал, поставь `blocked` и остановись.
 
-Выполнять после: — (101 тоже может менять `SessionsPageModel.cs` и `SessionsPageModelTests.cs`: если 101 уже в `main`, сделать `rebase` до начала; иначе 089 первой. 096 может менять `GenerationService.cs` — здесь только новый параметр и одна строка, при `rebase` сохранять обе стороны.)
+Выполнять после: — (101 тоже может менять `SessionsPageModel.cs` и `SessionsPageModelTests.cs`: если 101 уже в `main`, сделать `rebase` до начала; иначе 089 первой. 126 меняет конструктор `SessionService` и все `new SessionService(` в тестах, 108/121/129 — `GenerationService.CreateRunAsync`: порядок любой, правило порядка параметров — в «Анализе», при `rebase` сохранять обе стороны.)
 
 Решения (владелец, 2026-10-29): ядро сообщает об изменении сессии событием, список правит одну строку на месте. Прогон без сообщения (Repeat, New seed, Edit, Other model) сессию в списке не поднимает: обновляется только число прогонов. Сессия поднимается в начало «Today», только когда её `UpdatedAt` стал новее (новое сообщение). Переименование `UpdatedAt` не меняет и строку не двигает (S1.2).
 
@@ -59,7 +61,7 @@ created: 2026-10-29
    Тесты `ImageGen/ImageGen.Core.Tests/Services/SessionChangeNotifierTests.cs` (логгер `NullLogger<SessionChangeNotifier>.Instance`):
    - `Notify_RaisesSessionChangedWithId`: подписка, `Notify(id)` → обработчик вызван один раз с этим `id`;
    - `Notify_HandlerThrows_OtherHandlersStillCalled`: первый обработчик бросает, второй считает вызовы → `Notify` не бросает, второй вызван один раз.
-2. **`SessionService` сообщает об изменениях.** В первичный конструктор последним параметром `SessionChangeNotifier? changes = null`. После успешной записи вызвать `changes?.Notify(<id сессии>)` в `CreateAsync` (после `sessions.AddAsync`), `UpdateSettingsAsync`, `UpdateGenerationParametersAsync`, `RenameAsync`, `SetTitleFromFirstMessageAsync` (после `sessions.UpdateAsync`). Остальные места создания `SessionService` не меняются.
+2. **`SessionService` сообщает об изменениях.** В первичный конструктор самым последним параметром `SessionChangeNotifier? changes = null` (если 126 уже в `main` и там есть параметр `ISessionGenerationCoordinator` — `changes` ставится после него; координатор не трогать). После успешной записи вызвать `changes?.Notify(<id сессии>)` в `CreateAsync` (после `sessions.AddAsync`), `UpdateSettingsAsync`, `UpdateGenerationParametersAsync`, `RenameAsync`, `SetTitleFromFirstMessageAsync` (после `sessions.UpdateAsync`). Остальные места создания `SessionService` не меняются. Где `changes` передаётся (тесты), — только именованным аргументом `changes: …`.
    Тесты в `ImageGen/ImageGen.Core.Tests/Services/SessionServiceTests.cs` (сервис создаётся как в файле, плюс `changes: notifier`; подписка со списком полученных id):
    - `Create_NotifiesSessionChanged` → один id, равный id новой сессии;
    - `Rename_NotifiesSessionChanged`, `SetTitleFromFirstMessage_NotifiesSessionChanged`, `UpdateSettings_NotifiesSessionChanged`, `UpdateGenerationParameters_NotifiesSessionChanged` → один id, равный id сессии;
@@ -128,3 +130,8 @@ bash scripts/check.sh
 Вопрос владельцу: поднимать ли сессию наверх списка (и в «Today»), когда в ней запущен прогон без нового сообщения (Repeat, New seed, Edit, Other model)? Сейчас время изменения сессии двигает только сообщение. Допущение в плане: не поднимать, обновлять только число прогонов.
 ### 2026-10-29, владелец (в чате, записал claude-plan)
 План одобрен; допущения из комментариев claude-plan приняты как решения. План переписан под небольшую модель.
+### 2026-10-29, claude-review
+Владелец попросил сделать задачу исполнимой небольшой моделью. Изменено в «Анализе» и «Плане»:
+- названа 126: она добавляет обязательный параметр `ISessionGenerationCoordinator` в конструктор `SessionService` и правит те же `new SessionService(` в тестах и `CoreServiceCollectionExtensions.cs`; задано правило порядка (`changes` всегда последний, координатор перед ним, в тестах `changes:` только именованным), при `rebase` сохранять обе стороны;
+- названы 108, 121, 129: меняют `GenerationService.CreateRunAsync` рядом с местом вставки `Notify`;
+- убрано утверждение, что 096 может менять `GenerationService.cs`: в её строке `Файлы:` этого файла нет.
