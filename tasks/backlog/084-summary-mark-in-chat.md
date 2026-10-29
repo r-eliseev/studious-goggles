@@ -1,8 +1,8 @@
 ---
 id: 084
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: claude-536f
+claimed: 2026-10-29T06:02:31Z
 created: 2026-10-28
 ---
 
