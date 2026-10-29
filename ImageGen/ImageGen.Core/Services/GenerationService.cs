@@ -121,6 +121,16 @@ public sealed class GenerationService(
             [(SourceModel(source), source.Seed, source.ReferenceAttachmentIds)], requested, cancellationToken);
     }
 
+    /// <summary>New run from one generation on a model the user picked: same prompt and seed, a different model (task 076).</summary>
+    public async Task<Run> RunOnModelAsync(Guid generationId, ModelRef model, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        var source = await GetSourceAsync(generationId, cancellationToken);
+        var requested = await GetRunParametersAsync(source.RunId, cancellationToken);
+        return await CreateRunAsync(source.SessionId, source.Prompt, RunOrigin.OtherModel,
+            [(model, source.Seed, source.ReferenceAttachmentIds)], requested, cancellationToken);
+    }
+
     /// <summary>Marks generations left unfinished by a previous app session as Failed with <see cref="ErrorKind.Interrupted"/>.</summary>
     /// <returns>Number of updated generations.</returns>
     /// <remarks>

@@ -13,6 +13,20 @@ public class ProviderConfigLoaderTests
         """;
 
     [Fact]
+    public void BuiltIn_RegistersFalProvider()
+    {
+        var registry = ProviderConfigLoader.Build(ProviderConfigLoader.ReadBuiltInJson(), null);
+
+        var fal = registry.Get(ProviderIds.Fal);
+        Assert.Equal("fal", fal.Id);
+        Assert.Equal(ProviderKind.Fal, fal.Kind);
+        Assert.Equal("fal.ai", fal.DisplayName);
+        Assert.Equal(new Uri("https://queue.fal.run/"), fal.BaseAddress);
+        Assert.Equal(TimeSpan.FromSeconds(180), fal.Timeout);
+        Assert.Empty(fal.ImageModels);
+    }
+
+    [Fact]
     public void Parse_ValidFile_ReturnsProviders()
     {
         var providers = ProviderConfigLoader.Parse(BuiltIn);

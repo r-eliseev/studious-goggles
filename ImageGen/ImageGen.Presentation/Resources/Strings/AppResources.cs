@@ -73,6 +73,12 @@ public static class AppResources
 
     public static string StatusFiltered => Get(nameof(StatusFiltered));
 
+    public static string FilteredNotice => Get(nameof(FilteredNotice));
+
+    public static string TimeFormat => Get(nameof(TimeFormat));
+
+    public static string RunHeaderFormat => Get(nameof(RunHeaderFormat));
+
     public static string SeedFormat => Get(nameof(SeedFormat));
 
     public static string SeedNotSupported => Get(nameof(SeedNotSupported));
@@ -225,6 +231,14 @@ public static class AppResources
 
     public static string DescribePromptButton => Get(nameof(DescribePromptButton));
 
+    public static string More => Get(nameof(More));
+
+    public static string ActionEditPrompt => Get(nameof(ActionEditPrompt));
+
+    public static string ActionDescribeImage => Get(nameof(ActionDescribeImage));
+
+    public static string ActionPromptFromImage => Get(nameof(ActionPromptFromImage));
+
     public static string DescriptionTitle => Get(nameof(DescriptionTitle));
 
     public static string DescriptionCostUnknown => Get(nameof(DescriptionCostUnknown));
@@ -240,6 +254,18 @@ public static class AppResources
     public static string DescriptionAppend => Get(nameof(DescriptionAppend));
 
     public static string DescriptionReplaceQuestion => Get(nameof(DescriptionReplaceQuestion));
+
+    public static string ErrorDetailsTitle => Get(nameof(ErrorDetailsTitle));
+
+    public static string OtherModel => Get(nameof(OtherModel));
+
+    public static string CopyPrompt => Get(nameof(CopyPrompt));
+
+    public static string UsedInSession => Get(nameof(UsedInSession));
+
+    public static string AllModels => Get(nameof(AllModels));
+
+    public static string ModelPickerTitle => Get(nameof(ModelPickerTitle));
 
     private static string Get(string name) =>
         ResourceManager.GetString(name, CultureInfo.CurrentUICulture)

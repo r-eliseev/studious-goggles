@@ -1,9 +1,11 @@
 using System.Collections.Specialized;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using ImageGen.Avalonia.Services.Navigation;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Utilities;
@@ -60,6 +62,22 @@ public partial class ChatView : UserControl, IAppearing, IDisappearing
         model.OnDisappearing();
     }
 
+    /// <summary>The "More" icon opens the same context menu as a right-click on the card.</summary>
+    private void OnMoreClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Control control)
+        {
+            return;
+        }
+
+        var card = control.GetVisualAncestors().OfType<Border>()
+            .FirstOrDefault(border => border.Classes.Contains("card"));
+        if (card?.ContextMenu is { } menu)
+        {
+            menu.Open(card);
+        }
+    }
+
     private void OnInputKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter || e.KeyModifiers.HasFlag(KeyModifiers.Shift))
@@ -87,5 +105,14 @@ public partial class ChatView : UserControl, IAppearing, IDisappearing
         var layout = this.FindControl<Grid>("Layout")!;
         layout.ColumnDefinitions[0].Width = wide ? new GridLength(272) : new GridLength(0);
         this.FindControl<SessionsListView>("SessionList")!.IsVisible = wide;
+        if (DataContext is ChatPageModel model)
+        {
+            // A narrow window opens the models and parameters as a screen; any open pane is closed.
+            model.IsWide = wide;
+            if (!wide)
+            {
+                model.ClosePaneCommand.Execute(null);
+            }
+        }
     }
 }

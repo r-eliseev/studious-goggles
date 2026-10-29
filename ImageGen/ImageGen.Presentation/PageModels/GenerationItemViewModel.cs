@@ -6,6 +6,7 @@ using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
 using ImageGen.Presentation.Resources.Strings;
+using ImageGen.Presentation.Services;
 
 namespace ImageGen.Presentation.PageModels;
 
@@ -16,29 +17,41 @@ namespace ImageGen.Presentation.PageModels;
 public sealed partial class GenerationItemViewModel : ObservableObject
 {
     private readonly IImageFileStore _files;
+    private readonly IDialogService _dialogs;
+    private readonly IClipboardService _clipboard;
     private readonly Func<GenerationItemViewModel, Task> _repeat;
     private readonly Func<GenerationItemViewModel, Task> _newSeed;
     private readonly Func<GenerationItemViewModel, Task> _edit;
     private readonly Func<GenerationItemViewModel, DescriptionMode, Task> _describe;
+    private readonly Func<GenerationItemViewModel, Task> _otherModel;
 
     public GenerationItemViewModel(
         Generation generation,
         IImageFileStore files,
+        IDialogService dialogs,
+        IClipboardService clipboard,
         Func<GenerationItemViewModel, Task> repeat,
         Func<GenerationItemViewModel, Task> newSeed,
         Func<GenerationItemViewModel, Task> edit,
-        Func<GenerationItemViewModel, DescriptionMode, Task> describe)
+        Func<GenerationItemViewModel, DescriptionMode, Task> describe,
+        Func<GenerationItemViewModel, Task> otherModel)
     {
         ArgumentNullException.ThrowIfNull(generation);
         ArgumentNullException.ThrowIfNull(files);
+        ArgumentNullException.ThrowIfNull(dialogs);
+        ArgumentNullException.ThrowIfNull(clipboard);
         ArgumentNullException.ThrowIfNull(repeat);
         ArgumentNullException.ThrowIfNull(newSeed);
         ArgumentNullException.ThrowIfNull(edit);
+        ArgumentNullException.ThrowIfNull(otherModel);
         _files = files;
+        _dialogs = dialogs;
+        _clipboard = clipboard;
         _repeat = repeat;
         _newSeed = newSeed;
         _edit = edit;
         _describe = describe;
+        _otherModel = otherModel;
         Id = generation.Id;
         Prompt = generation.Prompt;
         Update(generation);
@@ -55,6 +68,57 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     /// <summary>Model, seed (or "seed not supported") and price when known.</summary>
     [ObservableProperty]
     public partial string DetailsText { get; set; } = "";
+
+    /// <summary>Model id of the generation.</summary>
+    [ObservableProperty]
+    public partial string ModelText { get; set; } = "";
+
+    /// <summary>Seed ("seed N") or "seed not supported".</summary>
+    [ObservableProperty]
+    public partial string SeedText { get; set; } = "";
+
+    /// <summary>Price ("$N") when known, otherwise empty.</summary>
+    [ObservableProperty]
+    public partial string CostText { get; set; } = "";
+
+    /// <summary>Generation time ("Ns") when both timestamps are known, otherwise empty.</summary>
+    [ObservableProperty]
+    public partial string TimeText { get; set; } = "";
+
+    /// <summary>Parameter lines (replaced or dropped) and the filtered explanation; empty when none.</summary>
+    [ObservableProperty]
+    public partial string NoticeText { get; set; } = "";
+
+    /// <summary>True when <see cref="NoticeText"/> is not empty.</summary>
+    [ObservableProperty]
+    public partial bool HasNotice { get; set; }
+
+    /// <summary>Status of the card: one placeholder and one status label per value.</summary>
+    [ObservableProperty]
+    public partial GenerationStatusKind StatusKind { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsDone { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsQueued { get; set; }
+
+    /// <summary>True only while the generation is running (not queued), for the status badge class.</summary>
+    [ObservableProperty]
+    public partial bool IsActive { get; set; }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(DetailsCommand))]
+    public partial bool IsFailed { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsFiltered { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsCancelled { get; set; }
+
+    /// <summary>Price in USD when known; used by the run header to total the cost.</summary>
+    public decimal? CostUsd { get; private set; }
 
     [ObservableProperty]
     public partial string ErrorText { get; set; } = "";
@@ -78,6 +142,11 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     [ObservableProperty]
     public partial bool HasError { get; set; }
 
+    /// <summary>True for a failed or filtered generation: the Repeat action stays visible even without hover (task 069).</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(OtherModelCommand))]
+    public partial bool IsFailedOrFiltered { get; set; }
+
     [ObservableProperty]
     public partial bool IsRunning { get; set; }
 
@@ -87,6 +156,8 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(EditCommand))]
     [NotifyCanExecuteChangedFor(nameof(DescribeCommand))]
     [NotifyCanExecuteChangedFor(nameof(DescribePromptCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyPromptCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ShowActionsCommand))]
     public partial bool IsFinished { get; set; }
 
     [RelayCommand(CanExecute = nameof(IsFinished))]
@@ -105,6 +176,61 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(IsFinished))]
     private Task DescribePromptAsync() => _describe(this, DescriptionMode.Prompt);
 
+    /// <summary>Shows the full error text of a failed generation (task 076). Only a failed card has it.</summary>
+    [RelayCommand(CanExecute = nameof(IsFailed))]
+    private Task DetailsAsync() => _dialogs.AlertAsync(AppResources.ErrorDetailsTitle, ErrorText);
+
+    /// <summary>Opens the model picker to run this prompt and seed on another model (failed or filtered card, task 076).</summary>
+    [RelayCommand(CanExecute = nameof(IsFailedOrFiltered))]
+    private Task OtherModelAsync() => _otherModel(this);
+
+    /// <summary>Copies the exact prompt to the clipboard (any finished card, task 076).</summary>
+    [RelayCommand(CanExecute = nameof(IsFinished))]
+    private Task CopyPromptAsync() => _clipboard.SetTextAsync(Prompt);
+
+    /// <summary>
+    /// Opens the actions menu (phone action sheet or right-click/"More" context menu). The title is the card meta line
+    /// (model, seed, cost, time), the options are the same actions as the icon row, and the chosen one runs.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(IsFinished))]
+    private async Task ShowActionsAsync()
+    {
+        var actions = new List<(string Label, Func<GenerationItemViewModel, Task> Run)>
+        {
+            (AppResources.Repeat, _repeat),
+            (AppResources.NewSeed, _newSeed),
+            (AppResources.ActionEditPrompt, _edit),
+            (AppResources.ActionDescribeImage, card => _describe(card, DescriptionMode.Description)),
+            (AppResources.ActionPromptFromImage, card => _describe(card, DescriptionMode.Prompt)),
+            (AppResources.CopyPrompt, card => card._clipboard.SetTextAsync(card.Prompt)),
+        };
+        if (IsFailedOrFiltered)
+        {
+            actions.Add((AppResources.OtherModel, card => card._otherModel(card)));
+        }
+
+        if (IsFailed)
+        {
+            actions.Add((AppResources.ErrorDetailsTitle, card => card._dialogs.AlertAsync(AppResources.ErrorDetailsTitle, card.ErrorText)));
+        }
+
+        var title = string.Join(" · ", new[] { ModelText, SeedText, CostText, TimeText }.Where(text => text.Length > 0));
+        var chosen = await _dialogs.ChooseAsync(title, AppResources.Cancel, actions.Select(action => action.Label).ToList());
+        if (chosen is null)
+        {
+            return;
+        }
+
+        foreach (var action in actions)
+        {
+            if (string.Equals(action.Label, chosen, StringComparison.Ordinal))
+            {
+                await action.Run(this);
+                return;
+            }
+        }
+    }
+
     /// <summary>Recomputes every displayed value from the saved generation.</summary>
     public void Update(Generation generation)
     {
@@ -115,7 +241,22 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         }
 
         StatusText = StatusTextOf(generation.Status);
+        StatusKind = StatusKindOf(generation.Status);
         DetailsText = DetailsOf(generation);
+        ModelText = generation.ModelId;
+        SeedText = SeedTextOf(generation);
+        CostText = CostTextOf(generation);
+        TimeText = TimeTextOf(generation);
+        NoticeText = NoticeOf(generation);
+        HasNotice = NoticeText.Length > 0;
+        CostUsd = generation.CostUsd;
+        IsDone = generation.Status == GenerationStatus.Succeeded;
+        IsQueued = generation.Status == GenerationStatus.Queued;
+        IsActive = generation.Status == GenerationStatus.Running;
+        IsFailed = generation.Status == GenerationStatus.Failed;
+        IsFiltered = generation.Status == GenerationStatus.Filtered;
+        IsFailedOrFiltered = IsFailed || IsFiltered;
+        IsCancelled = generation.Status == GenerationStatus.Cancelled;
         ErrorText = generation.ErrorMessage?.Trim() ?? "";
         HasErrorText = ErrorText.Length > 0;
         HasError = generation.Status == GenerationStatus.Failed && HasErrorText;
@@ -124,6 +265,61 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         IsRunning = generation.Status is GenerationStatus.Queued or GenerationStatus.Running;
         IsFinished = generation.IsFinished;
         SummaryText = string.Join(". ", new[] { StatusText, DetailsText, ErrorText }.Where(text => text.Length > 0));
+    }
+
+    private static GenerationStatusKind StatusKindOf(GenerationStatus status) => status switch
+    {
+        GenerationStatus.Queued => GenerationStatusKind.Queued,
+        GenerationStatus.Running => GenerationStatusKind.Running,
+        GenerationStatus.Succeeded => GenerationStatusKind.Done,
+        GenerationStatus.Failed => GenerationStatusKind.Failed,
+        GenerationStatus.Cancelled => GenerationStatusKind.Cancelled,
+        GenerationStatus.Filtered => GenerationStatusKind.Filtered,
+        _ => throw new ArgumentOutOfRangeException(nameof(status), status, null),
+    };
+
+    private static string SeedTextOf(Generation generation) => generation.SeedApplied
+        ? string.Format(CultureInfo.InvariantCulture, AppResources.SeedFormat, generation.Seed)
+        : AppResources.SeedNotSupported;
+
+    private static string CostTextOf(Generation generation)
+    {
+        if (generation.CostUsd is not { } cost)
+        {
+            return "";
+        }
+
+        var price = cost.ToString("0.####", CultureInfo.InvariantCulture);
+        return string.Format(CultureInfo.InvariantCulture, AppResources.CostFormat, price);
+    }
+
+    private static string TimeTextOf(Generation generation)
+    {
+        if (generation.CompletedAt is not { } completed)
+        {
+            return "";
+        }
+
+        var seconds = (completed - generation.CreatedAt).TotalSeconds;
+        if (seconds <= 0)
+        {
+            return "";
+        }
+
+        var value = seconds.ToString("0.#", CultureInfo.InvariantCulture);
+        return string.Format(CultureInfo.InvariantCulture, AppResources.TimeFormat, value);
+    }
+
+    private static string NoticeOf(Generation generation)
+    {
+        var lines = new List<string>();
+        if (generation.Status == GenerationStatus.Filtered)
+        {
+            lines.Add(AppResources.FilteredNotice);
+        }
+
+        lines.AddRange(ParameterLines(generation.Outcomes));
+        return string.Join("\n", lines);
     }
 
     private static string StatusTextOf(GenerationStatus status) => status switch

@@ -37,11 +37,52 @@ public class RunItemViewModelTests
             SortOrder = sortOrder,
         };
         var files = Substitute.For<IImageFileStore>();
-        return new GenerationItemViewModel(generation, files, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, (_, _) => Task.CompletedTask);
+        return new GenerationItemViewModel(generation, files, Substitute.For<IDialogService>(), Substitute.For<IClipboardService>(), _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, (_, _) => Task.CompletedTask, _ => Task.CompletedTask);
     }
 
     private static CopyTextAction Copy() =>
         new(Substitute.For<IClipboardService>(), Substitute.For<IMainThread>(), "text");
+
+    [Fact]
+    public void HeaderText_CountsDoneAndCost()
+    {
+        var cards = new[]
+        {
+            Card("vendor/a", GenerationStatus.Succeeded, 0.014m),
+            Card("vendor/a", GenerationStatus.Succeeded, 0.014m),
+            Card("vendor/a", GenerationStatus.Running, null),
+            Card("vendor/b", GenerationStatus.Queued, null),
+            Card("vendor/b", GenerationStatus.Queued, null),
+            Card("vendor/b", GenerationStatus.Queued, null),
+        };
+
+        var item = new RunItemViewModel(MakeRun(), cards, Copy());
+
+        Assert.Equal(
+            string.Format(AppResources.RunHeaderFormat, 2, 3, 2, 6, "0.028"),
+            item.HeaderText);
+    }
+
+    private static GenerationItemViewModel Card(string modelId, GenerationStatus status, decimal? cost)
+    {
+        var generation = new Generation
+        {
+            Id = Guid.NewGuid(),
+            RunId = Guid.NewGuid(),
+            SessionId = Guid.NewGuid(),
+            ProviderId = "openrouter",
+            ModelId = modelId,
+            Prompt = "red fox",
+            Seed = 1,
+            SeedApplied = true,
+            Status = status,
+            CostUsd = cost,
+            CreatedAt = Now,
+            SortOrder = 0,
+        };
+        var files = Substitute.For<IImageFileStore>();
+        return new GenerationItemViewModel(generation, files, Substitute.For<IDialogService>(), Substitute.For<IClipboardService>(), _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, (_, _) => Task.CompletedTask, _ => Task.CompletedTask);
+    }
 
     [Fact]
     public void PromptText_UsesRunPromptFormat()

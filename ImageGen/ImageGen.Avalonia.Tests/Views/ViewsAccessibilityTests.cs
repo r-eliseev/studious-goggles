@@ -16,6 +16,8 @@ public class ViewsAccessibilityTests
     public async Task Views_InteractiveControls_HaveAutomationName()
     {
         using var shell = new ShellHarness(openRouter: OpenRouterFakes.Create());
+        // Narrow window: the Models button navigates to the screen (wide opens a pane, task 071).
+        shell.Window.Width = 600;
         shell.Window.Show();
 
         var chat = await shell.OpenNewChatAsync();

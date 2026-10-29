@@ -4,131 +4,283 @@
              xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels"
              xmlns:pmui="clr-namespace:ImageGen.Maui.PageModels"
              xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
+             xmlns:appearance="clr-namespace:ImageGen.Presentation.Appearance"
              xmlns:converters="clr-namespace:ImageGen.Maui.Converters"
              xmlns:controls="clr-namespace:ImageGen.Maui.Controls"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="ImageGen.Maui.Pages.ChatPage"
+             x:Name="Page"
              x:DataType="pm:ChatPageModel"
              Title="{Binding Title}">
     <ContentPage.Resources>
         <ResourceDictionary>
             <converters:FilePathToImageSourceConverter x:Key="FilePathToImageSource" />
+            <toolkit:IsNotNullConverter x:Key="IsNotNull" />
 
             <pmui:ChatItemTemplateSelector x:Key="ChatItemSelector">
                 <pmui:ChatItemTemplateSelector.MessageTemplate>
                     <DataTemplate x:DataType="pm:MessageItemViewModel">
-                        <VerticalStackLayout Spacing="2" Padding="0,4" SemanticProperties.Description="{Binding Text}">
-                            <Label Text="{Binding RoleText}" FontAttributes="Bold" FontSize="12" />
-                            <Label Text="{Binding Text}" LineBreakMode="WordWrap">
-                                <Label.Triggers>
-                                    <DataTrigger TargetType="Label" Binding="{Binding IsError}" Value="True">
-                                        <Setter Property="TextColor" Value="{DynamicResource IgErrColor}" />
-                                    </DataTrigger>
-                                </Label.Triggers>
-                            </Label>
-                            <Button Text="{x:Static strings:AppResources.Copy}"
-                                    Command="{Binding Copy.CopyCommand}"
-                                    HorizontalOptions="Start"
-                                    SemanticProperties.Description="{x:Static strings:AppResources.Copy}">
-                                <Button.Triggers>
-                                    <DataTrigger TargetType="Button" Binding="{Binding IsUser}" Value="True">
-                                        <Setter Property="IsVisible" Value="False" />
-                                    </DataTrigger>
-                                </Button.Triggers>
-                            </Button>
-                            <Label Text="{x:Static strings:AppResources.Copied}" FontSize="12" IsVisible="{Binding Copy.IsCopied}" />
-                        </VerticalStackLayout>
+                        <Border Background="{DynamicResource IgUserMessageBackgroundBrush}"
+                                Padding="{DynamicResource IgUserMessagePadding}"
+                                StrokeThickness="0"
+                                HorizontalOptions="{DynamicResource IgUserMessageAlignment}"
+                                Margin="0,4"
+                                SemanticProperties.Description="{Binding Text}">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="{DynamicResource IgUserMessageCornerRadius}" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="{Binding RoleText}"
+                                       FontFamily="{DynamicResource IgRoleFont}"
+                                       FontAttributes="Bold"
+                                       FontSize="{DynamicResource IgFontSizeMeta}"
+                                       IsVisible="{Binding IsUser}" />
+                                <Label Text="{Binding Text}" LineBreakMode="WordWrap">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsError}" Value="True">
+                                            <Setter Property="TextColor" Value="{DynamicResource IgErrColor}" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                                <Button StyleClass="ghost,small"
+                                        Text="{x:Static strings:AppResources.Copy}"
+                                        Command="{Binding Copy.CopyCommand}"
+                                        HorizontalOptions="Start"
+                                        SemanticProperties.Description="{x:Static strings:AppResources.Copy}">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button" Binding="{Binding IsUser}" Value="True">
+                                            <Setter Property="IsVisible" Value="False" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+                                <Label StyleClass="meta" Text="{x:Static strings:AppResources.Copied}" IsVisible="{Binding Copy.IsCopied}" />
+                            </VerticalStackLayout>
+                        </Border>
                     </DataTemplate>
                 </pmui:ChatItemTemplateSelector.MessageTemplate>
 
                 <pmui:ChatItemTemplateSelector.RunTemplate>
                     <DataTemplate x:DataType="pm:RunItemViewModel">
-                        <VerticalStackLayout Spacing="8" Padding="0,4" SemanticProperties.Description="{Binding PromptText}">
-                            <Label Text="{Binding PromptText}" FontAttributes="Italic" LineBreakMode="WordWrap" />
-                            <Button Text="{x:Static strings:AppResources.Copy}"
-                                    Command="{Binding Copy.CopyCommand}"
-                                    HorizontalOptions="Start"
-                                    SemanticProperties.Description="{x:Static strings:AppResources.Copy}" />
-                            <Label Text="{x:Static strings:AppResources.Copied}" FontSize="12" IsVisible="{Binding Copy.IsCopied}" />
-                            <FlexLayout Wrap="Wrap" Direction="Row" JustifyContent="Start" AlignItems="Start"
-                                        BindableLayout.ItemsSource="{Binding Generations}">
-                                <BindableLayout.ItemTemplate>
-                                    <DataTemplate x:DataType="pm:GenerationItemViewModel">
-                                        <Border WidthRequest="280" Margin="0,0,8,8" Padding="8"
-                                                StrokeShape="RoundRectangle 8"
-                                                SemanticProperties.Description="{Binding SummaryText}">
-                                            <VerticalStackLayout Spacing="6">
-                                                <Image Source="{Binding ImageFilePath, Converter={StaticResource FilePathToImageSource}}"
-                                                       IsVisible="{Binding HasImage}"
-                                                       WidthRequest="264"
-                                                       HeightRequest="256"
-                                                       Aspect="AspectFit"
-                                                       AutomationProperties.IsInAccessibleTree="False" />
-
-                                                <ActivityIndicator IsRunning="{Binding IsRunning}"
-                                                                   IsVisible="{Binding IsRunning}"
-                                                                   HorizontalOptions="Start"
+                        <Border StrokeThickness="{DynamicResource IgRunBorderThickness}"
+                                Stroke="{DynamicResource IgLineColor}"
+                                Padding="{DynamicResource IgRunPadding}"
+                                Margin="0,4"
+                                SemanticProperties.Description="{Binding PromptText}">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="{DynamicResource IgRadiusMd}" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="8">
+                                <Label StyleClass="meta" Text="{Binding HeaderText}" />
+                                <Border Background="{DynamicResource IgPromptBackgroundBrush}"
+                                        Padding="{DynamicResource IgPromptPadding}"
+                                        StrokeThickness="0">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="{DynamicResource IgRadiusSm}" />
+                                    </Border.StrokeShape>
+                                    <Label Text="{Binding PromptText}"
+                                           TextColor="{DynamicResource IgPromptForegroundBrush}"
+                                           FontFamily="{DynamicResource IgPromptFont}"
+                                           FontAttributes="{DynamicResource IgPromptFontStyle}"
+                                           LineBreakMode="WordWrap" />
+                                </Border>
+                                <Button StyleClass="ghost,small"
+                                        Text="{x:Static strings:AppResources.Copy}"
+                                        Command="{Binding Copy.CopyCommand}"
+                                        HorizontalOptions="Start"
+                                        SemanticProperties.Description="{x:Static strings:AppResources.Copy}" />
+                                <Label StyleClass="meta" Text="{x:Static strings:AppResources.Copied}" IsVisible="{Binding Copy.IsCopied}" />
+                                <FlexLayout Wrap="Wrap" Direction="Row" JustifyContent="Start" AlignItems="Start"
+                                            BindableLayout.ItemsSource="{Binding Generations}">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="pm:GenerationItemViewModel">
+                                            <Border WidthRequest="280" Margin="0,0,8,8" Padding="8"
+                                                    Background="{DynamicResource IgCardBackgroundBrush}"
+                                                    StrokeThickness="{DynamicResource IgCardBorderThickness}"
+                                                    Stroke="{DynamicResource IgLineColor}"
+                                                    SemanticProperties.Description="{Binding SummaryText}">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="{DynamicResource IgRadiusMd}" />
+                                                </Border.StrokeShape>
+                                                <!-- Long press (phones) opens the actions sheet; right-click (Windows, Mac) opens the flyout. -->
+                                                <Border.Behaviors>
+                                                    <toolkit:TouchBehavior LongPressCommand="{Binding ShowActionsCommand}" />
+                                                </Border.Behaviors>
+                                                <FlyoutBase.ContextFlyout>
+                                                    <MenuFlyout>
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.Repeat}" Command="{Binding RepeatCommand}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.NewSeed}" Command="{Binding NewSeedCommand}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionEditPrompt}" Command="{Binding EditCommand}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionDescribeImage}" Command="{Binding DescribeCommand}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionPromptFromImage}" Command="{Binding DescribePromptCommand}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.CopyPrompt}" Command="{Binding CopyPromptCommand}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.OtherModel}" Command="{Binding OtherModelCommand}" IsEnabled="{Binding IsFailedOrFiltered}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.ErrorDetailsTitle}" Command="{Binding DetailsCommand}" IsEnabled="{Binding IsFailed}" />
+                                                    </MenuFlyout>
+                                                </FlyoutBase.ContextFlyout>
+                                                <VerticalStackLayout Spacing="6">
+                                                    <!-- Image area 3:2 with the per-status placeholder and the overlay strip. -->
+                                                    <Border WidthRequest="264" HeightRequest="176"
+                                                            StrokeThickness="0">
+                                                        <Border.StrokeShape>
+                                                            <RoundRectangle CornerRadius="{DynamicResource IgCardImageCornerRadius}" />
+                                                        </Border.StrokeShape>
+                                                        <Grid>
+                                                            <Image Source="{Binding ImageFilePath, Converter={StaticResource FilePathToImageSource}}"
+                                                                   IsVisible="{Binding HasImage}"
+                                                                   Aspect="AspectFill"
                                                                    AutomationProperties.IsInAccessibleTree="False" />
 
-                                                <Label Text="{Binding StatusText}" FontAttributes="Bold" FontSize="13" />
-                                                <Label Text="{Binding DetailsText}" FontSize="12" LineBreakMode="WordWrap" />
-                                                <Label Text="{Binding ErrorText}"
-                                                       IsVisible="{Binding HasErrorText}"
-                                                       FontSize="12"
-                                                       LineBreakMode="WordWrap">
-                                                    <Label.Triggers>
-                                                        <DataTrigger TargetType="Label" Binding="{Binding HasError}" Value="True">
-                                                            <Setter Property="TextColor" Value="{DynamicResource IgErrColor}" />
-                                                        </DataTrigger>
-                                                    </Label.Triggers>
-                                                </Label>
+                                                            <!-- Running: an indicator. -->
+                                                            <Grid IsVisible="{Binding IsActive}" BackgroundColor="{DynamicResource IgSunkenColor}">
+                                                                <ActivityIndicator IsRunning="{Binding IsActive}"
+                                                                                   VerticalOptions="End"
+                                                                                   AutomationProperties.IsInAccessibleTree="False" />
+                                                            </Grid>
 
-                                                <FlexLayout Wrap="Wrap" Direction="Row" AlignItems="Center">
-                                                    <Button Text="{x:Static strings:AppResources.Repeat}"
-                                                            Command="{Binding RepeatCommand}"
-                                                            Margin="0,0,6,6"
-                                                            SemanticProperties.Description="{x:Static strings:AppResources.Repeat}" />
-                                                    <Button Text="{x:Static strings:AppResources.NewSeed}"
-                                                            Command="{Binding NewSeedCommand}"
-                                                            Margin="0,0,6,6"
-                                                            SemanticProperties.Description="{x:Static strings:AppResources.NewSeed}" />
-                                                    <Button Text="{x:Static strings:AppResources.Edit}"
-                                                            Command="{Binding EditCommand}"
-                                                            Margin="0,0,6,6"
-                                                            SemanticProperties.Description="{x:Static strings:AppResources.Edit}" />
-                                                    <Button Text="{x:Static strings:AppResources.DescribeButton}"
-                                                            Command="{Binding DescribeCommand}"
-                                                            Margin="0,0,6,6"
-                                                            SemanticProperties.Description="{x:Static strings:AppResources.DescribeButton}" />
-                                                    <Button Text="{x:Static strings:AppResources.DescribePromptButton}"
-                                                            Command="{Binding DescribePromptCommand}"
-                                                            Margin="0,0,6,6"
-                                                            SemanticProperties.Description="{x:Static strings:AppResources.DescribePromptButton}" />
-                                                </FlexLayout>
-                                            </VerticalStackLayout>
-                                        </Border>
-                                    </DataTemplate>
-                                </BindableLayout.ItemTemplate>
-                            </FlexLayout>
-                        </VerticalStackLayout>
+                                                            <!-- Queued: a clock icon. -->
+                                                            <Grid IsVisible="{Binding IsQueued}" BackgroundColor="{DynamicResource IgSunkenColor}">
+                                                                <Label StyleClass="icon" FontSize="28" Text="{x:Static appearance:IconGlyphs.Queued}"
+                                                                       HorizontalOptions="Center" VerticalOptions="Center"
+                                                                       SemanticProperties.Description="{Binding StatusText}" />
+                                                            </Grid>
+
+                                                            <!-- Failed: soft error background and the error icon. -->
+                                                            <Grid IsVisible="{Binding IsFailed}" BackgroundColor="{DynamicResource IgErrSoftColor}">
+                                                                <Label StyleClass="icon" FontSize="28" Text="{x:Static appearance:IconGlyphs.Error}"
+                                                                       TextColor="{DynamicResource IgErrColor}"
+                                                                       HorizontalOptions="Center" VerticalOptions="Center"
+                                                                       SemanticProperties.Description="{Binding StatusText}" />
+                                                            </Grid>
+
+                                                            <!-- Filtered: soft warn background and the filtered icon. -->
+                                                            <Grid IsVisible="{Binding IsFiltered}" BackgroundColor="{DynamicResource IgWarnSoftColor}">
+                                                                <Label StyleClass="icon" FontSize="28" Text="{x:Static appearance:IconGlyphs.Filtered}"
+                                                                       TextColor="{DynamicResource IgWarnColor}"
+                                                                       HorizontalOptions="Center" VerticalOptions="Center"
+                                                                       SemanticProperties.Description="{Binding StatusText}" />
+                                                            </Grid>
+
+                                                            <!-- Cancelled: a muted placeholder. -->
+                                                            <Grid IsVisible="{Binding IsCancelled}" BackgroundColor="{DynamicResource IgSunkenColor}">
+                                                                <Label StyleClass="icon" FontSize="28" Text="{x:Static appearance:IconGlyphs.Close}"
+                                                                       TextColor="{DynamicResource IgMutedColor}"
+                                                                       HorizontalOptions="Center" VerticalOptions="Center"
+                                                                       SemanticProperties.Description="{Binding StatusText}" />
+                                                            </Grid>
+
+                                                            <!-- Overlay strip: seed and time over the image (Gallery; on phones always). -->
+                                                            <Border VerticalOptions="End"
+                                                                    BackgroundColor="{DynamicResource IgSunkenColor}"
+                                                                    Padding="6,2"
+                                                                    StrokeThickness="0"
+                                                                    IsVisible="{DynamicResource IgCardShowOverlay}">
+                                                                <HorizontalStackLayout Spacing="8">
+                                                                    <Label StyleClass="meta" Text="{Binding SeedText}" />
+                                                                    <Label StyleClass="meta" Text="{Binding TimeText}" />
+                                                                </HorizontalStackLayout>
+                                                            </Border>
+                                                        </Grid>
+                                                    </Border>
+
+                                                    <!-- Status label: always has text, never colour only. -->
+                                                    <Border StyleClass="status" HorizontalOptions="Start">
+                                                        <Label StyleClass="meta" Text="{Binding StatusText}">
+                                                            <Label.Triggers>
+                                                                <DataTrigger TargetType="Label" Binding="{Binding IsDone}" Value="True">
+                                                                    <Setter Property="TextColor" Value="{DynamicResource IgOkColor}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger TargetType="Label" Binding="{Binding IsActive}" Value="True">
+                                                                    <Setter Property="TextColor" Value="{DynamicResource IgAccentColor}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger TargetType="Label" Binding="{Binding IsQueued}" Value="True">
+                                                                    <Setter Property="TextColor" Value="{DynamicResource IgMutedColor}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger TargetType="Label" Binding="{Binding IsFailed}" Value="True">
+                                                                    <Setter Property="TextColor" Value="{DynamicResource IgErrColor}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger TargetType="Label" Binding="{Binding IsFiltered}" Value="True">
+                                                                    <Setter Property="TextColor" Value="{DynamicResource IgWarnColor}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger TargetType="Label" Binding="{Binding IsCancelled}" Value="True">
+                                                                    <Setter Property="TextColor" Value="{DynamicResource IgMutedColor}" />
+                                                                </DataTrigger>
+                                                            </Label.Triggers>
+                                                        </Label>
+                                                    </Border>
+
+                                                    <!-- Full meta block (model, seed, cost, time). -->
+                                                    <VerticalStackLayout Spacing="2" IsVisible="{DynamicResource IgCardShowFullMeta}">
+                                                        <Label StyleClass="meta" Text="{Binding ModelText}" LineBreakMode="WordWrap" />
+                                                        <HorizontalStackLayout Spacing="8">
+                                                            <Label StyleClass="meta" Text="{Binding SeedText}" />
+                                                            <Label StyleClass="meta" Text="{Binding CostText}" />
+                                                            <Label StyleClass="meta" Text="{Binding TimeText}" />
+                                                        </HorizontalStackLayout>
+                                                    </VerticalStackLayout>
+
+                                                    <!-- Short meta block (model and cost under the image). -->
+                                                    <HorizontalStackLayout Spacing="8" IsVisible="{DynamicResource IgCardShowShortMeta}">
+                                                        <Label StyleClass="meta" Text="{Binding ModelText}" />
+                                                        <Label StyleClass="meta" Text="{Binding CostText}" />
+                                                    </HorizontalStackLayout>
+
+                                                    <!-- Notice: dropped parameters and the filtered explanation. -->
+                                                    <Label StyleClass="meta"
+                                                           Text="{Binding NoticeText}"
+                                                           IsVisible="{Binding HasNotice}"
+                                                           LineBreakMode="WordWrap" />
+
+                                                    <Label Text="{Binding ErrorText}"
+                                                           IsVisible="{Binding HasErrorText}"
+                                                           FontSize="{DynamicResource IgFontSizeMeta}"
+                                                           LineBreakMode="WordWrap">
+                                                        <Label.Triggers>
+                                                            <DataTrigger TargetType="Label" Binding="{Binding HasError}" Value="True">
+                                                                <Setter Property="TextColor" Value="{DynamicResource IgErrColor}" />
+                                                            </DataTrigger>
+                                                        </Label.Triggers>
+                                                    </Label>
+
+                                                    <!-- Card actions: the "…" button opens the actions menu; long press and right-click do too (task 069). -->
+                                                    <HorizontalStackLayout Spacing="4">
+                                                        <Button StyleClass="ghost,small" Text="{x:Static strings:AppResources.Repeat}"
+                                                                Command="{Binding RepeatCommand}"
+                                                                IsVisible="{Binding IsFailedOrFiltered}"
+                                                                HorizontalOptions="Start"
+                                                                SemanticProperties.Description="{x:Static strings:AppResources.Repeat}" />
+                                                        <Button StyleClass="ghost,icon" Text="{x:Static appearance:IconGlyphs.More}" FontFamily="LucideIcons"
+                                                                Command="{Binding ShowActionsCommand}"
+                                                                SemanticProperties.Description="{x:Static strings:AppResources.More}" />
+                                                    </HorizontalStackLayout>
+                                                </VerticalStackLayout>
+                                            </Border>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </FlexLayout>
+                            </VerticalStackLayout>
+                        </Border>
                     </DataTemplate>
                 </pmui:ChatItemTemplateSelector.RunTemplate>
             </pmui:ChatItemTemplateSelector>
         </ResourceDictionary>
     </ContentPage.Resources>
 
-    <Grid x:Name="ChatLayout" ColumnDefinitions="272,*" ColumnSpacing="16" Padding="16">
+    <Grid x:Name="ChatLayout" ColumnDefinitions="272,*,Auto" ColumnSpacing="16" Padding="16">
         <!-- Wide layout only: the session list beside the chat (ChatPage.xaml.cs). -->
         <controls:SessionsListView x:Name="SessionList" Grid.Column="0" />
 
         <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12">
+        <!-- Header: title and the three chips. -->
         <HorizontalStackLayout Spacing="8" HorizontalOptions="Start">
-            <Button Text="{Binding ModelsButtonText}"
+            <Label StyleClass="title" Text="{Binding Title}" VerticalOptions="Center" />
+            <Button StyleClass="chip" Text="{Binding ModelsButtonText}"
                     Command="{Binding OpenModelsCommand}"
                     SemanticProperties.Description="{Binding ModelsButtonText}" />
-            <Label Text="{Binding AssistantText}"
-                   VerticalOptions="Center"
-                   SemanticProperties.Description="{Binding AssistantText}" />
-            <Button Text="{x:Static strings:AppResources.ChatParametersButton}"
+            <Border StyleClass="chip" VerticalOptions="Center">
+                <Label StyleClass="meta" Text="{Binding AssistantText}" VerticalOptions="Center"
+                       SemanticProperties.Description="{Binding AssistantText}" />
+            </Border>
+            <Button StyleClass="chip" Text="{x:Static strings:AppResources.ChatParametersButton}"
                     Command="{Binding OpenParametersCommand}"
                     SemanticProperties.Description="{x:Static strings:AppResources.ChatParametersButton}" />
         </HorizontalStackLayout>
@@ -138,54 +290,201 @@
                         ItemTemplate="{StaticResource ChatItemSelector}"
                         SelectionMode="None" />
 
+        <!-- Assistant is thinking... -->
         <HorizontalStackLayout Grid.Row="2" Spacing="8" IsVisible="{Binding IsBusy}">
             <ActivityIndicator IsRunning="{Binding IsBusy}"
                                AutomationProperties.IsInAccessibleTree="False" />
-            <Label Text="{x:Static strings:AppResources.AssistantThinking}" VerticalTextAlignment="Center" />
+            <Label StyleClass="meta" Text="{x:Static strings:AppResources.AssistantThinking}" VerticalTextAlignment="Center" />
         </HorizontalStackLayout>
 
-        <VerticalStackLayout Grid.Row="3" Spacing="6">
-            <HorizontalStackLayout Spacing="8">
-                <Button Text="{x:Static strings:AppResources.AttachImageButton}"
-                        Command="{Binding AttachImageCommand}"
-                        SemanticProperties.Description="{x:Static strings:AppResources.AttachImageButton}" />
-                <Label Text="{Binding AttachmentsText}" VerticalTextAlignment="Center" />
-            </HorizontalStackLayout>
-
-            <CollectionView ItemsSource="{Binding PendingAttachments}"
-                            IsVisible="{Binding PendingAttachments.Count}"
-                            SelectionMode="None">
-                <CollectionView.ItemsLayout>
-                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
-                </CollectionView.ItemsLayout>
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="pm:PendingAttachment">
-                        <HorizontalStackLayout Spacing="4">
-                            <Label Text="{Binding FileName}" VerticalTextAlignment="Center" />
-                            <Button Text="{x:Static strings:AppResources.RemoveAttachment}"
-                                    Command="{Binding Remove}"
-                                    CommandParameter="{Binding}"
-                                    SemanticProperties.Description="{x:Static strings:AppResources.RemoveAttachment}" />
-                        </HorizontalStackLayout>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
-
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <!-- Input field: a rounded border with the attachments inside, the paperclip, the hint and the send button. -->
+        <Border Grid.Row="3"
+                StrokeThickness="1"
+                Stroke="{DynamicResource IgLineColor}"
+                BackgroundColor="{DynamicResource IgSurfaceColor}"
+                Padding="8">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="12" />
+            </Border.StrokeShape>
+            <VerticalStackLayout Spacing="6">
+                <CollectionView ItemsSource="{Binding PendingAttachments}"
+                                IsVisible="{Binding PendingAttachments.Count}"
+                                SelectionMode="None">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="pm:PendingAttachment">
+                            <Border StyleClass="tag">
+                                <HorizontalStackLayout Spacing="4">
+                                    <Label StyleClass="meta" Text="{Binding FileName}" VerticalTextAlignment="Center" />
+                                    <Button StyleClass="ghost,icon,small" Text="{x:Static appearance:IconGlyphs.Close}" FontFamily="LucideIcons"
+                                            Command="{Binding Remove}"
+                                            CommandParameter="{Binding}"
+                                            SemanticProperties.Description="{x:Static strings:AppResources.RemoveAttachment}" />
+                                </HorizontalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
                 <controls:ChatEditor Text="{Binding InputText}"
                         SendCommand="{Binding SendCommand}"
                         Placeholder="{x:Static strings:AppResources.ChatPlaceholder}"
                         AutoSize="TextChanges"
+                        BackgroundColor="Transparent"
                         MaximumHeightRequest="160"
                         SemanticProperties.Description="{x:Static strings:AppResources.ChatPlaceholder}" />
-
-                <Button Grid.Column="1"
-                        Text="{x:Static strings:AppResources.Send}"
-                        Command="{Binding SendCommand}"
-                        VerticalOptions="End"
-                        SemanticProperties.Description="{x:Static strings:AppResources.Send}" />
-            </Grid>
-        </VerticalStackLayout>
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Button StyleClass="ghost,icon" Text="{x:Static appearance:IconGlyphs.Attach}" FontFamily="LucideIcons"
+                            Command="{Binding AttachImageCommand}"
+                            SemanticProperties.Description="{x:Static strings:AppResources.AttachImageButton}" />
+                    <Label Grid.Column="1" StyleClass="meta" Text="{Binding AttachmentsText}"
+                           VerticalTextAlignment="Center" Margin="8,0,0,0" />
+                    <Button Grid.Column="2"
+                            StyleClass="primary,icon" Text="{x:Static appearance:IconGlyphs.Send}" FontFamily="LucideIcons"
+                            Command="{Binding SendCommand}"
+                            SemanticProperties.Description="{x:Static strings:AppResources.Send}" />
+                </Grid>
+            </VerticalStackLayout>
+        </Border>
         </Grid>
+
+        <!-- Wide window only: models or parameters as a 360 pane beside the chat (task 071). -->
+        <Border x:Name="SidePane" Grid.Column="2"
+                WidthRequest="360"
+                IsVisible="{Binding IsPaneOpen}"
+                StrokeThickness="0"
+                BackgroundColor="{DynamicResource IgSurfaceColor}">
+            <Grid RowDefinitions="Auto,*">
+                <Grid ColumnDefinitions="*,Auto" Padding="16,12,8,0">
+                    <Label StyleClass="title" VerticalOptions="Center" Text="{Binding PaneTitle}" />
+                    <Button Grid.Column="1"
+                            StyleClass="ghost,icon" Text="{x:Static appearance:IconGlyphs.Close}" FontFamily="LucideIcons"
+                            Command="{Binding ClosePaneCommand}"
+                            SemanticProperties.Description="{x:Static strings:AppResources.DescriptionClose}" />
+                </Grid>
+
+                <!-- Models pane body (mirrors SessionModelsPage). -->
+                <ScrollView Grid.Row="1"
+                            IsVisible="{Binding Source={x:Reference Page}, Path=BindingContext.ModelsPane, Converter={StaticResource IsNotNull}}"
+                            BindingContext="{Binding ModelsPane}"
+                            x:DataType="pm:SessionModelsPageModel">
+                    <VerticalStackLayout Padding="16,8,16,16" Spacing="8">
+                        <SearchBar Text="{Binding SearchText, Mode=TwoWay}"
+                                   Placeholder="{x:Static strings:AppResources.ModelsSearchPlaceholder}"
+                                   SemanticProperties.Description="{x:Static strings:AppResources.ModelsSearchPlaceholder}" />
+                        <HorizontalStackLayout Spacing="12">
+                            <Label StyleClass="muted" Text="{Binding RunsPerModelText}" VerticalOptions="Center" />
+                            <Stepper Value="{Binding RunsPerModel, Mode=TwoWay}"
+                                     Minimum="{Binding MinRunsPerModel}"
+                                     Maximum="{Binding MaxRunsPerModel}"
+                                     Increment="1"
+                                     SemanticProperties.Description="{Binding RunsPerModelText}" />
+                        </HorizontalStackLayout>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label StyleClass="section" Text="{Binding SelectedCountText}" VerticalOptions="Center" />
+                            <Button Grid.Column="1"
+                                    StyleClass="ghost"
+                                    FontSize="12"
+                                    Text="{x:Static strings:AppResources.Refresh}"
+                                    Command="{Binding RefreshCommand}"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.Refresh}" />
+                        </Grid>
+                        <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" VerticalOptions="Start" />
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Models}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="pm:ModelOptionViewModel">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="0,4">
+                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                  SemanticProperties.Description="{Binding Name}" />
+                                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                            <Label Text="{Binding Name}" />
+                                            <Label StyleClass="meta" Text="{Binding DetailsText}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                        <Label StyleClass="section" Text="{x:Static strings:AppResources.AssistantModelTitle}" Margin="0,12,0,0" />
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding AssistantModels}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="pm:AssistantModelOptionViewModel">
+                                    <VerticalStackLayout Spacing="2" Margin="0,4">
+                                        <RadioButton GroupName="paneAssistant"
+                                                     Content="{Binding Name}"
+                                                     IsChecked="{Binding IsSelected}"
+                                                     CheckedChanged="OnAssistantCheckedChanged"
+                                                     SemanticProperties.Description="{Binding AutomationName}" />
+                                        <HorizontalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Tags}">
+                                            <BindableLayout.ItemTemplate>
+                                                <DataTemplate x:DataType="x:String">
+                                                    <Border StyleClass="tag">
+                                                        <Label StyleClass="meta" Text="{Binding .}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </BindableLayout.ItemTemplate>
+                                        </HorizontalStackLayout>
+                                        <Label StyleClass="meta" Text="{Binding DetailsText}" />
+                                    </VerticalStackLayout>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8" Margin="0,8,0,0">
+                            <Button StyleClass="primary"
+                                    Text="{x:Static strings:AppResources.Save}"
+                                    Command="{Binding SaveCommand}"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.Save}" />
+                            <Button Grid.Column="1"
+                                    Text="{x:Static strings:AppResources.Cancel}"
+                                    Command="{Binding CancelCommand}"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.Cancel}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </ScrollView>
+
+                <!-- Parameters pane body (mirrors SessionParametersPage). -->
+                <Grid Grid.Row="1" RowDefinitions="*,Auto" Padding="16,8,16,16" RowSpacing="8"
+                      IsVisible="{Binding Source={x:Reference Page}, Path=BindingContext.ParametersPane, Converter={StaticResource IsNotNull}}"
+                      BindingContext="{Binding ParametersPane}"
+                      x:DataType="pm:SessionParametersPageModel">
+                    <ScrollView>
+                        <VerticalStackLayout Spacing="8">
+                            <Label StyleClass="muted" Text="{x:Static strings:AppResources.SessionParametersDescription}" />
+                            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+                            <Label StyleClass="section" Text="{x:Static strings:AppResources.ParameterAspectRatio}" />
+                            <Picker ItemsSource="{Binding AspectRatioOptions}"
+                                    ItemDisplayBinding="{Binding Label}"
+                                    SelectedItem="{Binding SelectedAspectRatio, Mode=TwoWay}"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.ParameterAspectRatio}" />
+                            <Label StyleClass="section" Text="{x:Static strings:AppResources.ParameterResolution}" />
+                            <Picker ItemsSource="{Binding ResolutionOptions}"
+                                    ItemDisplayBinding="{Binding Label}"
+                                    SelectedItem="{Binding SelectedResolution, Mode=TwoWay}"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.ParameterResolution}" />
+                            <Label StyleClass="section" Text="{x:Static strings:AppResources.ParameterOutputFormat}" />
+                            <Picker ItemsSource="{Binding OutputFormatOptions}"
+                                    ItemDisplayBinding="{Binding Label}"
+                                    SelectedItem="{Binding SelectedOutputFormat, Mode=TwoWay}"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.ParameterOutputFormat}" />
+                            <Label StyleClass="section" Text="{x:Static strings:AppResources.ParameterQuality}" />
+                            <Picker ItemsSource="{Binding QualityOptions}"
+                                    ItemDisplayBinding="{Binding Label}"
+                                    SelectedItem="{Binding SelectedQuality, Mode=TwoWay}"
+                                    SemanticProperties.Description="{x:Static strings:AppResources.ParameterQuality}" />
+                        </VerticalStackLayout>
+                    </ScrollView>
+                    <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Button StyleClass="primary"
+                                Text="{x:Static strings:AppResources.ParameterSave}"
+                                Command="{Binding SaveCommand}"
+                                SemanticProperties.Description="{x:Static strings:AppResources.ParameterSave}" />
+                        <Button Grid.Column="1"
+                                Text="{x:Static strings:AppResources.Cancel}"
+                                Command="{Binding CancelCommand}"
+                                SemanticProperties.Description="{x:Static strings:AppResources.Cancel}" />
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Border>
     </Grid>
 </ContentPage>

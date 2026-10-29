@@ -10,178 +10,404 @@
         <conv:FilePathToBitmapConverter x:Key="FilePathToBitmap" />
     </UserControl.Resources>
     <UserControl.Styles>
-        <Style Selector="TextBlock.error">
-            <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+        <Style Selector="SelectableTextBlock.error">
+            <Setter Property="Foreground" Value="{DynamicResource IgErrBrush}" />
+        </Style>
+        <!-- Overlay strip fades in when the card is hovered (Gallery, desktop). -->
+        <Style Selector="Border.overlay">
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+        <Style Selector="Border:pointerover Border.overlay">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <!-- Card actions: hidden until the card is hovered or has keyboard focus inside it (task 069). -->
+        <Style Selector="StackPanel.card-actions">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="Border.card:pointerover StackPanel.card-actions">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+        <Style Selector="Border.card:focus-within StackPanel.card-actions">
+            <Setter Property="IsVisible" Value="True" />
         </Style>
     </UserControl.Styles>
 
-    <Grid x:Name="Layout" ColumnDefinitions="272,*" ColumnSpacing="16" Margin="16">
+    <Grid x:Name="Layout" ColumnDefinitions="272,*,Auto" ColumnSpacing="16" Margin="16">
         <!-- Wide layout only: the session list beside the chat (ChatView.axaml.cs). -->
         <views:SessionsListView x:Name="SessionList" Grid.Column="0" />
 
         <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12">
+        <!-- Header: title and the three chips (Models, Assistant, Parameters). -->
         <StackPanel Orientation="Horizontal" Spacing="8">
-            <Button Content="{Binding ModelsButtonText}"
-                    Command="{Binding OpenModelsCommand}"
-                    MinHeight="44"
-                    AutomationProperties.Name="{Binding ModelsButtonText}" />
-            <TextBlock Text="{Binding AssistantText}"
-                       VerticalAlignment="Center"
-                       AutomationProperties.Name="{Binding AssistantText}" />
-            <Button Content="{markup:Res ChatParametersButton}"
-                    Command="{Binding OpenParametersCommand}"
-                    MinHeight="44"
-                    AutomationProperties.Name="{markup:Res ChatParametersButton}" />
+            <TextBlock Classes="title" Text="{Binding Title}" VerticalAlignment="Center" />
+            <Button Classes="chip" Command="{Binding OpenModelsCommand}"
+                    MinHeight="28" Padding="10,0"
+                    AutomationProperties.Name="{Binding ModelsButtonText}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Classes="icon" Text="&#xE529;" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding ModelsButtonText}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+            <Border Classes="chip" VerticalAlignment="Center">
+                <TextBlock Classes="meta" Text="{Binding AssistantText}" VerticalAlignment="Center"
+                           AutomationProperties.Name="{Binding AssistantText}" />
+            </Border>
+            <Button Classes="chip" Command="{Binding OpenParametersCommand}"
+                    MinHeight="28" Padding="10,0"
+                    AutomationProperties.Name="{markup:Res ChatParametersButton}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Classes="icon" Text="&#xE29A;" VerticalAlignment="Center" />
+                    <TextBlock Text="{markup:Res ChatParametersButton}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
         </StackPanel>
 
         <ScrollViewer Grid.Row="1" Name="Transcript">
-            <ItemsControl ItemsSource="{Binding Items}">
+            <ItemsControl ItemsSource="{Binding Items}" MaxWidth="780" HorizontalAlignment="Stretch">
                 <ItemsControl.DataTemplates>
                     <DataTemplate DataType="pm:MessageItemViewModel" x:DataType="pm:MessageItemViewModel">
-                        <StackPanel Spacing="2" Margin="0,4">
-                            <TextBlock Text="{Binding RoleText}" FontWeight="Bold" FontSize="12" />
-                            <SelectableTextBlock Text="{Binding Text}"
-                                                 TextWrapping="Wrap"
-                                                 Classes.error="{Binding IsError}" />
-                            <Button Command="{Binding Copy.CopyCommand}"
-                                    Content="{markup:Res Copy}"
-                                    IsVisible="{Binding !IsUser}"
-                                    HorizontalAlignment="Left"
-                                    AutomationProperties.Name="{markup:Res Copy}" />
-                            <TextBlock Text="{markup:Res Copied}" FontSize="12" IsVisible="{Binding Copy.IsCopied}" />
-                        </StackPanel>
+                        <Border Background="{DynamicResource IgUserMessageBackgroundBrush}"
+                                Padding="{DynamicResource IgUserMessagePadding}"
+                                CornerRadius="{DynamicResource IgUserMessageCornerRadius}"
+                                HorizontalAlignment="{DynamicResource IgUserMessageAlignment}"
+                                Margin="0,4">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="{Binding RoleText}"
+                                           FontFamily="{DynamicResource IgRoleFont}"
+                                           FontWeight="SemiBold"
+                                           FontSize="{DynamicResource IgFontSizeMeta}"
+                                           IsVisible="{Binding IsUser}" />
+                                <SelectableTextBlock Text="{Binding Text}"
+                                                     TextWrapping="Wrap"
+                                                     Classes.error="{Binding IsError}" />
+                                <Button Classes="ghost small"
+                                        Command="{Binding Copy.CopyCommand}"
+                                        Content="{markup:Res Copy}"
+                                        IsVisible="{Binding !IsUser}"
+                                        HorizontalAlignment="Left"
+                                        AutomationProperties.Name="{markup:Res Copy}" />
+                                <TextBlock Classes="meta" Text="{markup:Res Copied}" IsVisible="{Binding Copy.IsCopied}" />
+                            </StackPanel>
+                        </Border>
                     </DataTemplate>
 
                     <DataTemplate DataType="pm:RunItemViewModel" x:DataType="pm:RunItemViewModel">
-                        <StackPanel Spacing="8" Margin="0,4">
-                            <SelectableTextBlock Text="{Binding PromptText}" FontStyle="Italic" TextWrapping="Wrap" />
-                            <Button Command="{Binding Copy.CopyCommand}"
-                                    Content="{markup:Res Copy}"
-                                    HorizontalAlignment="Left"
-                                    AutomationProperties.Name="{markup:Res Copy}" />
-                            <TextBlock Text="{markup:Res Copied}" FontSize="12" IsVisible="{Binding Copy.IsCopied}" />
-                            <ItemsControl ItemsSource="{Binding Generations}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel Orientation="Horizontal" />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.DataTemplates>
-                                    <DataTemplate DataType="pm:GenerationItemViewModel" x:DataType="pm:GenerationItemViewModel">
-                                        <Border Width="280"
-                                                Margin="0,0,8,8"
-                                                Padding="8"
-                                                CornerRadius="8"
-                                                BorderThickness="1"
-                                                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
-                                            <StackPanel Spacing="6">
-                                                <Image Source="{Binding ImageFilePath, Converter={StaticResource FilePathToBitmap}}"
-                                                       IsVisible="{Binding HasImage}"
-                                                       Width="264"
-                                                       Height="256"
-                                                       Stretch="Uniform"
-                                                       AutomationProperties.Name="{Binding SummaryText}" />
+                        <Border BorderThickness="{DynamicResource IgRunBorderThickness}"
+                                BorderBrush="{DynamicResource IgLineBrush}"
+                                Padding="{DynamicResource IgRunPadding}"
+                                CornerRadius="{DynamicResource IgRadiusMd}"
+                                Margin="0,4">
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="meta" Text="{Binding HeaderText}" />
+                                <Border Background="{DynamicResource IgPromptBackgroundBrush}"
+                                        Padding="{DynamicResource IgPromptPadding}"
+                                        CornerRadius="{DynamicResource IgRadiusSm}">
+                                    <SelectableTextBlock Text="{Binding PromptText}"
+                                                         Foreground="{DynamicResource IgPromptForegroundBrush}"
+                                                         FontFamily="{DynamicResource IgPromptFont}"
+                                                         FontStyle="{DynamicResource IgPromptFontStyle}"
+                                                         TextWrapping="Wrap" />
+                                </Border>
+                                <Button Classes="ghost small"
+                                        Command="{Binding Copy.CopyCommand}"
+                                        Content="{markup:Res Copy}"
+                                        HorizontalAlignment="Left"
+                                        AutomationProperties.Name="{markup:Res Copy}" />
+                                <TextBlock Classes="meta" Text="{markup:Res Copied}" IsVisible="{Binding Copy.IsCopied}" />
+                                <ItemsControl ItemsSource="{Binding Generations}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.DataTemplates>
+                                        <DataTemplate DataType="pm:GenerationItemViewModel" x:DataType="pm:GenerationItemViewModel">
+                                            <Border Classes="card"
+                                                    Width="280"
+                                                    Margin="0,0,8,8"
+                                                    Padding="8"
+                                                    CornerRadius="{DynamicResource IgRadiusMd}"
+                                                    BorderThickness="{DynamicResource IgCardBorderThickness}"
+                                                    BorderBrush="{DynamicResource IgLineBrush}"
+                                                    Background="{DynamicResource IgCardBackgroundBrush}">
+                                                <!-- Right-click anywhere on the card opens the same actions menu as "More". -->
+                                                <Border.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="{markup:Res Repeat}" Command="{Binding RepeatCommand}" />
+                                                        <MenuItem Header="{markup:Res NewSeed}" Command="{Binding NewSeedCommand}" />
+                                                        <MenuItem Header="{markup:Res ActionEditPrompt}" Command="{Binding EditCommand}" />
+                                                        <MenuItem Header="{markup:Res ActionDescribeImage}" Command="{Binding DescribeCommand}" />
+                                                        <MenuItem Header="{markup:Res ActionPromptFromImage}" Command="{Binding DescribePromptCommand}" />
+                                                        <MenuItem Header="{markup:Res CopyPrompt}" Command="{Binding CopyPromptCommand}" />
+                                                        <MenuItem Header="{markup:Res OtherModel}" Command="{Binding OtherModelCommand}" IsVisible="{Binding IsFailedOrFiltered}" />
+                                                        <MenuItem Header="{markup:Res ErrorDetailsTitle}" Command="{Binding DetailsCommand}" IsVisible="{Binding IsFailed}" />
+                                                    </ContextMenu>
+                                                </Border.ContextMenu>
+                                                <StackPanel Spacing="6">
+                                                    <!-- Image area, 3:2, with the per-status placeholder and the overlay strip. -->
+                                                    <Panel>
+                                                        <Border Width="264" Height="176"
+                                                                CornerRadius="{DynamicResource IgCardImageCornerRadius}"
+                                                                ClipToBounds="True">
+                                                            <Panel>
+                                                                <Image Source="{Binding ImageFilePath, Converter={StaticResource FilePathToBitmap}}"
+                                                                       IsVisible="{Binding HasImage}"
+                                                                       Stretch="UniformToFill"
+                                                                       AutomationProperties.Name="{Binding SummaryText}" />
 
-                                                <ProgressBar IsIndeterminate="True"
-                                                             IsVisible="{Binding IsRunning}"
-                                                             AutomationProperties.Name="{Binding StatusText}" />
+                                                                <!-- Running: an indeterminate indicator at the bottom. -->
+                                                                <Border IsVisible="{Binding IsActive}" Background="{DynamicResource IgSunkenBrush}">
+                                                                    <ProgressBar IsIndeterminate="True"
+                                                                                 VerticalAlignment="Bottom"
+                                                                                 AutomationProperties.Name="{Binding StatusText}" />
+                                                                </Border>
 
-                                                <TextBlock Text="{Binding StatusText}" FontWeight="Bold" />
-                                                <TextBlock Text="{Binding DetailsText}" FontSize="12" TextWrapping="Wrap" />
-                                                <TextBlock Text="{Binding ErrorText}"
-                                                           IsVisible="{Binding HasErrorText}"
-                                                           FontSize="12"
-                                                           TextWrapping="Wrap"
-                                                           Classes.error="{Binding HasError}" />
+                                                                <!-- Queued: a clock icon. -->
+                                                                <Border IsVisible="{Binding IsQueued}" Background="{DynamicResource IgSunkenBrush}">
+                                                                    <TextBlock Classes="icon" Text="&#xE087;"
+                                                                               FontSize="28"
+                                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                               AutomationProperties.Name="{Binding StatusText}" />
+                                                                </Border>
 
-                                                <WrapPanel>
-                                                    <Button Content="{markup:Res Repeat}"
+                                                                <!-- Failed: soft error background and the error icon. -->
+                                                                <Border IsVisible="{Binding IsFailed}" Background="{DynamicResource IgErrSoftBrush}">
+                                                                    <TextBlock Classes="icon" Text="&#xE077;"
+                                                                               FontSize="28"
+                                                                               Foreground="{DynamicResource IgErrBrush}"
+                                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                               AutomationProperties.Name="{Binding StatusText}" />
+                                                                </Border>
+
+                                                                <!-- Filtered: soft warn background and the filtered icon. -->
+                                                                <Border IsVisible="{Binding IsFiltered}" Background="{DynamicResource IgWarnSoftBrush}">
+                                                                    <TextBlock Classes="icon" Text="&#xE518;"
+                                                                               FontSize="28"
+                                                                               Foreground="{DynamicResource IgWarnBrush}"
+                                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                               AutomationProperties.Name="{Binding StatusText}" />
+                                                                </Border>
+
+                                                                <!-- Cancelled: a muted placeholder. -->
+                                                                <Border IsVisible="{Binding IsCancelled}" Background="{DynamicResource IgSunkenBrush}">
+                                                                    <TextBlock Classes="icon" Text="&#xE1B2;"
+                                                                               FontSize="28"
+                                                                               Foreground="{DynamicResource IgMutedBrush}"
+                                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                               AutomationProperties.Name="{Binding StatusText}" />
+                                                                </Border>
+
+                                                                <!-- Overlay strip: seed and time over the image (Gallery only; faded in on hover). -->
+                                                                <Border Classes="overlay"
+                                                                        VerticalAlignment="Bottom"
+                                                                        Background="{DynamicResource IgSunkenBrush}"
+                                                                        Padding="6,2"
+                                                                        IsVisible="{DynamicResource IgCardShowOverlay}">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                        <TextBlock Classes="meta" Text="{Binding SeedText}" />
+                                                                        <TextBlock Classes="meta" Text="{Binding TimeText}" />
+                                                                    </StackPanel>
+                                                                </Border>
+                                                            </Panel>
+                                                        </Border>
+                                                    </Panel>
+
+                                                    <!-- Status label: always has text, never colour only. -->
+                                                    <Border Classes="status"
+                                                            Classes.done="{Binding IsDone}"
+                                                            Classes.running="{Binding IsActive}"
+                                                            Classes.queued="{Binding IsQueued}"
+                                                            Classes.failed="{Binding IsFailed}"
+                                                            Classes.filtered="{Binding IsFiltered}"
+                                                            Classes.cancelled="{Binding IsCancelled}"
+                                                            BorderThickness="1"
+                                                            HorizontalAlignment="Left">
+                                                        <TextBlock Classes="meta" Text="{Binding StatusText}" Foreground="{DynamicResource IgFgBrush}" />
+                                                    </Border>
+
+                                                    <!-- Full meta block (model, seed, cost, time). -->
+                                                    <StackPanel Spacing="2" IsVisible="{DynamicResource IgCardShowFullMeta}">
+                                                        <TextBlock Classes="meta" Text="{Binding ModelText}" TextWrapping="Wrap" />
+                                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                                            <TextBlock Classes="meta" Text="{Binding SeedText}" />
+                                                            <TextBlock Classes="meta" Text="{Binding CostText}" />
+                                                            <TextBlock Classes="meta" Text="{Binding TimeText}" />
+                                                        </StackPanel>
+                                                    </StackPanel>
+
+                                                    <!-- Short meta block (model and cost under the image). -->
+                                                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                                                IsVisible="{DynamicResource IgCardShowShortMeta}">
+                                                        <TextBlock Classes="meta" Text="{Binding ModelText}" />
+                                                        <TextBlock Classes="meta" Text="{Binding CostText}" />
+                                                    </StackPanel>
+
+                                                    <!-- Notice: dropped parameters and the filtered explanation. -->
+                                                    <TextBlock Classes="meta"
+                                                               Text="{Binding NoticeText}"
+                                                               IsVisible="{Binding HasNotice}"
+                                                               TextWrapping="Wrap" />
+
+                                                    <TextBlock Text="{Binding ErrorText}"
+                                                               IsVisible="{Binding HasErrorText}"
+                                                               FontSize="{DynamicResource IgFontSizeMeta}"
+                                                               TextWrapping="Wrap"
+                                                               Classes.error="{Binding HasError}" />
+
+                                                    <!-- A failed or filtered card keeps Repeat visible without hover. -->
+                                                    <Button Classes="ghost small"
                                                             Command="{Binding RepeatCommand}"
-                                                            Margin="0,0,6,6"
-                                                            MinHeight="44"
+                                                            Content="{markup:Res Repeat}"
+                                                            IsVisible="{Binding IsFailedOrFiltered}"
+                                                            HorizontalAlignment="Left"
                                                             AutomationProperties.Name="{markup:Res Repeat}" />
-                                                    <Button Content="{markup:Res NewSeed}"
-                                                            Command="{Binding NewSeedCommand}"
-                                                            Margin="0,0,6,6"
-                                                            MinHeight="44"
-                                                            AutomationProperties.Name="{markup:Res NewSeed}" />
-                                                    <Button Content="{markup:Res Edit}"
-                                                            Command="{Binding EditCommand}"
-                                                            Margin="0,0,6,6"
-                                                            MinHeight="44"
-                                                            AutomationProperties.Name="{markup:Res Edit}" />
-                                                    <Button Content="{markup:Res DescribeButton}"
-                                                            Command="{Binding DescribeCommand}"
-                                                            Margin="0,0,6,6"
-                                                            MinHeight="44"
-                                                            AutomationProperties.Name="{markup:Res DescribeButton}" />
-                                                    <Button Content="{markup:Res DescribePromptButton}"
-                                                            Command="{Binding DescribePromptCommand}"
-                                                            Margin="0,0,6,6"
-                                                            MinHeight="44"
-                                                            AutomationProperties.Name="{markup:Res DescribePromptButton}" />
-                                                </WrapPanel>
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.DataTemplates>
-                            </ItemsControl>
-                        </StackPanel>
+
+                                                    <!-- Card actions: a row of icon buttons shown on hover or keyboard focus (desktop). -->
+                                                    <StackPanel Classes="card-actions" Orientation="Horizontal" Spacing="4">
+                                                        <Button Classes="ghost icon small" Command="{Binding RepeatCommand}"
+                                                                ToolTip.Tip="{markup:Res Repeat}"
+                                                                AutomationProperties.Name="{markup:Res Repeat}">
+                                                            <TextBlock Classes="icon" Text="&#xE146;" />
+                                                        </Button>
+                                                        <Button Classes="ghost icon small" Command="{Binding NewSeedCommand}"
+                                                                ToolTip.Tip="{markup:Res NewSeed}"
+                                                                AutomationProperties.Name="{markup:Res NewSeed}">
+                                                            <TextBlock Classes="icon" Text="&#xE2C5;" />
+                                                        </Button>
+                                                        <Button Classes="ghost icon small" Command="{Binding EditCommand}"
+                                                                ToolTip.Tip="{markup:Res Edit}"
+                                                                AutomationProperties.Name="{markup:Res Edit}">
+                                                            <TextBlock Classes="icon" Text="&#xE1F9;" />
+                                                        </Button>
+                                                        <Button Classes="ghost icon small" Command="{Binding DescribeCommand}"
+                                                                ToolTip.Tip="{markup:Res DescribeButton}"
+                                                                AutomationProperties.Name="{markup:Res DescribeButton}">
+                                                            <TextBlock Classes="icon" Text="&#xE0BA;" />
+                                                        </Button>
+                                                        <Button Classes="ghost icon small" Command="{Binding CopyPromptCommand}"
+                                                                ToolTip.Tip="{markup:Res CopyPrompt}"
+                                                                AutomationProperties.Name="{markup:Res CopyPrompt}">
+                                                            <TextBlock Classes="icon" Text="&#xE09E;" />
+                                                        </Button>
+                                                        <Button Classes="ghost icon small" Command="{Binding DetailsCommand}"
+                                                                IsVisible="{Binding IsFailed}"
+                                                                ToolTip.Tip="{markup:Res ErrorDetailsTitle}"
+                                                                AutomationProperties.Name="{markup:Res ErrorDetailsTitle}">
+                                                            <TextBlock Classes="icon" Text="&#xE0F9;" />
+                                                        </Button>
+                                                        <Button Classes="ghost icon small" Click="OnMoreClick"
+                                                                ToolTip.Tip="{markup:Res More}"
+                                                                AutomationProperties.Name="{markup:Res More}">
+                                                            <TextBlock Classes="icon" Text="&#xE0B6;" />
+                                                        </Button>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.DataTemplates>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
                     </DataTemplate>
                 </ItemsControl.DataTemplates>
             </ItemsControl>
         </ScrollViewer>
 
+        <!-- Assistant is thinking... -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsBusy}">
             <ProgressBar IsIndeterminate="True" Width="80" AutomationProperties.Name="{markup:Res AssistantThinking}" />
-            <TextBlock Text="{markup:Res AssistantThinking}" VerticalAlignment="Center" />
+            <TextBlock Classes="meta" Text="{markup:Res AssistantThinking}" VerticalAlignment="Center" />
         </StackPanel>
 
-        <StackPanel Grid.Row="3" Spacing="6">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Content="{markup:Res AttachImageButton}"
-                        Command="{Binding AttachImageCommand}"
-                        MinHeight="44"
-                        AutomationProperties.Name="{markup:Res AttachImageButton}" />
-                <TextBlock Text="{Binding AttachmentsText}" VerticalAlignment="Center" />
-            </StackPanel>
-            <ItemsControl ItemsSource="{Binding PendingAttachments}" IsVisible="{Binding PendingAttachments.Count}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel Orientation="Horizontal" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.DataTemplates>
-                    <DataTemplate DataType="pm:PendingAttachment" x:DataType="pm:PendingAttachment">
-                        <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,8,0">
-                            <TextBlock Text="{Binding FileName}" VerticalAlignment="Center" />
-                            <Button Content="{markup:Res RemoveAttachment}"
-                                    Command="{Binding Remove}"
-                                    CommandParameter="{Binding}"
-                                    MinHeight="44"
-                                    AutomationProperties.Name="{markup:Res RemoveAttachment}" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ItemsControl.DataTemplates>
-            </ItemsControl>
-            <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <!-- Input field: a rounded border with the attachments inside, the paperclip, the hint and the send button. -->
+        <Border Grid.Row="3"
+                CornerRadius="12"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource IgLineBrush}"
+                Background="{DynamicResource IgSurfaceBrush}"
+                Padding="8">
+            <StackPanel Spacing="6">
+                <ItemsControl ItemsSource="{Binding PendingAttachments}" IsVisible="{Binding PendingAttachments.Count}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.DataTemplates>
+                        <DataTemplate DataType="pm:PendingAttachment" x:DataType="pm:PendingAttachment">
+                            <Border Classes="tag" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Classes="meta" Text="{Binding FileName}" VerticalAlignment="Center" />
+                                    <Button Classes="ghost icon small"
+                                            Command="{Binding Remove}"
+                                            CommandParameter="{Binding}"
+                                            AutomationProperties.Name="{markup:Res RemoveAttachment}">
+                                        <TextBlock Classes="icon" Text="&#xE1B2;" />
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.DataTemplates>
+                </ItemsControl>
                 <TextBox Name="Input"
                          Text="{Binding InputText, Mode=TwoWay}"
                          AcceptsReturn="True"
                          TextWrapping="Wrap"
                          MaxHeight="160"
-                         MinHeight="44"
+                         BorderThickness="0"
+                         Background="Transparent"
                          PlaceholderText="{markup:Res ChatPlaceholder}"
                          AutomationProperties.Name="{markup:Res ChatPlaceholder}" />
-
-                <Button Grid.Column="1"
-                        Content="{markup:Res Send}"
-                        Command="{Binding SendCommand}"
-                        VerticalAlignment="Bottom"
-                        MinHeight="44"
-                        AutomationProperties.Name="{markup:Res Send}" />
-            </Grid>
-        </StackPanel>
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Button Classes="ghost icon"
+                            Command="{Binding AttachImageCommand}"
+                            AutomationProperties.Name="{markup:Res AttachImageButton}">
+                        <TextBlock Classes="icon" Text="&#xE12D;" />
+                    </Button>
+                    <TextBlock Grid.Column="1" Classes="meta" Text="{Binding AttachmentsText}"
+                               VerticalAlignment="Center" Margin="8,0,0,0" />
+                    <Button Grid.Column="2"
+                            Classes="primary icon"
+                            Command="{Binding SendCommand}"
+                            AutomationProperties.Name="{markup:Res Send}">
+                        <TextBlock Classes="icon" Text="&#xE04A;" />
+                    </Button>
+                </Grid>
+            </StackPanel>
+        </Border>
         </Grid>
+
+        <!-- Wide window only: models or parameters as a 360 pane beside the chat (task 071). -->
+        <Border x:Name="SidePane" Grid.Column="2"
+                Width="360"
+                IsVisible="{Binding IsPaneOpen}"
+                BorderThickness="1,0,0,0"
+                BorderBrush="{DynamicResource IgLineBrush}"
+                Background="{DynamicResource IgSurfaceBrush}">
+            <Grid RowDefinitions="Auto,*">
+                <Grid ColumnDefinitions="*,Auto" Margin="16,12,8,0">
+                    <TextBlock Classes="title"
+                               VerticalAlignment="Center"
+                               Text="{Binding PaneTitle}" />
+                    <Button Grid.Column="1"
+                            Classes="ghost icon"
+                            Command="{Binding ClosePaneCommand}"
+                            ToolTip.Tip="{markup:Res DescriptionClose}"
+                            AutomationProperties.Name="{markup:Res DescriptionClose}">
+                        <TextBlock Classes="icon" Text="&#xE1B2;" />
+                    </Button>
+                </Grid>
+                <ContentControl Grid.Row="1" Content="{Binding ActivePane}">
+                    <ContentControl.DataTemplates>
+                        <DataTemplate DataType="pm:SessionModelsPageModel" x:DataType="pm:SessionModelsPageModel">
+                            <views:SessionModelsView />
+                        </DataTemplate>
+                        <DataTemplate DataType="pm:SessionParametersPageModel" x:DataType="pm:SessionParametersPageModel">
+                            <views:SessionParametersView />
+                        </DataTemplate>
+                    </ContentControl.DataTemplates>
+                </ContentControl>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

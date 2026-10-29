@@ -102,6 +102,15 @@
   <data name="StatusFiltered" xml:space="preserve">
     <value>Filtered by the provider</value>
   </data>
+  <data name="FilteredNotice" xml:space="preserve">
+    <value>Filtered by the provider. This is the provider's decision, not an error.</value>
+  </data>
+  <data name="TimeFormat" xml:space="preserve">
+    <value>{0}s</value>
+  </data>
+  <data name="RunHeaderFormat" xml:space="preserve">
+    <value>{0} models × {1} · {2} of {3} done · ${4}</value>
+  </data>
   <data name="SeedFormat" xml:space="preserve">
     <value>seed {0}</value>
   </data>
@@ -228,6 +237,18 @@
   <data name="DescribePromptButton" xml:space="preserve">
     <value>Prompt</value>
   </data>
+  <data name="More" xml:space="preserve">
+    <value>More</value>
+  </data>
+  <data name="ActionEditPrompt" xml:space="preserve">
+    <value>Edit prompt…</value>
+  </data>
+  <data name="ActionDescribeImage" xml:space="preserve">
+    <value>Describe image</value>
+  </data>
+  <data name="ActionPromptFromImage" xml:space="preserve">
+    <value>Write a prompt from image</value>
+  </data>
   <data name="DescriptionTitle" xml:space="preserve">
     <value>Image description</value>
   </data>
@@ -353,5 +374,23 @@
   </data>
   <data name="SettingsOpenLogs" xml:space="preserve">
     <value>Open folder</value>
+  </data>
+  <data name="ErrorDetailsTitle" xml:space="preserve">
+    <value>Error details</value>
+  </data>
+  <data name="OtherModel" xml:space="preserve">
+    <value>Other model…</value>
+  </data>
+  <data name="CopyPrompt" xml:space="preserve">
+    <value>Copy prompt</value>
+  </data>
+  <data name="UsedInSession" xml:space="preserve">
+    <value>Used in this session</value>
+  </data>
+  <data name="AllModels" xml:space="preserve">
+    <value>All models</value>
+  </data>
+  <data name="ModelPickerTitle" xml:space="preserve">
+    <value>Run on another model</value>
   </data>
 </root>

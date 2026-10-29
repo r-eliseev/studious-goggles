@@ -28,7 +28,9 @@ public sealed partial class ChatPageModel(
     IFilePickerService filePicker,
     ImageDescriptionService descriptions,
     IClipboardService clipboard,
-    ICurrentSessionTracker currentSession) : ObservableObject
+    ICurrentSessionTracker currentSession,
+    Func<SessionModelsPageModel> modelsPaneFactory,
+    Func<SessionParametersPageModel> parametersPaneFactory) : ObservableObject
 {
     private readonly Dictionary<Guid, GenerationItemViewModel> _cards = [];
     private bool _imageConsentGiven;
@@ -56,6 +58,35 @@ public sealed partial class ChatPageModel(
     [NotifyCanExecuteChangedFor(nameof(AttachImageCommand))]
     [NotifyCanExecuteChangedFor(nameof(SendCommand))]
     public partial bool IsBusy { get; set; }
+
+    /// <summary>True on a wide window (≥ 840). The shell sets it on resize; it decides pane versus navigation.</summary>
+    [ObservableProperty]
+    public partial bool IsWide { get; set; }
+
+    /// <summary>The models page model shown in the side pane, or null when the pane is closed.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActivePane))]
+    [NotifyPropertyChangedFor(nameof(IsPaneOpen))]
+    [NotifyPropertyChangedFor(nameof(PaneTitle))]
+    public partial SessionModelsPageModel? ModelsPane { get; set; }
+
+    /// <summary>The parameters page model shown in the side pane, or null when the pane is closed.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActivePane))]
+    [NotifyPropertyChangedFor(nameof(IsPaneOpen))]
+    [NotifyPropertyChangedFor(nameof(PaneTitle))]
+    public partial SessionParametersPageModel? ParametersPane { get; set; }
+
+    /// <summary>The page model shown in the side pane now (models or parameters), or null when it is closed.</summary>
+    public object? ActivePane => (object?)ModelsPane ?? ParametersPane;
+
+    /// <summary>True while a side pane is open; the shell shows the third column.</summary>
+    public bool IsPaneOpen => ActivePane is not null;
+
+    /// <summary>The header of the open pane: the models or the parameters title.</summary>
+    public string PaneTitle => ModelsPane is not null
+        ? AppResources.ModelsTitle
+        : ParametersPane is not null ? AppResources.SessionParametersTitle : "";
 
     /// <summary>Reads the session id from the route query. The page forwards the Shell query here.</summary>
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -252,7 +283,26 @@ public sealed partial class ChatPageModel(
     {
         try
         {
-            await navigation.GoToAsync(Routes.SessionParametersFor(_sessionId));
+            if (!IsWide)
+            {
+                await navigation.GoToAsync(Routes.SessionParametersFor(_sessionId));
+                return;
+            }
+
+            // The same button toggles the pane; a different button replaces whatever is open.
+            if (ParametersPane is not null)
+            {
+                ClosePane();
+                return;
+            }
+
+            ClosePane();
+            var pane = parametersPaneFactory();
+            pane.HostedInPane = true;
+            pane.CloseRequested += OnPaneCloseRequested;
+            pane.ApplyQueryAttributes(new Dictionary<string, object> { [Routes.SessionIdParameter] = _sessionId.ToString("D") });
+            ParametersPane = pane;
+            await pane.OnAppearingAsync();
         }
         catch (Exception ex)
         {
@@ -265,13 +315,51 @@ public sealed partial class ChatPageModel(
     {
         try
         {
-            await navigation.GoToAsync(Routes.SessionModelsFor(_sessionId));
+            if (!IsWide)
+            {
+                await navigation.GoToAsync(Routes.SessionModelsFor(_sessionId));
+                return;
+            }
+
+            // The same button toggles the pane; a different button replaces whatever is open.
+            if (ModelsPane is not null)
+            {
+                ClosePane();
+                return;
+            }
+
+            ClosePane();
+            var pane = modelsPaneFactory();
+            pane.HostedInPane = true;
+            pane.CloseRequested += OnPaneCloseRequested;
+            pane.ApplyQueryAttributes(new Dictionary<string, object> { [Routes.SessionIdParameter] = _sessionId.ToString("D") });
+            ModelsPane = pane;
+            await pane.OnAppearingAsync();
         }
         catch (Exception ex)
         {
             await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
         }
     }
+
+    /// <summary>Closes the open pane (the close button and the pane's own Save/Cancel).</summary>
+    [RelayCommand]
+    private void ClosePane()
+    {
+        if (ModelsPane is { } models)
+        {
+            models.CloseRequested -= OnPaneCloseRequested;
+            ModelsPane = null;
+        }
+
+        if (ParametersPane is { } parameters)
+        {
+            parameters.CloseRequested -= OnPaneCloseRequested;
+            ParametersPane = null;
+        }
+    }
+
+    private void OnPaneCloseRequested(object? sender, EventArgs e) => ClosePane();
 
     private Task RepeatCardAsync(GenerationItemViewModel card) =>
         RunAndReloadAsync(() => generations.RepeatAsync(card.Id, CancellationToken.None));
@@ -308,9 +396,14 @@ public sealed partial class ChatPageModel(
         await ReloadAsync();
     }
 
+    /// <summary>Opens the model picker for a card: pick a model, run the same prompt and seed on it (task 076).</summary>
+    private Task OtherModelCardAsync(GenerationItemViewModel card) =>
+        navigation.GoToAsync(Routes.ModelPickerFor(_sessionId, card.Id));
+
     private GenerationItemViewModel CreateCard(Generation generation)
     {
-        var card = new GenerationItemViewModel(generation, files, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync);
+        var card = new GenerationItemViewModel(
+            generation, files, dialogs, clipboard, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync, OtherModelCardAsync);
         _cards[generation.Id] = card;
         return card;
     }

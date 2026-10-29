@@ -11,4 +11,7 @@ public interface IDialogService
 
     /// <summary>Returns the entered text, or null when the user cancelled.</summary>
     Task<string?> PromptAsync(string title, string message, string accept, string cancel, string initialValue);
+
+    /// <summary>Shows a list of options under <paramref name="title"/>; returns the chosen option, or null when the user cancelled.</summary>
+    Task<string?> ChooseAsync(string title, string cancel, IReadOnlyList<string> options);
 }

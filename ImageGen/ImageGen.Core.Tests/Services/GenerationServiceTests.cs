@@ -534,6 +534,49 @@ public class GenerationServiceTests
     }
 
     [Fact]
+    public async Task RunOnModelAsync_UsesSamePromptAndSeed_NewModel()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var source = Existing(_session.Id, Seeded, seed: 33, prompt: "a red fox");
+        _runs.GetGenerationAsync(source.Id, Arg.Any<CancellationToken>()).Returns(source);
+
+        var run = await _service.RunOnModelAsync(source.Id, new ModelRef(ProviderIds.OpenRouter, Unseeded), ct);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal("a red fox", run.Prompt);
+        Assert.Equal([(Unseeded, 33L, "a red fox")], _added.Select(g => (g.ModelId, g.Seed, g.Prompt)));
+        _seeds.DidNotReceive().NextSeed();
+    }
+
+    [Fact]
+    public async Task RunOnModelAsync_ModelWithoutSeed_DoesNotSendSeed()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var source = Existing(_session.Id, Seeded, seed: 33);
+        _runs.GetGenerationAsync(source.Id, Arg.Any<CancellationToken>()).Returns(source);
+
+        await _service.RunOnModelAsync(source.Id, new ModelRef(ProviderIds.OpenRouter, Unseeded), ct);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal([false], _added.Select(g => g.SeedApplied));
+        await _generator.Received(1).GenerateAsync(
+            Arg.Is<ImageGenerationRequest>(r => r.ModelId == Unseeded && r.Seed == null), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RunOnModelAsync_SetsOtherModelOrigin()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var source = Existing(_session.Id, Seeded, seed: 33);
+        _runs.GetGenerationAsync(source.Id, Arg.Any<CancellationToken>()).Returns(source);
+
+        var run = await _service.RunOnModelAsync(source.Id, new ModelRef(ProviderIds.OpenRouter, Seeded), ct);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal(RunOrigin.OtherModel, run.Origin);
+    }
+
+    [Fact]
     public async Task RepeatAsync_UnknownGeneration_Throws()
     {
         var id = Guid.NewGuid();

@@ -17,4 +17,11 @@ public sealed class ShellDialogService : IDialogService
 
     public Task<string?> PromptAsync(string title, string message, string accept, string cancel, string initialValue) =>
         Shell.Current.DisplayPromptAsync(title, message, accept, cancel, initialValue: initialValue, maxLength: 4000);
+
+    public async Task<string?> ChooseAsync(string title, string cancel, IReadOnlyList<string> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        var chosen = await Shell.Current.DisplayActionSheetAsync(title, cancel, destruction: null, [.. options]);
+        return chosen == cancel ? null : chosen;
+    }
 }

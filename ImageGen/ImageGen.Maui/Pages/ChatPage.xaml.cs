@@ -30,6 +30,21 @@ public partial class ChatPage : ContentPage, IQueryAttributable
         var wide = width >= WideWidth;
         ChatLayout.ColumnDefinitions[0].Width = wide ? new GridLength(272) : new GridLength(0);
         SessionList.IsVisible = wide;
+        // A narrow window opens the models and parameters as a screen; any open pane is closed.
+        _model.IsWide = wide;
+        if (!wide)
+        {
+            _model.ClosePaneCommand.Execute(null);
+        }
+    }
+
+    /// <summary>A radio button in the models pane was checked: the row chooses the assistant model (task 071).</summary>
+    private void OnAssistantCheckedChanged(object? sender, CheckedChangedEventArgs e)
+    {
+        if (e.Value && sender is RadioButton { BindingContext: AssistantModelOptionViewModel row } && row.SelectCommand.CanExecute(null))
+        {
+            row.SelectCommand.Execute(null);
+        }
     }
 
     /// <summary>Shell passes the route query (the session id) here before the page appears.</summary>

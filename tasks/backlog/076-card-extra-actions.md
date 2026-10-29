@@ -1,6 +1,6 @@
 ---
 id: 076
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -62,6 +62,70 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/{Domain/Generations/RunOrigin.cs,Services/GenerationService.cs}`, `ImageGen/ImageGen.Presentation/{Routes.cs,PageModels/ModelPickerPageModel.cs,PageModels/GenerationItemViewModel.cs,PageModels/ChatPageModel.cs}`, строки, `ImageGen/ImageGen.Avalonia/{Views/ModelPickerView.*,Views/ChatView.axaml,Composition/AppServices.cs}`, `ImageGen/ImageGen.Maui/{Pages/ModelPickerPage.*,Pages/ChatPage.xaml,MauiProgram.cs}`, тесты, `docs/specs/chat-sessions.md`
 
 ## Отчёт
+
+Сделано по «Плану», по TDD.
+
+Core: добавлено `RunOrigin.OtherModel = 4` (в конец перечисления — `RunOrigin`
+хранится в БД как `(int)`, см. `RunRepository`). `GenerationService.RunOnModelAsync(
+Guid generationId, ModelRef model, CancellationToken)` — прогон из одной генерации:
+тот же промпт и сид источника (и те же референсы), выбранная модель, origin
+`OtherModel`; `SeedApplied` ставит `CreateRunAsync` по `image?.SupportsSeed`, поэтому
+для модели без сида сид не отправляется (S3.3). Тесты `GenerationServiceTests`:
+`RunOnModelAsync_UsesSamePromptAndSeed_NewModel`, `RunOnModelAsync_ModelWithoutSeed_
+DoesNotSendSeed`, `RunOnModelAsync_SetsOtherModelOrigin`.
+
+Presentation: `Routes.ModelPicker = "modelpicker"` + параметр `generationId` и
+`Routes.ModelPickerFor(sessionId, generationId)`. Новый `ModelPickerPageModel`:
+`UsedModels`/`AllModels` (`ObservableCollection<ModelOptionViewModel>` —
+переиспользован как есть), `IsAllExpanded`, `SearchText` (фильтр только `AllModels`
+по имени/id без учёта регистра), `LoadCommand`, `PickCommand(ModelOptionViewModel)`
+→ `RunOnModelAsync` + `GoBackAsync`, `ToggleAllCommand` (для оболочек без экспандера).
+`UsedModels` — различные модели картинок сессии через
+`IRunRepository.ListGenerationsBySessionAsync`, кроме модели карточки, по последнему
+использованию; каталог — `ModelCatalogService.GetAllImageModelsAsync(forceRefresh:
+false)`; модель из сессии, которой нет в каталоге, в быстрый список не попадает.
+`GenerationItemViewModel`: `DetailsCommand` (только ошибка, `AlertAsync(
+ErrorDetailsTitle, ErrorText)`), `OtherModelCommand` (ошибка/фильтр, навигация на
+`ModelPickerFor`), `CopyPromptCommand` (все завершённые, `IClipboardService.SetTextAsync(
+Prompt)`); новые пункты добавлены и в меню действий 069 (`ShowActionsAsync`).
+Строки: `ErrorDetailsTitle`, `OtherModel`, `CopyPrompt`, `UsedInSession`, `AllModels`,
+`ModelPickerTitle`. Тесты: `ModelPickerPageModelTests` (`Load_UsedModels_
+ExcludeSourceModel`, `Load_UsedModels_OrderedByLastUse`, `Search_FiltersAllModelsOnly`,
+`Pick_StartsRunAndGoesBack`), `GenerationItemViewModelTests` (`Details_OnlyForFailed`,
+`Details_ShowsErrorText`, `OtherModel_ForFailedAndFiltered`, `CopyPrompt_
+CopiesExactPrompt`).
+
+Avalonia: `Views/ModelPickerView.axaml` (секция «Used in this session» со строками-
+кнопками, `Expander` «All models» с поиском и списком); маршрут в `AppServices`
+(+ `ModelPickerPageModel` транзиентом и в `Page`-свитче). В карточке чата: в меню
+(контекст и «…») добавлены Copy prompt, Other model… (видимо при ошибке/фильтре),
+Details (видимо при ошибке); в строке значков — Copy (`&#xE09E;`) и Details с
+`Info` (`&#xE0F9;`, видимо при ошибке). Flow-тест `Flows/OtherModelFlowTests.cs`:
+`FilteredCard_OtherModel_StartsRunOnPickedModel` (через `OpenRouterFakes` с опцией
+`imagesFiltered`). Обновлены тесты `CardActionsTests` под новые пункты/значки.
+
+MAUI: `Pages/ModelPickerPage.xaml(.cs)` (секция + сворачиваемый «All models» по
+`IsAllExpanded`/`ToggleAllCommand`, строки-кнопки с `Command` через `x:Reference
+Page`), регистрация `AddTransientWithShellRoute<ModelPickerPage, ModelPickerPageModel>`.
+В `ChatPage.xaml` MenuFlyout дополнен Copy prompt / Other model… / Details
+(видимость через `IsEnabled`; быстрый выбор экшн-листа — через `ShowActionsCommand`).
+
+Автономные решения:
+- Для MAUI «All models» сделан сворачиваемым через `Button` + `IsVisible`
+  (а не `toolkit:Expander`), чтобы не завязываться на компонент и не ловить XAML-
+  грабли; в Avalonia использован штатный `Expander`. Поведение совпадает с решением
+  владельца (быстрый выбор + экспандер со всем каталогом).
+- Other model… значка в строке иконок не получил (в `IconGlyphs` подходящего нет):
+  доступен из меню «…»/контекста и экшн-листа; в строке иконок добавлены только
+  Copy и Details (`Info`), как указано в плане.
+
+Проверка локально (.NET 10 SDK 10.0.403; MAUI android workload + Android SDK; JDK 21):
+`dotnet build ImageGen.Maui -f net10.0-android` — успешно, 0 warnings/0 errors.
+Core.Tests 310/310, Data.Tests 63/63, Presentation.Tests 223/223,
+Avalonia.Tests 103/103 (2 пропуска окружения). `dotnet format --verify-no-changes`
+по каждому изменённому проекту (Core, Core.Tests, Presentation, Presentation.Tests,
+Avalonia, Avalonia.Tests, Maui) — без изменений. `scripts/check.sh` — пройден.
+Не проверено вручную: Android/Windows-рантайм (только сборка), macOS/iOS.
 
 ## Комментарии
 

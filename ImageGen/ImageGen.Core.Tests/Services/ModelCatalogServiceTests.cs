@@ -142,6 +142,23 @@ public class ModelCatalogServiceTests
     }
 
     [Fact]
+    public async Task GetAllImageModelsAsync_OneProviderFailsWithEmptyCache_KeepsTheOthers()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var failing = Substitute.For<IModelProvider>();
+        failing.ListImageModelsAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<IReadOnlyList<ImageModel>>(new ProviderException(ErrorKind.InvalidKey, "no key")));
+        _providers.ImageProviderIds.Returns([ProviderIds.OpenRouter, "fal"]);
+        _providers.GetImageProvider("fal").Returns(failing);
+        _repository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns([Model("a", "Alpha")]);
+        _repository.ListAsync("fal", Arg.Any<CancellationToken>()).Returns([]);
+
+        var models = await _service.GetAllImageModelsAsync(forceRefresh: false, ct);
+
+        Assert.Equal([(ProviderIds.OpenRouter, "a")], models.Select(m => (m.ProviderId, m.Id)));
+    }
+
+    [Fact]
     public async Task FindAsync_SameModelIdUnderTwoProviders_ReturnsTheReferencedProvidersModel()
     {
         var ct = TestContext.Current.CancellationToken;

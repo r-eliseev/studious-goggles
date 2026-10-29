@@ -1,0 +1,70 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:markup="clr-namespace:ImageGen.Avalonia.Markup"
+             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels;assembly=ImageGen.Presentation"
+             xmlns:glyphs="clr-namespace:ImageGen.Presentation.Appearance;assembly=ImageGen.Presentation"
+             x:Class="ImageGen.Avalonia.Views.ModelPickerView"
+             x:DataType="pm:ModelPickerPageModel">
+    <Grid RowDefinitions="Auto,*" Margin="16" RowSpacing="8">
+        <ProgressBar Grid.Row="0"
+                     IsIndeterminate="True"
+                     IsVisible="{Binding IsBusy}"
+                     AutomationProperties.Name="{markup:Res ModelPickerTitle}" />
+
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="8">
+                <!-- Quick list: models already used in this session. -->
+                <TextBlock Classes="section" Text="{markup:Res UsedInSession}" />
+                <ItemsControl ItemsSource="{Binding UsedModels}">
+                    <ItemsControl.DataTemplates>
+                        <DataTemplate DataType="pm:ModelOptionViewModel" x:DataType="pm:ModelOptionViewModel">
+                            <Button Classes="ghost"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left"
+                                    Margin="0,2"
+                                    Command="{Binding $parent[ItemsControl].((pm:ModelPickerPageModel)DataContext).PickCommand}"
+                                    CommandParameter="{Binding}"
+                                    AutomationProperties.Name="{Binding Name}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" />
+                                    <TextBlock Classes="meta" Text="{Binding DetailsText}" />
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.DataTemplates>
+                </ItemsControl>
+
+                <!-- All models: collapsed by default, with a search that filters this block only. -->
+                <Expander Header="{markup:Res AllModels}" IsExpanded="{Binding IsAllExpanded, Mode=TwoWay}">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <TextBlock Classes="icon" VerticalAlignment="Center" Text="{x:Static glyphs:IconGlyphs.Search}" />
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding SearchText, Mode=TwoWay}"
+                                     PlaceholderText="{markup:Res ModelsSearchPlaceholder}"
+                                     AutomationProperties.Name="{markup:Res ModelsSearchPlaceholder}" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding AllModels}">
+                            <ItemsControl.DataTemplates>
+                                <DataTemplate DataType="pm:ModelOptionViewModel" x:DataType="pm:ModelOptionViewModel">
+                                    <Button Classes="ghost"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Left"
+                                            Margin="0,2"
+                                            Command="{Binding $parent[ItemsControl].((pm:ModelPickerPageModel)DataContext).PickCommand}"
+                                            CommandParameter="{Binding}"
+                                            AutomationProperties.Name="{Binding Name}">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" />
+                                            <TextBlock Classes="meta" Text="{Binding DetailsText}" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.DataTemplates>
+                        </ItemsControl>
+                    </StackPanel>
+                </Expander>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
