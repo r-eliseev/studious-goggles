@@ -1,6 +1,6 @@
 ---
 id: 118
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-29
@@ -11,12 +11,12 @@ created: 2026-10-29
 ## Описание
 У GitHub repo нет landing README. Нужен краткий user/developer start, основанный только на merged code/release после исправлений docs/privacy/arm64.
 
-Зависит от: 100, 115, 116, 117, 119, 120.
+Зависит от: 100, 115, 116, 117, 119, 120, 136.
 Среда: Linux или Windows.
 
 ## Критерии готовности
 - «Current» и roadmap разделены; Web/Docker/gallery/spending не названы готовыми.
-- Built-in: OpenRouter/fal. Additional OpenAI-compatible config manual; Together selected, not built-in/live-verified.
+- Built-in providers после 136: OpenRouter, fal и Together AI; additional OpenAI-compatible config manual. Together live paid behavior помечен как не проверенный, если smoke не выполнен.
 - Fal Core support не выдаётся за тот же first-run UI setup, пока экран/flow не подтверждён.
 - Download table только фактические release.yml assets после 100; Android debug-signed sideload, no store/MSIX/update claims.
 - Privacy: local app data с учётом отключённого backup 115; обычные Debug logs и debug trace могут содержать user/provider content, их нельзя публиковать.
