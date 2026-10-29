@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using ImageGen.Core.Diagnostics;
 using ImageGen.Core.Http;
 using ImageGen.Core.Tests.TestDoubles;
 using Microsoft.Extensions.Logging;
@@ -137,5 +138,5 @@ public class LoggingHttpHandlerTests
     }
 
     private static HttpClient Client(ILogger<LoggingHttpHandler> logger, HttpMessageHandler inner) =>
-        new(new LoggingHttpHandler(logger) { InnerHandler = inner });
+        new(new LoggingHttpHandler(logger, NullDebugTrace.Instance) { InnerHandler = inner });
 }

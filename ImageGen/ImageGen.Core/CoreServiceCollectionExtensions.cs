@@ -1,10 +1,12 @@
 using ImageGen.Core.Context;
+using ImageGen.Core.Diagnostics;
 using ImageGen.Core.Http;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Search;
 using ImageGen.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ImageGen.Core;
 
@@ -22,6 +24,9 @@ public static class CoreServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddSingleton(TimeProvider.System);
+
+        // The shell registers the file trace before this call when debug tracing is on (task 085); the default records nothing.
+        services.TryAddSingleton<IDebugTrace>(NullDebugTrace.Instance);
 
         // Clients take HttpClient from IHttpClientFactory per request. The timeout is set per provider
         // in the request itself, so the default HttpClient timeout must not cut it short.

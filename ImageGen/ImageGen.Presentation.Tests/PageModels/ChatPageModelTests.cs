@@ -167,7 +167,8 @@ public class ChatPageModelTests
                 Substitute.For<ISessionRepository>(), Substitute.For<IChatMessageRepository>(), Substitute.For<IRunRepository>(),
                 Substitute.For<IConversationSummaryRepository>(), ProviderDoubles.Router(chat: _chat),
                 new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),
-                new ImageGen.Core.Context.TokenCorrection(), time, NullLogger<ConversationSummaryService>.Instance));
+                new ImageGen.Core.Context.TokenCorrection(), time, NullLogger<ConversationSummaryService>.Instance),
+            ImageGen.Core.Diagnostics.NullDebugTrace.Instance);
 
         _model = CreateModel(_session.Id);
     }

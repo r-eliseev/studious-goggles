@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using ImageGen.Core.Diagnostics;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
@@ -22,8 +23,11 @@ public sealed class GenerationService(
     ISeedSource seeds,
     AttachmentService attachments,
     TimeProvider timeProvider,
-    ILogger<GenerationService> logger)
+    ILogger<GenerationService> logger,
+    IDebugTrace? trace = null)
 {
+    private readonly IDebugTrace _trace = trace ?? NullDebugTrace.Instance;
+
     public const int MaxParallelGenerations = 4;
 
     /// <summary>Poll interval of a queued job: starts at the minimum and grows to the maximum (ADR 0005).</summary>
@@ -89,8 +93,39 @@ public sealed class GenerationService(
             return new StartRunResult(null, skipped, notSent);
         }
 
+        if (_trace.IsEnabled)
+        {
+            RecordGenerationRequest(sessionId, text, attachmentIds, session.Settings, seedValues);
+        }
+
         var run = await CreateRunAsync(sessionId, text, RunOrigin.Assistant, pairs, session.Settings.Parameters, cancellationToken);
         return new StartRunResult(run, skipped, notSent);
+    }
+
+    /// <summary>The request as the user made it (task 085): prompt, models, seeds, parameters and attachment ids.</summary>
+    private void RecordGenerationRequest(
+        Guid sessionId,
+        string text,
+        IReadOnlyList<Guid> attachmentIds,
+        SessionSettings settings,
+        IReadOnlyList<long> seedValues)
+    {
+        var parameters = settings.Parameters;
+        _trace.Record(new TraceRecord(
+            "generation-request",
+            new Dictionary<string, string?>
+            {
+                ["session"] = sessionId.ToString("N"),
+                ["prompt"] = text,
+                ["models"] = string.Join(",", settings.ImageModels.Select(m => $"{m.ProviderId}/{m.ModelId}")),
+                ["seeds"] = string.Join(",", seedValues),
+                ["aspectRatio"] = parameters.AspectRatio,
+                ["resolution"] = parameters.Resolution,
+                ["outputFormat"] = parameters.OutputFormat,
+                ["quality"] = parameters.Quality,
+                ["attachments"] = string.Join(",", attachmentIds.Select(id => id.ToString("N"))),
+            },
+            []));
     }
 
     /// <summary>New run from one generation: same prompt, model and seed.</summary>

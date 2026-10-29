@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ImageGen.Core.Context;
+using ImageGen.Core.Diagnostics;
 using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Sessions;
@@ -26,7 +27,8 @@ public sealed class AssistantService(
     ILogger<AssistantService> logger,
     TokenCorrection correction,
     IConversationSummaryRepository summaries,
-    ConversationSummaryService summaryService)
+    ConversationSummaryService summaryService,
+    IDebugTrace trace)
 {
 
     public Task<AssistantTurnResult> SendUserMessageAsync(Guid sessionId, string text, CancellationToken cancellationToken) =>
@@ -99,6 +101,20 @@ public sealed class AssistantService(
         CancellationToken cancellationToken)
     {
         var sessionId = session.Id;
+        if (trace.IsEnabled)
+        {
+            // The user's words and the attachment ids; the pictures themselves are already in the data folder (task 085).
+            trace.Record(new TraceRecord(
+                "user-input",
+                new Dictionary<string, string?>
+                {
+                    ["session"] = sessionId.ToString("N"),
+                    ["text"] = userMessage.Text,
+                    ["attachments"] = string.Join(",", attachmentIds.Select(id => id.ToString("N"))),
+                },
+                []));
+        }
+
         Run? run = null;
         string replyText;
         ErrorKind? errorKind = null;

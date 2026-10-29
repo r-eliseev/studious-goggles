@@ -65,6 +65,10 @@ public static class MauiProgram
         builder.Services.AddSingleton<IAppPaths>(paths);
         builder.Services.AddSingleton<ISecretStore, MauiSecretStore>();
         builder.Services.AddSingleton<ISecretPersistence, MauiSecretPersistence>();
+        builder.Services.AddSingleton(DebugTraceSettings.Create(
+            paths.DataDirectory,
+            Environment.GetEnvironmentVariable(DebugTraceSettings.EnvironmentVariable),
+            TimeProvider.System));
         builder.Services.AddImageGenCore();
         builder.Services.AddImageGenData();
         builder.Services.AddSingleton<AppInitializer>();

@@ -55,7 +55,11 @@ public partial class App : Application
             paths,
             secrets,
             secrets,
-            configureLogging: logging => logging.AddImageGenFileLogging(logDirectory, level.Level));
+            configureLogging: logging => logging.AddImageGenFileLogging(logDirectory, level.Level),
+            debugTrace: DebugTraceSettings.Create(
+                paths.DataDirectory,
+                Environment.GetEnvironmentVariable(DebugTraceSettings.EnvironmentVariable),
+                TimeProvider.System));
 
         var logger = Services.GetRequiredService<ILogger<App>>();
         StartupLog.Write(logger, "Avalonia", paths.DataDirectory, logDirectory, level.Level);

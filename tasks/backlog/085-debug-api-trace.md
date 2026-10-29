@@ -1,6 +1,6 @@
 ---
 id: 085
-status: planned
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -54,5 +54,35 @@ created: 2026-10-28
 Файлы: `ImageGen/ImageGen.Core/Http/LoggingHttpHandler.cs`, `ImageGen/ImageGen.Core/Diagnostics/IDebugTrace.cs` (новый), `ImageGen/ImageGen.Presentation/Logging/DebugTrace*.cs` (новые), `ImageGen/ImageGen.Presentation/Logging/LogLevelSettings.cs`, `ImageGen/ImageGen.Core/Services/{AssistantService,GenerationService}.cs` (вызовы `RecordInput`), тесты, `docs/specs/debug-trace.md` (новый), `docs/knowledge/dev-environment.md` (раздел «Логи»)
 
 ## Отчёт
+
+Основание: статус «done» поставлен по указанию `/goal` («закончи все задачи, не останавливайся на одобрении плана; решения документируй»), а не по одобрению плана. Раньше статус `planned` не менялся; причина здесь та же, что у 043 и 044.
+
+Сделано (ветка `ccr-536342a2-4gwdk3`, PR #35):
+- `Core/Diagnostics`: `IDebugTrace` (по умолчанию `NullDebugTrace`), `TraceRecord`, `TraceBlob`, `TraceRedaction` (allowlist заголовков, вынос картинок из data-URL и `b64_json`, редакция полей аккаунта, тело не обрезается).
+- `LoggingHttpHandler` пишет `http-request` и `http-response` (метод, путь, заголовки из allowlist, тело, статус, `elapsedMs`); тело ответа проверки ключа (`/key`) не пишется. Обычный лог 045 не изменён.
+- `AssistantService` пишет `user-input` (текст, id вложений); `GenerationService` пишет `generation-request` (промпт, модели, сиды, параметры, вложения). Параметр трейса в `GenerationService` необязательный, чтобы тестовые конструкторы не менялись.
+- `Presentation/Logging`: `DebugTraceSettings` (`IMAGEGEN_DEBUG_TRACE` важнее `debugTrace` в `logging.json`), `FileDebugTrace` (JSON Lines `debug-trace/1` в `debug/<дата>/trace.jsonl`, картинки файлами рядом).
+- Оболочки: Avalonia (`AppServices.Create(debugTrace:)`), MAUI (регистрация до `AddImageGenCore`).
+- Спецификация `docs/specs/debug-trace.md`; `docs/architecture.md`, `docs/index.md`, `docs/knowledge/dev-environment.md` обновлены.
+
+Проверка:
+- `ImageGen.Core.Tests`: 355 тестов, все проходят (включая тесты трейса, воспроизведения записи на моке, `generation-request`).
+- `ImageGen.Presentation.Tests`: 277, все проходят (включая `DebugTraceTests`).
+- `ImageGen.Avalonia.Tests` (headless): 118 проходят, 2 пропущены самим проектом.
+- `dotnet format --verify-no-changes`: Core, Core.Tests, Presentation, Presentation.Tests, Avalonia, Avalonia.Tests — без изменений. MAUI на Linux не загружает ссылки для проверки формата (как указано в `AGENTS.md`).
+- Сборка: `ImageGen.Avalonia` и `ImageGen.Maui` под `net10.0-android` — успешно.
+
+Отклонения от плана и критериев:
+- Заголовки не маскируются, а отбрасываются (allowlist `Content-Type`, `Accept`, `User-Agent`, `Content-Length`). Так решено в плане: `Authorization` и `x-api-key` не попадают в трассу ни в каком виде. Критерий «маскируются» выполнен строже.
+- Поле версии называется `schema` (как в плане), значение `debug-trace/1`.
+- Время: поле `time` строки — момент записи (запись делается до отправки запроса и сразу после получения ответа); длительность — `elapsedMs` у ответа. Отдельного времени отправки в записи запроса нет, его даёт `time`.
+- URL записывается как путь без строки запроса (ключ может быть в query у некоторых провайдеров).
+- Сквозной сценарий «генерация через один провайдер → мок → тот же ответ» не написан. Воспроизведение проверено на уровне HTTP: `Replay_RecordedResponseRebuiltFromTrace_ReproducesStatusAndBody` восстанавливает ответ из записи и проверяет статус и тело. Сквозной тест через клиент OpenRouter — открытый пункт.
+- Вложения пользователя записаны ссылками на id (файлы уже в папке данных), их байты в трейс не копируются.
+- Папка `debug/` не очищается (в отличие от логов, 14 дней). Вопрос открыт, см. спецификацию.
+
+Журнал работ:
+1. Тесты трейса (падающие) → `Core/Diagnostics` → `LoggingHttpHandler` → `AssistantService`/`GenerationService` → `Presentation` (`FileDebugTrace`, `DebugTraceSettings`) → оболочки.
+2. Найдено при самопроверке: трейс резал тело по 4096 символам (через общий `BodyRedactor`) и заменял `b64_json` на размер. Исправлено: тело не обрезается, `b64_json` выносится в файлы, редакция только полей аккаунта. Добавлены тесты.
 
 ## Комментарии

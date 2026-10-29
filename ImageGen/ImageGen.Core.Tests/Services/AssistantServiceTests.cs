@@ -1,4 +1,5 @@
 using ImageGen.Core.Context;
+using ImageGen.Core.Diagnostics;
 using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Models;
@@ -107,7 +108,7 @@ public class AssistantServiceTests
             NullLogger<ConversationSummaryService>.Instance);
         _service = new AssistantService(
             sessionService, _messages, _runs, _providers, _generations, chatModels, _files, attachments, time, _logger, correction,
-            _summaries, summaryService);
+            _summaries, summaryService, NullDebugTrace.Instance);
     }
 
     private ChatMessage AssistantMessage => _stored.Last();
