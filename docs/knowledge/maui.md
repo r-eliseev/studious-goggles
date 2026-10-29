@@ -107,3 +107,10 @@
 - **Копирование текста в MAUI (задача 055):** `Label` не выделяется, поэтому у ответа ассистента и у промпта прогона есть кнопка «Copy» (`Command="{Binding Copy.CopyCommand}"`), а «Copied» показывается через `CopyTextAction.IsCopied`. Долгое нажатие на сообщение не сделано. В Avalonia текст выделяется `SelectableTextBlock`.
 - **Стили MAUI на ресурсах Ig* (задача 064, собрано на Android):** `Resources/Styles/Styles.xaml` без ключей шаблона (`Colors.xaml` удалён). `IgControlHeight` — `OnPlatform` в `Themes/Common.xaml`, в стиле берётся через `StaticResource` (Common объединён первым в `App.xaml`): `DynamicResource` на `OnPlatform` не проверен. `Button.CornerRadius` в MAUI — `int`, поэтому в словарях темы есть `IgButtonCornerRadius` (`x:Int32`). Отдельный размер шрифта на iOS и Android (17 и 16) не применяется: `IgFontSizeBody` — обычное число (десктопное значение стиля). Классы `.primary`, `.ghost`, … — неявные стили (`Class="..."`); состояния кнопки — `VisualStateManager` в базовом стиле `Button`.
 - **Переключатель модели ассистента в MAUI (задача 070):** у `RadioButton` нет `Command`, поэтому выбор идёт через событие `CheckedChanged` в `SessionModelsPage.xaml.cs`, которое вызывает `SelectCommand` строки. Порядок кнопок диалога (Save/Cancel) задаётся в code-behind через `Grid.SetColumn`: на Mac Catalyst Cancel слева.
+
+## Меню и ускорители (задача 073)
+- Строка меню — `ContentPage.MenuBarItems` (`MenuBarItem` → `MenuFlyoutItem`). Ускоритель — `KeyboardAccelerator` в `MenuFlyoutItem.KeyboardAccelerators`; модификатор через `Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Cmd}"` (собирается на Android, компилятор XAML принимает).
+- Буквенные ускорители без модификатора не ставим: они перехватывают ввод в поле чата (поэтому R, E и Ctrl+C без ускорителя).
+- Выбранная карточка — `ChatPageModel.SelectedCard`: тап по карточке (`TapGestureRecognizer` с `x:Reference Page`) вызывает `SelectCardCommand`; пункты меню «Card» привязаны к `SelectedCard.<Команда>`.
+- **Не проверено:** поведение строки меню и ускорителей под Windows и Mac Catalyst (нужны Windows и macOS, пункт в задаче 016); на телефонах `MenuBarItems` не показываются.
+

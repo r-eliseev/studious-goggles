@@ -37,7 +37,7 @@ public class RunItemViewModelTests
             SortOrder = sortOrder,
         };
         var files = Substitute.For<IImageFileStore>();
-        return new GenerationItemViewModel(generation, files, Substitute.For<IDialogService>(), Substitute.For<IClipboardService>(), _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, (_, _) => Task.CompletedTask, _ => Task.CompletedTask);
+        return new GenerationItemViewModel(generation, files, Substitute.For<IDialogService>(), Substitute.For<IClipboardService>(), Substitute.For<IImageSaver>(), _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, (_, _) => Task.CompletedTask, _ => Task.CompletedTask);
     }
 
     private static CopyTextAction Copy() =>
@@ -81,7 +81,7 @@ public class RunItemViewModelTests
             SortOrder = 0,
         };
         var files = Substitute.For<IImageFileStore>();
-        return new GenerationItemViewModel(generation, files, Substitute.For<IDialogService>(), Substitute.For<IClipboardService>(), _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, (_, _) => Task.CompletedTask, _ => Task.CompletedTask);
+        return new GenerationItemViewModel(generation, files, Substitute.For<IDialogService>(), Substitute.For<IClipboardService>(), Substitute.For<IImageSaver>(), _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, (_, _) => Task.CompletedTask, _ => Task.CompletedTask);
     }
 
     [Fact]

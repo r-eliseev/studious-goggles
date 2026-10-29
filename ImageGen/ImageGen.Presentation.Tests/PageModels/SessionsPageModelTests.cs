@@ -3,6 +3,7 @@ using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
+using ImageGen.Core.Search;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
 using ImageGen.Data;
@@ -256,14 +257,200 @@ public class SessionsPageModelTests : IDisposable
         Assert.Single(model.Sessions);
     }
 
+    [Fact]
+    public async Task OnAppearingAsync_ShowsRunCountPerSession()
+    {
+        var busy = NewSession("Busy", DateTimeOffset.UtcNow);
+        var idle = NewSession("Idle", DateTimeOffset.UtcNow.AddMinutes(-1));
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([busy, idle]);
+        _runs.CountRunsBySessionAsync(Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<Guid, int> { [busy.Id] = 3 });
+        var model = CreateModel();
+
+        await model.OnAppearingAsync();
+
+        Assert.Equal(3, model.Sessions[0].RunCount);
+        Assert.Equal(0, model.Sessions[1].RunCount);
+    }
+
+    [Fact]
+    public async Task Rename_SavesNewTitleAndShowsIt()
+    {
+        var session = NewSession("Old name", DateTimeOffset.UtcNow);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
+        _sessionRepository.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        _dialogs.PromptAsync(AppResources.RenameSessionTitle, "", AppResources.Rename, AppResources.Cancel, "Old name")
+            .Returns("  Lighthouse  ");
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        await model.Sessions[0].RenameCommand.ExecuteAsync(null);
+
+        Assert.Equal("Lighthouse", model.Sessions[0].Title);
+        await _sessionRepository.Received(1).UpdateAsync(
+            Arg.Is<Session>(saved => saved.Title == "Lighthouse"), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Rename_Cancelled_KeepsTitle()
+    {
+        var session = NewSession("Keep name", DateTimeOffset.UtcNow);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
+        _dialogs.PromptAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns((string?)null);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        await model.Sessions[0].RenameCommand.ExecuteAsync(null);
+
+        Assert.Equal("Keep name", model.Sessions[0].Title);
+        await _sessionRepository.DidNotReceive().UpdateAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Rename_Blank_ShowsErrorAndKeepsTitle()
+    {
+        var session = NewSession("Keep name", DateTimeOffset.UtcNow);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
+        _dialogs.PromptAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns("   ");
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        await model.Sessions[0].RenameCommand.ExecuteAsync(null);
+
+        Assert.Equal("Keep name", model.Sessions[0].Title);
+        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, AppResources.RenameEmpty);
+        await _sessionRepository.DidNotReceive().UpdateAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Search_ShowsSessionWithSnippetOfMatchingText()
+    {
+        var fox = NewSession("Animals", DateTimeOffset.UtcNow);
+        var boat = NewSession("Boats", DateTimeOffset.UtcNow.AddMinutes(-1));
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([fox, boat]);
+        _searchTexts.ListAllAsync(Arg.Any<CancellationToken>()).Returns(
+        [
+            new SearchText(fox.Id, SearchTextKind.Prompt, "red fox in snow"),
+            new SearchText(boat.Id, SearchTextKind.Title, "Boats"),
+        ]);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        model.SearchText = "fox";
+        await WaitUntilAsync(() => model.SearchResults.Count > 0);
+
+        var hit = Assert.Single(model.SearchResults);
+        Assert.Same(model.Sessions[0], hit);
+        Assert.Equal("prompt: red fox in snow", hit.SearchLine);
+        Assert.False(model.HasNoResults);
+    }
+
+    [Fact]
+    public async Task Search_Debounced_OnlyLastQueryRuns()
+    {
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([NewSession("Fox", DateTimeOffset.UtcNow)]);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        model.SearchText = "f";
+        model.SearchText = "fo";
+        model.SearchText = "fox";
+        await Task.Delay(SessionsPageModel.SearchDebounce + TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
+
+        await _searchTexts.Received(1).ListAllAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Search_NoHits_ShowsNothingFound()
+    {
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([NewSession("Fox", DateTimeOffset.UtcNow)]);
+        _searchTexts.ListAllAsync(Arg.Any<CancellationToken>()).Returns([]);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        model.SearchText = "zebra";
+        await WaitUntilAsync(() => model.HasNoResults);
+
+        Assert.Empty(model.SearchResults);
+        Assert.False(model.IsSearching);
+    }
+
+    [Fact]
+    public async Task ClearSearch_EmptiesResultsAndSnippets()
+    {
+        var fox = NewSession("Fox", DateTimeOffset.UtcNow);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([fox]);
+        _searchTexts.ListAllAsync(Arg.Any<CancellationToken>()).Returns([new SearchText(fox.Id, SearchTextKind.Title, "Fox")]);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+        model.SearchText = "fox";
+        await WaitUntilAsync(() => model.SearchResults.Count > 0);
+
+        model.ClearSearchCommand.Execute(null);
+
+        Assert.Empty(model.SearchResults);
+        Assert.False(model.HasNoResults);
+        Assert.Equal("", model.Sessions[0].SearchLine);
+        Assert.Single(model.Sessions);
+    }
+
+    [Fact]
+    public async Task StartExample_CreatesSessionAndOpensChatWithMessage()
+    {
+        Session? created = null;
+        _sessionRepository.When(repository => repository.AddAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>()))
+            .Do(call => created = call.Arg<Session>());
+        var model = CreateModel();
+
+        await model.StartExampleCommand.ExecuteAsync(AppResources.EmptyChatExample1);
+
+        Assert.NotNull(created);
+        await _navigation.Received(1).GoToAsync(Routes.ChatWithMessage(created!.Id, AppResources.EmptyChatExample1));
+    }
+
+    [Fact]
+    public async Task ShowsListExamples_OnlyWhenExamplesAreEnabledAndNoSessions()
+    {
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([]);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        Assert.False(model.ShowsListExamples);
+        model.ExamplesInList = true;
+        Assert.True(model.ShowsListExamples);
+    }
+
+    [Fact]
+    public void Examples_AreTheThreeStarterPrompts()
+    {
+        var model = CreateModel();
+
+        Assert.Equal(
+            [AppResources.EmptyChatExample1, AppResources.EmptyChatExample2, AppResources.EmptyChatExample3],
+            model.Examples);
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        for (var attempt = 0; attempt < 300 && !condition(); attempt++)
+        {
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
+        Assert.True(condition());
+    }
+
+    private readonly ISearchTextSource _searchTexts = Substitute.For<ISearchTextSource>();
     private readonly CurrentSessionTracker _tracker = new();
 
     private SessionsPageModel CreateModel(TimeProvider? time = null)
     {
         var catalog = new ChatModelCatalogService(ProviderDoubles.Router(), NullLogger<ChatModelCatalogService>.Instance);
-        var sessions = new SessionService(_sessionRepository, Substitute.For<IChatMessageRepository>(), _runs, _files, catalog, TimeProvider.System);
+        var sessions = new SessionService(_sessionRepository, Substitute.For<IChatMessageRepository>(), _runs, _files, catalog, TimeProvider.System, Substitute.For<IConversationSummaryRepository>());
         var apiKeys = new ApiKeyService(ProviderDoubles.Router(_provider), _secrets, NullLogger<ApiKeyService>.Instance);
-        return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs, time ?? TimeProvider.System, _tracker);
+        return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs, time ?? TimeProvider.System, _tracker, new SessionSearchService(_searchTexts));
     }
 
     private static Session NewSession(string title, DateTimeOffset updatedAt) => new()

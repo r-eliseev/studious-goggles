@@ -1,6 +1,6 @@
 ---
 id: 078
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -51,5 +51,19 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Presentation/{Routes.cs,PageModels/ChatPageModel.cs,PageModels/SessionsPageModel.cs}`, строки, `ImageGen/ImageGen.Avalonia/Views/SessionsView.axaml`, `ImageGen/ImageGen.Maui/Pages/SessionsPage.xaml`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml.cs` (передача query, если нужно), тесты
 
 ## Отчёт
+
+Сделано по плану (`claude-536f`, 2026-10-29). Тесты писались до кода в каждом слое.
+
+- Presentation: `Routes.MessageParameter`, `Routes.ChatWithMessage(sessionId, message)` (текст кодируется `Uri.EscapeDataString`). `ChatPageModel.ApplyQueryAttributes` читает `message` и раскодирует его; `OnAppearingAsync` после первой загрузки ленты отправляет текст один раз и обнуляет его, поэтому перечитывание не отправляет повторно. `SessionsPageModel`: `Examples` (три строки ресурсов), `StartExampleCommand(string?)` — создать сессию и открыть чат с текстом. Для узкого окна: `HasNoSessions`, `ExamplesInList` (ставит представление по ширине), `ShowsListExamples` = флаг и пустой список. Строки: `EmptyChatExample1..3` с текстами из критериев. Тесты: `RoutesTests.ChatWithMessage_EscapesTextAndReadsBack`, 3 теста чата (`Query_WithMessage_SendsItOnceAfterLoad`, `Query_WithoutMessage_SendsNothing`, `Reload_AfterPendingMessageSent_DoesNotSendAgain`), 3 теста страницы сессий (создание и переход, список примеров, `ShowsListExamples`).
+- Avalonia: `Views/StarterExamples` — UserControl с тремя кнопками (`StartExampleCommand`, `CommandParameter` = пример); используется в пустом состоянии широкого окна (`SessionsView`) и в конце списка (`SessionsListView`) при `ShowsListExamples`. Код-behind `SessionsView.ApplyWidth` ставит `ExamplesInList = !wide`. Тест `Flows/EmptyChatExampleFlowTests.PressingAnExample_OpensNewChatAndSendsItOnce`: нажатие открывает чат, пример уходит ассистенту один раз.
+- MAUI: `Controls/StarterExamples` (ContentView с тремя кнопками) в пустом состоянии `SessionsPage` и в конце `SessionsListView` при `ShowsListExamples`; `SessionsPage.xaml.cs` ставит `ExamplesInList`. Сборка `-f net10.0-android` проходит.
+
+Проверено: Presentation 255/255 (было 244 до 077 и 248 до примеров; новые тесты — 11), Avalonia 108/108 (2 пропущены, как раньше), Core 343 и Data 69 без изменений, `dotnet format --verify-no-changes` по всем изменённым проектам чистый, MAUI собирается.
+
+Отклонения от плана:
+- В Avalonia и MAUI примеры вынесены в отдельный контрол `StarterExamples` (три кнопки с `CommandParameter`), а не `ItemsControl`: контекст данных кнопок — страница, и привязка к команде страницы из шаблона элемента потребовала бы относительных привязок.
+- Ширина блока примеров — та же, что у пустого состояния (до 440), а не 380 из плана: так блоки совпадают по ширине с подсказкой.
+- Спецификация `chat-sessions.md` не менялась: в критериях задачи её правок нет.
+- Ручная проверка на MAUI (телефон и Windows) и визуальная проверка макета — в задаче 016 и у владельца; в облачной среде проверены сборка и тесты.
 
 ## Комментарии

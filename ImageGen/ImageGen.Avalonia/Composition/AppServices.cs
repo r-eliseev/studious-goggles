@@ -6,6 +6,7 @@ using ImageGen.Avalonia.Services;
 using ImageGen.Avalonia.Services.Navigation;
 using ImageGen.Avalonia.Views;
 using ImageGen.Core;
+using ImageGen.Core.Diagnostics;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Data;
@@ -32,7 +33,8 @@ public static class AppServices
         ISecretPersistence persistence,
         HttpMessageHandler? openRouterHandler = null,
         IDialogService? dialogs = null,
-        Action<ILoggingBuilder>? configureLogging = null)
+        Action<ILoggingBuilder>? configureLogging = null,
+        IDebugTrace? debugTrace = null)
     {
         ArgumentNullException.ThrowIfNull(paths);
         ArgumentNullException.ThrowIfNull(secrets);
@@ -43,6 +45,11 @@ public static class AppServices
         services.AddSingleton(secrets);
         services.AddSingleton(persistence);
         services.AddLogging(builder => configureLogging?.Invoke(builder));
+        if (debugTrace is not null)
+        {
+            services.AddSingleton(debugTrace);
+        }
+
         services.AddImageGenCore();
         services.AddImageGenData();
         if (openRouterHandler is not null)
@@ -56,6 +63,7 @@ public static class AppServices
         services.AddSingleton<IFilePickerService>(new AvaloniaFilePickerService(MainWindowOwner));
         services.AddSingleton<AppearanceService>();
         services.AddSingleton<IClipboardService>(new AvaloniaClipboardService(MainWindowOwner));
+        services.AddSingleton<IImageSaver>(new AvaloniaImageSaver(MainWindowOwner));
         services.AddSingleton<ICurrentSessionTracker, CurrentSessionTracker>();
 
         services.AddSingleton(sp => new PageRoutes()

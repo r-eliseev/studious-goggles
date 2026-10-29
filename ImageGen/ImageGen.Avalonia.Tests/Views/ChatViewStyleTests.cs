@@ -151,6 +151,7 @@ public class ChatViewStyleTests
             Substitute.For<IImageFileStore>(),
             Substitute.For<IDialogService>(),
             Substitute.For<IClipboardService>(),
+            Substitute.For<IImageSaver>(),
             _ => Task.CompletedTask,
             _ => Task.CompletedTask,
             _ => Task.CompletedTask,

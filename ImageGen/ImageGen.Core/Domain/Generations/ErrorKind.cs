@@ -14,4 +14,12 @@ public enum ErrorKind
     Network = 9,
     Interrupted = 10,
     EmptyResponse = 11,
+    /// <summary>The assistant asked for a tool call without a valid prompt.</summary>
+    InvalidToolCall = 12,
+    /// <summary>An image attached to the user's message could not be read.</summary>
+    AttachmentUnreadable = 13,
+    /// <summary>A reference image of a generation is missing or unreadable.</summary>
+    ReferenceUnreadable = 14,
+    /// <summary>The model does not take reference images, so the assistant could not start the run.</summary>
+    ModelWithoutReferences = 15,
 }

@@ -12,8 +12,13 @@ public static class Routes
     public const string ModelPicker = "modelpicker";
     public const string SessionIdParameter = "sessionId";
     public const string GenerationIdParameter = "generationId";
+    public const string MessageParameter = "message";
 
     public static string ChatFor(Guid sessionId) => $"{Chat}?{SessionIdParameter}={sessionId:D}";
+
+    /// <summary>The chat of a session that sends <paramref name="message"/> to the assistant once it has loaded (S1.5 examples).</summary>
+    public static string ChatWithMessage(Guid sessionId, string message) =>
+        $"{Chat}?{SessionIdParameter}={sessionId:D}&{MessageParameter}={Uri.EscapeDataString(message)}";
 
     public static string SessionModelsFor(Guid sessionId) => $"{SessionModels}?{SessionIdParameter}={sessionId:D}";
 

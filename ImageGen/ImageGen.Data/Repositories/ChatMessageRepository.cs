@@ -1,4 +1,5 @@
 using ImageGen.Core.Domain.Chat;
+using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Storage;
 using Microsoft.Data.Sqlite;
 
@@ -12,8 +13,8 @@ public sealed class ChatMessageRepository(SqliteDatabase database) : IChatMessag
         await using var connection = await database.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO chat_messages (id, session_id, role, text, created_at, run_id, is_error)
-            VALUES (@id, @session_id, @role, @text, @created_at, @run_id, @is_error);
+            INSERT INTO chat_messages (id, session_id, role, text, created_at, run_id, is_error, error_kind)
+            VALUES (@id, @session_id, @role, @text, @created_at, @run_id, @is_error, @error_kind);
             """;
         command.Parameters.AddWithValue("@id", SqliteValues.FromGuid(message.Id));
         command.Parameters.AddWithValue("@session_id", SqliteValues.FromGuid(message.SessionId));
@@ -22,6 +23,7 @@ public sealed class ChatMessageRepository(SqliteDatabase database) : IChatMessag
         command.Parameters.AddWithValue("@created_at", SqliteValues.FromDate(message.CreatedAt));
         command.Parameters.AddWithValue("@run_id", SqliteValues.FromNullableGuid(message.RunId));
         command.Parameters.AddWithValue("@is_error", SqliteValues.FromBool(message.IsError));
+        command.Parameters.AddWithValue("@error_kind", message.ErrorKind is { } kind ? (object)(int)kind : DBNull.Value);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
@@ -30,7 +32,7 @@ public sealed class ChatMessageRepository(SqliteDatabase database) : IChatMessag
         await using var connection = await database.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT id, session_id, role, text, created_at, run_id, is_error
+            SELECT id, session_id, role, text, created_at, run_id, is_error, error_kind
             FROM chat_messages
             WHERE session_id = @session_id
             ORDER BY created_at ASC;
@@ -55,5 +57,6 @@ public sealed class ChatMessageRepository(SqliteDatabase database) : IChatMessag
         CreatedAt = SqliteValues.GetDate(reader, "created_at"),
         RunId = SqliteValues.GetNullableGuid(reader, "run_id"),
         IsError = SqliteValues.GetBool(reader, "is_error"),
+        ErrorKind = SqliteValues.GetNullableInt32(reader, "error_kind") is { } kind ? (ErrorKind)kind : null,
     };
 }

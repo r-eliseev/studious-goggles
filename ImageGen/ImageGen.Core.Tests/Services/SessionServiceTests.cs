@@ -1,3 +1,4 @@
+using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
@@ -16,6 +17,7 @@ public class SessionServiceTests
     private readonly IChatMessageRepository _messages = Substitute.For<IChatMessageRepository>();
     private readonly IRunRepository _runs = Substitute.For<IRunRepository>();
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
+    private readonly IConversationSummaryRepository _summaries = Substitute.For<IConversationSummaryRepository>();
     private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
     private readonly SessionService _service;
 
@@ -23,7 +25,7 @@ public class SessionServiceTests
     {
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
-        _service = new SessionService(_sessions, _messages, _runs, _files, Catalog(AssistantWithTools), time);
+        _service = new SessionService(_sessions, _messages, _runs, _files, Catalog(AssistantWithTools), time, _summaries);
     }
 
     private static readonly ChatModel AssistantWithTools = new(
@@ -74,7 +76,7 @@ public class SessionServiceTests
         var service = new SessionService(
             _sessions, _messages, _runs, _files,
             Catalog(new ChatModel("vendor/plain", "Plain", SupportsImageInput: false, ContextLength: 1000)),
-            TimeProvider.System);
+            TimeProvider.System, Substitute.For<IConversationSummaryRepository>());
         var settings = new SessionSettings
         {
             ImageModels = session.Settings.ImageModels,
@@ -112,7 +114,7 @@ public class SessionServiceTests
         var catalog = Catalog();
         _chat.ListChatModelsAsync(Arg.Any<CancellationToken>())
             .Returns<Task<IReadOnlyList<ChatModel>>>(_ => throw new ProviderException(ErrorKind.Network, "down"));
-        var service = new SessionService(_sessions, _messages, _runs, _files, catalog, TimeProvider.System);
+        var service = new SessionService(_sessions, _messages, _runs, _files, catalog, TimeProvider.System, Substitute.For<IConversationSummaryRepository>());
         var settings = new SessionSettings
         {
             ImageModels = session.Settings.ImageModels,
@@ -241,6 +243,32 @@ public class SessionServiceTests
     }
 
     [Fact]
+    public async Task GetSummaryAsync_ReturnsSavedSummary()
+    {
+        var session = ExistingSession();
+        var summary = new ConversationSummary
+        {
+            SessionId = session.Id,
+            Text = "earlier decisions",
+            CoversUpToMessageId = Guid.NewGuid(),
+            Model = new ModelRef(ProviderIds.OpenRouter, "vendor/assistant"),
+            CreatedAt = Now,
+        };
+        _summaries.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(summary);
+
+        Assert.Same(summary, await _service.GetSummaryAsync(session.Id, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetSummaryAsync_NoSummary_ReturnsNull()
+    {
+        var session = ExistingSession();
+        _summaries.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns((ConversationSummary?)null);
+
+        Assert.Null(await _service.GetSummaryAsync(session.Id, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task GetTimelineAsync_ReturnsAllParts()
     {
         var session = ExistingSession();
@@ -253,5 +281,62 @@ public class SessionServiceTests
 
         Assert.Same(session, timeline.Session);
         Assert.Empty(timeline.Messages);
+    }
+
+    [Fact]
+    public async Task RenameAsync_SetsTrimmedTitle()
+    {
+        var session = ExistingSession("Old");
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+
+        await _service.RenameAsync(session.Id, "  Lighthouse  ", TestContext.Current.CancellationToken);
+
+        Assert.Equal("Lighthouse", session.Title);
+        await _sessions.Received(1).UpdateAsync(session, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RenameAsync_Blank_Throws()
+    {
+        var session = ExistingSession("Old");
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.RenameAsync(session.Id, "   ", TestContext.Current.CancellationToken));
+        Assert.Equal("Old", session.Title);
+    }
+
+    [Fact]
+    public async Task RenameAsync_Long_TruncatesToMaxLength()
+    {
+        var session = ExistingSession("Old");
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+
+        await _service.RenameAsync(session.Id, new string('x', 60), TestContext.Current.CancellationToken);
+
+        Assert.Equal(new string('x', Session.MaxTitleLength), session.Title);
+    }
+
+    [Fact]
+    public async Task RenameAsync_KeepsUpdatedAt()
+    {
+        var session = ExistingSession("Old");
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+
+        await _service.RenameAsync(session.Id, "New", TestContext.Current.CancellationToken);
+
+        Assert.Equal(Now.AddDays(-1), session.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task SetTitleFromFirstMessage_AfterRename_KeepsName()
+    {
+        var session = ExistingSession("Old");
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        await _service.RenameAsync(session.Id, "Mine", TestContext.Current.CancellationToken);
+
+        await _service.SetTitleFromFirstMessageAsync(session.Id, "first message", TestContext.Current.CancellationToken);
+
+        Assert.Equal("Mine", session.Title);
     }
 }

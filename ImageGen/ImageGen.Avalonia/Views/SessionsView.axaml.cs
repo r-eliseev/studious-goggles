@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Avalonia.VisualTree;
 using ImageGen.Avalonia.Services.Navigation;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Utilities;
@@ -27,6 +28,9 @@ public partial class SessionsView : UserControl, IAppearing
         }
     }
 
+    /// <summary>Puts the cursor in the search field of the session list (Ctrl/Cmd+F).</summary>
+    public void FocusSearch() => this.GetVisualDescendants().OfType<SessionsListView>().FirstOrDefault()?.FocusSearch();
+
     private void ApplyWidth(double width)
     {
         var wide = width >= WideWidth;
@@ -34,5 +38,10 @@ public partial class SessionsView : UserControl, IAppearing
         layout.ColumnDefinitions[0].Width = wide ? new GridLength(272) : GridLength.Star;
         layout.ColumnDefinitions[1].Width = wide ? GridLength.Star : new GridLength(0);
         this.FindControl<Border>("EmptyState")!.IsVisible = wide;
+        if (DataContext is SessionsPageModel model)
+        {
+            // The examples sit in the empty-state panel when it is shown, and in the list otherwise.
+            model.ExamplesInList = !wide;
+        }
     }
 }

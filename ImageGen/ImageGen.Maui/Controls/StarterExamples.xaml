@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels"
+             x:Class="ImageGen.Maui.Controls.StarterExamples"
+             x:DataType="pm:SessionsPageModel">
+    <!-- Three starter prompts (task 078). Each button creates a session and sends its text; the binding context is the sessions page model. -->
+    <VerticalStackLayout Spacing="6">
+        <Button StyleClass="ghost"
+                Command="{Binding StartExampleCommand}"
+                CommandParameter="{Binding Examples[0]}"
+                Text="{Binding Examples[0]}"
+                HorizontalOptions="Fill"
+                SemanticProperties.Description="{Binding Examples[0]}" />
+        <Button StyleClass="ghost"
+                Command="{Binding StartExampleCommand}"
+                CommandParameter="{Binding Examples[1]}"
+                Text="{Binding Examples[1]}"
+                HorizontalOptions="Fill"
+                SemanticProperties.Description="{Binding Examples[1]}" />
+        <Button StyleClass="ghost"
+                Command="{Binding StartExampleCommand}"
+                CommandParameter="{Binding Examples[2]}"
+                Text="{Binding Examples[2]}"
+                HorizontalOptions="Fill"
+                SemanticProperties.Description="{Binding Examples[2]}" />
+    </VerticalStackLayout>
+</ContentView>

@@ -86,9 +86,30 @@
                                         IsVisible="{Binding !IsUser}"
                                         HorizontalAlignment="Left"
                                         AutomationProperties.Name="{markup:Res Copy}" />
+                                <Button Classes="ghost small"
+                                        Command="{Binding RetryCommand}"
+                                        Content="{markup:Res TryAgain}"
+                                        IsVisible="{Binding CanRetry}"
+                                        HorizontalAlignment="Left"
+                                        AutomationProperties.Name="{markup:Res TryAgain}" />
                                 <TextBlock Classes="meta" Text="{markup:Res Copied}" IsVisible="{Binding Copy.IsCopied}" />
                             </StackPanel>
                         </Border>
+                    </DataTemplate>
+
+                    <!-- The thin line after the last message the summary covers (task 084). -->
+                    <DataTemplate DataType="pm:SummaryMarkerViewModel" x:DataType="pm:SummaryMarkerViewModel">
+                        <Grid ColumnDefinitions="*,Auto,*" Margin="0,8">
+                            <Border Grid.Column="0" Height="1" Background="{DynamicResource IgLineBrush}" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="8,0">
+                                <TextBlock Classes="meta" Text="{Binding Text}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                <Button Classes="ghost small"
+                                        Command="{Binding ShowCommand}"
+                                        Content="{Binding ShowText}"
+                                        AutomationProperties.Name="{Binding ShowText}" />
+                            </StackPanel>
+                            <Border Grid.Column="2" Height="1" Background="{DynamicResource IgLineBrush}" VerticalAlignment="Center" />
+                        </Grid>
                     </DataTemplate>
 
                     <DataTemplate DataType="pm:RunItemViewModel" x:DataType="pm:RunItemViewModel">
@@ -122,7 +143,7 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.DataTemplates>
                                         <DataTemplate DataType="pm:GenerationItemViewModel" x:DataType="pm:GenerationItemViewModel">
-                                            <Border Classes="card"
+                                            <Border Classes="card" Focusable="True"
                                                     Width="280"
                                                     Margin="0,0,8,8"
                                                     Padding="8"
@@ -133,16 +154,27 @@
                                                 <!-- Right-click anywhere on the card opens the same actions menu as "More". -->
                                                 <Border.ContextMenu>
                                                     <ContextMenu>
-                                                        <MenuItem Header="{markup:Res Repeat}" Command="{Binding RepeatCommand}" />
-                                                        <MenuItem Header="{markup:Res NewSeed}" Command="{Binding NewSeedCommand}" />
-                                                        <MenuItem Header="{markup:Res ActionEditPrompt}" Command="{Binding EditCommand}" />
+                                                        <MenuItem Header="{markup:Res Repeat}" Command="{Binding RepeatCommand}" InputGesture="R" />
+                                                        <MenuItem Header="{markup:Res NewSeed}" Command="{Binding NewSeedCommand}" InputGesture="Shift+R" />
+                                                        <MenuItem Header="{markup:Res ActionEditPrompt}" Command="{Binding EditCommand}" InputGesture="E" />
                                                         <MenuItem Header="{markup:Res ActionDescribeImage}" Command="{Binding DescribeCommand}" />
                                                         <MenuItem Header="{markup:Res ActionPromptFromImage}" Command="{Binding DescribePromptCommand}" />
-                                                        <MenuItem Header="{markup:Res CopyPrompt}" Command="{Binding CopyPromptCommand}" />
+                                                        <MenuItem Header="{markup:Res CopyPrompt}" Command="{Binding CopyPromptCommand}" InputGesture="Ctrl+C" />
+                                                        <MenuItem Header="{markup:Res SaveImageAs}" Command="{Binding SaveCommand}" IsVisible="{Binding HasImage}" InputGesture="Ctrl+S" />
                                                         <MenuItem Header="{markup:Res OtherModel}" Command="{Binding OtherModelCommand}" IsVisible="{Binding IsFailedOrFiltered}" />
                                                         <MenuItem Header="{markup:Res ErrorDetailsTitle}" Command="{Binding DetailsCommand}" IsVisible="{Binding IsFailed}" />
                                                     </ContextMenu>
                                                 </Border.ContextMenu>
+                                                <!-- Keys of a focused card (task 073). Typing in the input box is not affected: it is outside the card. -->
+                                                <Border.KeyBindings>
+                                                    <KeyBinding Gesture="R" Command="{Binding RepeatCommand}" />
+                                                    <KeyBinding Gesture="Shift+R" Command="{Binding NewSeedCommand}" />
+                                                    <KeyBinding Gesture="E" Command="{Binding EditCommand}" />
+                                                    <KeyBinding Gesture="Ctrl+C" Command="{Binding CopyPromptCommand}" />
+                                                    <KeyBinding Gesture="Meta+C" Command="{Binding CopyPromptCommand}" />
+                                                    <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
+                                                    <KeyBinding Gesture="Meta+S" Command="{Binding SaveCommand}" />
+                                                </Border.KeyBindings>
                                                 <StackPanel Spacing="6">
                                                     <!-- Image area, 3:2, with the per-status placeholder and the overlay strip. -->
                                                     <Panel>
@@ -289,6 +321,13 @@
                                                                 AutomationProperties.Name="{markup:Res CopyPrompt}">
                                                             <TextBlock Classes="icon" Text="&#xE09E;" />
                                                         </Button>
+                                                        <Button Classes="ghost icon small" Command="{Binding SaveCommand}"
+                                                                IsVisible="{Binding HasImage}"
+                                                                ToolTip.Tip="{Binding SaveLabel}"
+                                                                AutomationProperties.Name="{Binding SaveLabel}">
+                                                            <TextBlock Classes="icon" Text="&#xE0B2;" />
+                                                        </Button>
+                                                        <TextBlock Classes="meta" Text="{Binding SaveStatusText}" VerticalAlignment="Center" />
                                                         <Button Classes="ghost icon small" Command="{Binding DetailsCommand}"
                                                                 IsVisible="{Binding IsFailed}"
                                                                 ToolTip.Tip="{markup:Res ErrorDetailsTitle}"

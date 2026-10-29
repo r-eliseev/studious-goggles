@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json.Nodes;
+using System.Threading;
 
 namespace ImageGen.Avalonia.Tests.TestDoubles;
 
@@ -24,11 +25,15 @@ public static class OpenRouterFakes
     /// <param name="chatStatus">HTTP status of chat completions; anything but 200 is an error reply.</param>
     /// <param name="toolArgumentsJson">Arguments of the generate_images call the assistant makes.</param>
     /// <param name="imagesFiltered">When true, image generation answers 403 with a moderation reason, so the card is filtered.</param>
+    /// <param name="failedChatReplies">How many chat replies use <paramref name="chatStatus"/> before the rest answer normally.</param>
     public static StubHttpMessageHandler Create(
         HttpStatusCode chatStatus = HttpStatusCode.OK,
         string toolArgumentsJson = """{"prompt":"a red fox"}""",
-        bool imagesFiltered = false) =>
-        new(request =>
+        bool imagesFiltered = false,
+        int failedChatReplies = int.MaxValue)
+    {
+        var chatReplies = 0;
+        return new(request =>
         {
             var path = request.RequestUri!.AbsolutePath;
             if (path.EndsWith("/key", StringComparison.Ordinal))
@@ -50,13 +55,15 @@ public static class OpenRouterFakes
 
             if (path.EndsWith("/chat/completions", StringComparison.Ordinal))
             {
-                return chatStatus == HttpStatusCode.OK
-                    ? Json(HttpStatusCode.OK, ToolCallReply(toolArgumentsJson))
-                    : Json(chatStatus, """{"error":{"code":429,"message":"slow down"}}""");
+                var failing = chatStatus != HttpStatusCode.OK && Interlocked.Increment(ref chatReplies) <= failedChatReplies;
+                return failing
+                    ? Json(chatStatus, """{"error":{"code":429,"message":"slow down"}}""")
+                    : Json(HttpStatusCode.OK, ToolCallReply(toolArgumentsJson));
             }
 
             return Json(HttpStatusCode.NotFound, "{}");
         });
+    }
 
     private static HttpResponseMessage Json(HttpStatusCode status, string json) =>
         new(status) { Content = new StringContent(json, Encoding.UTF8, "application/json") };

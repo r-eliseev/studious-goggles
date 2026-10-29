@@ -46,6 +46,7 @@ public sealed class ShellHarness : IDisposable
         Window = new MainWindow();
         Navigation = Provider.GetRequiredService<AvaloniaNavigationService>();
         Navigation.AttachHost(Window.PageArea);
+        Window.ConfigureShortcuts(Provider.GetRequiredService<SessionsPageModel>(), Navigation);
         _generations = Provider.GetRequiredService<GenerationService>();
     }
 

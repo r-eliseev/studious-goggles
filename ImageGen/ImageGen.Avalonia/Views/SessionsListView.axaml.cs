@@ -13,4 +13,7 @@ public partial class SessionsListView : UserControl
     {
         AvaloniaXamlLoader.Load(this);
     }
+
+    /// <summary>Moves the focus to the search field.</summary>
+    public void FocusSearch() => this.FindControl<TextBox>("SearchBox")?.Focus();
 }

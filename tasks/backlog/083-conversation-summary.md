@@ -1,6 +1,6 @@
 ---
 id: 083
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -51,5 +51,23 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/{Domain/Chat/ConversationSummary.cs,Storage/IConversationSummaryRepository.cs,Context/SummaryPlanner.cs,Services/ConversationSummaryService.cs,Services/AssistantService.cs,Services/AssistantPrompts.cs,CoreServiceCollectionExtensions.cs}`, `ImageGen/ImageGen.Data/{Migrations/NNNN_conversation_summaries.sql,Repositories/ConversationSummaryRepository.cs,DataServiceCollectionExtensions.cs}` (и список миграций, если он отдельно), тесты, `docs/architecture.md`, `docs/specs/assistant-context.md`
 
 ## Отчёт
+
+Сделано по плану (`claude-536f`, 2026-10-29). Тесты писались до кода в каждом слое (падающий прогон до создания типов и методов снимался); в `AssistantService` тест и код шли вместе.
+
+- Core, `Domain/Chat/ConversationSummary` (одна сводка на сессию: текст, `CoversUpToMessageId`, модель, цена, время), `Storage/IConversationSummaryRepository`.
+- Core, `Context/SummaryPlanner` и `SummaryPlan` (чистая логика C3.2–C3.3): порог 80 % бюджета по оценке всех сообщений после покрытой части (с поправкой модели), минимум 10 «старых» сообщений кроме последних 20, ошибки не сводятся. Тесты `SummaryPlannerTests` (5).
+- Core, `Services/ConversationSummaryService`: фоновая задача на сессию (повторный запрос во время работы ничего не делает), `WhenIdleAsync` для тестов, инструкция `AssistantPrompts.SummaryInstruction` (C3.3). Ошибка модели или пустой ответ — предупреждение в журнал, сводка не сохраняется, повтор — со следующим ответом (C3.5). Тесты `ConversationSummaryServiceTests` (5).
+- Core, `AssistantService`: запрос строится по C1.3 — системный промпт, текущий промпт, сводка (`AssistantPrompts.SummaryLine`), затем сообщения после покрытой части; токены сводки входят в бюджет (вместо `SummaryTokens: 0` из 082). После сохранения ответа — `summaryService.Request(sessionId)`, ответ не ждёт. Постоянная часть бюджета вынесена в `AssistantPrompts.FixedTokens` (одна формула для ассистента и сводки). Тест `SendUserMessageAsync_SummaryExists_SendsSummaryBeforeHistoryAndSkipsCoveredMessages`.
+- Data: миграция `0007_conversation_summaries.sql` (таблица по ADR 0015, `ON DELETE CASCADE`), `ConversationSummaryRepository` (`INSERT … ON CONFLICT(session_id) DO UPDATE`, только параметры), регистрация. Тесты `ConversationSummaryRepositoryTests` (4: сохранение и чтение, вторая запись заменяет первую, пустая сводка — null, удаление сессии удаляет сводку). Список таблиц в `SqliteDatabaseTests` дополнен новой таблицей.
+- `docs/architecture.md`: модули `Context/`, сервис и репозиторий сводки. `docs/specs/assistant-context.md`: статус «в работе» (C4, видимость в ленте, — в задаче 084).
+
+Проверено: Core 338/338 (было 310 до 075), Data 69/69, Presentation 244/244, Avalonia 106/106 (2 пропущены, как раньше), `dotnet format --verify-no-changes` по всем изменённым проектам чистый.
+
+Отклонения от плана:
+- Метод запуска назван `Request` (void), а не `RequestAsync`: он ничего не ждёт и только ставит задачу в фон.
+- Тест `Reply_LongHistory_RequestsSummaryInBackground` на уровне `AssistantService` не делался: в тестах ассистента сводка изолирована (её репозиторий сессий пуст, задача выходит сразу), а сам запуск в фоне проверен в `ConversationSummaryServiceTests`.
+- Тест `SummaryFails_LogsWarning` проверяет, что сводка не сохранена и исключение не выходит наружу; сообщение журнала не проверяется (логгер-расширения не подменяются).
+- Отдельного теста миграции на существующей базе нет: тест `InitializeAsync_NewFile_CreatesAllTables` проверяет наличие новой таблицы, миграции применяются по порядку.
+- Показ сводки в ленте и «Show summary» — в задаче 084.
 
 ## Комментарии

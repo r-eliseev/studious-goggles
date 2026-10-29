@@ -1,4 +1,5 @@
 using ImageGen.Core.Context;
+using ImageGen.Core.Diagnostics;
 using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Models;
@@ -36,6 +37,7 @@ public class AssistantServiceTests
     private readonly Session _session;
     private readonly GenerationService _generations;
     private readonly CapturingLogger<AssistantService> _logger = new();
+    private readonly IConversationSummaryRepository _summaries = Substitute.For<IConversationSummaryRepository>();
     private readonly AssistantService _service;
 
     public AssistantServiceTests()
@@ -92,13 +94,21 @@ public class AssistantServiceTests
         _files.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns([1, 2, 3]);
 
         var sessionService = new SessionService(
-            _sessions, _messages, _runs, _files, new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance), time);
+            _sessions, _messages, _runs, _files, new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance), time, Substitute.For<IConversationSummaryRepository>());
         var attachments = new AttachmentService(_chatAttachments, _files, time);
         _generations = new GenerationService(
             _sessions, _runs, _providers, _files, catalog, _seeds, attachments, time, NullLogger<GenerationService>.Instance);
         var chatModels = new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance);
+        _summaries.GetAsync(_session.Id, Arg.Any<CancellationToken>()).Returns((ConversationSummary?)null);
+        var correction = new TokenCorrection();
+        // The summary job is tested on its own (ConversationSummaryServiceTests). Here it finds no session and does nothing,
+        // so its calls to the model do not mix with the calls of the assistant turn.
+        var summaryService = new ConversationSummaryService(
+            Substitute.For<ISessionRepository>(), _messages, _runs, _summaries, _providers, chatModels, correction, time,
+            NullLogger<ConversationSummaryService>.Instance);
         _service = new AssistantService(
-            sessionService, _messages, _runs, _providers, _generations, chatModels, _files, attachments, time, _logger, new TokenCorrection());
+            sessionService, _messages, _runs, _providers, _generations, chatModels, _files, attachments, time, _logger, correction,
+            _summaries, summaryService, NullDebugTrace.Instance);
     }
 
     private ChatMessage AssistantMessage => _stored.Last();
@@ -209,7 +219,7 @@ public class AssistantServiceTests
 
         Assert.Null(result.Run);
         Assert.True(result.AssistantMessage.IsError);
-        Assert.Contains("does not take reference images", result.AssistantMessage.Text, StringComparison.Ordinal);
+        Assert.Equal(ErrorKind.ModelWithoutReferences, result.AssistantMessage.ErrorKind);
     }
 
     [Fact]
@@ -353,7 +363,9 @@ public class AssistantServiceTests
 
 
     private AssistantChatRequest LastRequest =>
-        (AssistantChatRequest)_chat.ReceivedCalls().Last().GetArguments()[0]!;
+        (AssistantChatRequest)_chat.ReceivedCalls()
+            .Last(call => call.GetMethodInfo().Name == nameof(IAssistantChatClient.CompleteChatAsync))
+            .GetArguments()[0]!;
 
     private void ReplyWith(AssistantChatResult reply) =>
         _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
@@ -497,6 +509,121 @@ public class AssistantServiceTests
     }
 
     [Fact]
+    public async Task SendUserMessageAsync_SummaryExists_SendsSummaryBeforeHistoryAndSkipsCoveredMessages()
+    {
+        for (var i = 0; i < 6; i++)
+        {
+            _stored.Add(new ChatMessage
+            {
+                Id = Guid.NewGuid(),
+                SessionId = _session.Id,
+                Role = i % 2 == 0 ? ChatRole.User : ChatRole.Assistant,
+                Text = $"m{i}",
+                CreatedAt = Now.AddSeconds(i),
+            });
+        }
+        _summaries.GetAsync(_session.Id, Arg.Any<CancellationToken>()).Returns(new ConversationSummary
+        {
+            SessionId = _session.Id,
+            Text = "earlier decisions",
+            CoversUpToMessageId = _stored[2].Id,
+            Model = new ModelRef(ProviderIds.OpenRouter, AssistantModel),
+            CreatedAt = Now,
+        });
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "new", TestContext.Current.CancellationToken);
+
+        // C1.3: system prompt, current prompt, summary, then the messages after the covered part.
+        var request = LastRequest;
+        Assert.Equal(AssistantPrompts.SummaryLine("earlier decisions"), request.Messages[2].Text);
+        Assert.Equal(AssistantChatMessage.SystemRole, request.Messages[2].Role);
+        Assert.Equal(["m3", "m4", "m5", "new"], request.Messages.Skip(3).Select(m => m.Text));
+        Assert.DoesNotContain(request.Messages, m => m.Text is "m0" or "m1" or "m2");
+    }
+
+    private void StoreErrorTurn(string userText, string errorText)
+    {
+        _stored.Add(new ChatMessage
+        {
+            Id = Guid.NewGuid(),
+            SessionId = _session.Id,
+            Role = ChatRole.User,
+            Text = userText,
+            CreatedAt = Now,
+        });
+        _stored.Add(new ChatMessage
+        {
+            Id = Guid.NewGuid(),
+            SessionId = _session.Id,
+            Role = ChatRole.Assistant,
+            Text = errorText,
+            CreatedAt = Now.AddSeconds(1),
+            IsError = true,
+        });
+    }
+
+    [Fact]
+    public async Task RetryLastTurn_SendsLastUserMessageAgain()
+    {
+        StoreErrorTurn("a fox", "Assistant error (RateLimited): slow down");
+        ReplyWith(new AssistantChatResult("Here you go", [], null));
+
+        await _service.RetryLastTurnAsync(_session.Id, TestContext.Current.CancellationToken);
+
+        Assert.Equal("a fox", LastRequest.Messages[^1].Text);
+        Assert.Equal(AssistantChatMessage.UserRole, LastRequest.Messages[^1].Role);
+    }
+
+    [Fact]
+    public async Task RetryLastTurn_DoesNotAddUserMessage_AddsOnlyTheReply()
+    {
+        StoreErrorTurn("a fox", "error");
+        ReplyWith(new AssistantChatResult("Here you go", [], null));
+
+        var result = await _service.RetryLastTurnAsync(_session.Id, TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, _stored.Count);
+        Assert.Equal(1, _stored.Count(m => m.Role == ChatRole.User));
+        Assert.Equal("Here you go", result.AssistantMessage.Text);
+        Assert.False(result.AssistantMessage.IsError);
+    }
+
+    [Fact]
+    public async Task RetryLastTurn_ExcludesErrorFromHistory()
+    {
+        StoreErrorTurn("a fox", "Assistant error (RateLimited): slow down");
+        ReplyWith(new AssistantChatResult("Here you go", [], null));
+
+        await _service.RetryLastTurnAsync(_session.Id, TestContext.Current.CancellationToken);
+
+        Assert.DoesNotContain(LastRequest.Messages, m => m.Text.Contains("slow down", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RetryLastTurn_NoUserMessage_Throws()
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.RetryLastTurnAsync(_session.Id, TestContext.Current.CancellationToken));
+        Assert.Empty(_stored);
+    }
+
+    [Fact]
+    public async Task RetryLastTurn_WithAttachments_SendsImagesAgain()
+    {
+        AssistantAcceptsImages();
+        var attachment = UserAttachment();
+        StoreErrorTurn("look at this", "error");
+        attachment.MessageId = _stored[0].Id;
+        _chatAttachments.ListByMessageAsync(_stored[0].Id, Arg.Any<CancellationToken>()).Returns([attachment]);
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        await _service.RetryLastTurnAsync(_session.Id, TestContext.Current.CancellationToken);
+
+        Assert.Single(LastRequest.Messages[^1].ImageDataUrls);
+    }
+
+    [Fact]
     public async Task SendUserMessageAsync_ToolCallWithPrompt_StartsRunAndShowsPrompt()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -537,7 +664,8 @@ public class AssistantServiceTests
 
         Assert.Null(result.Run);
         Assert.True(result.AssistantMessage.IsError);
-        Assert.Equal("The assistant returned an invalid tool call.", result.AssistantMessage.Text);
+        Assert.Equal(ErrorKind.InvalidToolCall, result.AssistantMessage.ErrorKind);
+        Assert.Equal("", result.AssistantMessage.Text);
         Assert.Empty(_storedRuns);
         await _runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
     }
@@ -550,7 +678,8 @@ public class AssistantServiceTests
         var result = await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
 
         Assert.True(result.AssistantMessage.IsError);
-        Assert.Equal("The assistant returned an empty response.", result.AssistantMessage.Text);
+        Assert.Equal(ErrorKind.EmptyResponse, result.AssistantMessage.ErrorKind);
+        Assert.Equal("", result.AssistantMessage.Text);
     }
 
     [Fact]
@@ -582,7 +711,8 @@ public class AssistantServiceTests
         Assert.Equal(2, _stored.Count);
         Assert.Equal(ChatRole.Assistant, result.AssistantMessage.Role);
         Assert.True(result.AssistantMessage.IsError);
-        Assert.Equal("Assistant error (RateLimited): Rate limit exceeded", result.AssistantMessage.Text);
+        Assert.Equal(ErrorKind.RateLimited, result.AssistantMessage.ErrorKind);
+        Assert.Equal("Rate limit exceeded", result.AssistantMessage.Text);
     }
 
     [Fact]

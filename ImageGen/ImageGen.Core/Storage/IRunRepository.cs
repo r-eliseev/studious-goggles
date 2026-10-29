@@ -12,6 +12,9 @@ public interface IRunRepository
     /// <summary>Runs of the session ordered by <see cref="Run.CreatedAt"/> ascending.</summary>
     Task<IReadOnlyList<Run>> ListRunsBySessionAsync(Guid sessionId, CancellationToken cancellationToken);
 
+    /// <summary>Number of runs per session. Sessions without runs are absent from the dictionary.</summary>
+    Task<IReadOnlyDictionary<Guid, int>> CountRunsBySessionAsync(CancellationToken cancellationToken);
+
     Task<Generation?> GetGenerationAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>Generations of the session ordered by run creation time, then <see cref="Generation.SortOrder"/>.</summary>

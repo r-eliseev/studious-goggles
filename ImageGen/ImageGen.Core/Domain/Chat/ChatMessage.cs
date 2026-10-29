@@ -1,3 +1,4 @@
+using ImageGen.Core.Domain.Generations;
 namespace ImageGen.Core.Domain.Chat;
 
 public sealed class ChatMessage
@@ -17,4 +18,10 @@ public sealed class ChatMessage
 
     /// <summary>True for assistant messages that report an error.</summary>
     public bool IsError { get; set; }
+
+    /// <summary>
+    /// Code of the error in an error message: the interface shows the text for this code. Null for messages without
+    /// a code, including the messages saved before the code existed (their text is shown as it was saved).
+    /// </summary>
+    public ErrorKind? ErrorKind { get; set; }
 }

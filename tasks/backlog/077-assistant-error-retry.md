@@ -1,6 +1,6 @@
 ---
 id: 077
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -51,5 +51,21 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core/Storage/IChatAttachmentRepository.cs` и `ImageGen/ImageGen.Data/Repositories/*Attachment*` (если нужен метод), `ImageGen/ImageGen.Presentation/PageModels/{ChatPageModel,MessageItemViewModel}.cs`, строки, `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, тесты, `docs/specs/chat-sessions.md`
 
 ## Отчёт
+
+Сделано по плану (`claude-536f`, 2026-10-29). Тесты писались до кода в каждом слое. Порядок: 077 сначала заняли по ошибке, раньше 083; занятость сняли и вернули в `approved`, после выполнения 083 заняли снова.
+
+- Core: `AssistantService` — тело хода вынесено в `CompleteTurnAsync(session, userMessage, attachmentIds, ct)`, `SendUserMessageAsync` и новый `RetryLastTurnAsync(sessionId, ct)` вызывают его. Повтор берёт последнее сообщение пользователя из БД (поэтому работает и после перезапуска) и его вложения через новый `AttachmentService.ListIdsByMessageAsync`; сообщение пользователя не добавляется; без сообщения пользователя — `InvalidOperationException`. Поведение `SendUserMessageAsync` не менялось: существующие тесты проходят без правок. Тесты: 5 новых (`RetryLastTurn_*`).
+- Presentation: `MessageItemViewModel` стал `ObservableObject`: `CanRetry` и `RetryCommand` (`CanExecute = CanRetry`), делегат передаётся необязательным параметром конструктора. `ChatPageModel`: `UpdateRetry()` ставит `CanRetry` только последнему сообщению, если это ошибка и ничего не выполняется; вызывается при перечитывании ленты и при смене `IsBusy`. `RetryLastMessageAsync` — занятость, `RetryLastTurnAsync`, ошибка в `AlertAsync`, перечитывание ленты. Строка `TryAgain` = «Try again». Тесты: 4 новых (`OnAppearingAsync_LastMessageIsError_CanRetry`, `OnAppearingAsync_ErrorNotLast_CannotRetry`, `Retry_SendsLastMessageAgainAndReloadsTimeline`, `Retry_WhileBusy_CannotExecute`).
+- Avalonia: кнопка «Try again» (`RetryCommand`, видна при `CanRetry`) в шаблоне сообщения после «Copy». Тест-сценарий `Flows/AssistantRetryFlowTests.TryAgain_AfterErrorReply_AnswersAgainWithoutNewUserMessage`: первый ответ чата — 429, затем обычный ответ. Для этого `OpenRouterFakes.Create` получил необязательный `failedChatReplies` (значение по умолчанию — прежнее поведение).
+- MAUI: такая же кнопка в шаблоне сообщения `ChatPage.xaml`; сборка `-f net10.0-android` проходит.
+- `docs/specs/chat-sessions.md` S2.5 дополнен.
+
+Проверено: Core 343/343, Presentation 248/248, Avalonia 107/107 (2 пропущены, как раньше), `dotnet format --verify-no-changes` по всем изменённым проектам чистый, MAUI собирается.
+
+Отклонения от плана:
+- В Avalonia-сценарии ответ после повтора — вызов `generate_images` (фейк OpenRouter отвечает только так), поэтому после повтора в ленте появляется прогон, а не текстовый ответ. Проверяется: сообщение пользователя одно, прогон появился, кнопки повтора у ошибки нет.
+- `Retry_WhileBusy_CannotExecute` выставляет `IsBusy` напрямую, а не через долгий запрос.
+- Тест `RetryLastTurn_WithAttachments_SendsImagesAgain` и тест Avalonia проверяют вложения только в Core (картинка уходит ассистенту); в Avalonia вложений в сценарии нет.
+- Ручная проверка кнопки на MAUI и на Windows не делалась; сборка и тесты — в облачной среде. Добавлять пункт в 016 не понадобилось: проверка повтора — часть ручного сценария ассистента, который уже описан в задачах 018/019.
 
 ## Комментарии

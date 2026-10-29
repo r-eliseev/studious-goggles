@@ -4,18 +4,25 @@
              xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels"
              xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
              xmlns:appearance="clr-namespace:ImageGen.Presentation.Appearance"
+             xmlns:controls="clr-namespace:ImageGen.Maui.Controls"
              x:Class="ImageGen.Maui.Controls.SessionsListView"
              x:DataType="pm:SessionsPageModel">
     <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
-        <Button StyleClass="primary"
-                Command="{Binding NewSessionCommand}"
-                Text="{x:Static strings:AppResources.NewSession}"
-                HorizontalOptions="Fill"
-                SemanticProperties.Description="{x:Static strings:AppResources.NewSession}">
-            <Button.ImageSource>
-                <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Plus}" Color="{DynamicResource IgOnAccentColor}" Size="16" />
-            </Button.ImageSource>
-        </Button>
+        <VerticalStackLayout Spacing="8">
+            <Button StyleClass="primary"
+                    Command="{Binding NewSessionCommand}"
+                    Text="{x:Static strings:AppResources.NewSession}"
+                    HorizontalOptions="Fill"
+                    SemanticProperties.Description="{x:Static strings:AppResources.NewSession}">
+                <Button.ImageSource>
+                    <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Plus}" Color="{DynamicResource IgOnAccentColor}" Size="16" />
+                </Button.ImageSource>
+            </Button>
+            <SearchBar x:Name="SearchField"
+                       Text="{Binding SearchText, Mode=TwoWay}"
+                       Placeholder="{x:Static strings:AppResources.SearchSessions}"
+                       SemanticProperties.Description="{x:Static strings:AppResources.SearchSessions}" />
+        </VerticalStackLayout>
 
         <ActivityIndicator Grid.Row="1"
                            IsRunning="{Binding IsBusy}"
@@ -23,7 +30,7 @@
                            HorizontalOptions="Start"
                            AutomationProperties.IsInAccessibleTree="False" />
 
-        <ScrollView Grid.Row="2">
+        <ScrollView Grid.Row="2" IsVisible="{Binding IsSearchInactive}">
             <VerticalStackLayout Spacing="6">
                 <Label StyleClass="section" Text="{x:Static strings:AppResources.SessionsToday}" Margin="4,8,0,0" />
                 <VerticalStackLayout BindableLayout.ItemsSource="{Binding Today}">
@@ -32,17 +39,33 @@
                             <SwipeView>
                                 <SwipeView.RightItems>
                                     <SwipeItems>
+                                        <SwipeItem Text="{x:Static strings:AppResources.Rename}"
+                                                   BackgroundColor="{DynamicResource IgMutedColor}"
+                                                   Command="{Binding RenameCommand}" />
                                         <SwipeItem Text="{x:Static strings:AppResources.DeleteSession}"
                                                    BackgroundColor="{DynamicResource IgErrColor}"
                                                    Command="{Binding DeleteCommand}" />
                                     </SwipeItems>
                                 </SwipeView.RightItems>
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                                    <Button StyleClass="ghost"
-                                            Command="{Binding OpenCommand}"
-                                            HorizontalOptions="Fill"
-                                            Text="{Binding Title}"
-                                            SemanticProperties.Description="{Binding Title}" />
+                                    <FlyoutBase.ContextFlyout>
+                                        <MenuFlyout>
+                                            <MenuFlyoutItem Text="{x:Static strings:AppResources.Rename}"
+                                                            Command="{Binding RenameCommand}" />
+                                            <MenuFlyoutItem Text="{x:Static strings:AppResources.DeleteSession}"
+                                                            Command="{Binding DeleteCommand}" />
+                                        </MenuFlyout>
+                                    </FlyoutBase.ContextFlyout>
+                                    <VerticalStackLayout Spacing="2">
+                                        <Button StyleClass="ghost"
+                                                Command="{Binding OpenCommand}"
+                                                HorizontalOptions="Fill"
+                                                Text="{Binding Title}"
+                                                SemanticProperties.Description="{Binding Title}" />
+                                        <Label StyleClass="meta"
+                                               Margin="12,0,0,0"
+                                               Text="{Binding DetailsText}" />
+                                    </VerticalStackLayout>
                                     <Button Grid.Column="1"
                                             StyleClass="ghost"
                                             Command="{Binding DeleteCommand}"
@@ -65,17 +88,33 @@
                             <SwipeView>
                                 <SwipeView.RightItems>
                                     <SwipeItems>
+                                        <SwipeItem Text="{x:Static strings:AppResources.Rename}"
+                                                   BackgroundColor="{DynamicResource IgMutedColor}"
+                                                   Command="{Binding RenameCommand}" />
                                         <SwipeItem Text="{x:Static strings:AppResources.DeleteSession}"
                                                    BackgroundColor="{DynamicResource IgErrColor}"
                                                    Command="{Binding DeleteCommand}" />
                                     </SwipeItems>
                                 </SwipeView.RightItems>
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                                    <Button StyleClass="ghost"
-                                            Command="{Binding OpenCommand}"
-                                            HorizontalOptions="Fill"
-                                            Text="{Binding Title}"
-                                            SemanticProperties.Description="{Binding Title}" />
+                                    <FlyoutBase.ContextFlyout>
+                                        <MenuFlyout>
+                                            <MenuFlyoutItem Text="{x:Static strings:AppResources.Rename}"
+                                                            Command="{Binding RenameCommand}" />
+                                            <MenuFlyoutItem Text="{x:Static strings:AppResources.DeleteSession}"
+                                                            Command="{Binding DeleteCommand}" />
+                                        </MenuFlyout>
+                                    </FlyoutBase.ContextFlyout>
+                                    <VerticalStackLayout Spacing="2">
+                                        <Button StyleClass="ghost"
+                                                Command="{Binding OpenCommand}"
+                                                HorizontalOptions="Fill"
+                                                Text="{Binding Title}"
+                                                SemanticProperties.Description="{Binding Title}" />
+                                        <Label StyleClass="meta"
+                                               Margin="12,0,0,0"
+                                               Text="{Binding DetailsText}" />
+                                    </VerticalStackLayout>
                                     <Button Grid.Column="1"
                                             StyleClass="ghost"
                                             Command="{Binding DeleteCommand}"
@@ -87,6 +126,34 @@
                                     </Button>
                                 </Grid>
                             </SwipeView>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
+                <!-- Narrow layout: with no sessions the examples take the place of the empty-state panel (task 078). -->
+                <controls:StarterExamples IsVisible="{Binding ShowsListExamples}" Margin="0,8,0,0" />
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <ScrollView Grid.Row="2" IsVisible="{Binding IsSearchActive}">
+            <VerticalStackLayout Spacing="6">
+                <Label StyleClass="meta"
+                       Text="{x:Static strings:AppResources.NothingFound}"
+                       IsVisible="{Binding HasNoResults}"
+                       Margin="4,8,0,0" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding SearchResults}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="pm:SessionItemViewModel">
+                            <VerticalStackLayout Spacing="2">
+                                <Button StyleClass="ghost"
+                                        Command="{Binding OpenCommand}"
+                                        HorizontalOptions="Fill"
+                                        Text="{Binding Title}"
+                                        SemanticProperties.Description="{Binding Title}" />
+                                <Label StyleClass="meta"
+                                       Margin="12,0,0,0"
+                                       Text="{Binding SearchLine}" />
+                            </VerticalStackLayout>
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
                 </VerticalStackLayout>

@@ -4,7 +4,10 @@ using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
 using ImageGen.Avalonia.Tests.TestDoubles;
 using ImageGen.Avalonia.Views;
+using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Sessions;
+using ImageGen.Core.Services;
+using ImageGen.Core.Storage;
 using ImageGen.Presentation;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Resources.Strings;
@@ -61,11 +64,66 @@ public class SessionsViewTests
             UpdatedAt = DateTimeOffset.UtcNow,
             Settings = SessionSettings.CreateDefault(),
         };
-        model.Today.Add(new SessionItemViewModel(session, _ => Task.CompletedTask, _ => Task.CompletedTask));
+        model.Today.Add(new SessionItemViewModel(session, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask));
         shell.Window.UpdateLayout();
 
         var view = Assert.IsType<SessionsView>(shell.Window.PageArea.Content);
         var names = view.GetVisualDescendants().OfType<Button>().Select(b => AutomationProperties.GetName(b)).ToList();
         Assert.Contains(AppResources.DeleteSession, names);
+    }
+
+    [AvaloniaFact]
+    public async Task RowContextMenu_HasRenameAndDelete()
+    {
+        using var shell = new ShellHarness();
+        await shell.SaveKeyAsync("sk-or-test");
+        await shell.InitializeDatabaseAsync();
+        shell.Window.Show();
+        await shell.Navigation.GoToAsync(Routes.Sessions);
+        var model = shell.Provider.GetRequiredService<SessionsPageModel>();
+        var session = new Session
+        {
+            Id = Guid.NewGuid(),
+            Title = "Fox",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+            Settings = SessionSettings.CreateDefault(),
+        };
+        model.Today.Add(new SessionItemViewModel(session, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask));
+        shell.Window.UpdateLayout();
+
+        var view = Assert.IsType<SessionsView>(shell.Window.PageArea.Content);
+        var row = view.GetVisualDescendants().OfType<Grid>().Single(grid => grid.Classes.Contains("session-row"));
+        var headers = row.ContextMenu!.Items.OfType<MenuItem>().Select(item => item.Header?.ToString()).ToList();
+        Assert.Equal([AppResources.Rename, AppResources.DeleteSession], headers);
+    }
+
+    [AvaloniaFact]
+    public async Task Search_FindsSessionByPromptWithTypo_ShowsSnippet()
+    {
+        using var shell = new ShellHarness();
+        await shell.SaveKeyAsync("sk-or-test");
+        await shell.InitializeDatabaseAsync();
+        var ct = TestContext.Current.CancellationToken;
+        var session = await shell.Provider.GetRequiredService<SessionService>().CreateAsync(ct);
+        await shell.Provider.GetRequiredService<IRunRepository>().AddRunAsync(new Run
+        {
+            Id = Guid.NewGuid(),
+            SessionId = session.Id,
+            Prompt = "lighthouse at dusk",
+            Origin = RunOrigin.Assistant,
+            CreatedAt = DateTimeOffset.UtcNow,
+        }, [], ct);
+        shell.Window.Show();
+        await shell.Navigation.GoToAsync(Routes.Sessions);
+        var model = shell.Provider.GetRequiredService<SessionsPageModel>();
+        await shell.WaitUntilAsync(() => model.Sessions.Count == 1, "список загружен");
+
+        model.SearchText = "lighthose";
+        await shell.WaitUntilAsync(() => model.SearchResults.Count == 1, "поиск выполнен");
+        shell.Window.UpdateLayout();
+
+        var view = Assert.IsType<SessionsView>(shell.Window.PageArea.Content);
+        Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "prompt: lighthouse at dusk");
     }
 }

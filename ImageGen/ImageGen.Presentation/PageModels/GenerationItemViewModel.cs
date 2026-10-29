@@ -19,17 +19,20 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     private readonly IImageFileStore _files;
     private readonly IDialogService _dialogs;
     private readonly IClipboardService _clipboard;
+    private readonly IImageSaver _saver;
     private readonly Func<GenerationItemViewModel, Task> _repeat;
     private readonly Func<GenerationItemViewModel, Task> _newSeed;
     private readonly Func<GenerationItemViewModel, Task> _edit;
     private readonly Func<GenerationItemViewModel, DescriptionMode, Task> _describe;
     private readonly Func<GenerationItemViewModel, Task> _otherModel;
+    private string _mediaType = "image/png";
 
     public GenerationItemViewModel(
         Generation generation,
         IImageFileStore files,
         IDialogService dialogs,
         IClipboardService clipboard,
+        IImageSaver saver,
         Func<GenerationItemViewModel, Task> repeat,
         Func<GenerationItemViewModel, Task> newSeed,
         Func<GenerationItemViewModel, Task> edit,
@@ -40,6 +43,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(files);
         ArgumentNullException.ThrowIfNull(dialogs);
         ArgumentNullException.ThrowIfNull(clipboard);
+        ArgumentNullException.ThrowIfNull(saver);
         ArgumentNullException.ThrowIfNull(repeat);
         ArgumentNullException.ThrowIfNull(newSeed);
         ArgumentNullException.ThrowIfNull(edit);
@@ -47,6 +51,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         _files = files;
         _dialogs = dialogs;
         _clipboard = clipboard;
+        _saver = saver;
         _repeat = repeat;
         _newSeed = newSeed;
         _edit = edit;
@@ -123,6 +128,9 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     [ObservableProperty]
     public partial string ErrorText { get; set; } = "";
 
+    /// <summary>The provider's own error text, shown only in the details dialog.</summary>
+    public string TechnicalError { get; private set; } = "";
+
     /// <summary>Status, details and error in one line for screen readers.</summary>
     [ObservableProperty]
     public partial string SummaryText { get; set; } = "";
@@ -132,7 +140,15 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     public partial string ImageFilePath { get; set; } = "";
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     public partial bool HasImage { get; set; }
+
+    /// <summary>Caption of the save action in this shell (task 080).</summary>
+    public string SaveLabel => _saver.ActionLabel;
+
+    /// <summary>«Saved» after a successful save; empty otherwise. Shown on the card as a status line.</summary>
+    [ObservableProperty]
+    public partial string SaveStatusText { get; set; } = "";
 
     /// <summary>True when <see cref="ErrorText"/> is not empty (failures and provider filtering both show a reason).</summary>
     [ObservableProperty]
@@ -169,6 +185,25 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(IsFinished))]
     private Task EditAsync() => _edit(this);
 
+    /// <summary>Saves the picture through the shell's saver (task 080). A refusal or a failure shows a message; a cancelled dialog does nothing.</summary>
+    [RelayCommand(CanExecute = nameof(HasImage))]
+    private async Task SaveAsync()
+    {
+        var result = await _saver.SaveAsync(ImageFilePath, ImageFileNames.Suggested(Id, _mediaType), _mediaType, CancellationToken.None);
+        switch (result)
+        {
+            case ImageSaveResult.Saved:
+                SaveStatusText = AppResources.Saved;
+                break;
+            case ImageSaveResult.PermissionDenied:
+                await _dialogs.AlertAsync(AppResources.ErrorTitle, AppResources.SavePermissionDenied);
+                break;
+            case ImageSaveResult.Failed:
+                await _dialogs.AlertAsync(AppResources.ErrorTitle, AppResources.SaveFailed);
+                break;
+        }
+    }
+
     /// <summary>Describes this picture (task 019): the text is shown, and it goes into the input field only on the user's action.</summary>
     [RelayCommand(CanExecute = nameof(IsFinished))]
     private Task DescribeAsync() => _describe(this, DescriptionMode.Description);
@@ -178,7 +213,10 @@ public sealed partial class GenerationItemViewModel : ObservableObject
 
     /// <summary>Shows the full error text of a failed generation (task 076). Only a failed card has it.</summary>
     [RelayCommand(CanExecute = nameof(IsFailed))]
-    private Task DetailsAsync() => _dialogs.AlertAsync(AppResources.ErrorDetailsTitle, ErrorText);
+    private Task DetailsAsync() => _dialogs.AlertAsync(AppResources.ErrorDetailsTitle, ErrorDetailsValue());
+
+    /// <summary>What the details dialog shows: the provider's text when there is one, otherwise the text for the code.</summary>
+    private string ErrorDetailsValue() => TechnicalError.Length > 0 ? TechnicalError : ErrorText;
 
     /// <summary>Opens the model picker to run this prompt and seed on another model (failed or filtered card, task 076).</summary>
     [RelayCommand(CanExecute = nameof(IsFailedOrFiltered))]
@@ -204,6 +242,11 @@ public sealed partial class GenerationItemViewModel : ObservableObject
             (AppResources.ActionPromptFromImage, card => _describe(card, DescriptionMode.Prompt)),
             (AppResources.CopyPrompt, card => card._clipboard.SetTextAsync(card.Prompt)),
         };
+        if (HasImage)
+        {
+            actions.Add((SaveLabel, card => card.SaveAsync()));
+        }
+
         if (IsFailedOrFiltered)
         {
             actions.Add((AppResources.OtherModel, card => card._otherModel(card)));
@@ -211,7 +254,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
 
         if (IsFailed)
         {
-            actions.Add((AppResources.ErrorDetailsTitle, card => card._dialogs.AlertAsync(AppResources.ErrorDetailsTitle, card.ErrorText)));
+            actions.Add((AppResources.ErrorDetailsTitle, card => card._dialogs.AlertAsync(AppResources.ErrorDetailsTitle, card.ErrorDetailsValue())));
         }
 
         var title = string.Join(" · ", new[] { ModelText, SeedText, CostText, TimeText }.Where(text => text.Length > 0));
@@ -257,11 +300,14 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         IsFiltered = generation.Status == GenerationStatus.Filtered;
         IsFailedOrFiltered = IsFailed || IsFiltered;
         IsCancelled = generation.Status == GenerationStatus.Cancelled;
-        ErrorText = generation.ErrorMessage?.Trim() ?? "";
+        // The text for the code is shown; the provider's own text (generation.ErrorMessage) is kept for the details dialog.
+        TechnicalError = generation.ErrorMessage?.Trim() ?? "";
+        ErrorText = generation.ErrorKind is { } kind ? ErrorKindText.Of(kind) : TechnicalError;
         HasErrorText = ErrorText.Length > 0;
         HasError = generation.Status == GenerationStatus.Failed && HasErrorText;
         HasImage = generation.Status == GenerationStatus.Succeeded && !string.IsNullOrEmpty(generation.ImagePath);
         ImageFilePath = HasImage ? _files.GetFullPath(generation.ImagePath!) : "";
+        _mediaType = generation.MediaType ?? "image/png";
         IsRunning = generation.Status is GenerationStatus.Queued or GenerationStatus.Running;
         IsFinished = generation.IsFinished;
         SummaryText = string.Join(". ", new[] { StatusText, DetailsText, ErrorText }.Where(text => text.Length > 0));

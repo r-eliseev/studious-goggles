@@ -1,5 +1,7 @@
 using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Domain.Models;
+using ImageGen.Core.Providers;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Services;
 using NSubstitute;
@@ -38,6 +40,23 @@ public class ChatItemTemplateChoiceTests
     public void Pick_MessageItem_ReturnsMessageTemplate()
     {
         Assert.Equal("message", ChatItemTemplateChoice.Pick<string>(Message(), "message", "run"));
+    }
+
+    [Fact]
+    public void Pick_SummaryMarker_ReturnsSummaryTemplate()
+    {
+        var marker = new SummaryMarkerViewModel(
+            new ConversationSummary
+            {
+                SessionId = Guid.NewGuid(),
+                Text = "summary",
+                CoversUpToMessageId = Guid.NewGuid(),
+                Model = new ModelRef(ProviderIds.OpenRouter, "vendor/assistant"),
+                CreatedAt = Now,
+            },
+            Substitute.For<IDialogService>());
+
+        Assert.Equal("summary-template", ChatItemTemplateChoice.Pick<string>(marker, "message", "run", "summary-template"));
     }
 
     [Fact]

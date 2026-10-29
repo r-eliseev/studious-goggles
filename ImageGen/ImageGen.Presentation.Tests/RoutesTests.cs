@@ -27,4 +27,18 @@ public class RoutesTests
 
         Assert.Equal("chat?sessionId=3f2504e0-4f89-41d3-9a0c-0305e82c3301", Routes.ChatFor(sessionId));
     }
+
+    [Fact]
+    public void ChatWithMessage_EscapesTextAndReadsBack()
+    {
+        var sessionId = Guid.Parse("3f2504e0-4f89-41d3-9a0c-0305e82c3301");
+        const string text = "a fox & a boat, 50% off";
+
+        var route = Routes.ChatWithMessage(sessionId, text);
+
+        Assert.StartsWith("chat?sessionId=3f2504e0-4f89-41d3-9a0c-0305e82c3301&message=", route, StringComparison.Ordinal);
+        Assert.DoesNotContain(" ", route, StringComparison.Ordinal);
+        var encoded = route[(route.IndexOf("&message=", StringComparison.Ordinal) + "&message=".Length)..];
+        Assert.Equal(text, Uri.UnescapeDataString(encoded));
+    }
 }

@@ -1,3 +1,4 @@
+using ImageGen.Core.Context;
 namespace ImageGen.Core.Services;
 
 /// <summary>Texts and constants sent to the assistant model.</summary>
@@ -33,6 +34,23 @@ public static class AssistantPrompts
     public const string NoCurrentPrompt = "Current prompt: (none yet)";
 
     public static string CurrentPrompt(string prompt) => "Current prompt: " + prompt;
+
+    /// <summary>C3.3: what the summary must keep, in the assistant's own words. The summary goes in as a system message.</summary>
+    public const string SummaryInstruction =
+        "Summarize the conversation so far for an assistant that writes image prompts. Keep the user's goals, the chosen style, "
+        + "the rejected ideas and the latest prompt. At most 300 words. Write in the language of the conversation.";
+
+    public const string SummaryPrefix = "Summary of the earlier conversation: ";
+
+    public static string SummaryLine(string summary) => SummaryPrefix + summary;
+
+    /// <summary>
+    /// Estimated tokens of the fixed part of every request: the system prompt, the current prompt line and the tool
+    /// description and schema (C1.1).
+    /// </summary>
+    public static int FixedTokens(string currentLine) =>
+        TokenEstimator.Estimate(System) + TokenEstimator.Estimate(currentLine)
+        + TokenEstimator.Estimate(GenerateImagesToolDescription) + TokenEstimator.Estimate(GenerateImagesToolSchema);
 
     /// <summary>
     /// Text of an assistant message that started a run: only what the assistant said, possibly empty.

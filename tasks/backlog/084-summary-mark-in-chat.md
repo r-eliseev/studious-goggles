@@ -1,6 +1,6 @@
 ---
 id: 084
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -50,5 +50,20 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Services/SessionService.cs`, `ImageGen/ImageGen.Presentation/PageModels/{SummaryMarkerViewModel,ChatPageModel,ChatItemTemplateChoice}.cs`, строки, `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`, `ImageGen/ImageGen.Maui/{Pages/ChatPage.xaml,PageModels/ChatItemTemplateSelector.cs}`, тесты, `docs/specs/assistant-context.md`
 
 ## Отчёт
+
+Сделано по плану (`claude-536f`, 2026-10-29). Тесты писались до кода в каждом слое.
+
+- Core: `SessionService.GetSummaryAsync(sessionId, ct)` — сводка из репозитория (083). Конструктор `SessionService` получил репозиторий сводки последним параметром; все вызовы в тестах обновлены. Тесты: `GetSummaryAsync_ReturnsSavedSummary`, `GetSummaryAsync_NoSummary_ReturnsNull`.
+- Presentation: `SummaryMarkerViewModel` (`Text` — «Earlier messages are summarized for the assistant», `ShowText` — «Show summary», `ShowCommand` — `AlertAsync` с заголовком «Summary for the assistant», текстом сводки и строкой модели и цены в формате описания картинки). `ChatPageModel.ReloadAsync` вставляет маркер сразу после сообщения `CoversUpToMessageId`; если такого сообщения в ленте нет, маркер идёт первым; без сводки маркера нет. `ChatItemTemplateChoice.Pick` получил третий шаблон (необязательный). Строки `SummaryMarker`, `SummaryTitle`, `ShowSummary`. Тесты: `OnAppearingAsync_WithSummary_InsertsMarkerAfterCoveredMessage`, `OnAppearingAsync_NoSummary_NoMarker`, `ShowSummary_AlertsSummaryWithModelAndPrice`, `Pick_SummaryMarker_ReturnsSummaryTemplate`.
+- Avalonia: шаблон маркера в `ChatView.axaml` — тонкие линии `IgLineBrush` по сторонам, в центре `meta`-текст и кнопка «Show summary» с доступным именем. Тест `Views/SummaryMarkerTests.ChatWithSummary_ShowsMarkerWithShowSummaryButton` (сессия с сохранённой сводкой, открыт чат, маркер и кнопка).
+- MAUI: `SummaryTemplate` у `ChatItemTemplateSelector` и шаблон в `ChatPage.xaml` (линии `IgLineColor`, текст, кнопка). Сборка `-f net10.0-android` проходит.
+- `docs/specs/assistant-context.md`: статус «реализовано», строка «Код:» с путями.
+
+Проверено: Core 345/345, Data 69/69, Presentation 259/259, Avalonia 109/109 (2 пропущены, как раньше), `dotnet format --verify-no-changes` по всем изменённым проектам чистый, MAUI собирается, `scripts/check.sh` проходит.
+
+Отклонения от плана:
+- Текст маркера взят из строки `SummaryMarker` без изменений; «Show summary» — отдельная строка `ShowSummary`, как и в плане.
+- Тест Avalonia сделан на уровне страницы чата и шаблона, без проверки нажатия (показ `AlertAsync` покрыт тестом `ShowSummary_AlertsSummaryWithModelAndPrice`).
+- Ручная проверка вида маркера на MAUI и Windows — в задаче 016 и у владельца.
 
 ## Комментарии

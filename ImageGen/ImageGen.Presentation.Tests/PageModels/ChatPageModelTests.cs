@@ -31,6 +31,7 @@ public class ChatPageModelTests
     private readonly ISeedSource _seeds = Substitute.For<ISeedSource>();
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
     private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
+    private readonly IConversationSummaryRepository _summaries = Substitute.For<IConversationSummaryRepository>();
     private readonly INavigationService _navigation = Substitute.For<INavigationService>();
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly IMainThread _mainThread = Substitute.For<IMainThread>();
@@ -146,7 +147,7 @@ public class ChatPageModelTests
         _sessionService = new SessionService(
             _sessionRepository, _messageRepository, _runRepository, _files,
             new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),
-            time);
+            time, _summaries);
         _attachments = new AttachmentService(_chatAttachments, _files, time);
         _descriptions = new ImageDescriptionService(
             _sessionRepository, _runRepository, ProviderDoubles.Router(chat: _chat),
@@ -160,7 +161,14 @@ public class ChatPageModelTests
         _assistant = new AssistantService(
             _sessionService, _messageRepository, _runRepository, ProviderDoubles.Router(chat: _chat), _generationService,
             new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),
-            _files, _attachments, time, NullLogger<AssistantService>.Instance, new ImageGen.Core.Context.TokenCorrection());
+            _files, _attachments, time, NullLogger<AssistantService>.Instance, new ImageGen.Core.Context.TokenCorrection(),
+            Substitute.For<IConversationSummaryRepository>(),
+            new ConversationSummaryService(
+                Substitute.For<ISessionRepository>(), Substitute.For<IChatMessageRepository>(), Substitute.For<IRunRepository>(),
+                Substitute.For<IConversationSummaryRepository>(), ProviderDoubles.Router(chat: _chat),
+                new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),
+                new ImageGen.Core.Context.TokenCorrection(), time, NullLogger<ConversationSummaryService>.Instance),
+            ImageGen.Core.Diagnostics.NullDebugTrace.Instance);
 
         _model = CreateModel(_session.Id);
     }
@@ -205,6 +213,7 @@ public class ChatPageModelTests
             _filePicker,
             _descriptions,
             _clipboard,
+            Substitute.For<IImageSaver>(),
             _tracker,
             NewModelsPane,
             NewParametersPane);
@@ -308,6 +317,174 @@ public class ChatPageModelTests
     }
 
     [Fact]
+    public async Task OnAppearingAsync_LastMessageIsError_CanRetry()
+    {
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.User, Text = "a fox", CreatedAt = Now });
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.Assistant, Text = "error", CreatedAt = Now.AddSeconds(1), IsError = true });
+
+        await _model.OnAppearingAsync();
+
+        Assert.True(Assert.IsType<MessageItemViewModel>(_model.Items[^1]).CanRetry);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_ErrorNotLast_CannotRetry()
+    {
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.User, Text = "a fox", CreatedAt = Now });
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.Assistant, Text = "error", CreatedAt = Now.AddSeconds(1), IsError = true });
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.Assistant, Text = "Here", CreatedAt = Now.AddSeconds(2) });
+
+        await _model.OnAppearingAsync();
+
+        Assert.All(_model.Items.OfType<MessageItemViewModel>(), item => Assert.False(item.CanRetry));
+    }
+
+    [Fact]
+    public async Task Retry_SendsLastMessageAgainAndReloadsTimeline()
+    {
+        // The reply is stamped with the test clock (Now), so the stored messages are older than it.
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.User, Text = "a fox", CreatedAt = Now.AddMinutes(-2) });
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.Assistant, Text = "error", CreatedAt = Now.AddMinutes(-1), IsError = true });
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AssistantChatResult("Here you go", [], null));
+        await _model.OnAppearingAsync();
+
+        await Assert.IsType<MessageItemViewModel>(_model.Items[^1]).RetryCommand.ExecuteAsync(null);
+
+        await _chat.Received(1).CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
+        var last = Assert.IsType<MessageItemViewModel>(_model.Items[^1]);
+        Assert.Equal("Here you go", last.Text);
+        Assert.False(last.IsError);
+        Assert.False(_model.IsBusy);
+    }
+
+    [Fact]
+    public async Task Retry_WhileBusy_CannotExecute()
+    {
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.User, Text = "a fox", CreatedAt = Now });
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.Assistant, Text = "error", CreatedAt = Now.AddSeconds(1), IsError = true });
+        await _model.OnAppearingAsync();
+        var error = Assert.IsType<MessageItemViewModel>(_model.Items[^1]);
+        Assert.True(error.RetryCommand.CanExecute(null));
+
+        _model.IsBusy = true;
+
+        Assert.False(error.RetryCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Query_WithMessage_SendsItOnceAfterLoad()
+    {
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AssistantChatResult("Hi", [], null));
+        _model.ApplyQueryAttributes(new Dictionary<string, object>
+        {
+            [Routes.SessionIdParameter] = _session.Id.ToString("D"),
+            [Routes.MessageParameter] = Uri.EscapeDataString("A lighthouse at dusk"),
+        });
+
+        await _model.OnAppearingAsync();
+
+        await _chat.Received(1).CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
+        Assert.Contains(_messages, m => m.Role == ChatRole.User && m.Text == "A lighthouse at dusk");
+    }
+
+    [Fact]
+    public async Task Query_WithoutMessage_SendsNothing()
+    {
+        await _model.OnAppearingAsync();
+
+        await _chat.DidNotReceive().CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Reload_AfterPendingMessageSent_DoesNotSendAgain()
+    {
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AssistantChatResult("Hi", [], null));
+        _model.ApplyQueryAttributes(new Dictionary<string, object>
+        {
+            [Routes.SessionIdParameter] = _session.Id.ToString("D"),
+            [Routes.MessageParameter] = Uri.EscapeDataString("A lighthouse at dusk"),
+        });
+        await _model.OnAppearingAsync();
+
+        await _model.OnAppearingAsync();
+
+        await _chat.Received(1).CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_WithSummary_InsertsMarkerAfterCoveredMessage()
+    {
+        var first = new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.User, Text = "first", CreatedAt = Now.AddMinutes(-3) };
+        var covered = new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.Assistant, Text = "covered", CreatedAt = Now.AddMinutes(-2) };
+        var later = new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.User, Text = "later", CreatedAt = Now.AddMinutes(-1) };
+        StoreMessage(first);
+        StoreMessage(covered);
+        StoreMessage(later);
+        _summaries.GetAsync(_session.Id, Arg.Any<CancellationToken>()).Returns(NewSummary(covered.Id));
+
+        await _model.OnAppearingAsync();
+
+        Assert.IsType<SummaryMarkerViewModel>(_model.Items[2]);
+        Assert.Equal("later", Assert.IsType<MessageItemViewModel>(_model.Items[3]).Text);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_NoSummary_NoMarker()
+    {
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.User, Text = "hi", CreatedAt = Now });
+
+        await _model.OnAppearingAsync();
+
+        Assert.DoesNotContain(_model.Items, item => item is SummaryMarkerViewModel);
+    }
+
+    [Fact]
+    public async Task ShowSummary_AlertsSummaryWithModelAndPrice()
+    {
+        var covered = Guid.NewGuid();
+        StoreMessage(new ChatMessage { Id = covered, SessionId = _session.Id, Role = ChatRole.User, Text = "hi", CreatedAt = Now });
+        _summaries.GetAsync(_session.Id, Arg.Any<CancellationToken>()).Returns(NewSummary(covered));
+        await _model.OnAppearingAsync();
+        var marker = Assert.IsType<SummaryMarkerViewModel>(_model.Items[1]);
+
+        await marker.ShowCommand.ExecuteAsync(null);
+
+        await _dialogs.Received(1).AlertAsync(
+            AppResources.SummaryTitle,
+            Arg.Is<string>(text => text.StartsWith("The user wants a red fox.", StringComparison.Ordinal)
+                && text.Contains("vendor/assistant", StringComparison.Ordinal)
+                && text.Contains("$0.002", StringComparison.Ordinal)));
+    }
+
+    private static ConversationSummary NewSummary(Guid coversUpTo) => new()
+    {
+        SessionId = Guid.Empty,
+        Text = "The user wants a red fox.",
+        CoversUpToMessageId = coversUpTo,
+        Model = new ModelRef(ProviderIds.OpenRouter, "vendor/assistant"),
+        CostUsd = 0.002m,
+        CreatedAt = Now,
+    };
+
+    [Fact]
+    public async Task SelectCard_SetsSelectedCard()
+    {
+        var run = NewRun(_session.Id, "red fox");
+        var generations = new[] { NewGeneration(run, 5) };
+        StoreRun(run, generations);
+        await _model.OnAppearingAsync();
+        var card = Assert.IsType<RunItemViewModel>(_model.Items[^1]).Generations[0];
+        Assert.Null(_model.SelectedCard);
+
+        _model.SelectCardCommand.Execute(card);
+
+        Assert.Same(card, _model.SelectedCard);
+    }
+
+    [Fact]
     public async Task OnAppearingAsync_SetsCurrentSession()
     {
         await _model.OnAppearingAsync();
@@ -357,7 +534,7 @@ public class ChatPageModelTests
     public void ApplyQueryAttributes_MissingSessionId_Throws()
     {
         var model = new ChatPageModel(
-            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard, _tracker, NewModelsPane, NewParametersPane);
+            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard, Substitute.For<IImageSaver>(), _tracker, NewModelsPane, NewParametersPane);
 
         Assert.Throws<ArgumentException>(() => model.ApplyQueryAttributes(new Dictionary<string, object>()));
     }

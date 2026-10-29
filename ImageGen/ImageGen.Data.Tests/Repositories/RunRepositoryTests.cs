@@ -202,4 +202,24 @@ public class RunRepositoryTests
 
         Assert.Equal(GenerationStatus.Queued, (await repository.GetGenerationAsync(withJob.Id, ct))!.Status);
     }
+
+    [Fact]
+    public async Task CountRunsBySession_CountsPerSession()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var busy = TestData.Session();
+        var idle = TestData.Session();
+        var sessions = new SessionRepository(test.Database);
+        await sessions.AddAsync(busy, ct);
+        await sessions.AddAsync(idle, ct);
+        var repository = new RunRepository(test.Database);
+        await repository.AddRunAsync(TestData.Run(busy.Id, TestData.BaseTime), [], ct);
+        await repository.AddRunAsync(TestData.Run(busy.Id, TestData.BaseTime.AddMinutes(1)), [], ct);
+
+        var counts = await repository.CountRunsBySessionAsync(ct);
+
+        Assert.Equal(2, counts[busy.Id]);
+        Assert.False(counts.ContainsKey(idle.Id));
+    }
 }

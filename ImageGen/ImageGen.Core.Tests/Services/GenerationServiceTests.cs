@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using ImageGen.Core.Diagnostics;
 using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Models;
@@ -6,6 +7,7 @@ using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
+using ImageGen.Core.Tests.Diagnostics;
 using ImageGen.Core.Tests.TestDoubles;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -103,6 +105,24 @@ public class GenerationServiceTests
         CreatedAt = Now,
         SortOrder = 0,
     };
+
+    [Fact]
+    public async Task StartRunAsync_TraceOn_RecordsGenerationRequestWithModelsAndSeeds()
+    {
+        var trace = new CapturingDebugTrace();
+        var catalog = new ModelCatalogService(_providers, _modelRepository, NullLogger<ModelCatalogService>.Instance);
+        var time = Substitute.For<TimeProvider>();
+        time.GetUtcNow().Returns(Now);
+        var traced = new GenerationService(
+            _sessions, _runs, _providers, _files, catalog, _seeds, _attachments, time, _logger, trace);
+
+        await traced.StartRunAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
+
+        var record = Assert.Single(trace.Records, r => r.Kind == "generation-request");
+        Assert.Equal("a fox", record.Fields["prompt"]);
+        Assert.Equal($"{ProviderIds.OpenRouter}/{Seeded},{ProviderIds.OpenRouter}/{Unseeded}", record.Fields["models"]);
+        Assert.Equal("11,22", record.Fields["seeds"]);
+    }
 
     [Fact]
     public async Task StartRunAsync_TwoModelsTwoRuns_CreatesFourGenerationsInOrder()
@@ -336,7 +356,7 @@ public class GenerationServiceTests
         Assert.All(_added, g =>
         {
             Assert.Equal(GenerationStatus.Failed, g.Status);
-            Assert.Contains("Reference image", g.ErrorMessage, StringComparison.Ordinal);
+            Assert.Equal(ErrorKind.ReferenceUnreadable, g.ErrorKind);
         });
     }
 

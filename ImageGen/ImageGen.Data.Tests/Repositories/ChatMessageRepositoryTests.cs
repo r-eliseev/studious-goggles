@@ -1,4 +1,5 @@
 using ImageGen.Core.Domain.Chat;
+using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Sessions;
 using ImageGen.Data.Repositories;
 
@@ -31,6 +32,31 @@ public class ChatMessageRepositoryTests
         Assert.True(list[1].IsError);
         Assert.Null(list[0].RunId);
         Assert.False(list[0].IsError);
+    }
+
+    [Fact]
+    public async Task AddAsync_ErrorKind_RoundTripsAndMissingCodeStaysNull()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var session = TestData.Session();
+        await new SessionRepository(test.Database).AddAsync(session, ct);
+        var repository = new ChatMessageRepository(test.Database);
+        var coded = TestData.Message(session.Id, TestData.BaseTime.AddSeconds(1), "");
+        coded.Role = ChatRole.Assistant;
+        coded.IsError = true;
+        coded.ErrorKind = ErrorKind.RateLimited;
+        var legacy = TestData.Message(session.Id, TestData.BaseTime.AddSeconds(2), "Assistant error (Network): old text");
+        legacy.Role = ChatRole.Assistant;
+        legacy.IsError = true;
+
+        await repository.AddAsync(coded, ct);
+        await repository.AddAsync(legacy, ct);
+        var list = await repository.ListBySessionAsync(session.Id, ct);
+
+        Assert.Equal(ErrorKind.RateLimited, list[0].ErrorKind);
+        Assert.Null(list[1].ErrorKind);
+        Assert.Equal("Assistant error (Network): old text", list[1].Text);
     }
 
     [Fact]

@@ -40,4 +40,11 @@
 - **Avalonia, macOS:** неизвестно, путь не проверен (нет macOS-машины).
 - **MAUI:** папка `AppDataDirectory` приложения (`FileSystem.Current.AppDataDirectory`), подпапка `logs`. Android: не проверено на устройстве (эмулятора нет). Сообщения пишутся и в `Debug`-вывод (logcat).
 - Уровень: `IMAGEGEN_LOG_LEVEL=Trace|Debug|Information|Warning|Error` или `logging.json` `{"level": "Debug"}` в папке данных; по умолчанию Debug в Debug-сборке, Information в Release.
+- Отладочный трейс (задача 085) включается отдельно от уровня: `IMAGEGEN_DEBUG_TRACE=1` или `{"debugTrace": true}` в `logging.json`. Пишет в `{папка данных}/debug/<дата>/trace.jsonl` и картинки рядом; очистки нет (неизвестно, нужна ли). Спецификация: `docs/specs/debug-trace.md`.
 - Папка данных Avalonia задаётся переменной `IMAGEGEN_DATA_DIR` (второй профиль для ручной проверки). Тесты `ImageGen.Avalonia.Tests` её не используют: они работают во временной папке и с хранилищем ключей в памяти (`App.HostOverrides`, задача 048).
+
+## Релиз
+- Workflow `.github/workflows/release.yml` запускается на тег `vMAJOR.MINOR.PATCH` (например, `v0.1.0`). Публикует Avalonia-десктоп для `linux-x64` и `win-x64` (self-contained, архивы) и создаёт GitHub Release с заметками из `scripts/release-notes.sh`. Папка релиза — тег без патча: `v0.1.0` → `tasks/v0.1`.
+- MAUI в релиз не входит: нужны подписи Android и Windows-сборка с сертификатом. macOS-сборка Avalonia не публикуется (нет macOS-машины, см. выше).
+- Workflow не проверен запуском на GitHub: проверено локально только `dotnet publish -r linux-x64` Avalonia и разбор YAML. Первый тег покажет, работает ли `7z` и `gh release create` на раннерах.
+- Тег `v0.1.0` не создан: в `tasks/v0.1` ещё стоит 016 (ручная проверка, `planned`).

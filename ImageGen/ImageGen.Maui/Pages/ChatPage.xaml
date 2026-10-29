@@ -53,11 +53,34 @@
                                         </DataTrigger>
                                     </Button.Triggers>
                                 </Button>
+                                <Button StyleClass="ghost,small"
+                                        Text="{x:Static strings:AppResources.TryAgain}"
+                                        Command="{Binding RetryCommand}"
+                                        IsVisible="{Binding CanRetry}"
+                                        HorizontalOptions="Start"
+                                        SemanticProperties.Description="{x:Static strings:AppResources.TryAgain}" />
                                 <Label StyleClass="meta" Text="{x:Static strings:AppResources.Copied}" IsVisible="{Binding Copy.IsCopied}" />
                             </VerticalStackLayout>
                         </Border>
                     </DataTemplate>
                 </pmui:ChatItemTemplateSelector.MessageTemplate>
+                <pmui:ChatItemTemplateSelector.SummaryTemplate>
+                    <!-- The thin line after the last message the summary covers (task 084). -->
+                    <DataTemplate x:DataType="pm:SummaryMarkerViewModel">
+                        <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8" Margin="0,8">
+                            <BoxView Grid.Column="0" HeightRequest="1" Color="{DynamicResource IgLineColor}" VerticalOptions="Center" />
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="Center">
+                                <Label StyleClass="meta" Text="{Binding Text}" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" />
+                                <Button StyleClass="ghost,small"
+                                        Text="{Binding ShowText}"
+                                        Command="{Binding ShowCommand}"
+                                        HorizontalOptions="Center"
+                                        SemanticProperties.Description="{Binding ShowText}" />
+                            </VerticalStackLayout>
+                            <BoxView Grid.Column="2" HeightRequest="1" Color="{DynamicResource IgLineColor}" VerticalOptions="Center" />
+                        </Grid>
+                    </DataTemplate>
+                </pmui:ChatItemTemplateSelector.SummaryTemplate>
 
                 <pmui:ChatItemTemplateSelector.RunTemplate>
                     <DataTemplate x:DataType="pm:RunItemViewModel">
@@ -105,6 +128,10 @@
                                                 <Border.Behaviors>
                                                     <toolkit:TouchBehavior LongPressCommand="{Binding ShowActionsCommand}" />
                                                 </Border.Behaviors>
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer Command="{Binding Source={x:Reference Page}, Path=BindingContext.SelectCardCommand}"
+                                                                          CommandParameter="{Binding .}" />
+                                                </Border.GestureRecognizers>
                                                 <FlyoutBase.ContextFlyout>
                                                     <MenuFlyout>
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.Repeat}" Command="{Binding RepeatCommand}" />
@@ -113,6 +140,7 @@
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionDescribeImage}" Command="{Binding DescribeCommand}" />
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionPromptFromImage}" Command="{Binding DescribePromptCommand}" />
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.CopyPrompt}" Command="{Binding CopyPromptCommand}" />
+                                                        <MenuFlyoutItem Text="{Binding SaveLabel}" Command="{Binding SaveCommand}" IsEnabled="{Binding HasImage}" />
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.OtherModel}" Command="{Binding OtherModelCommand}" IsEnabled="{Binding IsFailedOrFiltered}" />
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.ErrorDetailsTitle}" Command="{Binding DetailsCommand}" IsEnabled="{Binding IsFailed}" />
                                                     </MenuFlyout>
@@ -264,6 +292,33 @@
             </pmui:ChatItemTemplateSelector>
         </ResourceDictionary>
     </ContentPage.Resources>
+
+    <ContentPage.MenuBarItems>
+        <MenuBarItem Text="{x:Static strings:AppResources.MenuFile}">
+            <MenuFlyoutItem Text="{x:Static strings:AppResources.NewSession}" Command="{Binding Source={x:Reference SessionList}, Path=BindingContext.NewSessionCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="N" Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Cmd}" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{x:Static strings:AppResources.MenuSettings}" Command="{Binding Source={x:Reference SessionList}, Path=BindingContext.OpenSettingsCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="," Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Cmd}" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+        </MenuBarItem>
+        <!-- The card actions act on the card the user touched last (ChatPageModel.SelectedCard). Letter keys have no accelerator: they would take the typing in the input box. -->
+        <MenuBarItem Text="{x:Static strings:AppResources.MenuCard}">
+            <MenuFlyoutItem Text="{x:Static strings:AppResources.Repeat}" Command="{Binding SelectedCard.RepeatCommand}" />
+            <MenuFlyoutItem Text="{x:Static strings:AppResources.NewSeed}" Command="{Binding SelectedCard.NewSeedCommand}" />
+            <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionEditPrompt}" Command="{Binding SelectedCard.EditCommand}" />
+            <MenuFlyoutItem Text="{Binding SelectedCard.SaveLabel}" Command="{Binding SelectedCard.SaveCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="S" Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Cmd}" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{x:Static strings:AppResources.CopyPrompt}" Command="{Binding SelectedCard.CopyPromptCommand}" />
+        </MenuBarItem>
+    </ContentPage.MenuBarItems>
 
     <Grid x:Name="ChatLayout" ColumnDefinitions="272,*,Auto" ColumnSpacing="16" Padding="16">
         <!-- Wide layout only: the session list beside the chat (ChatPage.xaml.cs). -->

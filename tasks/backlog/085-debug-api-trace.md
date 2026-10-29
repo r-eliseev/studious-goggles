@@ -1,6 +1,6 @@
 ---
 id: 085
-status: todo
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -31,23 +31,59 @@ created: 2026-10-28
 - Тесты и линтер проходят по затронутым проектам.
 
 ## Анализ
-
-Задача создана сейчас в виде заготовки и не разобрана. Перед планированием нужно исследовать:
-
-- Где в коде проходят все HTTP-вызовы провайдеров и как их перехватить одним обработчиком (`DelegatingHandler`), не меняя клиенты провайдеров.
-- Какой формат записи выбрать: например, JSON Lines с полями `ts`, `kind`, `provider`, `request`, `response`, `files`.
-- Как хранить изображения: файлы рядом с логом, с именами по хешу содержимого или по id запроса.
-- Как маскировать ключи: по имени заголовка и по значению из хранилища ключей.
-- Объём логов и ротация: сколько занимают тела ответов с картинками и нужна ли отдельная политика хранения (сейчас 14 дней, см. `AGENTS.md`).
-- Как связать вводы пользователя и HTTP-записи в один сценарий (идентификатор генерации или прогона).
-- Совпадение с `docs/architecture.md` и `docs/specs/image-client.md`, а также пересечения с 045 в конфигурации логирования.
-
-Статус `todo` значит: задача ждёт анализа и плана с более сильной моделью.
+- Цель: по одной записи лога восстанавливать запрос и ответ провайдера так, чтобы собрать мок в тесте. Для этого нужны вход пользователя, HTTP-запрос и HTTP-ответ с телом, заголовками и изображениями.
+- Уже есть: `Presentation/Logging` и `LogLevelSettings` (уровень через `IMAGEGEN_LOG_LEVEL` или `logging.json`), `Core/Http/LoggingHttpHandler` (логирование HTTP на уровне Debug через `BodyRedactor`). Задача расширяет их, а не заменяет (045).
+- Ограничение безопасности: `AGENTS.md` и `docs/conventions.md` запрещают писать ключи в любом виде; заголовки HTTP сейчас не логируются целиком (там ключ). Значит, в трассе — allowlist заголовков (`Content-Type`, `Accept`, `User-Agent`, `Content-Length`), остальные отбрасываются, а не маскируются.
+- Что такое «режим отладки»: вводится как отдельное включение (`IMAGEGEN_DEBUG_TRACE=1` или поле `debugTrace` в `logging.json`), а не уровень логов. Так обычный Debug-журнал не начнёт писать тела с картинками по умолчанию.
+- Формат версионирован: записи в JSON Lines с полем `schema` (`debug-trace/1`), описание в `docs/specs/debug-trace.md` (новый).
+- Изображения: отдельные файлы в `{DataDirectory}/debug/<дата>/` с именем по id записи; в записи — относительный путь.
+- Пересечения: `LoggingHttpHandler` и `GenerationService`/`AssistantService` меняются редко; конфликтов с задачами в работе нет.
 
 ## План
 
-Не заполнен. Заполнить после анализа.
+Команды проверки: `dotnet test` для `ImageGen.Core.Tests`, `ImageGen.Data.Tests`, `ImageGen.Presentation.Tests`; `dotnet format` по изменённым проектам; `scripts/check.sh`.
+
+Концепции:
+1. Включение: `DebugTraceOptions` (читает `IMAGEGEN_DEBUG_TRACE` и `logging.json`, поле `debugTrace`). Выключено по умолчанию. Вне режима трасса не создаётся, обычное логирование из 045 не меняется.
+2. `IDebugTrace` в Core (интерфейс, пустая реализация по умолчанию): `RecordInput(...)` (текст промпта, модели, параметры, id вложений), `RecordRequest(...)`, `RecordResponse(...)` с временем отправки/получения. Реализация — в `Presentation/Logging` (файлы и запись), подключается оболочкой.
+3. Маскирование: заголовки по allowlist; `Authorization` и `x-api-key` не попадают в трассу. Тело запроса и ответа проходит `BodyRedactor` (поля `label`, `key`, `api_key`, `*_user_id`, как в 045).
+4. `LoggingHttpHandler` вызывает `IDebugTrace` для запроса и ответа; изображения (data URL и бинарные ответы) сохраняются в файлы, в JSON — путь.
+5. Тест-кейсы (юнит): пустая реализация ничего не пишет; включённая пишет JSON Lines с `schema`; ключ из заголовка не попадает ни в одну строку; изображение уходит в файл, в строке путь; запись можно разобрать обратно.
+6. Сквозной тест: по записи одного сценария генерации (через один провайдер, на заглушке `HttpMessageHandler`) собирается мок и воспроизводит ответ — это приёмка из описания.
+
+Файлы: `ImageGen/ImageGen.Core/Http/LoggingHttpHandler.cs`, `ImageGen/ImageGen.Core/Diagnostics/IDebugTrace.cs` (новый), `ImageGen/ImageGen.Presentation/Logging/DebugTrace*.cs` (новые), `ImageGen/ImageGen.Presentation/Logging/LogLevelSettings.cs`, `ImageGen/ImageGen.Core/Services/{AssistantService,GenerationService}.cs` (вызовы `RecordInput`), тесты, `docs/specs/debug-trace.md` (новый), `docs/knowledge/dev-environment.md` (раздел «Логи»)
 
 ## Отчёт
 
+Основание: статус «done» поставлен по указанию `/goal` («закончи все задачи, не останавливайся на одобрении плана; решения документируй»), а не по одобрению плана. Раньше статус `planned` не менялся; причина здесь та же, что у 043 и 044.
+
+Сделано (ветка `ccr-536342a2-4gwdk3`, PR #35):
+- `Core/Diagnostics`: `IDebugTrace` (по умолчанию `NullDebugTrace`), `TraceRecord`, `TraceBlob`, `TraceRedaction` (allowlist заголовков, вынос картинок из data-URL и `b64_json`, редакция полей аккаунта, тело не обрезается).
+- `LoggingHttpHandler` пишет `http-request` и `http-response` (метод, путь, заголовки из allowlist, тело, статус, `elapsedMs`); тело ответа проверки ключа (`/key`) не пишется. Обычный лог 045 не изменён.
+- `AssistantService` пишет `user-input` (текст, id вложений); `GenerationService` пишет `generation-request` (промпт, модели, сиды, параметры, вложения). Параметр трейса в `GenerationService` необязательный, чтобы тестовые конструкторы не менялись.
+- `Presentation/Logging`: `DebugTraceSettings` (`IMAGEGEN_DEBUG_TRACE` важнее `debugTrace` в `logging.json`), `FileDebugTrace` (JSON Lines `debug-trace/1` в `debug/<дата>/trace.jsonl`, картинки файлами рядом).
+- Оболочки: Avalonia (`AppServices.Create(debugTrace:)`), MAUI (регистрация до `AddImageGenCore`).
+- Спецификация `docs/specs/debug-trace.md`; `docs/architecture.md`, `docs/index.md`, `docs/knowledge/dev-environment.md` обновлены.
+
+Проверка:
+- `ImageGen.Core.Tests`: 355 тестов, все проходят (включая тесты трейса, воспроизведения записи на моке, `generation-request`).
+- `ImageGen.Presentation.Tests`: 277, все проходят (включая `DebugTraceTests`).
+- `ImageGen.Avalonia.Tests` (headless): 118 проходят, 2 пропущены самим проектом.
+- `dotnet format --verify-no-changes`: Core, Core.Tests, Presentation, Presentation.Tests, Avalonia, Avalonia.Tests — без изменений. MAUI на Linux не загружает ссылки для проверки формата (как указано в `AGENTS.md`).
+- Сборка: `ImageGen.Avalonia` и `ImageGen.Maui` под `net10.0-android` — успешно.
+
+Отклонения от плана и критериев:
+- Заголовки не маскируются, а отбрасываются (allowlist `Content-Type`, `Accept`, `User-Agent`, `Content-Length`). Так решено в плане: `Authorization` и `x-api-key` не попадают в трассу ни в каком виде. Критерий «маскируются» выполнен строже.
+- Поле версии называется `schema` (как в плане), значение `debug-trace/1`.
+- Время: поле `time` строки — момент записи (запись делается до отправки запроса и сразу после получения ответа); длительность — `elapsedMs` у ответа. Отдельного времени отправки в записи запроса нет, его даёт `time`.
+- URL записывается как путь без строки запроса (ключ может быть в query у некоторых провайдеров).
+- Сквозной сценарий: `GenerateAsync_RecordedCall_MockFromTraceGivesSameImage` (`ImageGen.Core.Tests/Diagnostics/DebugTraceProviderReplayTests.cs`) — генерация через настоящий `OpenRouterClient` с трассой; мок собран только из записей `http-request`/`http-response` (тело, статус, блоб картинки), второй клиент через этот мок получает то же изображение и путь запроса. Для Replicate и fal.ai такого теста нет: в них трасса та же, но клиенты не проверены.
+- Вложения пользователя записаны ссылками на id (файлы уже в папке данных), их байты в трейс не копируются.
+- Папка `debug/` не очищается (в отличие от логов, 14 дней). Вопрос открыт, см. спецификацию.
+
+Журнал работ:
+1. Тесты трейса (падающие) → `Core/Diagnostics` → `LoggingHttpHandler` → `AssistantService`/`GenerationService` → `Presentation` (`FileDebugTrace`, `DebugTraceSettings`) → оболочки.
+2. Найдено при самопроверке: трейс резал тело по 4096 символам (через общий `BodyRedactor`) и заменял `b64_json` на размер. Исправлено: тело не обрезается, `b64_json` выносится в файлы, редакция только полей аккаунта. Добавлены тесты.
+
 ## Комментарии
+- Статус возвращён в `planned`: в `done` стояла по указанию `/goal` без одобренного плана, а `docs/tasks.md` требует одобренный план. Работа по задаче выполнена и описана в «Отчёте»; владелец одобрил все семь задач (ответ в диалоге, 2026-10-29), статус переведён в `done`.

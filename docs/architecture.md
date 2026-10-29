@@ -21,7 +21,7 @@ ImageGen/
     Domain/Keys/                   ApiKeyStatus, SecretNames (ключ по провайдеру)
     Domain/Models/                 ImageModel, ModelRef (ссылка «провайдер:модель»)
     Platform/                      ISecretStore, IAppPaths
-    Storage/                       ISessionRepository, IChatMessageRepository, IRunRepository,
+    Storage/                       ISessionRepository, IChatMessageRepository, IRunRepository, IConversationSummaryRepository,
                                    IImageModelRepository (кэш по провайдеру), IImageFileStore
     Providers/                     ProviderConfig, ProviderKind, ConfiguredImageModel, ProviderConfigLoader (встроенный
                                    builtin-providers.json и providers.json в DataDirectory), ProviderRegistry (проверка),
@@ -34,7 +34,12 @@ ImageGen/
     OpenAiCompatible/              OpenAiCompatibleClient (картинки и чат), OpenAiChatWire (формат chat/completions)
     AnthropicCompatible/           AnthropicCompatibleClient (только чат, Messages API)
     Services/                      ApiKeyService, ModelCatalogService, SessionService, TimelineOrdering, GenerationService,
-                                   AssistantService, AssistantPrompts, ISeedSource, RandomSeedSource
+                                   AssistantService, AssistantPrompts, ISeedSource, RandomSeedSource,
+                                   ConversationSummaryService (сводка старой истории в фоне; одна задача на сессию)
+    Search/                        SessionSearchService (поиск по названиям, промптам и описаниям), FuzzyMatcher (нечёткие
+                                   совпадения слов), ISearchTextSource (тексты всех сессий; реализация в Data)
+    Context/                       ContextBudget (бюджет истории), ContextBuilder (выбор сообщений), TokenEstimator,
+                                   TokenCorrection (поправка по usage), SummaryPlanner и SummaryPlan (когда и что сводить, C3)
     Serialization/                 CoreJsonContext
     CoreServiceCollectionExtensions.cs   AddImageGenCore()
   ImageGen.Data/                   net10.0, Microsoft.Data.Sqlite: SqliteDatabase, Migrations, репозитории, FileImageStore,
@@ -57,7 +62,7 @@ ImageGen/
 
 Зависимости: `Maui → Presentation → Data → Core`; `Maui` ссылается также на `Core` и `Data` (регистрация в `MauiProgram`); `Avalonia → Presentation → Data → Core` (также ссылается на `Core` и `Data`, регистрация в `AppServices`); `Presentation → Core`.
 
-Журнал: `Core`, `Data` и `Presentation` пишут через `ILogger<T>`. Файл `{DataDirectory}/logs/imagegen-yyyyMMdd.log` настраивает `ImageGen.Presentation/Logging` (`AddImageGenFileLogging`, Serilog; ADR 0010), оболочки его вызывают. Уровень: `IMAGEGEN_LOG_LEVEL` или `logging.json` в папке данных. `Core` ссылается только на `Microsoft.Extensions.Http`, `Microsoft.Extensions.Logging.Abstractions`, `Microsoft.Extensions.DependencyInjection.Abstractions`. Архитектурный тест в `ImageGen.Core.Tests` проверяет, что `Core` не ссылается на `Microsoft.Maui*`, `Microsoft.AspNetCore*`, `Microsoft.Data.Sqlite*`; тест в `ImageGen.Presentation.Tests` проверяет, что `Presentation` не ссылается на `Microsoft.Maui*`, `Avalonia*`, `Microsoft.AspNetCore*`.
+Журнал: `Core`, `Data` и `Presentation` пишут через `ILogger<T>`. Файл `{DataDirectory}/logs/imagegen-yyyyMMdd.log` настраивает `ImageGen.Presentation/Logging` (`AddImageGenFileLogging`, Serilog; ADR 0010), оболочки его вызывают. Уровень: `IMAGEGEN_LOG_LEVEL` или `logging.json` в папке данных. Отладочный трейс (включается отдельно: `IMAGEGEN_DEBUG_TRACE` или `debugTrace` в `logging.json`) пишет вводы пользователя и HTTP-обмен с провайдерами в `debug/<дата>/` через `Core/Diagnostics/IDebugTrace`; реализация — `Presentation/Logging/FileDebugTrace`, спецификация `docs/specs/debug-trace.md`. `Core` ссылается только на `Microsoft.Extensions.Http`, `Microsoft.Extensions.Logging.Abstractions`, `Microsoft.Extensions.DependencyInjection.Abstractions`. Архитектурный тест в `ImageGen.Core.Tests` проверяет, что `Core` не ссылается на `Microsoft.Maui*`, `Microsoft.AspNetCore*`, `Microsoft.Data.Sqlite*`; тест в `ImageGen.Presentation.Tests` проверяет, что `Presentation` не ссылается на `Microsoft.Maui*`, `Avalonia*`, `Microsoft.AspNetCore*`.
 
 Логика страниц (PageModels, маршруты, строки, `AppInitializer`) живёт в `ImageGen.Presentation` и не использует типы UI-фреймворков: тестируется обычными тестами на Linux, без ссылок на файлы MAUI. Типы MAUI (`IQueryAttributable`, `MainThread`, `ImageSource`) остаются в страницах, конвертерах и реализациях интерфейсов (`IMainThread`, `INavigationService`, `IDialogService`) в `ImageGen.Maui`.
 
@@ -97,7 +102,7 @@ Dockerfile, docker-compose.yml   том /data
 - Оболочки MAUI и Avalonia: логика экранов одна (`Presentation`), разметка своя в каждой; каждая экранная фича делается в обеих. Зависимости: `Maui → Presentation → Data → Core`, `Avalonia → Presentation`.
 
 ## Правила слоёв
-- `Core` не знает про MAUI, ASP.NET Core, SQLite и UI-типы (`Brush`, `Color`, `Shell`, `Preferences`, `FileSystem`). Платформенное — через `Core/Platform`.
+- `Core` не знает про MAUI, Avalonia, ASP.NET Core, SQLite и UI-типы (архитектурный тест `CoreDependencyTests` запрещает сборки с префиксами `Microsoft.Maui`, `Microsoft.AspNetCore`, `Microsoft.Data.Sqlite`, `Avalonia`) (`Brush`, `Color`, `Shell`, `Preferences`, `FileSystem`). Платформенное — через `Core/Platform`.
 - Код вне `Providers/`, `OpenRouter/`, `OpenAiCompatible/`, `AnthropicCompatible/` не знает, какой провайдер рисует картинки или отвечает ассистенту: провайдер берётся по `ModelRef` (провайдер и модель) через `IProviderRouter`. Адреса и типы API провайдеров задаёт конфиг (ADR 0009), ключи — только в `ISecretStore`.
 - Ядро не формирует тексты интерфейса: ошибки и состояния отдаёт кодами (`ErrorKind`, `GenerationStatus`), тексты в `.resx` слоя представления (`Presentation`, общий для MAUI и Avalonia).
 - Страницы MAUI и view Avalonia знают только свой `PageModel`; `PageModel` знает сервисы ядра.

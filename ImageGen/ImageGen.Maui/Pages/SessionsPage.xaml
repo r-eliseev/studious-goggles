@@ -8,6 +8,26 @@
              x:Class="ImageGen.Maui.Pages.SessionsPage"
              x:DataType="pm:SessionsPageModel"
              Title="{x:Static strings:AppResources.SessionsTitle}">
+    <ContentPage.MenuBarItems>
+        <MenuBarItem Text="{x:Static strings:AppResources.MenuFile}">
+            <MenuFlyoutItem Text="{x:Static strings:AppResources.NewSession}" Command="{Binding NewSessionCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="N" Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Cmd}" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{x:Static strings:AppResources.MenuSettings}" Command="{Binding OpenSettingsCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="," Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Cmd}" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem x:Name="FindItem" Text="{x:Static strings:AppResources.MenuFind}" Clicked="OnFindClicked">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="F" Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Cmd}" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+        </MenuBarItem>
+    </ContentPage.MenuBarItems>
+
     <Grid x:Name="SessionsLayout" ColumnDefinitions="272,*" ColumnSpacing="16" Padding="16">
         <controls:SessionsListView Grid.Column="0" x:Name="SessionList" />
 
@@ -20,6 +40,7 @@
                         Command="{Binding NewSessionCommand}"
                         HorizontalOptions="Center"
                         Text="{x:Static strings:AppResources.NewSession}" />
+                <controls:StarterExamples />
             </VerticalStackLayout>
         </Border>
     </Grid>

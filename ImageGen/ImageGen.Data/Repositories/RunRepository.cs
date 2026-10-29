@@ -64,6 +64,21 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
         return await reader.ReadAsync(cancellationToken) ? ReadRun(reader) : null;
     }
 
+    public async Task<IReadOnlyDictionary<Guid, int>> CountRunsBySessionAsync(CancellationToken cancellationToken)
+    {
+        await using var connection = await database.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT session_id, COUNT(*) AS run_count FROM runs GROUP BY session_id;";
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var result = new Dictionary<Guid, int>();
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            result[SqliteValues.GetGuid(reader, "session_id")] = SqliteValues.GetInt32(reader, "run_count");
+        }
+
+        return result;
+    }
+
     public async Task<IReadOnlyList<Run>> ListRunsBySessionAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         await using var connection = await database.OpenAsync(cancellationToken);

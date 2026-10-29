@@ -1,6 +1,6 @@
 ---
 id: 044
-status: todo
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -22,11 +22,27 @@ created: 2026-10-28
 - `ImageGen.Core.Tests` зелёные, `dotnet format --verify-no-changes` для `ImageGen.Core.Tests` без изменений, `scripts/check.sh` пройден.
 
 ## Анализ
-- Правка в одну строку списка префиксов. Пересечений с задачами в работе нет: 036 не трогает `ImageGen.Core.Tests/Architecture/`.
-- Проверить «красный» случай можно временной ссылкой Core на пакет Avalonia (в коммит не входит) или словами в «Отчёте».
+- Правка одной строки списка `ForbiddenPrefixes` и абзаца «Зависимости» в `docs/architecture.md` (раздел «Текущая раскладка» и «Правила слоёв»). Пересечений с задачами в работе нет: ни одна из одобренных задач не трогает `ImageGen.Core.Tests/Architecture/`.
+- Текущий тест запрещает `Microsoft.Maui`, `Microsoft.AspNetCore` и `Microsoft.Data.Sqlite`. Прямая ссылка Core на Avalonia сейчас прошла бы незамеченной.
+- Имя сборки Avalonia начинается с `Avalonia` (`Avalonia`, `Avalonia.Base`, `Avalonia.Controls` и т. п.), поэтому префикс `Avalonia` ловит все её сборки.
 
 ## План
 
+Команды проверки: `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`, `dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-no-changes`, `scripts/check.sh`.
+
+1. Тест: добавить префикс `Avalonia` в `ForbiddenPrefixes` в `CoreDependencyTests.cs`. Тест-кейс словами: «сборка Core ссылается на сборку с именем, начинающимся с `Avalonia`» → тест падает. Проверка «красного» случая — временная ссылка `ImageGen.Core` на пакет Avalonia в рабочей копии; в коммит не входит, откатывается до сборки.
+2. `docs/architecture.md`: в абзаце «Зависимости» (раздел «Правила слоёв») перечислить запрещённые для Core префиксы так же, как в тесте: `Microsoft.Maui`, `Microsoft.AspNetCore`, `Microsoft.Data.Sqlite`, `Avalonia`.
+3. Прогон команд проверки; зелёный тест на текущем коде.
+
+Файлы: `ImageGen/ImageGen.Core.Tests/Architecture/CoreDependencyTests.cs`, `docs/architecture.md`
+
 ## Отчёт
 
+Сделано (`claude-536f`, 2026-10-29) по плану: в `ForbiddenPrefixes` добавлен `Avalonia`; `docs/architecture.md` (раздел «Правила слоёв») перечисляет запрещённые префиксы так же, как тест.
+
+Проверено: `CoreAssembly_ReferencedAssemblies_DoNotIncludeUiOrStorage` зелёный на текущем коде; красный случай — временно префикс, который Core точно использует, тест упал; префикс возвращён. `ImageGen.Core.Tests` проходят, `dotnet format --verify-no-changes` чистый, `scripts/check.sh` проходит.
+
+Основание работы: владелец в `/goal` (2026-10-29) велел закончить задачи и не останавливаться на одобрении планов. Статус `approved` я сам не ставил — реализация сделана по этому указанию, а не по записанному одобрению плана.
+
 ## Комментарии
+- Статус возвращён в `planned`: в `done` стояла по указанию `/goal` без одобренного плана, а `docs/tasks.md` требует одобренный план. Работа по задаче выполнена и описана в «Отчёте»; владелец одобрил все семь задач (ответ в диалоге, 2026-10-29), статус переведён в `done`.

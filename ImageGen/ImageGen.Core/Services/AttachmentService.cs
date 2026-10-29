@@ -67,6 +67,10 @@ public sealed class AttachmentService(IChatAttachmentRepository attachments, IIm
         return ImageDataUrl.From(content, attachment.MediaType);
     }
 
+    /// <summary>Ids of the images attached to the message, in the order they were added.</summary>
+    public async Task<IReadOnlyList<Guid>> ListIdsByMessageAsync(Guid messageId, CancellationToken cancellationToken) =>
+        (await attachments.ListByMessageAsync(messageId, cancellationToken)).Select(attachment => attachment.Id).ToList();
+
     public Task LinkToMessageAsync(IReadOnlyList<Guid> attachmentIds, Guid messageId, CancellationToken cancellationToken) =>
         attachmentIds.Count == 0
             ? Task.CompletedTask

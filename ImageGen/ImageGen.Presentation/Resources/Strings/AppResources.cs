@@ -47,6 +47,63 @@ public static class AppResources
 
     public static string DeleteSessionMessage => Get(nameof(DeleteSessionMessage));
 
+    public static string RenameSessionTitle => Get(nameof(RenameSessionTitle));
+
+    public static string Rename => Get(nameof(Rename));
+
+    public static string RenameEmpty => Get(nameof(RenameEmpty));
+
+    public static string RunsCountOne => Get(nameof(RunsCountOne));
+
+    public static string SearchSessions => Get(nameof(SearchSessions));
+
+    public static string ClearSearch => Get(nameof(ClearSearch));
+
+    public static string NothingFound => Get(nameof(NothingFound));
+
+    public static string SearchInTitle => Get(nameof(SearchInTitle));
+
+    public static string SearchInPrompt => Get(nameof(SearchInPrompt));
+
+    public static string SearchInDescription => Get(nameof(SearchInDescription));
+
+    public static string Saved => Get(nameof(Saved));
+
+    public static string SavePermissionDenied => Get(nameof(SavePermissionDenied));
+
+    public static string SaveFailed => Get(nameof(SaveFailed));
+
+    public static string TryAgain => Get(nameof(TryAgain));
+
+    public static string EmptyChatExample1 => Get(nameof(EmptyChatExample1));
+
+    public static string EmptyChatExample2 => Get(nameof(EmptyChatExample2));
+
+    public static string EmptyChatExample3 => Get(nameof(EmptyChatExample3));
+
+    public static string SummaryMarker => Get(nameof(SummaryMarker));
+
+    public static string SummaryTitle => Get(nameof(SummaryTitle));
+
+    public static string ShowSummary => Get(nameof(ShowSummary));
+
+    public static string MenuFile => Get(nameof(MenuFile));
+
+    public static string MenuFind => Get(nameof(MenuFind));
+
+    public static string MenuSettings => Get(nameof(MenuSettings));
+
+    public static string MenuCard => Get(nameof(MenuCard));
+
+    public static string SaveImageAs => Get(nameof(SaveImageAs));
+
+    public static string SaveToPhotos => Get(nameof(SaveToPhotos));
+
+    public static string SaveToGallery => Get(nameof(SaveToGallery));
+
+    /// <summary>Format string: the number of runs goes in <c>{0}</c>.</summary>
+    public static string RunsCountFormat => Get(nameof(RunsCountFormat));
+
     public static string ChatPlaceholder => Get(nameof(ChatPlaceholder));
 
     public static string Send => Get(nameof(Send));
@@ -256,6 +313,38 @@ public static class AppResources
     public static string DescriptionReplaceQuestion => Get(nameof(DescriptionReplaceQuestion));
 
     public static string ErrorDetailsTitle => Get(nameof(ErrorDetailsTitle));
+
+    public static string ErrorKindUnknown => Get(nameof(ErrorKindUnknown));
+
+    public static string ErrorKindInvalidKey => Get(nameof(ErrorKindInvalidKey));
+
+    public static string ErrorKindInsufficientFunds => Get(nameof(ErrorKindInsufficientFunds));
+
+    public static string ErrorKindModerated => Get(nameof(ErrorKindModerated));
+
+    public static string ErrorKindForbidden => Get(nameof(ErrorKindForbidden));
+
+    public static string ErrorKindBadRequest => Get(nameof(ErrorKindBadRequest));
+
+    public static string ErrorKindTimeout => Get(nameof(ErrorKindTimeout));
+
+    public static string ErrorKindRateLimited => Get(nameof(ErrorKindRateLimited));
+
+    public static string ErrorKindModelUnavailable => Get(nameof(ErrorKindModelUnavailable));
+
+    public static string ErrorKindNetwork => Get(nameof(ErrorKindNetwork));
+
+    public static string ErrorKindInterrupted => Get(nameof(ErrorKindInterrupted));
+
+    public static string ErrorKindEmptyResponse => Get(nameof(ErrorKindEmptyResponse));
+
+    public static string ErrorKindInvalidToolCall => Get(nameof(ErrorKindInvalidToolCall));
+
+    public static string ErrorKindAttachmentUnreadable => Get(nameof(ErrorKindAttachmentUnreadable));
+
+    public static string ErrorKindReferenceUnreadable => Get(nameof(ErrorKindReferenceUnreadable));
+
+    public static string ErrorKindModelWithoutReferences => Get(nameof(ErrorKindModelWithoutReferences));
 
     public static string OtherModel => Get(nameof(OtherModel));
 

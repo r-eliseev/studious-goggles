@@ -18,7 +18,7 @@ internal static partial class BodyRedactor
             $"\"{match.Groups["name"].Value}\":\"<base64, {DecodedBytes(match.Groups["data"].Value)} bytes>\"");
         redacted = DataUrl().Replace(redacted, match =>
             $"<data url, {match.Groups["type"].Value}, {DecodedBytes(match.Groups["data"].Value)} bytes>");
-        redacted = SecretJsonField().Replace(redacted, match => $"\"{match.Groups["name"].Value}\":\"<redacted>\"");
+        redacted = RedactAccountFields(redacted);
 
         if (redacted.Length <= MaxLength)
         {
@@ -40,6 +40,10 @@ internal static partial class BodyRedactor
 
     [GeneratedRegex("data:(?<type>[a-zA-Z0-9.+-]+/[a-zA-Z0-9.+-]+);base64,(?<data>[A-Za-z0-9+/=]+)")]
     private static partial Regex DataUrl();
+
+    /// <summary>Replaces the values of the account fields (<c>label</c>, <c>key</c>, <c>api_key</c>, <c>*_user_id</c>).</summary>
+    public static string RedactAccountFields(string text) =>
+        SecretJsonField().Replace(text, match => $"\"{match.Groups["name"].Value}\":\"<redacted>\"");
 
     [GeneratedRegex("\"(?<name>label|key|api_key|[a-z_]*user_id)\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\"")]
     private static partial Regex SecretJsonField();

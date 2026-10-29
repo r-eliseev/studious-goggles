@@ -1,3 +1,4 @@
+using ImageGen.Core.Search;
 using ImageGen.Core.Storage;
 using ImageGen.Data.Repositories;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +19,8 @@ public static class DataServiceCollectionExtensions
         services.AddSingleton<IImageFileStore, FileImageStore>();
         services.AddSingleton<IChatAttachmentRepository, ChatAttachmentRepository>();
         services.AddSingleton<IImageDescriptionRepository, ImageDescriptionRepository>();
+        services.AddSingleton<ISearchTextSource, SearchTextSource>();
+        services.AddSingleton<IConversationSummaryRepository, ConversationSummaryRepository>();
         return services;
     }
 }

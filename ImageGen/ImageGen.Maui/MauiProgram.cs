@@ -65,6 +65,10 @@ public static class MauiProgram
         builder.Services.AddSingleton<IAppPaths>(paths);
         builder.Services.AddSingleton<ISecretStore, MauiSecretStore>();
         builder.Services.AddSingleton<ISecretPersistence, MauiSecretPersistence>();
+        builder.Services.AddSingleton(DebugTraceSettings.Create(
+            paths.DataDirectory,
+            Environment.GetEnvironmentVariable(DebugTraceSettings.EnvironmentVariable),
+            TimeProvider.System));
         builder.Services.AddImageGenCore();
         builder.Services.AddImageGenData();
         builder.Services.AddSingleton<AppInitializer>();
@@ -75,6 +79,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<AppearanceService>();
         builder.Services.AddSingleton<MauiAppearanceApplier>();
         builder.Services.AddSingleton<IClipboardService, MauiClipboardService>();
+        builder.Services.AddSingleton<IImageSaver, MauiImageSaver>();
         builder.Services.AddSingleton<ICurrentSessionTracker, CurrentSessionTracker>();
 
         // Pages and page models

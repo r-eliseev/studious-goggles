@@ -1,10 +1,13 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Providers;
+using ImageGen.Core.Search;
 using ImageGen.Core.Services;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using ImageGen.Presentation.Utilities;
 
 namespace ImageGen.Presentation.PageModels;
 
@@ -15,9 +18,40 @@ public sealed partial class SessionsPageModel(
     INavigationService navigation,
     IDialogService dialogs,
     TimeProvider timeProvider,
-    ICurrentSessionTracker tracker) : ObservableObject
+    ICurrentSessionTracker tracker,
+    SessionSearchService searchService) : ObservableObject
 {
+    /// <summary>Pause after the last keystroke before the search runs.</summary>
+    public static readonly TimeSpan SearchDebounce = TimeSpan.FromMilliseconds(250);
+
     public ObservableCollection<SessionItemViewModel> Sessions { get; } = [];
+
+    /// <summary>The starter prompts of the empty state (task 078). Pressing one creates a session and sends the prompt.</summary>
+    public IReadOnlyList<string> Examples { get; } =
+    [
+        AppResources.EmptyChatExample1,
+        AppResources.EmptyChatExample2,
+        AppResources.EmptyChatExample3,
+    ];
+
+    /// <summary>True when there are no sessions.</summary>
+    public bool HasNoSessions => Sessions.Count == 0;
+
+    /// <summary>
+    /// Set by the view: the narrow layout has no empty-state panel, so the examples go into the list while it is empty.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool ExamplesInList { get; set; }
+
+    /// <summary>True when the narrow layout shows the examples in the list: the flag is set and no session exists.</summary>
+    public bool ShowsListExamples => ExamplesInList && HasNoSessions;
+
+    partial void OnExamplesInListChanged(bool value) => OnPropertyChanged(nameof(ShowsListExamples));
+
+    /// <summary>Sessions that match <see cref="SearchText"/>, best match first. Their rows show <see cref="SessionItemViewModel.SearchLine"/>.</summary>
+    public ObservableCollection<SessionItemViewModel> SearchResults { get; } = [];
+
+    private CancellationTokenSource? _searchCancellation;
 
     /// <summary>Sessions last changed today (local date), newest first.</summary>
     public ObservableCollection<SessionItemViewModel> Today { get; } = [];
@@ -33,6 +67,39 @@ public sealed partial class SessionsPageModel(
 
     [ObservableProperty]
     public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
+    public partial string SearchText { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool IsSearching { get; set; }
+
+    /// <summary>True when a non-empty query matched no session.</summary>
+    [ObservableProperty]
+    public partial bool HasNoResults { get; set; }
+
+    /// <summary>True while the query is not blank: the list then shows the search results instead of the groups.</summary>
+    public bool IsSearchActive => !string.IsNullOrWhiteSpace(SearchText);
+
+    /// <summary>The opposite of <see cref="IsSearchActive"/>, for bindings that cannot negate.</summary>
+    public bool IsSearchInactive => !IsSearchActive;
+
+    partial void OnSearchTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsSearchActive));
+        OnPropertyChanged(nameof(IsSearchInactive));
+        _searchCancellation?.Cancel();
+        _searchCancellation?.Dispose();
+        var cancellation = _searchCancellation = new CancellationTokenSource();
+        SearchAfterDelayAsync(value, cancellation.Token).FireAndForgetSafeAsync();
+    }
+
+    [RelayCommand]
+    private void ClearSearch()
+    {
+        SearchText = "";
+        ClearSearchResults();
+    }
 
     private void OnCurrentSessionChanged(Guid? current)
     {
@@ -57,20 +124,25 @@ public sealed partial class SessionsPageModel(
                 return;
             }
 
+            SearchText = "";
+            ClearSearchResults();
             var sessions = await sessionService.ListAsync(CancellationToken.None);
+            var runCounts = await sessionService.CountRunsAsync(CancellationToken.None);
             var today = timeProvider.GetLocalNow().Date;
             Sessions.Clear();
             Today.Clear();
             Earlier.Clear();
             foreach (var session in sessions.OrderByDescending(session => session.UpdatedAt))
             {
-                var item = new SessionItemViewModel(session, OpenSessionAsync, DeleteSessionAsync)
+                var item = new SessionItemViewModel(session, OpenSessionAsync, RenameSessionAsync, DeleteSessionAsync)
                 {
                     IsCurrent = session.Id == tracker.CurrentId,
+                    RunCount = runCounts.GetValueOrDefault(session.Id),
                 };
                 Sessions.Add(item);
                 (session.UpdatedAt.ToLocalTime().Date == today ? Today : Earlier).Add(item);
             }
+            NotifySessionsCount();
         }
         catch (Exception ex)
         {
@@ -118,6 +190,119 @@ public sealed partial class SessionsPageModel(
         }
     }
 
+    private async Task SearchAfterDelayAsync(string query, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(SearchDebounce, timeProvider, cancellationToken);
+            await ShowSearchResultsAsync(query, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // A newer keystroke replaced this search.
+        }
+        catch (Exception ex)
+        {
+            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+        }
+    }
+
+    private async Task ShowSearchResultsAsync(string query, CancellationToken cancellationToken)
+    {
+        ClearSearchResults();
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return;
+        }
+
+        IsSearching = true;
+        try
+        {
+            var hits = await searchService.SearchAsync(query, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            var rows = hits
+                .Join(Sessions, hit => hit.SessionId, item => item.Id, (hit, item) => (Hit: hit, Item: item))
+                .OrderByDescending(row => row.Hit.Score)
+                .ThenBy(row => Sessions.IndexOf(row.Item));
+            foreach (var row in rows)
+            {
+                row.Item.SearchLine = $"{KindLabel(row.Hit.Kind)}: {row.Hit.Snippet}";
+                SearchResults.Add(row.Item);
+            }
+        }
+        finally
+        {
+            IsSearching = false;
+        }
+
+        HasNoResults = SearchResults.Count == 0;
+    }
+
+    private void ClearSearchResults()
+    {
+        foreach (var item in Sessions)
+        {
+            item.SearchLine = "";
+        }
+
+        SearchResults.Clear();
+        HasNoResults = false;
+    }
+
+    private static string KindLabel(SearchTextKind kind) => kind switch
+    {
+        SearchTextKind.Title => AppResources.SearchInTitle,
+        SearchTextKind.Prompt => AppResources.SearchInPrompt,
+        _ => AppResources.SearchInDescription,
+    };
+
+    private void NotifySessionsCount()
+    {
+        OnPropertyChanged(nameof(HasNoSessions));
+        OnPropertyChanged(nameof(ShowsListExamples));
+    }
+
+    /// <summary>Creates a session and opens its chat with the example text, which the chat sends once (task 078).</summary>
+    [RelayCommand]
+    private async Task StartExampleAsync(string? text)
+    {
+        try
+        {
+            var session = await sessionService.CreateAsync(CancellationToken.None);
+            await navigation.GoToAsync(Routes.ChatWithMessage(session.Id, text ?? string.Empty));
+        }
+        catch (Exception ex)
+        {
+            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+        }
+    }
+
+    private async Task RenameSessionAsync(SessionItemViewModel item)
+    {
+        try
+        {
+            var title = await dialogs.PromptAsync(
+                AppResources.RenameSessionTitle, "", AppResources.Rename, AppResources.Cancel, item.Title);
+            if (title is null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                await dialogs.AlertAsync(AppResources.ErrorTitle, AppResources.RenameEmpty);
+                return;
+            }
+
+            var session = await sessionService.RenameAsync(item.Id, title, CancellationToken.None);
+            item.Title = session.Title;
+        }
+        catch (Exception ex)
+        {
+            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+        }
+    }
+
     private async Task DeleteSessionAsync(SessionItemViewModel item)
     {
         var confirmed = await dialogs.ConfirmAsync(
@@ -137,6 +322,8 @@ public sealed partial class SessionsPageModel(
             Sessions.Remove(item);
             Today.Remove(item);
             Earlier.Remove(item);
+            NotifySessionsCount();
+            SearchResults.Remove(item);
         }
         catch (Exception ex)
         {

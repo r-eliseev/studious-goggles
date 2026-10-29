@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Descriptions;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Services;
@@ -28,6 +29,7 @@ public sealed partial class ChatPageModel(
     IFilePickerService filePicker,
     ImageDescriptionService descriptions,
     IClipboardService clipboard,
+    IImageSaver imageSaver,
     ICurrentSessionTracker currentSession,
     Func<SessionModelsPageModel> modelsPaneFactory,
     Func<SessionParametersPageModel> parametersPaneFactory) : ObservableObject
@@ -35,6 +37,7 @@ public sealed partial class ChatPageModel(
     private readonly Dictionary<Guid, GenerationItemViewModel> _cards = [];
     private bool _imageConsentGiven;
     private Guid _sessionId;
+    private string? _pendingMessage;
     private bool _subscribed;
 
     /// <summary>Rows of the chat: <see cref="MessageItemViewModel"/> or <see cref="RunItemViewModel"/>.</summary>
@@ -58,6 +61,18 @@ public sealed partial class ChatPageModel(
     [NotifyCanExecuteChangedFor(nameof(AttachImageCommand))]
     [NotifyCanExecuteChangedFor(nameof(SendCommand))]
     public partial bool IsBusy { get; set; }
+
+    partial void OnIsBusyChanged(bool value) => UpdateRetry();
+
+    /// <summary>
+    /// The card the user touched last. The menu bar's generation actions act on it (task 073); a card that is no longer
+    /// shown stays selected until another one is touched.
+    /// </summary>
+    [ObservableProperty]
+    public partial GenerationItemViewModel? SelectedCard { get; set; }
+
+    [RelayCommand]
+    private void SelectCard(GenerationItemViewModel card) => SelectedCard = card;
 
     /// <summary>True on a wide window (≥ 840). The shell sets it on resize; it decides pane versus navigation.</summary>
     [ObservableProperty]
@@ -101,6 +116,9 @@ public sealed partial class ChatPageModel(
         }
 
         _sessionId = sessionId;
+        _pendingMessage = query.TryGetValue(Routes.MessageParameter, out var message) && message is string encoded
+            ? Uri.UnescapeDataString(encoded)
+            : null;
     }
 
     /// <summary>Called on every appearance: subscribes once to generation updates, then loads the chat.</summary>
@@ -110,6 +128,14 @@ public sealed partial class ChatPageModel(
         generations.GenerationUpdated += OnGenerationUpdated;
         _subscribed = true;
         await ReloadAsync();
+
+        // A message that came with the route (an example on the empty sessions page) is sent once, after the first load.
+        if (_pendingMessage is { Length: > 0 } pending)
+        {
+            _pendingMessage = null;
+            InputText = pending;
+            await SendCommand.ExecuteAsync(null);
+        }
     }
 
     public void OnDisappearing() => Unsubscribe();
@@ -143,12 +169,12 @@ public sealed partial class ChatPageModel(
                         var text = RunMessageText.Visible(message.Text, runPrompt);
                         if (text.Length > 0)
                         {
-                            Items.Add(new MessageItemViewModel(message, text, new CopyTextAction(clipboard, mainThread, text)));
+                            Items.Add(new MessageItemViewModel(message, text, new CopyTextAction(clipboard, mainThread, text), _ => RetryLastMessageAsync()));
                         }
                     }
                     else
                     {
-                        Items.Add(new MessageItemViewModel(message, message.Text, new CopyTextAction(clipboard, mainThread, message.Text)));
+                        Items.Add(new MessageItemViewModel(message, message.Text, new CopyTextAction(clipboard, mainThread, message.Text), _ => RetryLastMessageAsync()));
                     }
                 }
                 else if (entry.Run is { } run)
@@ -157,6 +183,14 @@ public sealed partial class ChatPageModel(
                     Items.Add(new RunItemViewModel(run, cards, new CopyTextAction(clipboard, mainThread, run.Prompt)));
                 }
             }
+
+            var summary = await sessions.GetSummaryAsync(_sessionId, CancellationToken.None);
+            if (summary is not null)
+            {
+                InsertSummaryMarker(summary);
+            }
+
+            UpdateRetry();
         }
         catch (Exception ex)
         {
@@ -277,6 +311,56 @@ public sealed partial class ChatPageModel(
     }
 
     private bool CanSend() => !IsBusy && (!string.IsNullOrWhiteSpace(InputText) || PendingAttachments.Count > 0);
+
+    /// <summary>C4.1: the marker goes after the last message the summary covers; without that message it goes first.</summary>
+    private void InsertSummaryMarker(ConversationSummary summary)
+    {
+        var covered = -1;
+        for (var i = 0; i < Items.Count; i++)
+        {
+            if (Items[i] is MessageItemViewModel message && message.Id == summary.CoversUpToMessageId)
+            {
+                covered = i;
+                break;
+            }
+        }
+
+        Items.Insert(covered + 1, new SummaryMarkerViewModel(summary, dialogs));
+    }
+
+    /// <summary>S2.5: «Try again» is offered only for the last message of the chat, and only while nothing runs.</summary>
+    private void UpdateRetry()
+    {
+        foreach (var item in Items.OfType<MessageItemViewModel>())
+        {
+            item.CanRetry = false;
+        }
+
+        if (!IsBusy && Items.LastOrDefault() is MessageItemViewModel { IsError: true } last)
+        {
+            last.CanRetry = true;
+        }
+    }
+
+    /// <summary>Sends the chat's last message to the assistant again (S2.5, task 077); the error reply stays in the chat.</summary>
+    private async Task RetryLastMessageAsync()
+    {
+        IsBusy = true;
+        try
+        {
+            await assistant.RetryLastTurnAsync(_sessionId, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+
+        await ReloadAsync();
+    }
 
     [RelayCommand]
     private async Task OpenParametersAsync()
@@ -403,7 +487,7 @@ public sealed partial class ChatPageModel(
     private GenerationItemViewModel CreateCard(Generation generation)
     {
         var card = new GenerationItemViewModel(
-            generation, files, dialogs, clipboard, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync, OtherModelCardAsync);
+            generation, files, dialogs, clipboard, imageSaver, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync, OtherModelCardAsync);
         _cards[generation.Id] = card;
         return card;
     }
