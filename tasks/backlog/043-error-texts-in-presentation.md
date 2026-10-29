@@ -1,6 +1,6 @@
 ---
 id: 043
-status: planned
+status: done
 assignee:
 claimed:
 created: 2026-10-28
@@ -50,6 +50,18 @@ created: 2026-10-28
 
 ## Отчёт
 
+Сделано (`claude-536f`, 2026-10-29) по плану. Основание работы: `/goal` владельца (закончить задачи, решения принимать самостоятельно). Статус `approved` не ставился.
+
+- Core: `ErrorKind` дополнен `InvalidToolCall`, `AttachmentUnreadable`, `ReferenceUnreadable`, `ModelWithoutReferences`. `ChatMessage.ErrorKind` — код ошибки сообщения. `AssistantService` больше не пишет текст ошибок: пустой ответ, некорректный вызов, нечитаемое вложение, отсутствие моделей с референсами — коды; сбой провайдера — код `ex.Kind` и технический текст провайдера. `GenerationService` для нечитаемого референса пишет `ReferenceUnreadable`, а не английскую строку.
+- Data: миграция `0008_message_error_kind.sql` (колонка `error_kind`, NULL для старых сообщений); `ChatMessageRepository` пишет и читает код.
+- Presentation: `ErrorKindText.Of(ErrorKind)` — строка из `AppResources` по коду (16 ключей `ErrorKind*`). `MessageItemViewModel` показывает строку по коду, старое сообщение без кода — сохранённый текст. `GenerationItemViewModel`: `ErrorText` — по коду, технический текст провайдера — `TechnicalError` и окно «Details».
+- Тесты: Core — `AssistantServiceTests` и `GenerationServiceTests` переведены на проверку кодов; Data — `AddAsync_ErrorKind_RoundTripsAndMissingCodeStaysNull`; Presentation — `ErrorKindTextTests` (каждое значение имеет свой текст), `ErrorTextTests` (сообщение и карточка по коду, старое сообщение, окно «Details»).
+
+Проверено: Core 345/345, Data 70/70, Presentation 266/266, Avalonia 118/118 (2 пропущены, как раньше), `dotnet format --verify-no-changes` чистый, MAUI собирается под `net10.0-android`, `scripts/check.sh` проходит.
+
+Остаточный долг (не ошибки, по критериям задачи не покрыты): два примечания в успешном ответе — о пропущенных моделях без референсов и о лишних картинках сверх лимита — остаются английскими строками в `AssistantService` (`SkippedText`, `attached image(s) were not sent`). Вынести их в коды — отдельная задача.
+
+## Комментарии
 ## Комментарии
 
 ### 2026-10-28, ревью (claude)

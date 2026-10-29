@@ -477,4 +477,52 @@
   <data name="ModelPickerTitle" xml:space="preserve">
     <value>Run on another model</value>
   </data>
+  <data name="ErrorKindUnknown" xml:space="preserve">
+    <value>Something went wrong.</value>
+  </data>
+  <data name="ErrorKindInvalidKey" xml:space="preserve">
+    <value>The API key was rejected.</value>
+  </data>
+  <data name="ErrorKindInsufficientFunds" xml:space="preserve">
+    <value>The provider account has no funds left.</value>
+  </data>
+  <data name="ErrorKindModerated" xml:space="preserve">
+    <value>The provider filtered this request.</value>
+  </data>
+  <data name="ErrorKindForbidden" xml:space="preserve">
+    <value>The provider refused this request.</value>
+  </data>
+  <data name="ErrorKindBadRequest" xml:space="preserve">
+    <value>The provider rejected the request.</value>
+  </data>
+  <data name="ErrorKindTimeout" xml:space="preserve">
+    <value>The provider did not answer in time.</value>
+  </data>
+  <data name="ErrorKindRateLimited" xml:space="preserve">
+    <value>The provider is limiting requests. Try again later.</value>
+  </data>
+  <data name="ErrorKindModelUnavailable" xml:space="preserve">
+    <value>This model is not available right now.</value>
+  </data>
+  <data name="ErrorKindNetwork" xml:space="preserve">
+    <value>Could not reach the provider.</value>
+  </data>
+  <data name="ErrorKindInterrupted" xml:space="preserve">
+    <value>The app closed before the generation finished.</value>
+  </data>
+  <data name="ErrorKindEmptyResponse" xml:space="preserve">
+    <value>The assistant returned an empty response.</value>
+  </data>
+  <data name="ErrorKindInvalidToolCall" xml:space="preserve">
+    <value>The assistant returned an invalid tool call.</value>
+  </data>
+  <data name="ErrorKindAttachmentUnreadable" xml:space="preserve">
+    <value>An attached image could not be read.</value>
+  </data>
+  <data name="ErrorKindReferenceUnreadable" xml:space="preserve">
+    <value>A reference image is missing or unreadable.</value>
+  </data>
+  <data name="ErrorKindModelWithoutReferences" xml:space="preserve">
+    <value>No run was started: the model does not take reference images.</value>
+  </data>
 </root>

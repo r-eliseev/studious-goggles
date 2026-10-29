@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ImageGen.Core.Domain.Chat;
 using ImageGen.Presentation.Resources.Strings;
+using ImageGen.Presentation.Services;
 
 namespace ImageGen.Presentation.PageModels;
 
@@ -21,7 +22,8 @@ public sealed partial class MessageItemViewModel : ObservableObject
         Id = message.Id;
         IsUser = message.Role == ChatRole.User;
         RoleText = IsUser ? AppResources.UserRole : AppResources.AssistantRole;
-        Text = text;
+        // An error with a code shows the text of the code; a message saved without one shows its saved text.
+        Text = message.IsError && message.ErrorKind is { } kind ? ErrorKindText.Of(kind) : text;
         IsError = message.IsError;
         Copy = copy ?? throw new ArgumentNullException(nameof(copy));
     }

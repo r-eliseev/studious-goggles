@@ -218,7 +218,7 @@ public class AssistantServiceTests
 
         Assert.Null(result.Run);
         Assert.True(result.AssistantMessage.IsError);
-        Assert.Contains("does not take reference images", result.AssistantMessage.Text, StringComparison.Ordinal);
+        Assert.Equal(ErrorKind.ModelWithoutReferences, result.AssistantMessage.ErrorKind);
     }
 
     [Fact]
@@ -663,7 +663,8 @@ public class AssistantServiceTests
 
         Assert.Null(result.Run);
         Assert.True(result.AssistantMessage.IsError);
-        Assert.Equal("The assistant returned an invalid tool call.", result.AssistantMessage.Text);
+        Assert.Equal(ErrorKind.InvalidToolCall, result.AssistantMessage.ErrorKind);
+        Assert.Equal("", result.AssistantMessage.Text);
         Assert.Empty(_storedRuns);
         await _runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
     }
@@ -676,7 +677,8 @@ public class AssistantServiceTests
         var result = await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
 
         Assert.True(result.AssistantMessage.IsError);
-        Assert.Equal("The assistant returned an empty response.", result.AssistantMessage.Text);
+        Assert.Equal(ErrorKind.EmptyResponse, result.AssistantMessage.ErrorKind);
+        Assert.Equal("", result.AssistantMessage.Text);
     }
 
     [Fact]
@@ -708,7 +710,8 @@ public class AssistantServiceTests
         Assert.Equal(2, _stored.Count);
         Assert.Equal(ChatRole.Assistant, result.AssistantMessage.Role);
         Assert.True(result.AssistantMessage.IsError);
-        Assert.Equal("Assistant error (RateLimited): Rate limit exceeded", result.AssistantMessage.Text);
+        Assert.Equal(ErrorKind.RateLimited, result.AssistantMessage.ErrorKind);
+        Assert.Equal("Rate limit exceeded", result.AssistantMessage.Text);
     }
 
     [Fact]

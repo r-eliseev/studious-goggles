@@ -128,6 +128,9 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     [ObservableProperty]
     public partial string ErrorText { get; set; } = "";
 
+    /// <summary>The provider's own error text, shown only in the details dialog.</summary>
+    public string TechnicalError { get; private set; } = "";
+
     /// <summary>Status, details and error in one line for screen readers.</summary>
     [ObservableProperty]
     public partial string SummaryText { get; set; } = "";
@@ -210,7 +213,10 @@ public sealed partial class GenerationItemViewModel : ObservableObject
 
     /// <summary>Shows the full error text of a failed generation (task 076). Only a failed card has it.</summary>
     [RelayCommand(CanExecute = nameof(IsFailed))]
-    private Task DetailsAsync() => _dialogs.AlertAsync(AppResources.ErrorDetailsTitle, ErrorText);
+    private Task DetailsAsync() => _dialogs.AlertAsync(AppResources.ErrorDetailsTitle, ErrorDetailsValue());
+
+    /// <summary>What the details dialog shows: the provider's text when there is one, otherwise the text for the code.</summary>
+    private string ErrorDetailsValue() => TechnicalError.Length > 0 ? TechnicalError : ErrorText;
 
     /// <summary>Opens the model picker to run this prompt and seed on another model (failed or filtered card, task 076).</summary>
     [RelayCommand(CanExecute = nameof(IsFailedOrFiltered))]
@@ -248,7 +254,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
 
         if (IsFailed)
         {
-            actions.Add((AppResources.ErrorDetailsTitle, card => card._dialogs.AlertAsync(AppResources.ErrorDetailsTitle, card.ErrorText)));
+            actions.Add((AppResources.ErrorDetailsTitle, card => card._dialogs.AlertAsync(AppResources.ErrorDetailsTitle, card.ErrorDetailsValue())));
         }
 
         var title = string.Join(" · ", new[] { ModelText, SeedText, CostText, TimeText }.Where(text => text.Length > 0));
@@ -294,7 +300,9 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         IsFiltered = generation.Status == GenerationStatus.Filtered;
         IsFailedOrFiltered = IsFailed || IsFiltered;
         IsCancelled = generation.Status == GenerationStatus.Cancelled;
-        ErrorText = generation.ErrorMessage?.Trim() ?? "";
+        // The text for the code is shown; the provider's own text (generation.ErrorMessage) is kept for the details dialog.
+        TechnicalError = generation.ErrorMessage?.Trim() ?? "";
+        ErrorText = generation.ErrorKind is { } kind ? ErrorKindText.Of(kind) : TechnicalError;
         HasErrorText = ErrorText.Length > 0;
         HasError = generation.Status == GenerationStatus.Failed && HasErrorText;
         HasImage = generation.Status == GenerationStatus.Succeeded && !string.IsNullOrEmpty(generation.ImagePath);

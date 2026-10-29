@@ -485,8 +485,8 @@ public sealed class GenerationService(
         {
             logger.LogWarning(ex, "Reference image of generation {GenerationId} is missing or unreadable.", generation.Id);
             generation.Status = GenerationStatus.Failed;
-            generation.ErrorKind = ErrorKind.Unknown;
-            generation.ErrorMessage = "Reference image is missing or unreadable.";
+            generation.ErrorKind = ErrorKind.ReferenceUnreadable;
+            generation.ErrorMessage = ex.Message;
             return null;
         }
 

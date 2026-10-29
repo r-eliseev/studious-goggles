@@ -336,7 +336,7 @@ public class GenerationServiceTests
         Assert.All(_added, g =>
         {
             Assert.Equal(GenerationStatus.Failed, g.Status);
-            Assert.Contains("Reference image", g.ErrorMessage, StringComparison.Ordinal);
+            Assert.Equal(ErrorKind.ReferenceUnreadable, g.ErrorKind);
         });
     }
 

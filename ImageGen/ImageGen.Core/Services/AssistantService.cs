@@ -28,8 +28,6 @@ public sealed class AssistantService(
     IConversationSummaryRepository summaries,
     ConversationSummaryService summaryService)
 {
-    private const string EmptyResponseText = "The assistant returned an empty response.";
-    private const string InvalidToolCallText = "The assistant returned an invalid tool call.";
 
     public Task<AssistantTurnResult> SendUserMessageAsync(Guid sessionId, string text, CancellationToken cancellationToken) =>
         SendUserMessageAsync(sessionId, text, [], cancellationToken);
@@ -103,7 +101,7 @@ public sealed class AssistantService(
         var sessionId = session.Id;
         Run? run = null;
         string replyText;
-        var isError = false;
+        ErrorKind? errorKind = null;
         var messageCount = 0;
         var toolCallCount = 0;
         try
@@ -132,18 +130,18 @@ public sealed class AssistantService(
                 var prompt = ReadPrompt(call.ArgumentsJson);
                 if (prompt is null)
                 {
-                    replyText = InvalidToolCallText;
-                    isError = true;
+                    replyText = string.Empty;
+                    errorKind = ErrorKind.InvalidToolCall;
                 }
                 else
                 {
-                    (run, replyText, isError) = await StartRunReplyAsync(sessionId, reply.Text, prompt, attachmentIds, cancellationToken);
+                    (run, replyText, errorKind) = await StartRunReplyAsync(sessionId, reply.Text, prompt, attachmentIds, cancellationToken);
                 }
             }
             else if (string.IsNullOrWhiteSpace(reply.Text))
             {
-                replyText = EmptyResponseText;
-                isError = true;
+                replyText = string.Empty;
+                errorKind = ErrorKind.EmptyResponse;
             }
             else
             {
@@ -153,19 +151,21 @@ public sealed class AssistantService(
         catch (ProviderException ex)
         {
             logger.LogWarning("Assistant request failed with error kind {ErrorKind}.", ex.Kind);
-            replyText = $"Assistant error ({ex.Kind}): {ex.Message}";
-            isError = true;
+            // The provider's own text is kept as a technical detail; the interface shows the text for the code.
+            replyText = ex.Message;
+            errorKind = ex.Kind;
         }
         catch (Exception ex) when (ex is IOException or InvalidOperationException && attachmentIds.Count > 0)
         {
             logger.LogWarning(ex, "An attached image of session {SessionId} could not be read.", sessionId);
-            replyText = "An attached image could not be read.";
-            isError = true;
+            replyText = ex.Message;
+            errorKind = ErrorKind.AttachmentUnreadable;
         }
 
         var assistantMessage = NewMessage(sessionId, ChatRole.Assistant, replyText);
         assistantMessage.RunId = run?.Id;
-        assistantMessage.IsError = isError;
+        assistantMessage.IsError = errorKind is not null;
+        assistantMessage.ErrorKind = errorKind;
         await messages.AddAsync(assistantMessage, cancellationToken);
         // C3.1: the summary is written in the background; the reply above does not wait for it.
         summaryService.Request(sessionId);
@@ -175,7 +175,7 @@ public sealed class AssistantService(
             messageCount,
             toolCallCount,
             run?.Id,
-            isError);
+            errorKind is not null);
         return new AssistantTurnResult(userMessage, assistantMessage, run);
     }
 
@@ -207,7 +207,7 @@ public sealed class AssistantService(
         }
     }
 
-    private async Task<(Run? Run, string Text, bool IsError)> StartRunReplyAsync(
+    private async Task<(Run? Run, string Text, ErrorKind? Error)> StartRunReplyAsync(
         Guid sessionId,
         string? assistantText,
         string prompt,
@@ -219,9 +219,11 @@ public sealed class AssistantService(
             var result = await generations.StartRunWithAttachmentsAsync(sessionId, prompt, attachmentIds, cancellationToken);
             if (result.Run is null)
             {
-                return (null, SkippedText(result.SkippedModels), true);
+                return (null, string.Empty, ErrorKind.ModelWithoutReferences);
             }
 
+            // Notes about skipped models and references are shown next to a started run. They are not errors and are
+            // still written in English (task 043 covers error texts only).
             var notes = new List<string>();
             if (result.SkippedModels.Count > 0)
             {
@@ -234,12 +236,12 @@ public sealed class AssistantService(
             }
 
             var text = AssistantPrompts.RunMessage(assistantText);
-            return (result.Run, string.Join(" ", [text, .. notes]).Trim(), false);
+            return (result.Run, string.Join(" ", [text, .. notes]).Trim(), null);
         }
         catch (InvalidOperationException ex)
         {
-            // For example, the session has no image models. The message is written by the core and has no secrets.
-            return (null, ex.Message, true);
+            // For example, the session has no image models: the code is shown, the core's message is kept as a detail.
+            return (null, ex.Message, ErrorKind.ModelUnavailable);
         }
     }
 

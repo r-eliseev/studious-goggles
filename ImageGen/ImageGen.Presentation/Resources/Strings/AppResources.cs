@@ -314,6 +314,38 @@ public static class AppResources
 
     public static string ErrorDetailsTitle => Get(nameof(ErrorDetailsTitle));
 
+    public static string ErrorKindUnknown => Get(nameof(ErrorKindUnknown));
+
+    public static string ErrorKindInvalidKey => Get(nameof(ErrorKindInvalidKey));
+
+    public static string ErrorKindInsufficientFunds => Get(nameof(ErrorKindInsufficientFunds));
+
+    public static string ErrorKindModerated => Get(nameof(ErrorKindModerated));
+
+    public static string ErrorKindForbidden => Get(nameof(ErrorKindForbidden));
+
+    public static string ErrorKindBadRequest => Get(nameof(ErrorKindBadRequest));
+
+    public static string ErrorKindTimeout => Get(nameof(ErrorKindTimeout));
+
+    public static string ErrorKindRateLimited => Get(nameof(ErrorKindRateLimited));
+
+    public static string ErrorKindModelUnavailable => Get(nameof(ErrorKindModelUnavailable));
+
+    public static string ErrorKindNetwork => Get(nameof(ErrorKindNetwork));
+
+    public static string ErrorKindInterrupted => Get(nameof(ErrorKindInterrupted));
+
+    public static string ErrorKindEmptyResponse => Get(nameof(ErrorKindEmptyResponse));
+
+    public static string ErrorKindInvalidToolCall => Get(nameof(ErrorKindInvalidToolCall));
+
+    public static string ErrorKindAttachmentUnreadable => Get(nameof(ErrorKindAttachmentUnreadable));
+
+    public static string ErrorKindReferenceUnreadable => Get(nameof(ErrorKindReferenceUnreadable));
+
+    public static string ErrorKindModelWithoutReferences => Get(nameof(ErrorKindModelWithoutReferences));
+
     public static string OtherModel => Get(nameof(OtherModel));
 
     public static string CopyPrompt => Get(nameof(CopyPrompt));
