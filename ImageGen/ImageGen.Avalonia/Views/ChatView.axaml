@@ -86,6 +86,12 @@
                                         IsVisible="{Binding !IsUser}"
                                         HorizontalAlignment="Left"
                                         AutomationProperties.Name="{markup:Res Copy}" />
+                                <Button Classes="ghost small"
+                                        Command="{Binding RetryCommand}"
+                                        Content="{markup:Res TryAgain}"
+                                        IsVisible="{Binding CanRetry}"
+                                        HorizontalAlignment="Left"
+                                        AutomationProperties.Name="{markup:Res TryAgain}" />
                                 <TextBlock Classes="meta" Text="{markup:Res Copied}" IsVisible="{Binding Copy.IsCopied}" />
                             </StackPanel>
                         </Border>

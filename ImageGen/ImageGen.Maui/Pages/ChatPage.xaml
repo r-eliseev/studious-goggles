@@ -53,6 +53,12 @@
                                         </DataTrigger>
                                     </Button.Triggers>
                                 </Button>
+                                <Button StyleClass="ghost,small"
+                                        Text="{x:Static strings:AppResources.TryAgain}"
+                                        Command="{Binding RetryCommand}"
+                                        IsVisible="{Binding CanRetry}"
+                                        HorizontalOptions="Start"
+                                        SemanticProperties.Description="{x:Static strings:AppResources.TryAgain}" />
                                 <Label StyleClass="meta" Text="{x:Static strings:AppResources.Copied}" IsVisible="{Binding Copy.IsCopied}" />
                             </VerticalStackLayout>
                         </Border>

@@ -60,6 +60,8 @@ public sealed partial class ChatPageModel(
     [NotifyCanExecuteChangedFor(nameof(SendCommand))]
     public partial bool IsBusy { get; set; }
 
+    partial void OnIsBusyChanged(bool value) => UpdateRetry();
+
     /// <summary>True on a wide window (≥ 840). The shell sets it on resize; it decides pane versus navigation.</summary>
     [ObservableProperty]
     public partial bool IsWide { get; set; }
@@ -144,12 +146,12 @@ public sealed partial class ChatPageModel(
                         var text = RunMessageText.Visible(message.Text, runPrompt);
                         if (text.Length > 0)
                         {
-                            Items.Add(new MessageItemViewModel(message, text, new CopyTextAction(clipboard, mainThread, text)));
+                            Items.Add(new MessageItemViewModel(message, text, new CopyTextAction(clipboard, mainThread, text), _ => RetryLastMessageAsync()));
                         }
                     }
                     else
                     {
-                        Items.Add(new MessageItemViewModel(message, message.Text, new CopyTextAction(clipboard, mainThread, message.Text)));
+                        Items.Add(new MessageItemViewModel(message, message.Text, new CopyTextAction(clipboard, mainThread, message.Text), _ => RetryLastMessageAsync()));
                     }
                 }
                 else if (entry.Run is { } run)
@@ -158,6 +160,8 @@ public sealed partial class ChatPageModel(
                     Items.Add(new RunItemViewModel(run, cards, new CopyTextAction(clipboard, mainThread, run.Prompt)));
                 }
             }
+
+            UpdateRetry();
         }
         catch (Exception ex)
         {
@@ -278,6 +282,40 @@ public sealed partial class ChatPageModel(
     }
 
     private bool CanSend() => !IsBusy && (!string.IsNullOrWhiteSpace(InputText) || PendingAttachments.Count > 0);
+
+    /// <summary>S2.5: «Try again» is offered only for the last message of the chat, and only while nothing runs.</summary>
+    private void UpdateRetry()
+    {
+        foreach (var item in Items.OfType<MessageItemViewModel>())
+        {
+            item.CanRetry = false;
+        }
+
+        if (!IsBusy && Items.LastOrDefault() is MessageItemViewModel { IsError: true } last)
+        {
+            last.CanRetry = true;
+        }
+    }
+
+    /// <summary>Sends the chat's last message to the assistant again (S2.5, task 077); the error reply stays in the chat.</summary>
+    private async Task RetryLastMessageAsync()
+    {
+        IsBusy = true;
+        try
+        {
+            await assistant.RetryLastTurnAsync(_sessionId, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+
+        await ReloadAsync();
+    }
 
     [RelayCommand]
     private async Task OpenParametersAsync()

@@ -73,6 +73,8 @@ public static class AppResources
 
     public static string SaveFailed => Get(nameof(SaveFailed));
 
+    public static string TryAgain => Get(nameof(TryAgain));
+
     public static string SaveImageAs => Get(nameof(SaveImageAs));
 
     public static string SaveToPhotos => Get(nameof(SaveToPhotos));

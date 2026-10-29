@@ -75,6 +75,32 @@ public sealed class AssistantService(
             await sessions.SetTitleFromFirstMessageAsync(sessionId, trimmed, cancellationToken);
         }
 
+        return await CompleteTurnAsync(session, userMessage, attachmentIds, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends the last user message, with its images, to the assistant again (S2.5, task 077). Used after an error reply: no
+    /// user message is added, and the error reply stays in the history but is left out of the request (C1.2).
+    /// </summary>
+    public async Task<AssistantTurnResult> RetryLastTurnAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var session = await sessions.GetAsync(sessionId, cancellationToken)
+            ?? throw new InvalidOperationException($"Session {sessionId} not found.");
+        var history = await messages.ListBySessionAsync(sessionId, cancellationToken);
+        var userMessage = history.LastOrDefault(m => m.Role == ChatRole.User)
+            ?? throw new InvalidOperationException($"Session {sessionId} has no user message to send again.");
+        var attachmentIds = await attachments.ListIdsByMessageAsync(userMessage.Id, cancellationToken);
+        return await CompleteTurnAsync(session, userMessage, attachmentIds, cancellationToken);
+    }
+
+    /// <summary>Builds the request, calls the assistant, starts a run if it asks for one, and saves its reply.</summary>
+    private async Task<AssistantTurnResult> CompleteTurnAsync(
+        Session session,
+        ChatMessage userMessage,
+        IReadOnlyList<Guid> attachmentIds,
+        CancellationToken cancellationToken)
+    {
+        var sessionId = session.Id;
         Run? run = null;
         string replyText;
         var isError = false;

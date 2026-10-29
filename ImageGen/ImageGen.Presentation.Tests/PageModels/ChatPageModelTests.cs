@@ -315,6 +315,62 @@ public class ChatPageModelTests
     }
 
     [Fact]
+    public async Task OnAppearingAsync_LastMessageIsError_CanRetry()
+    {
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.User, Text = "a fox", CreatedAt = Now });
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.Assistant, Text = "error", CreatedAt = Now.AddSeconds(1), IsError = true });
+
+        await _model.OnAppearingAsync();
+
+        Assert.True(Assert.IsType<MessageItemViewModel>(_model.Items[^1]).CanRetry);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_ErrorNotLast_CannotRetry()
+    {
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.User, Text = "a fox", CreatedAt = Now });
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.Assistant, Text = "error", CreatedAt = Now.AddSeconds(1), IsError = true });
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.Assistant, Text = "Here", CreatedAt = Now.AddSeconds(2) });
+
+        await _model.OnAppearingAsync();
+
+        Assert.All(_model.Items.OfType<MessageItemViewModel>(), item => Assert.False(item.CanRetry));
+    }
+
+    [Fact]
+    public async Task Retry_SendsLastMessageAgainAndReloadsTimeline()
+    {
+        // The reply is stamped with the test clock (Now), so the stored messages are older than it.
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.User, Text = "a fox", CreatedAt = Now.AddMinutes(-2) });
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.Assistant, Text = "error", CreatedAt = Now.AddMinutes(-1), IsError = true });
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AssistantChatResult("Here you go", [], null));
+        await _model.OnAppearingAsync();
+
+        await Assert.IsType<MessageItemViewModel>(_model.Items[^1]).RetryCommand.ExecuteAsync(null);
+
+        await _chat.Received(1).CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
+        var last = Assert.IsType<MessageItemViewModel>(_model.Items[^1]);
+        Assert.Equal("Here you go", last.Text);
+        Assert.False(last.IsError);
+        Assert.False(_model.IsBusy);
+    }
+
+    [Fact]
+    public async Task Retry_WhileBusy_CannotExecute()
+    {
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.User, Text = "a fox", CreatedAt = Now });
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.Assistant, Text = "error", CreatedAt = Now.AddSeconds(1), IsError = true });
+        await _model.OnAppearingAsync();
+        var error = Assert.IsType<MessageItemViewModel>(_model.Items[^1]);
+        Assert.True(error.RetryCommand.CanExecute(null));
+
+        _model.IsBusy = true;
+
+        Assert.False(error.RetryCommand.CanExecute(null));
+    }
+
+    [Fact]
     public async Task OnAppearingAsync_SetsCurrentSession()
     {
         await _model.OnAppearingAsync();

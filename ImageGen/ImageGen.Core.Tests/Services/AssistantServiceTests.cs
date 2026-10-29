@@ -541,6 +541,87 @@ public class AssistantServiceTests
         Assert.DoesNotContain(request.Messages, m => m.Text is "m0" or "m1" or "m2");
     }
 
+    private void StoreErrorTurn(string userText, string errorText)
+    {
+        _stored.Add(new ChatMessage
+        {
+            Id = Guid.NewGuid(),
+            SessionId = _session.Id,
+            Role = ChatRole.User,
+            Text = userText,
+            CreatedAt = Now,
+        });
+        _stored.Add(new ChatMessage
+        {
+            Id = Guid.NewGuid(),
+            SessionId = _session.Id,
+            Role = ChatRole.Assistant,
+            Text = errorText,
+            CreatedAt = Now.AddSeconds(1),
+            IsError = true,
+        });
+    }
+
+    [Fact]
+    public async Task RetryLastTurn_SendsLastUserMessageAgain()
+    {
+        StoreErrorTurn("a fox", "Assistant error (RateLimited): slow down");
+        ReplyWith(new AssistantChatResult("Here you go", [], null));
+
+        await _service.RetryLastTurnAsync(_session.Id, TestContext.Current.CancellationToken);
+
+        Assert.Equal("a fox", LastRequest.Messages[^1].Text);
+        Assert.Equal(AssistantChatMessage.UserRole, LastRequest.Messages[^1].Role);
+    }
+
+    [Fact]
+    public async Task RetryLastTurn_DoesNotAddUserMessage_AddsOnlyTheReply()
+    {
+        StoreErrorTurn("a fox", "error");
+        ReplyWith(new AssistantChatResult("Here you go", [], null));
+
+        var result = await _service.RetryLastTurnAsync(_session.Id, TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, _stored.Count);
+        Assert.Equal(1, _stored.Count(m => m.Role == ChatRole.User));
+        Assert.Equal("Here you go", result.AssistantMessage.Text);
+        Assert.False(result.AssistantMessage.IsError);
+    }
+
+    [Fact]
+    public async Task RetryLastTurn_ExcludesErrorFromHistory()
+    {
+        StoreErrorTurn("a fox", "Assistant error (RateLimited): slow down");
+        ReplyWith(new AssistantChatResult("Here you go", [], null));
+
+        await _service.RetryLastTurnAsync(_session.Id, TestContext.Current.CancellationToken);
+
+        Assert.DoesNotContain(LastRequest.Messages, m => m.Text.Contains("slow down", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RetryLastTurn_NoUserMessage_Throws()
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.RetryLastTurnAsync(_session.Id, TestContext.Current.CancellationToken));
+        Assert.Empty(_stored);
+    }
+
+    [Fact]
+    public async Task RetryLastTurn_WithAttachments_SendsImagesAgain()
+    {
+        AssistantAcceptsImages();
+        var attachment = UserAttachment();
+        StoreErrorTurn("look at this", "error");
+        attachment.MessageId = _stored[0].Id;
+        _chatAttachments.ListByMessageAsync(_stored[0].Id, Arg.Any<CancellationToken>()).Returns([attachment]);
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        await _service.RetryLastTurnAsync(_session.Id, TestContext.Current.CancellationToken);
+
+        Assert.Single(LastRequest.Messages[^1].ImageDataUrls);
+    }
+
     [Fact]
     public async Task SendUserMessageAsync_ToolCallWithPrompt_StartsRunAndShowsPrompt()
     {
