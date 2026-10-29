@@ -1,0 +1,57 @@
+name: release
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: write
+
+jobs:
+  desktop:
+    strategy:
+      matrix:
+        rid: [linux-x64, win-x64]
+    runs-on: ${{ matrix.rid == 'win-x64' && 'windows-latest' || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Publish Avalonia desktop
+        run: dotnet publish ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj -c Release -r ${{ matrix.rid }} --self-contained -p:Version=${GITHUB_REF_NAME#v} -o publish/${{ matrix.rid }}
+      - name: Pack
+        shell: bash
+        run: |
+          cd publish/${{ matrix.rid }}
+          if [ "${{ matrix.rid }}" = "win-x64" ]; then
+            7z a -tzip "../../ImageGen-${GITHUB_REF_NAME}-${{ matrix.rid }}.zip" .
+          else
+            tar -czf "../../ImageGen-${GITHUB_REF_NAME}-${{ matrix.rid }}.tar.gz" .
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ImageGen-${{ matrix.rid }}
+          path: ImageGen-${{ github.ref_name }}-${{ matrix.rid }}.*
+
+  publish:
+    needs: desktop
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+      - name: Release notes
+        run: |
+          # Release folder is the tag without its patch number: v0.1.0 -> tasks/v0.1 (scripts/release-notes.sh).
+          release="${GITHUB_REF_NAME%.*}"
+          if [ -d "tasks/$release" ]; then
+            bash scripts/release-notes.sh "$release" > notes.md
+          else
+            echo "Release notes: no tasks folder for $release; see the commits." > notes.md
+          fi
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" assets/* --title "ImageGen $GITHUB_REF_NAME" --notes-file notes.md
