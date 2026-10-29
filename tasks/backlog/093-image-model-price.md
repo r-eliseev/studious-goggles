@@ -13,7 +13,7 @@ created: 2026-10-29
 
 Что известно: `ImageModel` (`ImageGen.Core/Domain/Models/ImageModel.cs`) цену не хранит; у ассистента цена берётся из поля `pricing` каталога OpenRouter (`OpenRouterClient`). В каком виде OpenRouter и fal отдают цену моделей картинок (за картинку, за мегапиксель, за токены вывода), неизвестно: выяснить в «Анализе», при необходимости пробным кодом в `poc/`. Скорее всего нужна новая колонка в кэше каталога (миграция `NNNN_<смысл>.sql`).
 
-Зависит от: 092 (та же строка модели в списке; ядро и данные можно делать раньше).
+Зависит от: 092 (та же строка модели в списке).
 Среда: Linux или Windows.
 
 ## Критерии готовности
@@ -53,9 +53,9 @@ fal, проверено 2026-10-29: в списке моделей цены не
 - Формат чисел инвариантный, `0.00##`, как у цены ассистента.
 
 ## План
-Для исполнителя (план рассчитан на небольшую модель): делай шаги строго по порядку, по TDD (сначала падающий тест, потом минимальный код), после каждого шага — сборка и тесты из «Проверки». Имена файлов, типов, членов, ключей строк и тестов переноси дословно. Если шаг не получается так, как написано (API другое, компилятор не принимает разметку), не придумывай обход: опиши в «Комментариях», что пробовал, поставь `blocked` и остановись.
+Для исполнителя (план рассчитан на небольшую модель): делай шаги строго по порядку, по TDD (сначала падающий тест, потом минимальный код), после каждого шага — сборка и тесты из «Проверки». Имена файлов, типов, членов, ключей строк и тестов переноси дословно. При расхождении с текущим API адаптируй имена и разметку в рамках описанного контракта и проверь сборкой. `blocked` нужен только для неизвестного продуктового решения или недоступной обязательной среды; ошибку компиляции исправляй минимальным изменением, без расширения задачи.
 
-Выполнять после: 092 (та же строка модели и `ModelOptionViewModel`). Шаги 1–6 (ядро и данные) с 090–092 не пересекаются и могут идти раньше. Шаг 7 — только после 092 `done`; иначе поставь `blocked` с комментарием «ждёт 092».
+Выполнять после: 092 в main. Задачу до этого не занимать и не разбивать выполнение по скрытым частичным зависимостям. Пересечения с 129 и 132: `OpenRouterClient.cs`, `OpenAiCompatibleClientTests.cs`; контракт генерации не менять, при rebase сохранять их правки. Нет функциональной зависимости от них.
 
 Прочитай перед началом:
 - «Анализ» выше.
@@ -68,7 +68,7 @@ fal, проверено 2026-10-29: в списке моделей цены не
    - Новый файл `ImageGen/ImageGen.Core/Domain/Models/ImageModelPrice.cs`: `public sealed record ImageModelPrice(string Billable, ImagePriceUnit Unit, decimal CostUsd, string? Variant);`. XML-комментарий: `CostUsd` — за одну единицу провайдера, у `Token` — за один токен.
    - В `ImageModel` — `public IReadOnlyList<ImageModelPrice> Prices { get; set; } = [];` с комментарием «Prices from the provider's catalog; empty when the provider gives none».
    - В `CoreJsonContext` — `[JsonSerializable(typeof(List<ImageModelPrice>))]`.
-2. Потокобезопасные тестовые заглушки. В `ImageGen/ImageGen.Core.Tests/TestDoubles/StubHttpMessageHandler.cs` и `ImageGen/ImageGen.Avalonia.Tests/TestDoubles/StubHttpMessageHandler.cs`, в `SendAsync`: сначала прочитать тело запроса, затем под `lock` по приватному объекту добавить запрос в `Requests` и тело в `RequestBodies`. Причина: запросы цены идут параллельно. Все тесты зелёные.
+2. Потокобезопасные тестовые заглушки. В Core `StubHttpMessageHandler` уже есть `Requests` и `RequestBodies`: сначала прочитать тело, затем одним `lock` по новому приватному объекту добавить запрос и тело, сохранив совпадение индексов. В Avalonia `StubHttpMessageHandler` есть только `Requests` и синхронный responder: защитить `Requests.Add` тем же приёмом, без добавления неиспользуемого `RequestBodies` и async-конверсии. `_respond`/`respond` вызывать за пределами lock; проверки коллекций только после завершения запросов. Регрессия Core: несколько параллельных запросов → все запросы и тела сохранены попарно без потерь. Причина — до 4 запросов цены одновременно.
 3. Разбор цены OpenRouter (сначала тесты в `OpenRouterClientTests`). Заглушка — `new StubHttpMessageHandler(req => …)`: путь, оканчивающийся на `/endpoints`, получает выдержку нужной модели (выбор по `AbsolutePath`), путь `/images/models` — список.
    - `ListImageModelsAsync_Endpoints_ParsesPrices` — список из `black-forest-labs/flux.2-klein-4b` и `qwen/qwen-image-2.1-turbo` с выдержками из «Анализа». У первой одна цена (`output_image`, `Megapixel`, 0.014, `null`); у второй три: `input_image`/`Image`/0/`null`, `output_image`/`Image`/0.0184/`1k`, `output_image`/`Image`/0.0184/`2k`.
    - `ListImageModelsAsync_EndpointsAddress_KeepsSlashInId` — среди запросов есть `https://openrouter.ai/api/v1/images/models/black-forest-labs/flux.2-klein-4b/endpoints`; первый запрос — `…/images/models`.
@@ -78,16 +78,13 @@ fal, проверено 2026-10-29: в списке моделей цены не
    - `ListImageModelsAsync_UnknownUnit_SkipsEntry` — в `pricing` добавлена запись `{"billable":"output_image","unit":"second","cost_usd":1}` → её нет, остальные на месте.
    - `ListImageModelsAsync_Cancelled_Throws` — токен отменён до вызова → `Assert.ThrowsAnyAsync<OperationCanceledException>`.
    - Реализация в `OpenRouterClient`:
-     - новый приватный метод `private async Task<IReadOnlyList<ImageModelPrice>> ReadPricesAsync(string modelId, CancellationToken cancellationToken)`. Запрос `GET` на относительный путь `"images/models/" + modelId + "/endpoints"` (id не экранировать) через `CreateAuthorizedRequestAsync` и `SendJsonAsync`. Обходит все `endpoints[*].pricing[*]`. Единица — `unit`: `image`, `megapixel`, `token`, `request`, иначе запись пропускается. Цена — `cost_usd`, читается сразу как `decimal` (`GetValue<decimal>()`); если поле не число, запись пропускается. `variant` — строка или `null`. `ProviderException` перехватывается, и метод возвращает `[]`; отмена пробрасывается.
+     - новый приватный метод `private async Task<IReadOnlyList<ImageModelPrice>> ReadPricesAsync(string modelId, CancellationToken cancellationToken)`. Запрос `GET` на относительный путь `"images/models/" + modelId + "/endpoints"` (id не экранировать) через `CreateAuthorizedRequestAsync` и `SendJsonAsync`. Обходит все `endpoints[*].pricing[*]`. Единица — `unit`: `image`, `megapixel`, `token`, `request`, иначе запись пропускается. Цена — `cost_usd`, читается безопасно через `JsonValue.TryGetValue<decimal>`; если поле не число, отрицательное или вне диапазона decimal, запись пропускается. `billable` — непустая строка, иначе пропустить; `variant` — строка или `null`. Неверный тип `endpoints`/`pricing` даёт пустую цену/пропуск элемента, а не падение всего каталога. Добавить тесты неверных JSON-типов, отрицательной цены и некорректного endpoint одного из нескольких элементов. `ProviderException` перехватывается, и метод возвращает `[]`; отмена пробрасывается. Никаких широких catch, скрывающих cancellation или ошибки программы.
      - в `ListImageModelsAsync`, после сборки списка: `Parallel.ForEachAsync` по списку с `MaxDegreeOfParallelism = 4` (приватная константа `PriceRequestParallelism = 4`) и токеном отмены; каждой модели присваивается `Prices = await ReadPricesAsync(...)`.
    - Существующие тесты `ListImageModelsAsync_*`, которые отвечают одним JSON на любой запрос, должны остаться зелёными: у их моделей `Prices` пуст. Если какой-то из них проверяет число запросов, поменяй ожидание на «1 + число моделей» и запиши это в «Отчёт».
 4. fal и модели из конфига. Тест в `FalImageProviderTests`: `ListImageModels_NoPriceInCatalog_EmptyPrices` — существующий ответ списка (`fal-ai/a`, `fal-ai/b`) → `Prices` пуст у обеих. Тест в `OpenAiCompatibleClientTests`: `ListImageModelsAsync_ConfiguredModels_EmptyPrices`. Код не меняется: значение по умолчанию уже `[]`. Если тест падает — поставь `Prices = []` явно.
 5. Данные (сначала тесты).
-   - Новая миграция `ImageGen/ImageGen.Data/Migrations/NNNN_image_model_prices.sql`, где `NNNN` — следующий свободный номер в папке на момент работы. Содержимое:
-     - комментарий «Task 093: image model prices. The catalog is a cache: old rows are dropped and reloaded on the next open.»;
-     - `ALTER TABLE image_models ADD COLUMN prices_json TEXT NULL;`
-     - `DELETE FROM image_models;`
-   - Тест в `MigrationsTests`: `All_ImageModelPricesMigration_AddsColumnAndClearsCache` — в `Migrations.All` есть миграция, чьё имя оканчивается на `_image_model_prices.sql`; её `Script` содержит `ADD COLUMN prices_json` и `DELETE FROM image_models`.
+   - Новая миграция `ImageGen/ImageGen.Data/Migrations/NNNN_image_model_prices.sql`, где `NNNN` — следующий свободный номер в папке на момент работы: добавить nullable TEXT-колонку `prices_json` таблице `image_models` и очистить только этот кэш. Данные сессий, прогонов и картинок не затрагивать. Комментарий миграции объясняет, что каталог перечитается при следующем открытии.
+   - Тест в `MigrationsTests`: `All_ImageModelPricesMigration_AddsColumnAndClearsCache` — в `Migrations.All` есть миграция, чьё имя оканчивается на `_image_model_prices.sql`; проверить реальное применение на временной SQLite БД со старой схемой и заполненным `image_models`: после миграции есть колонка, кэш пуст, остальные таблицы и их строки сохранены. Одной проверки SQL-текста недостаточно.
    - В `ImageGen/ImageGen.Data/ParameterJson.cs`:
      - `public static string Prices(IReadOnlyList<ImageModelPrice> prices)` — сериализация через `CoreJsonContext.Default.ListImageModelPrice`;
      - `public static IReadOnlyList<ImageModelPrice> ReadPrices(string? json)` — `null` → `[]`.
@@ -128,6 +125,8 @@ fal, проверено 2026-10-29: в списке моделей цены не
    - `docs/architecture.md`, строка `Domain/Models/`: добавь `ImageModelPrice`, `ImagePriceUnit` (цена из каталога).
    - `docs/status.md`, «Открытые вопросы»: «Цена моделей fal (задача 093): в списке моделей цены нет, `GET https://api.fal.ai/v1/models/pricing` без ключа отвечает 401, форма ответа неизвестна; у fal показывается „price unknown“. Проверить с ключом fal».
 10. Ручные пункты (см. «Ручная проверка») допиши в задачи 016 и 046.
+
+После проверок заполни «Отчёт», перечисли доступные и отложенные ручные проверки, выполни `scripts/release-task.sh 093`, затем `bash scripts/check.sh`. Отсутствие Windows/Android-устройства для ручной проверки не блокирует завершение: пункты передаются владельцу по `docs/tasks.md`.
 
 ### Проверка
 ```
