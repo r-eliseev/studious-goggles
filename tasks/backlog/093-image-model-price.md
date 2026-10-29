@@ -144,7 +144,7 @@ dotnet format ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.c
 dotnet format ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj --verify-no-changes
 bash scripts/check.sh
 ```
-Живая проверка без ключа (необязательна): `curl -s https://openrouter.ai/api/v1/images/models/black-forest-labs/flux.2-klein-4b/endpoints` — в ответе есть `"pricing"`. Если формы ответа больше нет, поставь `blocked` и опиши в «Комментариях».
+Живая проверка без ключа (необязательна): `curl -s https://openrouter.ai/api/v1/images/models/black-forest-labs/flux.2-klein-4b/endpoints` — в ответе есть `"pricing"`. Недоступность endpoint/401/сетевая ошибка необязательного probe не блокирует mocked-contract реализацию: записать фактический исход. При документированном изменении wire schema сверить актуальную документацию и fixtures; если она действительно неизвестна, задать точный вопрос с evidence, не изобретать контракт.
 
 ### Ручная проверка
 - В задачу 016 (MAUI под Windows): после «Refresh» у моделей OpenRouter в строке видна цена («$0.014 / MP» у FLUX.2 Klein 4B), у моделей fal — «price unknown»; повторное открытие экрана берёт цены из кэша без задержки.
