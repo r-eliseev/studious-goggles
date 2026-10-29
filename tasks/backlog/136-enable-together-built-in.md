@@ -29,12 +29,13 @@ Official catalog requires positive balance. Price snapshot 2026-10-29: FLUX1.1 P
 Для Haiku/Luna: JSON/config/catalog/docs, no new ProviderKind/client. Do not add Together chat models.
 
 1. Add provider entry to builtin-providers.json with fields from criteria and four imageModels, name, supportsSeed true, maxImagesPerRequest=1 because app issues one generation/request and initial scope no references.
-2. Update ProviderConfigLoader built-in tests exact provider count/order/config/models. Composition test resolves OpenAiCompatible connection and model catalog ProviderId=together.
+2. Добавить Together в конец существующего списка (openrouter, fal, together), чтобы сохранить порядок предыдущих provider. ProviderConfigLoader built-in tests проверяют ровно этот count/order, форматные knobs, case-sensitive четыре model id. Сохранить override semantics: пользовательский entry id=together полностью заменяет built-in по действующим правилам, дубликаты внутри одного файла отклоняются. Composition test разрешает generic openAiCompatible connection и model catalog ProviderId=together; после129 он представлен queued wrapper, поэтому не требовать GetConnection(id) is OpenAiCompatibleClient: проверять публичный IQueuedImageProvider и HTTP contract. Провайдерский wire test остаётся на OpenAiCompatibleClient из132.
 3. Presentation tests after135: Settings row/key route, model rows provider label; first-run only OpenRouter.
-4. Mocked end-to-end Core generation Together: key secret name, POST path/body, b64 PNG saved, status/cost unknown.
-5. Update docs/knowledge/together-ai.md from132: built-in enabled, date/prices remain snapshot/live unverified. Update architecture external systems, product/spec active provider wording, status remove «task not created» and list live smoke unknown.
-6. Update README task118 dependency/content so Together listed built-in only after this task.
-7. Optional owner live smoke cheapest chosen model; if official model id removed or response differs, blocked/follow-up, no silent model substitution.
+4. В Core GenerationServiceTests подключить registry/router как после129 с in-memory queued adapter, fake ISecretStore и StubHttpMessageHandler без живого ключа. Scenario: fake key under SecretNames.ForProvider(together), один POST images/generations с base64/png/seed, ответ с маленьким валидным PNG → дождаться WhenIdleAsync, один SaveAsync с теми же bytes/media image/png, terminal Succeeded, CostUsd=null; пустой ключ → Failed/InvalidKey и HTTP не вызывается. Data.Tests/CompositionTests только проверяет реальную DI-композицию и регистрацию каталога, без живой сети. Не ожидать конкретный внутренний wire-тип от router после129.
+5. Update docs/knowledge/together-ai.md from132: built-in enabled, date/prices remain snapshot/live unverified. Update architecture external systems, product/spec active provider wording, status remove «task not created» and list live smoke unknown. Обязательно AGENTS.md: в116 Together был выбранным/manual-config, теперь отметить built-in для image-only; не оставить утверждение «Together не встроен». Оставить ограничения по assistant, reference input/parameters, actual cost и непроверенный live ответ явными. Документацию менять по фактической реализации, не копировать устаревшие абсолютные даты как текущую цену.
+6. Task118 уже зависит от136; файл задачи118 не менять, она создаст README по фактическому built-in catalog после merge136. Если README к моменту реализации уже существует, обновить в нём фактический список провайдеров и ограничения Together; иначе новый README здесь не создавать.
+7. Optional owner live smoke — только после его явного разрешения на платный запрос и с собственноручным вводом ключа. Без запроса live результат остаётся «не проверено», mocked-contract задача завершается. Если владелец сообщил, что точный id удалён/contract отличается, не включать заведомо сломанный built-in: записать факт/источник, уточнить список и план у владельца; молча заменять модель нельзя.
+8. Заполнить «Отчёт», перечислить живые проверки/ограничения отдельно; завершить по docs/tasks.md, release-task.sh136 и scripts/check.sh.
 
 ### Проверка
 ```
@@ -50,8 +51,11 @@ dotnet format ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj --
 bash scripts/check.sh
 ```
 
-Файлы: `ImageGen/ImageGen.Core/Providers/builtin-providers.json`, `ImageGen/ImageGen.Core.Tests/Providers/ProviderConfigLoaderTests.cs`, `ImageGen/ImageGen.Core.Tests/Providers/ProviderRouterTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Data.Tests/CompositionTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SettingsPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionModelsPageModelTests.cs`, `ImageGen/ImageGen.Avalonia.Tests/Flows/StartFlowTests.cs`, `docs/knowledge/together-ai.md`, `docs/architecture.md`, `docs/product.md`, `docs/specs/image-client.md`, `docs/status.md`, `tasks/backlog/118-root-readme.md`
+Файлы: `ImageGen/ImageGen.Core/Providers/builtin-providers.json`, `ImageGen/ImageGen.Core.Tests/Providers/ProviderConfigLoaderTests.cs`, `ImageGen/ImageGen.Core.Tests/Providers/ProviderRouterTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Data.Tests/CompositionTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SettingsPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionModelsPageModelTests.cs`, `ImageGen/ImageGen.Avalonia.Tests/Flows/StartFlowTests.cs`, `docs/knowledge/together-ai.md`, `docs/architecture.md`, `docs/product.md`, `docs/specs/image-client.md`, `docs/status.md`, `AGENTS.md`, `README.md` (только если уже создан задачей118 к моменту реализации)
 
 ## Отчёт
 
 ## Комментарии
+
+### 2026-10-29, codex-review
+Задача нужна отдельно от generic wire support132 и key UI135. Уточнён queued router после129 и сохранение порядка/override. По согласованию с ревью116 AGENTS.md обязательно переключает Together из manual-config в built-in. Чужой план118 не переписывается; платный smoke остаётся необязательным и требует отдельного разрешения владельца.
