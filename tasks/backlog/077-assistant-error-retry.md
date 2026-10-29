@@ -1,8 +1,8 @@
 ---
 id: 077
-status: in-progress
-assignee: claude-536f
-claimed: 2026-10-29T05:40:00Z
+status: approved
+assignee:
+claimed:
 created: 2026-10-28
 ---
 
