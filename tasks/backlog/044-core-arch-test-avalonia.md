@@ -1,6 +1,6 @@
 ---
 id: 044
-status: todo
+status: planned
 assignee:
 claimed:
 created: 2026-10-28
@@ -22,10 +22,19 @@ created: 2026-10-28
 - `ImageGen.Core.Tests` зелёные, `dotnet format --verify-no-changes` для `ImageGen.Core.Tests` без изменений, `scripts/check.sh` пройден.
 
 ## Анализ
-- Правка в одну строку списка префиксов. Пересечений с задачами в работе нет: 036 не трогает `ImageGen.Core.Tests/Architecture/`.
-- Проверить «красный» случай можно временной ссылкой Core на пакет Avalonia (в коммит не входит) или словами в «Отчёте».
+- Правка одной строки списка `ForbiddenPrefixes` и абзаца «Зависимости» в `docs/architecture.md` (раздел «Текущая раскладка» и «Правила слоёв»). Пересечений с задачами в работе нет: ни одна из одобренных задач не трогает `ImageGen.Core.Tests/Architecture/`.
+- Текущий тест запрещает `Microsoft.Maui`, `Microsoft.AspNetCore` и `Microsoft.Data.Sqlite`. Прямая ссылка Core на Avalonia сейчас прошла бы незамеченной.
+- Имя сборки Avalonia начинается с `Avalonia` (`Avalonia`, `Avalonia.Base`, `Avalonia.Controls` и т. п.), поэтому префикс `Avalonia` ловит все её сборки.
 
 ## План
+
+Команды проверки: `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`, `dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-no-changes`, `scripts/check.sh`.
+
+1. Тест: добавить префикс `Avalonia` в `ForbiddenPrefixes` в `CoreDependencyTests.cs`. Тест-кейс словами: «сборка Core ссылается на сборку с именем, начинающимся с `Avalonia`» → тест падает. Проверка «красного» случая — временная ссылка `ImageGen.Core` на пакет Avalonia в рабочей копии; в коммит не входит, откатывается до сборки.
+2. `docs/architecture.md`: в абзаце «Зависимости» (раздел «Правила слоёв») перечислить запрещённые для Core префиксы так же, как в тесте: `Microsoft.Maui`, `Microsoft.AspNetCore`, `Microsoft.Data.Sqlite`, `Avalonia`.
+3. Прогон команд проверки; зелёный тест на текущем коде.
+
+Файлы: `ImageGen/ImageGen.Core.Tests/Architecture/CoreDependencyTests.cs`, `docs/architecture.md`
 
 ## Отчёт
 
