@@ -36,6 +36,7 @@ public class AssistantServiceTests
     private readonly Session _session;
     private readonly GenerationService _generations;
     private readonly CapturingLogger<AssistantService> _logger = new();
+    private readonly IConversationSummaryRepository _summaries = Substitute.For<IConversationSummaryRepository>();
     private readonly AssistantService _service;
 
     public AssistantServiceTests()
@@ -97,8 +98,16 @@ public class AssistantServiceTests
         _generations = new GenerationService(
             _sessions, _runs, _providers, _files, catalog, _seeds, attachments, time, NullLogger<GenerationService>.Instance);
         var chatModels = new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance);
+        _summaries.GetAsync(_session.Id, Arg.Any<CancellationToken>()).Returns((ConversationSummary?)null);
+        var correction = new TokenCorrection();
+        // The summary job is tested on its own (ConversationSummaryServiceTests). Here it finds no session and does nothing,
+        // so its calls to the model do not mix with the calls of the assistant turn.
+        var summaryService = new ConversationSummaryService(
+            Substitute.For<ISessionRepository>(), _messages, _runs, _summaries, _providers, chatModels, correction, time,
+            NullLogger<ConversationSummaryService>.Instance);
         _service = new AssistantService(
-            sessionService, _messages, _runs, _providers, _generations, chatModels, _files, attachments, time, _logger, new TokenCorrection());
+            sessionService, _messages, _runs, _providers, _generations, chatModels, _files, attachments, time, _logger, correction,
+            _summaries, summaryService);
     }
 
     private ChatMessage AssistantMessage => _stored.Last();
@@ -353,7 +362,9 @@ public class AssistantServiceTests
 
 
     private AssistantChatRequest LastRequest =>
-        (AssistantChatRequest)_chat.ReceivedCalls().Last().GetArguments()[0]!;
+        (AssistantChatRequest)_chat.ReceivedCalls()
+            .Last(call => call.GetMethodInfo().Name == nameof(IAssistantChatClient.CompleteChatAsync))
+            .GetArguments()[0]!;
 
     private void ReplyWith(AssistantChatResult reply) =>
         _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
@@ -494,6 +505,40 @@ public class AssistantServiceTests
         Assert.Equal("m1", history[0].Text);
         Assert.Equal("new", history[^1].Text);
         Assert.DoesNotContain(history, m => m.Text.StartsWith("error", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_SummaryExists_SendsSummaryBeforeHistoryAndSkipsCoveredMessages()
+    {
+        for (var i = 0; i < 6; i++)
+        {
+            _stored.Add(new ChatMessage
+            {
+                Id = Guid.NewGuid(),
+                SessionId = _session.Id,
+                Role = i % 2 == 0 ? ChatRole.User : ChatRole.Assistant,
+                Text = $"m{i}",
+                CreatedAt = Now.AddSeconds(i),
+            });
+        }
+        _summaries.GetAsync(_session.Id, Arg.Any<CancellationToken>()).Returns(new ConversationSummary
+        {
+            SessionId = _session.Id,
+            Text = "earlier decisions",
+            CoversUpToMessageId = _stored[2].Id,
+            Model = new ModelRef(ProviderIds.OpenRouter, AssistantModel),
+            CreatedAt = Now,
+        });
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "new", TestContext.Current.CancellationToken);
+
+        // C1.3: system prompt, current prompt, summary, then the messages after the covered part.
+        var request = LastRequest;
+        Assert.Equal(AssistantPrompts.SummaryLine("earlier decisions"), request.Messages[2].Text);
+        Assert.Equal(AssistantChatMessage.SystemRole, request.Messages[2].Role);
+        Assert.Equal(["m3", "m4", "m5", "new"], request.Messages.Skip(3).Select(m => m.Text));
+        Assert.DoesNotContain(request.Messages, m => m.Text is "m0" or "m1" or "m2");
     }
 
     [Fact]

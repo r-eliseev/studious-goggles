@@ -48,6 +48,7 @@ public static class CoreServiceCollectionExtensions
         services.AddSingleton<ImageDescriptionService>();
         services.AddSingleton<GenerationService>();
         services.AddSingleton<ChatModelCatalogService>();
+        services.AddSingleton<ConversationSummaryService>();
         services.AddSingleton<AssistantService>();
         services.AddSingleton<TokenCorrection>();
         services.AddSingleton<SessionSearchService>();

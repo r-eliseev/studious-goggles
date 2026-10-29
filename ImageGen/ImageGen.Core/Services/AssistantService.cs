@@ -24,7 +24,9 @@ public sealed class AssistantService(
     AttachmentService attachments,
     TimeProvider timeProvider,
     ILogger<AssistantService> logger,
-    TokenCorrection correction)
+    TokenCorrection correction,
+    IConversationSummaryRepository summaries,
+    ConversationSummaryService summaryService)
 {
     private const string EmptyResponseText = "The assistant returned an empty response.";
     private const string InvalidToolCallText = "The assistant returned an invalid tool call.";
@@ -139,6 +141,8 @@ public sealed class AssistantService(
         assistantMessage.RunId = run?.Id;
         assistantMessage.IsError = isError;
         await messages.AddAsync(assistantMessage, cancellationToken);
+        // C3.1: the summary is written in the background; the reply above does not wait for it.
+        summaryService.Request(sessionId);
         logger.LogInformation(
             "Assistant turn in session {SessionId} finished: {MessageCount} messages sent, {ToolCallCount} tool calls, run {RunId}, error {IsError}.",
             sessionId,
@@ -223,6 +227,7 @@ public sealed class AssistantService(
     private async Task<BuiltRequest> BuildRequestAsync(Session session, IReadOnlyList<string> userImages, CancellationToken cancellationToken)
     {
         var history = await messages.ListBySessionAsync(session.Id, cancellationToken);
+        var summary = await summaries.GetAsync(session.Id, cancellationToken);
         var lastRun = (await runs.ListRunsBySessionAsync(session.Id, cancellationToken)).LastOrDefault();
         var assistantModel = session.Settings.AssistantModel;
         var currentLine = lastRun is null ? AssistantPrompts.NoCurrentPrompt : AssistantPrompts.CurrentPrompt(lastRun.Prompt);
@@ -240,18 +245,22 @@ public sealed class AssistantService(
 
         // C1.1: the history gets what the model's context leaves after the fixed part, the pictures and the reserve.
         var attachedImages = images.Take(AttachmentService.MaxAttachmentsPerMessage).ToList();
-        var fixedTokens = TokenEstimator.Estimate(AssistantPrompts.System) + TokenEstimator.Estimate(currentLine)
-            + TokenEstimator.Estimate(AssistantPrompts.GenerateImagesToolDescription)
-            + TokenEstimator.Estimate(AssistantPrompts.GenerateImagesToolSchema);
+        var fixedTokens = AssistantPrompts.FixedTokens(currentLine);
+        var summaryTokens = summary is null ? 0 : TokenEstimator.Estimate(AssistantPrompts.SummaryLine(summary.Text));
         var contextLength = await chatModels.ContextLengthAsync(assistantModel, cancellationToken);
-        var budget = new ContextBudget(contextLength, fixedTokens, TokenEstimator.EstimateImages(attachedImages.Count), SummaryTokens: 0);
-        var selected = ContextBuilder.Select(history, budget.HistoryBudget, correction.FactorFor(assistantModel));
+        var budget = new ContextBudget(contextLength, fixedTokens, TokenEstimator.EstimateImages(attachedImages.Count), summaryTokens);
+        var selected = ContextBuilder.Select(AfterCovered(history, summary), budget.HistoryBudget, correction.FactorFor(assistantModel));
 
         var chat = new List<AssistantChatMessage>
         {
             AssistantChatMessage.System(AssistantPrompts.System),
             AssistantChatMessage.System(currentLine),
         };
+        if (summary is not null)
+        {
+            chat.Add(AssistantChatMessage.System(AssistantPrompts.SummaryLine(summary.Text)));
+        }
+
         foreach (var message in selected)
         {
             chat.Add(message.Role == ChatRole.User
@@ -269,10 +278,29 @@ public sealed class AssistantService(
             AssistantPrompts.GenerateImagesToolName,
             AssistantPrompts.GenerateImagesToolDescription,
             AssistantPrompts.GenerateImagesToolSchema);
-        var estimated = fixedTokens
+        var estimated = fixedTokens + summaryTokens
             + selected.Sum(m => TokenEstimator.Estimate(m.Text))
             + TokenEstimator.EstimateImages(attachedImages.Count);
         return new BuiltRequest(new AssistantChatRequest(assistantModel.ModelId, chat, [tool]), estimated);
+    }
+
+    /// <summary>C1.3: the history after the part a summary covers. A summary whose last message is gone covers nothing.</summary>
+    private static IReadOnlyList<ChatMessage> AfterCovered(IReadOnlyList<ChatMessage> history, ConversationSummary? summary)
+    {
+        if (summary is null)
+        {
+            return history;
+        }
+
+        for (var i = 0; i < history.Count; i++)
+        {
+            if (history[i].Id == summary.CoversUpToMessageId)
+            {
+                return history.Skip(i + 1).ToList();
+            }
+        }
+
+        return history;
     }
 
     /// <summary>

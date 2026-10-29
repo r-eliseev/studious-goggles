@@ -21,7 +21,7 @@ ImageGen/
     Domain/Keys/                   ApiKeyStatus, SecretNames (ключ по провайдеру)
     Domain/Models/                 ImageModel, ModelRef (ссылка «провайдер:модель»)
     Platform/                      ISecretStore, IAppPaths
-    Storage/                       ISessionRepository, IChatMessageRepository, IRunRepository,
+    Storage/                       ISessionRepository, IChatMessageRepository, IRunRepository, IConversationSummaryRepository,
                                    IImageModelRepository (кэш по провайдеру), IImageFileStore
     Providers/                     ProviderConfig, ProviderKind, ConfiguredImageModel, ProviderConfigLoader (встроенный
                                    builtin-providers.json и providers.json в DataDirectory), ProviderRegistry (проверка),
@@ -34,9 +34,12 @@ ImageGen/
     OpenAiCompatible/              OpenAiCompatibleClient (картинки и чат), OpenAiChatWire (формат chat/completions)
     AnthropicCompatible/           AnthropicCompatibleClient (только чат, Messages API)
     Services/                      ApiKeyService, ModelCatalogService, SessionService, TimelineOrdering, GenerationService,
-                                   AssistantService, AssistantPrompts, ISeedSource, RandomSeedSource
+                                   AssistantService, AssistantPrompts, ISeedSource, RandomSeedSource,
+                                   ConversationSummaryService (сводка старой истории в фоне; одна задача на сессию)
     Search/                        SessionSearchService (поиск по названиям, промптам и описаниям), FuzzyMatcher (нечёткие
                                    совпадения слов), ISearchTextSource (тексты всех сессий; реализация в Data)
+    Context/                       ContextBudget (бюджет истории), ContextBuilder (выбор сообщений), TokenEstimator,
+                                   TokenCorrection (поправка по usage), SummaryPlanner и SummaryPlan (когда и что сводить, C3)
     Serialization/                 CoreJsonContext
     CoreServiceCollectionExtensions.cs   AddImageGenCore()
   ImageGen.Data/                   net10.0, Microsoft.Data.Sqlite: SqliteDatabase, Migrations, репозитории, FileImageStore,
