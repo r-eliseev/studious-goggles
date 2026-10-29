@@ -102,7 +102,7 @@ Dockerfile, docker-compose.yml   том /data
 - Оболочки MAUI и Avalonia: логика экранов одна (`Presentation`), разметка своя в каждой; каждая экранная фича делается в обеих. Зависимости: `Maui → Presentation → Data → Core`, `Avalonia → Presentation`.
 
 ## Правила слоёв
-- `Core` не знает про MAUI, ASP.NET Core, SQLite и UI-типы (`Brush`, `Color`, `Shell`, `Preferences`, `FileSystem`). Платформенное — через `Core/Platform`.
+- `Core` не знает про MAUI, Avalonia, ASP.NET Core, SQLite и UI-типы (архитектурный тест `CoreDependencyTests` запрещает сборки с префиксами `Microsoft.Maui`, `Microsoft.AspNetCore`, `Microsoft.Data.Sqlite`, `Avalonia`) (`Brush`, `Color`, `Shell`, `Preferences`, `FileSystem`). Платформенное — через `Core/Platform`.
 - Код вне `Providers/`, `OpenRouter/`, `OpenAiCompatible/`, `AnthropicCompatible/` не знает, какой провайдер рисует картинки или отвечает ассистенту: провайдер берётся по `ModelRef` (провайдер и модель) через `IProviderRouter`. Адреса и типы API провайдеров задаёт конфиг (ADR 0009), ключи — только в `ISecretStore`.
 - Ядро не формирует тексты интерфейса: ошибки и состояния отдаёт кодами (`ErrorKind`, `GenerationStatus`), тексты в `.resx` слоя представления (`Presentation`, общий для MAUI и Avalonia).
 - Страницы MAUI и view Avalonia знают только свой `PageModel`; `PageModel` знает сервисы ядра.

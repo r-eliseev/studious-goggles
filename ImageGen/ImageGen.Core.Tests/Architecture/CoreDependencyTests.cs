@@ -7,6 +7,7 @@ public class CoreDependencyTests
         "Microsoft.Maui",
         "Microsoft.AspNetCore",
         "Microsoft.Data.Sqlite",
+        "Avalonia",
     ];
 
     [Fact]

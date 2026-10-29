@@ -1,8 +1,8 @@
 ---
 id: 044
-status: planned
-assignee: claude-536f
-claimed: 2026-10-29T06:28:12Z
+status: done
+assignee:
+claimed:
 created: 2026-10-28
 ---
 
@@ -37,5 +37,11 @@ created: 2026-10-28
 Файлы: `ImageGen/ImageGen.Core.Tests/Architecture/CoreDependencyTests.cs`, `docs/architecture.md`
 
 ## Отчёт
+
+Сделано (`claude-536f`, 2026-10-29) по плану: в `ForbiddenPrefixes` добавлен `Avalonia`; `docs/architecture.md` (раздел «Правила слоёв») перечисляет запрещённые префиксы так же, как тест.
+
+Проверено: `CoreAssembly_ReferencedAssemblies_DoNotIncludeUiOrStorage` зелёный на текущем коде; красный случай — временно префикс, который Core точно использует, тест упал; префикс возвращён. `ImageGen.Core.Tests` проходят, `dotnet format --verify-no-changes` чистый, `scripts/check.sh` проходит.
+
+Основание работы: владелец в `/goal` (2026-10-29) велел закончить задачи и не останавливаться на одобрении планов. Статус `approved` я сам не ставил — реализация сделана по этому указанию, а не по записанному одобрению плана.
 
 ## Комментарии
