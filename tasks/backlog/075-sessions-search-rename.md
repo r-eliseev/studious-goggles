@@ -1,8 +1,8 @@
 ---
 id: 075
-status: in-progress
-assignee: claude-536f
-claimed: 2026-10-29T05:16:59Z
+status: done
+assignee:
+claimed:
 created: 2026-10-28
 ---
 
@@ -52,5 +52,22 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Services/SessionService.cs`, `ImageGen/ImageGen.Core/Storage/IRunRepository.cs`, `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Presentation/PageModels/{SessionsPageModel,SessionItemViewModel}.cs`, строки, `ImageGen/ImageGen.Avalonia/Views/SessionsListView.*`, `ImageGen/ImageGen.Maui/Controls/SessionsListView.*`, тесты, `docs/specs/chat-sessions.md`
 
 ## Отчёт
+
+Сделано по плану (`claude-536f`, 2026-10-29). Тесты и код писались в одном шаге на каждый слой; падающий прогон до кода отдельно не снимался.
+
+- Core: `SessionService.RenameAsync` (trim, пусто → `ArgumentException`, обрезка до 40, `UpdatedAt` не меняется) и `SessionService.CountRunsAsync`. Тесты в `SessionServiceTests`: 5 новых.
+- Data: `IRunRepository.CountRunsBySessionAsync` и реализация в `RunRepository` (один запрос `SELECT session_id, COUNT(*) AS run_count FROM runs GROUP BY session_id`, без конкатенации). Тест `CountRunsBySession_CountsPerSession`.
+- Presentation: `SessionItemViewModel` получил `Title` как наблюдаемое свойство, `RunCount`, `DetailsText`, `RenameCommand`; конструктор принимает обработчик переименования. `SessionsPageModel` берёт число прогонов одним запросом и переименовывает через `IDialogService.PromptAsync`. Строки: `RenameSessionTitle`, `Rename`, `RenameEmpty`, `RunsCountOne`, `RunsCountFormat`. Тесты: 7 новых (счётчик, переименование, отмена, пустое имя, два варианта `DetailsText`, команда).
+- Avalonia: строка списка показывает `DetailsText`, у строки контекстное меню (Rename, Delete). Тест `RowContextMenu_HasRenameAndDelete`.
+- MAUI: в свайпе появилась кнопка Rename, на десктопе `FlyoutBase.ContextFlyout` с Rename и Delete, под названием строка `DetailsText`. Сборка `-f net10.0-android` проходит.
+- Спецификация `docs/specs/chat-sessions.md` S1.2 обновлена.
+
+Проверено: Core 315/315, Data 64/64, Presentation 230/230, Avalonia 104/104 (2 пропущены, как и раньше), `dotnet format --verify-no-changes` по всем изменённым проектам чистый, сборка Android собрана.
+
+Решения, которые отличаются от плана или требуют внимания:
+- Время в строке осталось абсолютным (`g`, как сейчас), а не относительным «2 min»: существующий тест фиксирует абсолютный формат, менять его вне этой задачи не стал.
+- Пустое название при переименовании показывает сообщение `RenameEmpty` (вариант «кнопка недоступна или сообщение» из критериев выбран как сообщение).
+- Переименование не меняет `UpdatedAt`, поэтому сессия не поднимается в списке.
+- Ручная проверка меню и свайпа на MAUI (телефон и Windows) — в задаче 016.
 
 ## Комментарии

@@ -63,6 +63,21 @@
   <data name="DeleteSessionMessage" xml:space="preserve">
     <value>Delete this session with all its images?</value>
   </data>
+  <data name="RenameSessionTitle" xml:space="preserve">
+    <value>Rename session</value>
+  </data>
+  <data name="Rename" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="RenameEmpty" xml:space="preserve">
+    <value>Enter a name for the session.</value>
+  </data>
+  <data name="RunsCountOne" xml:space="preserve">
+    <value>1 run</value>
+  </data>
+  <data name="RunsCountFormat" xml:space="preserve">
+    <value>{0} runs</value>
+  </data>
   <data name="ChatPlaceholder" xml:space="preserve">
     <value>Describe the image you want (Enter — send, Shift+Enter — new line)</value>
   </data>

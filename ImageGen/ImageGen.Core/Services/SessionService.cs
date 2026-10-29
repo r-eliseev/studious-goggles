@@ -30,6 +30,10 @@ public sealed class SessionService(
 
     public Task<IReadOnlyList<Session>> ListAsync(CancellationToken cancellationToken) => sessions.ListAsync(cancellationToken);
 
+    /// <summary>Runs per session in one query; sessions without runs are absent.</summary>
+    public Task<IReadOnlyDictionary<Guid, int>> CountRunsAsync(CancellationToken cancellationToken) =>
+        runs.CountRunsBySessionAsync(cancellationToken);
+
     public Task<Session?> GetAsync(Guid sessionId, CancellationToken cancellationToken) =>
         sessions.GetAsync(sessionId, cancellationToken);
 
@@ -151,6 +155,21 @@ public sealed class SessionService(
         {
             throw new ArgumentException($"{name} must be 1 to {maxLength} characters.", name);
         }
+    }
+
+    /// <summary>
+    /// Renames the session. The title is trimmed and cut to <see cref="Session.MaxTitleLength"/>. The change does not move
+    /// the session up the list, so <see cref="Session.UpdatedAt"/> stays as it was.
+    /// </summary>
+    public async Task<Session> RenameAsync(Guid sessionId, string title, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        var session = await sessions.GetAsync(sessionId, cancellationToken)
+            ?? throw new InvalidOperationException($"Session {sessionId} not found.");
+        var trimmed = title.Trim();
+        session.Title = trimmed.Length > Session.MaxTitleLength ? trimmed[..Session.MaxTitleLength] : trimmed;
+        await sessions.UpdateAsync(session, cancellationToken);
+        return session;
     }
 
     /// <summary>Sets the title from the first user message if the session still has the default title.</summary>

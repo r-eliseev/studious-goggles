@@ -32,17 +32,33 @@
                             <SwipeView>
                                 <SwipeView.RightItems>
                                     <SwipeItems>
+                                        <SwipeItem Text="{x:Static strings:AppResources.Rename}"
+                                                   BackgroundColor="{DynamicResource IgMutedColor}"
+                                                   Command="{Binding RenameCommand}" />
                                         <SwipeItem Text="{x:Static strings:AppResources.DeleteSession}"
                                                    BackgroundColor="{DynamicResource IgErrColor}"
                                                    Command="{Binding DeleteCommand}" />
                                     </SwipeItems>
                                 </SwipeView.RightItems>
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                                    <Button StyleClass="ghost"
-                                            Command="{Binding OpenCommand}"
-                                            HorizontalOptions="Fill"
-                                            Text="{Binding Title}"
-                                            SemanticProperties.Description="{Binding Title}" />
+                                    <FlyoutBase.ContextFlyout>
+                                        <MenuFlyout>
+                                            <MenuFlyoutItem Text="{x:Static strings:AppResources.Rename}"
+                                                            Command="{Binding RenameCommand}" />
+                                            <MenuFlyoutItem Text="{x:Static strings:AppResources.DeleteSession}"
+                                                            Command="{Binding DeleteCommand}" />
+                                        </MenuFlyout>
+                                    </FlyoutBase.ContextFlyout>
+                                    <VerticalStackLayout Spacing="2">
+                                        <Button StyleClass="ghost"
+                                                Command="{Binding OpenCommand}"
+                                                HorizontalOptions="Fill"
+                                                Text="{Binding Title}"
+                                                SemanticProperties.Description="{Binding Title}" />
+                                        <Label StyleClass="meta"
+                                               Margin="12,0,0,0"
+                                               Text="{Binding DetailsText}" />
+                                    </VerticalStackLayout>
                                     <Button Grid.Column="1"
                                             StyleClass="ghost"
                                             Command="{Binding DeleteCommand}"
@@ -65,17 +81,33 @@
                             <SwipeView>
                                 <SwipeView.RightItems>
                                     <SwipeItems>
+                                        <SwipeItem Text="{x:Static strings:AppResources.Rename}"
+                                                   BackgroundColor="{DynamicResource IgMutedColor}"
+                                                   Command="{Binding RenameCommand}" />
                                         <SwipeItem Text="{x:Static strings:AppResources.DeleteSession}"
                                                    BackgroundColor="{DynamicResource IgErrColor}"
                                                    Command="{Binding DeleteCommand}" />
                                     </SwipeItems>
                                 </SwipeView.RightItems>
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                                    <Button StyleClass="ghost"
-                                            Command="{Binding OpenCommand}"
-                                            HorizontalOptions="Fill"
-                                            Text="{Binding Title}"
-                                            SemanticProperties.Description="{Binding Title}" />
+                                    <FlyoutBase.ContextFlyout>
+                                        <MenuFlyout>
+                                            <MenuFlyoutItem Text="{x:Static strings:AppResources.Rename}"
+                                                            Command="{Binding RenameCommand}" />
+                                            <MenuFlyoutItem Text="{x:Static strings:AppResources.DeleteSession}"
+                                                            Command="{Binding DeleteCommand}" />
+                                        </MenuFlyout>
+                                    </FlyoutBase.ContextFlyout>
+                                    <VerticalStackLayout Spacing="2">
+                                        <Button StyleClass="ghost"
+                                                Command="{Binding OpenCommand}"
+                                                HorizontalOptions="Fill"
+                                                Text="{Binding Title}"
+                                                SemanticProperties.Description="{Binding Title}" />
+                                        <Label StyleClass="meta"
+                                               Margin="12,0,0,0"
+                                               Text="{Binding DetailsText}" />
+                                    </VerticalStackLayout>
                                     <Button Grid.Column="1"
                                             StyleClass="ghost"
                                             Command="{Binding DeleteCommand}"

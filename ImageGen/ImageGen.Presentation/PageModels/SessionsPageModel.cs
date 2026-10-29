@@ -58,15 +58,17 @@ public sealed partial class SessionsPageModel(
             }
 
             var sessions = await sessionService.ListAsync(CancellationToken.None);
+            var runCounts = await sessionService.CountRunsAsync(CancellationToken.None);
             var today = timeProvider.GetLocalNow().Date;
             Sessions.Clear();
             Today.Clear();
             Earlier.Clear();
             foreach (var session in sessions.OrderByDescending(session => session.UpdatedAt))
             {
-                var item = new SessionItemViewModel(session, OpenSessionAsync, DeleteSessionAsync)
+                var item = new SessionItemViewModel(session, OpenSessionAsync, RenameSessionAsync, DeleteSessionAsync)
                 {
                     IsCurrent = session.Id == tracker.CurrentId,
+                    RunCount = runCounts.GetValueOrDefault(session.Id),
                 };
                 Sessions.Add(item);
                 (session.UpdatedAt.ToLocalTime().Date == today ? Today : Earlier).Add(item);
@@ -111,6 +113,32 @@ public sealed partial class SessionsPageModel(
             {
                 await navigation.GoToAsync(Routes.ChatFor(item.Id));
             }
+        }
+        catch (Exception ex)
+        {
+            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+        }
+    }
+
+    private async Task RenameSessionAsync(SessionItemViewModel item)
+    {
+        try
+        {
+            var title = await dialogs.PromptAsync(
+                AppResources.RenameSessionTitle, "", AppResources.Rename, AppResources.Cancel, item.Title);
+            if (title is null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                await dialogs.AlertAsync(AppResources.ErrorTitle, AppResources.RenameEmpty);
+                return;
+            }
+
+            var session = await sessionService.RenameAsync(item.Id, title, CancellationToken.None);
+            item.Title = session.Title;
         }
         catch (Exception ex)
         {

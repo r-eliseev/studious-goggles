@@ -256,6 +256,73 @@ public class SessionsPageModelTests : IDisposable
         Assert.Single(model.Sessions);
     }
 
+    [Fact]
+    public async Task OnAppearingAsync_ShowsRunCountPerSession()
+    {
+        var busy = NewSession("Busy", DateTimeOffset.UtcNow);
+        var idle = NewSession("Idle", DateTimeOffset.UtcNow.AddMinutes(-1));
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([busy, idle]);
+        _runs.CountRunsBySessionAsync(Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<Guid, int> { [busy.Id] = 3 });
+        var model = CreateModel();
+
+        await model.OnAppearingAsync();
+
+        Assert.Equal(3, model.Sessions[0].RunCount);
+        Assert.Equal(0, model.Sessions[1].RunCount);
+    }
+
+    [Fact]
+    public async Task Rename_SavesNewTitleAndShowsIt()
+    {
+        var session = NewSession("Old name", DateTimeOffset.UtcNow);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
+        _sessionRepository.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        _dialogs.PromptAsync(AppResources.RenameSessionTitle, "", AppResources.Rename, AppResources.Cancel, "Old name")
+            .Returns("  Lighthouse  ");
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        await model.Sessions[0].RenameCommand.ExecuteAsync(null);
+
+        Assert.Equal("Lighthouse", model.Sessions[0].Title);
+        await _sessionRepository.Received(1).UpdateAsync(
+            Arg.Is<Session>(saved => saved.Title == "Lighthouse"), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Rename_Cancelled_KeepsTitle()
+    {
+        var session = NewSession("Keep name", DateTimeOffset.UtcNow);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
+        _dialogs.PromptAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns((string?)null);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        await model.Sessions[0].RenameCommand.ExecuteAsync(null);
+
+        Assert.Equal("Keep name", model.Sessions[0].Title);
+        await _sessionRepository.DidNotReceive().UpdateAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Rename_Blank_ShowsErrorAndKeepsTitle()
+    {
+        var session = NewSession("Keep name", DateTimeOffset.UtcNow);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
+        _dialogs.PromptAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns("   ");
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        await model.Sessions[0].RenameCommand.ExecuteAsync(null);
+
+        Assert.Equal("Keep name", model.Sessions[0].Title);
+        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, AppResources.RenameEmpty);
+        await _sessionRepository.DidNotReceive().UpdateAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>());
+    }
+
     private readonly CurrentSessionTracker _tracker = new();
 
     private SessionsPageModel CreateModel(TimeProvider? time = null)

@@ -37,6 +37,14 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="pm:SessionItemViewModel">
                                 <Grid Classes="session-row" ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                                    <Grid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="{markup:Res Rename}"
+                                                      Command="{Binding RenameCommand}" />
+                                            <MenuItem Header="{markup:Res DeleteSession}"
+                                                      Command="{Binding DeleteCommand}" />
+                                        </ContextMenu>
+                                    </Grid.ContextMenu>
                                     <Button Classes="ghost"
                                             Command="{Binding OpenCommand}"
                                             HorizontalAlignment="Stretch"
@@ -44,7 +52,7 @@
                                             AutomationProperties.Name="{Binding Title}">
                                         <StackPanel Spacing="2">
                                             <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Classes="meta" Text="{Binding UpdatedText}" />
+                                            <TextBlock Classes="meta" Text="{Binding DetailsText}" />
                                         </StackPanel>
                                     </Button>
                                     <Button Grid.Column="1"
@@ -64,6 +72,14 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="pm:SessionItemViewModel">
                                 <Grid Classes="session-row" ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                                    <Grid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="{markup:Res Rename}"
+                                                      Command="{Binding RenameCommand}" />
+                                            <MenuItem Header="{markup:Res DeleteSession}"
+                                                      Command="{Binding DeleteCommand}" />
+                                        </ContextMenu>
+                                    </Grid.ContextMenu>
                                     <Button Classes="ghost"
                                             Command="{Binding OpenCommand}"
                                             HorizontalAlignment="Stretch"
@@ -71,7 +87,7 @@
                                             AutomationProperties.Name="{Binding Title}">
                                         <StackPanel Spacing="2">
                                             <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Classes="meta" Text="{Binding UpdatedText}" />
+                                            <TextBlock Classes="meta" Text="{Binding DetailsText}" />
                                         </StackPanel>
                                     </Button>
                                     <Button Grid.Column="1"

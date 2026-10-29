@@ -61,11 +61,37 @@ public class SessionsViewTests
             UpdatedAt = DateTimeOffset.UtcNow,
             Settings = SessionSettings.CreateDefault(),
         };
-        model.Today.Add(new SessionItemViewModel(session, _ => Task.CompletedTask, _ => Task.CompletedTask));
+        model.Today.Add(new SessionItemViewModel(session, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask));
         shell.Window.UpdateLayout();
 
         var view = Assert.IsType<SessionsView>(shell.Window.PageArea.Content);
         var names = view.GetVisualDescendants().OfType<Button>().Select(b => AutomationProperties.GetName(b)).ToList();
         Assert.Contains(AppResources.DeleteSession, names);
+    }
+
+    [AvaloniaFact]
+    public async Task RowContextMenu_HasRenameAndDelete()
+    {
+        using var shell = new ShellHarness();
+        await shell.SaveKeyAsync("sk-or-test");
+        await shell.InitializeDatabaseAsync();
+        shell.Window.Show();
+        await shell.Navigation.GoToAsync(Routes.Sessions);
+        var model = shell.Provider.GetRequiredService<SessionsPageModel>();
+        var session = new Session
+        {
+            Id = Guid.NewGuid(),
+            Title = "Fox",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+            Settings = SessionSettings.CreateDefault(),
+        };
+        model.Today.Add(new SessionItemViewModel(session, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask));
+        shell.Window.UpdateLayout();
+
+        var view = Assert.IsType<SessionsView>(shell.Window.PageArea.Content);
+        var row = view.GetVisualDescendants().OfType<Grid>().Single(grid => grid.Classes.Contains("session-row"));
+        var headers = row.ContextMenu!.Items.OfType<MenuItem>().Select(item => item.Header?.ToString()).ToList();
+        Assert.Equal([AppResources.Rename, AppResources.DeleteSession], headers);
     }
 }

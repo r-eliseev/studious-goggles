@@ -47,6 +47,17 @@ public static class AppResources
 
     public static string DeleteSessionMessage => Get(nameof(DeleteSessionMessage));
 
+    public static string RenameSessionTitle => Get(nameof(RenameSessionTitle));
+
+    public static string Rename => Get(nameof(Rename));
+
+    public static string RenameEmpty => Get(nameof(RenameEmpty));
+
+    public static string RunsCountOne => Get(nameof(RunsCountOne));
+
+    /// <summary>Format string: the number of runs goes in <c>{0}</c>.</summary>
+    public static string RunsCountFormat => Get(nameof(RunsCountFormat));
+
     public static string ChatPlaceholder => Get(nameof(ChatPlaceholder));
 
     public static string Send => Get(nameof(Send));

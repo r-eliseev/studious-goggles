@@ -254,4 +254,61 @@ public class SessionServiceTests
         Assert.Same(session, timeline.Session);
         Assert.Empty(timeline.Messages);
     }
+
+    [Fact]
+    public async Task RenameAsync_SetsTrimmedTitle()
+    {
+        var session = ExistingSession("Old");
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+
+        await _service.RenameAsync(session.Id, "  Lighthouse  ", TestContext.Current.CancellationToken);
+
+        Assert.Equal("Lighthouse", session.Title);
+        await _sessions.Received(1).UpdateAsync(session, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RenameAsync_Blank_Throws()
+    {
+        var session = ExistingSession("Old");
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.RenameAsync(session.Id, "   ", TestContext.Current.CancellationToken));
+        Assert.Equal("Old", session.Title);
+    }
+
+    [Fact]
+    public async Task RenameAsync_Long_TruncatesToMaxLength()
+    {
+        var session = ExistingSession("Old");
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+
+        await _service.RenameAsync(session.Id, new string('x', 60), TestContext.Current.CancellationToken);
+
+        Assert.Equal(new string('x', Session.MaxTitleLength), session.Title);
+    }
+
+    [Fact]
+    public async Task RenameAsync_KeepsUpdatedAt()
+    {
+        var session = ExistingSession("Old");
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+
+        await _service.RenameAsync(session.Id, "New", TestContext.Current.CancellationToken);
+
+        Assert.Equal(Now.AddDays(-1), session.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task SetTitleFromFirstMessage_AfterRename_KeepsName()
+    {
+        var session = ExistingSession("Old");
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        await _service.RenameAsync(session.Id, "Mine", TestContext.Current.CancellationToken);
+
+        await _service.SetTitleFromFirstMessageAsync(session.Id, "first message", TestContext.Current.CancellationToken);
+
+        Assert.Equal("Mine", session.Title);
+    }
 }
