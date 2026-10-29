@@ -20,7 +20,7 @@ created: 2026-10-29
 - Configurable openAiCompatible provider can set image response value `base64` and output `png`; client sends them and reads `data[0].b64_json` as image/png.
 - Existing providers with absent knobs keep prior request/response behavior.
 - Together example: id together, base URL, timeout, no key in JSON, selected model ids, seed support.
-- GET models key probe covered. Exact status mapping: 400/413 BadRequest; 401 InvalidKey; 402 InsufficientFunds; 403 Forbidden; 404/503/529 ModelUnavailable; 429 RateLimited; 504/524 Timeout; 500 Unknown.
+- GET models key probe covered. Exact status mapping: 400/413 BadRequest; 401 InvalidKey; 402 InsufficientFunds; 403 без moderation metadata → Forbidden; 403 с moderation reasons → Moderated; 404/502/503/529 ModelUnavailable; 408/504/524 Timeout; 429 RateLimited; 500 Unknown. MapErrorKind общий для всех провайдеров: существующие 408, 502 и 403-moderation сохраняются.
 - Together safety checker documents HTTP 422 but not a unique sanitized marker. Initial mapping remains Unknown, not falsely Moderated; live fixture/follow-up required before Filtered mapping.
 - Initial Together scope text-to-image only: prompt/model/n=1/seed; dimensions/model-specific parameters/reference_images explicitly unsupported/dropped until separate capability task.
 - Provider response cost is absent in documented image shape: CostUsd remains null; official catalog prices documented, not presented as actual charge.
@@ -33,13 +33,16 @@ Official 2026-10-29 representative prices: FLUX.1.1 Pro and Kontext Pro $0.04/MP
 ## План
 Для Haiku/Luna: mocked contract only; no real key/CI live call; no UI/built-in.
 
-1. ProviderConfig optional `ImageResponseFormat`, `ImageOutputFormat`; loader fields `imageResponseFormat`/`imageOutputFormat`, only openAiCompatible, nonblank safe strings, null default. Update parser/registry tests.
+1. ProviderConfig optional `ImageResponseFormat`, `ImageOutputFormat`; loader fields `imageResponseFormat`/`imageOutputFormat`, только openAiCompatible. Добавить к ProviderConfig последние необязательные string? параметры с null default, чтобы старые конструкторы компилировались. Набор разрешённых case-sensitive значений: ImageResponseFormat — null, `base64`, `b64_json`; ImageOutputFormat — null, `png`, `jpeg`. Поле отсутствует/null → прежнее поведение; пустое, пробельное, неверный JSON type, неизвестное значение или поле у другого kind → ProviderConfigException до HTTP. Добавить имена в KnownFields и валидацию и парсеру, и ProviderRegistry (он может создаваться напрямую). Новый ProviderRegistryTests покрывает прямое создание и ошибку формата, loader tests — JSON; не переименовывать существующие тесты.
 2. OpenAiCompatible Generate body sends configured values. MediaType `image/png` for png, `image/jpeg` for jpeg; unknown configured output rejected at startup, not guessed.
-3. Together fixture tests exact URL/auth/body including response/output format, seed/no-seed; b64 bytes/media; GET models probe. ProviderClientBase status tests exact mapping 413,504,524 plus existing codes; 422 Together image fixture remains Unknown and documented until live marker known.
+3. Новые Together-сценарии в существующем OpenAiCompatibleClientTests (config id=together, kind=OpenAiCompatible): exact URL/auth/body including response/output format, seed/no-seed; b64 bytes/media; GET models probe. Новый ProviderClientBaseTests тестирует публичный static MapErrorKind: полная таблица критериев, отдельные 403 с/без reasons, 408 и 502. Это намеренное расширение общего mapping, не Together-specific switch. Через существующие тесты всех клиентов сохранить прежние ошибки; 422 Together image fixture remains Unknown and documented until live marker known.
 4. Regression generic config without fields retains current body and default media behavior.
 5. Add `docs/knowledge/together-ai.md`: sources/date, input/output, selected model table/prices, default URL caveat, text-only initial limitations, live call not performed. `docs/index.md` менять не нужно: каталог `knowledge/` уже индексирован.
-6. Add safe `providers.json` example without key to docs/knowledge; config loader test parses it. Do not add builtin entry.
-7. Optional owner smoke after merge: one smallest paid request; record only status/media/dimensions/cost. API keys, Authorization headers and secret values are never logged, traced, saved outside secret store or committed at any level. Sanitized request/response content may appear only at Debug per BodyRedactor; key-probe response body is never logged.
+6. Пример JSON в docs/knowledge/together-ai.md: together/OpenAiCompatible, https://api.together.ai/v1/, response_format base64/output png через новые camelCase поля, timeout 180s, только документированная выбранная модель из таблицы. Для теста loader хранить эквивалентную fixture без секрета; не парсить markdown из теста. Built-in entry не добавлять.
+7. Создать новый ADR `NNNN-provider-image-formats.md` (следующий свободный номер) с дополнением схемы ADR0009; прежний ADR не переписывать. Обновить docs/knowledge о провайдерах при наличии таблицы полей: enum whitelist, null/default поведение и отсутствие поддержки URL-response.
+8. Optional owner smoke after merge: one smallest paid request; record only status/media/dimensions/cost. API keys, Authorization headers and secret values are never logged, traced, saved outside secret store or committed at any level. Sanitized request/response content may appear only at Debug per BodyRedactor; key-probe response body is never logged.
+
+9. Заполнить «Отчёт» и завершить по docs/tasks.md, `scripts/release-task.sh 132`. Без ключа задача закрывается по mocked contract; непроверенный live marker 422/стоимость остаётся явным ограничением.
 
 ### Проверка
 ```
@@ -49,8 +52,11 @@ dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-n
 bash scripts/check.sh
 ```
 
-Файлы: `ImageGen/ImageGen.Core/Providers/ProviderConfig.cs`, `ImageGen/ImageGen.Core/Providers/ProviderConfigLoader.cs`, `ImageGen/ImageGen.Core/Providers/ProviderRegistry.cs`, `ImageGen/ImageGen.Core/Providers/ProviderClientBase.cs`, `ImageGen/ImageGen.Core/OpenAiCompatible/OpenAiCompatibleClient.cs`, `ImageGen/ImageGen.Core.Tests/Providers/ProviderConfigLoaderTests.cs`, `ImageGen/ImageGen.Core.Tests/Providers/ProviderRegistryTests.cs`, `ImageGen/ImageGen.Core.Tests/Providers/ProviderClientBaseTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/OpenAiCompatible/OpenAiCompatibleClientTests.cs`, `docs/knowledge/together-ai.md` (новый)
+Файлы: `ImageGen/ImageGen.Core/Providers/ProviderConfig.cs`, `ImageGen/ImageGen.Core/Providers/ProviderConfigLoader.cs`, `ImageGen/ImageGen.Core/Providers/ProviderRegistry.cs`, `ImageGen/ImageGen.Core/Providers/ProviderClientBase.cs`, `ImageGen/ImageGen.Core/OpenAiCompatible/OpenAiCompatibleClient.cs`, `ImageGen/ImageGen.Core.Tests/Providers/ProviderConfigLoaderTests.cs`, `ImageGen/ImageGen.Core.Tests/Providers/ProviderRegistryTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Providers/ProviderClientBaseTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/OpenAiCompatible/OpenAiCompatibleClientTests.cs`, `docs/knowledge/together-ai.md` (новый), `docs/decisions/NNNN-provider-image-formats.md` (новый)
 
 ## Отчёт
 
 ## Комментарии
+
+### 2026-10-29, codex-review
+Задача нужна как ограниченное расширение generic-клиента перед включением Together. Уточнены whitelist конфигурации, совместимость старых конструкторов и общий error mapping без потери 408/502/403 moderation; неподтверждённый 422 не классифицируется как фильтрация.
