@@ -1,8 +1,8 @@
 ---
 id: 142
 status: todo
-assignee:
-claimed:
+assignee: opencode-vps
+claimed: 2026-10-29T17:27:03Z
 created: 2026-10-29
 ---
 
