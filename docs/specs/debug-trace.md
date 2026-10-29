@@ -57,7 +57,7 @@
 
 ## Воспроизведение в тесте
 
-Из записи `http-response` собирается мок: `body` с заменой `blob:<name>` на data-URL из файла, `status` из поля `status`. Пример — `ImageGen.Core.Tests/Diagnostics/DebugTraceHandlerTests.cs`, тест `Replay_RecordedResponseRebuiltFromTrace_ReproducesStatusAndBody`. Запись `generation-request` даёт модели и сиды для повторного запуска.
+Из записи `http-response` собирается мок: `body` с заменой `blob:<name>` на data-URL из файла, `status` из поля `status`. Примеры: `ImageGen.Core.Tests/Diagnostics/DebugTraceProviderReplayTests.cs` (генерация через `OpenRouterClient`, мок из записи) и `DebugTraceHandlerTests.cs` (восстановление ответа на уровне HTTP). Запись `generation-request` даёт модели и сиды для повторного запуска.
 
 ## Реализация
 
