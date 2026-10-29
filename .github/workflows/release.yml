@@ -123,46 +123,13 @@ jobs:
           name: ${{ env.ASSET }}
           path: ${{ env.ASSET }}.apk
 
-  # Mac Catalyst without an Apple developer certificate: ad-hoc signed .app (Gatekeeper asks to confirm the first launch).
-  # iOS is not published: an unsigned IPA cannot be installed on a device.
-  maui-maccatalyst:
-    needs: version
-    # macos-26, not macos-latest: the current MAUI workload (Mac Catalyst SDK 27.0) needs Xcode 27.1, macos-latest tops out at Xcode 26.6.
-    runs-on: macos-26
-    env:
-      ASSET: ImageGen-Maui-${{ needs.version.outputs.label }}-maccatalyst
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.x
-      - name: Installed Xcode versions
-        run: ls -d /Applications/Xcode*.app
-      # The MAUI workload needs a newer Xcode than the runner's default one.
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
-      # All of maui, not maui-maccatalyst: on macOS restore evaluates every target framework (android, ios too) and fails with NETSDK1147.
-      - run: dotnet workload install maui
-      - name: Publish MAUI Mac Catalyst
-        run: >-
-          dotnet publish ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -c Release -f net10.0-maccatalyst
-          -p:EnableCodeSigning=false -p:CreatePackage=false
-          -p:ApplicationDisplayVersion=${{ needs.version.outputs.version }} -p:ApplicationVersion=${{ github.run_number }}
-      - name: Sign ad-hoc and pack
-        run: |
-          app=$(find ImageGen/ImageGen.Maui/bin/Release/net10.0-maccatalyst -name '*.app' -type d -prune | head -1)
-          [ -n "$app" ] || { echo "No .app in the publish output" >&2; exit 1; }
-          codesign --force --deep --sign - "$app"
-          ditto -c -k --keepParent "$app" "$ASSET.zip"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.ASSET }}
-          path: ${{ env.ASSET }}.zip
+  # MAUI Mac Catalyst and iOS are not published (owner's decision 2026-10-29). The current maui workload
+  # (Mac Catalyst SDK 27.0) needs Xcode 27.1; GitHub runners macos-latest and macos-26 have Xcode 26.x only.
+  # Mac users get the Avalonia osx-x64 / osx-arm64 packages. iOS would also need an Apple certificate.
 
   publish:
     if: github.ref_type == 'tag'
-    needs: [avalonia, maui-windows, maui-android, maui-maccatalyst]
+    needs: [avalonia, maui-windows, maui-android]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
