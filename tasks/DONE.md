@@ -38,3 +38,43 @@
 - 053 | backlog | done | 2026-10-28 | Тесты падают на Windows: культура цен и блокировка временной базы | `tasks/backlog/053-windows-test-failures.md`
 - 054 | backlog | done | 2026-10-28 | MAUI на Windows: картинка на карточке не показывается | `tasks/backlog/054-maui-image-not-shown.md`
 - 056 | backlog | done | 2026-10-28 | Отправка по Enter в MAUI под Windows | `tasks/backlog/056-enter-to-send-maui-windows.md`
+- 025 | backlog | done | 2026-10-28 | Провайдер fal.ai и контракт ADR 0003 | `tasks/backlog/025-provider-fal.md`
+- 027 | backlog | cancelled | 2026-10-28 | Модель ассистента и управление контекстом | `tasks/backlog/027-assistant-settings-and-context.md`
+- 029 | backlog | cancelled | 2026-10-28 | Сохранение в галерею Android | `tasks/backlog/029-android-gallery-save.md`
+- 043 | backlog | done | 2026-10-29 | Тексты ошибок формирует слой представления, а не ядро | `tasks/backlog/043-error-texts-in-presentation.md`
+- 044 | backlog | done | 2026-10-29 | Архитектурный тест Core: запрет ссылок на Avalonia | `tasks/backlog/044-core-arch-test-avalonia.md`
+- 047 | backlog | done | 2026-10-29 | Исследование провайдера вместо Replicate | `tasks/backlog/047-research-image-provider.md`
+- 050 | backlog | done | 2026-10-28 | Отправка сообщения по Enter | `tasks/backlog/050-enter-to-send.md`
+- 051 | backlog | done | 2026-10-28 | Дизайн: макеты экранов и дизайн-система на утверждение | `tasks/backlog/051-design-mockups.md`
+- 055 | backlog | done | 2026-10-28 | Копирование текста в чате | `tasks/backlog/055-chat-copy-text.md`
+- 057 | backlog | done | 2026-10-28 | Промпт прогона показывается в чате дважды | `tasks/backlog/057-prompt-shown-once.md`
+- 058 | backlog | done | 2026-10-29 | Подумать: общее хранилище ключей для оболочек | `tasks/backlog/058-shared-secret-storage.md`
+- 059 | backlog | done | 2026-10-28 | Настройки внешнего вида: стиль и тема | `tasks/backlog/059-appearance-settings.md`
+- 060 | backlog | done | 2026-10-28 | Ресурсы оформления: шрифты и значки в обеих оболочках | `tasks/backlog/060-design-assets.md`
+- 061 | backlog | done | 2026-10-28 | Тема Avalonia: словари трёх стилей и переключение на лету | `tasks/backlog/061-theme-avalonia.md`
+- 062 | backlog | done | 2026-10-28 | Тема MAUI: словари трёх стилей и переключение на лету | `tasks/backlog/062-theme-maui.md`
+- 063 | backlog | done | 2026-10-28 | Базовые стили элементов Avalonia | `tasks/backlog/063-base-styles-avalonia.md`
+- 064 | backlog | done | 2026-10-28 | Базовые стили элементов MAUI | `tasks/backlog/064-base-styles-maui.md`
+- 065 | backlog | done | 2026-10-28 | Экран настроек: ключ, стиль, тема | `tasks/backlog/065-settings-screen.md`
+- 066 | backlog | done | 2026-10-28 | Список сессий и экран ключа в новом стиле | `tasks/backlog/066-sessions-and-key-restyle.md`
+- 067 | backlog | done | 2026-10-28 | Широкое окно: список сессий рядом с чатом | `tasks/backlog/067-wide-sessions-sidebar.md`
+- 068 | backlog | done | 2026-10-28 | Чат: сообщения, прогон, карточки и поле ввода в новом стиле | `tasks/backlog/068-chat-restyle.md`
+- 069 | backlog | done | 2026-10-28 | Действия над генерацией: наведение, меню «…», нижнее меню на телефоне | `tasks/backlog/069-card-actions.md`
+- 070 | backlog | done | 2026-10-28 | Модели сессии и параметры в новом стиле | `tasks/backlog/070-models-params-restyle.md`
+- 071 | backlog | done | 2026-10-28 | Широкое окно: модели и параметры панелью справа от чата | `tasks/backlog/071-wide-side-pane.md`
+- 072 | backlog | done | 2026-10-28 | Диалоги Avalonia в новом стиле и порядок кнопок по ОС | `tasks/backlog/072-avalonia-dialogs-restyle.md`
+- 073 | backlog | done | 2026-10-29 | Десктоп: строка меню и сочетания клавиш | `tasks/backlog/073-desktop-menu-shortcuts.md`
+- 074 | backlog | done | 2026-10-28 | Новые функции с макетов | `tasks/backlog/074-design-extras.md`
+- 075 | backlog | done | 2026-10-29 | Список сессий: переименование и число прогонов | `tasks/backlog/075-sessions-search-rename.md`
+- 076 | backlog | done | 2026-10-28 | Карточка генерации: Details, Other model…, Copy prompt | `tasks/backlog/076-card-extra-actions.md`
+- 077 | backlog | done | 2026-10-29 | Повтор запроса после ошибки ассистента | `tasks/backlog/077-assistant-error-retry.md`
+- 078 | backlog | done | 2026-10-29 | Пустой чат: кликабельные примеры | `tasks/backlog/078-empty-chat-examples.md`
+- 079 | backlog | done | 2026-10-29 | Поиск по сессиям: нечёткий поиск по названиям, промптам и описаниям | `tasks/backlog/079-fuzzy-search.md`
+- 080 | backlog | done | 2026-10-29 | Сохранение картинки: файл на десктопе, галерея на телефонах | `tasks/backlog/080-save-image.md`
+- 081 | backlog | done | 2026-10-29 | Поиск по смыслу: исследование и ADR (тексты и картинки) | `tasks/backlog/081-semantic-search-research.md`
+- 082 | backlog | done | 2026-10-28 | Контекст ассистента: бюджет запроса и поправка по токенам | `tasks/backlog/082-context-budget.md`
+- 083 | backlog | done | 2026-10-29 | Контекст ассистента: сводка старой части истории | `tasks/backlog/083-conversation-summary.md`
+- 084 | backlog | done | 2026-10-29 | Контекст ассистента: пометка о сводке в ленте | `tasks/backlog/084-summary-mark-in-chat.md`
+- 085 | backlog | done | 2026-10-29 | Отладочный трейс: вводы пользователя и запросы к API моделей | `tasks/backlog/085-debug-api-trace.md`
+- 086 | backlog | done | 2026-10-29 | Поддержка видео: исследование | `tasks/backlog/086-video-support-research.md`
+- 087 | backlog | done | 2026-10-29 | Самоулучшение как в Hermes: исследование и перенос идеи | `tasks/backlog/087-hermes-self-improvement.md`

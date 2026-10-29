@@ -2,16 +2,46 @@ name: release
 on:
   push:
     tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  # Manual run: builds every package as workflow artifacts without creating a GitHub release (dry run before a tag).
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  desktop:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      label: ${{ steps.v.outputs.label }}
+    steps:
+      - id: v
+        run: |
+          # Tag v1.2.3 -> version 1.2.3, label v1.2.3; manual run -> 0.0.<run>, label dev-<run>.
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+            echo "label=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0.0.$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "label=dev-$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+          fi
+
+  avalonia:
+    needs: version
     strategy:
+      fail-fast: false
       matrix:
-        rid: [linux-x64, win-x64]
-    runs-on: ${{ matrix.rid == 'win-x64' && 'windows-latest' || 'ubuntu-latest' }}
+        include:
+          - { rid: linux-x64, os: ubuntu-latest }
+          - { rid: linux-arm64, os: ubuntu-latest }
+          - { rid: win-x64, os: windows-latest }
+          - { rid: win-arm64, os: windows-latest }
+          # macOS runners: the SDK ad-hoc signs the apphost only on a Mac, and osx-arm64 does not start unsigned.
+          - { rid: osx-x64, os: macos-latest }
+          - { rid: osx-arm64, os: macos-latest }
+    runs-on: ${{ matrix.os }}
+    env:
+      ASSET: ImageGen-Avalonia-${{ needs.version.outputs.label }}-${{ matrix.rid }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -19,23 +49,116 @@ jobs:
           dotnet-version: 10.0.x
       - name: Publish Avalonia desktop
         shell: bash
-        run: dotnet publish ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj -c Release -r ${{ matrix.rid }} --self-contained -p:Version=${GITHUB_REF_NAME#v} -o publish/${{ matrix.rid }}
+        run: dotnet publish ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj -c Release -r ${{ matrix.rid }} --self-contained -p:Version=${{ needs.version.outputs.version }} -o publish/${{ matrix.rid }}
       - name: Pack
         shell: bash
         run: |
           cd publish/${{ matrix.rid }}
-          if [ "${{ matrix.rid }}" = "win-x64" ]; then
-            7z a -tzip "../../ImageGen-${GITHUB_REF_NAME}-${{ matrix.rid }}.zip" .
-          else
-            tar -czf "../../ImageGen-${GITHUB_REF_NAME}-${{ matrix.rid }}.tar.gz" .
-          fi
+          case "${{ matrix.rid }}" in
+            win-*) 7z a -tzip "../../$ASSET.zip" . ;;
+            *) tar -czf "../../$ASSET.tar.gz" . ;;
+          esac
       - uses: actions/upload-artifact@v4
         with:
-          name: ImageGen-${{ matrix.rid }}
-          path: ImageGen-${{ github.ref_name }}-${{ matrix.rid }}.*
+          name: ${{ env.ASSET }}
+          path: ${{ env.ASSET }}.*
+
+  maui-windows:
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [win-x64, win-arm64]
+    runs-on: windows-latest
+    env:
+      ASSET: ImageGen-Maui-${{ needs.version.outputs.label }}-${{ matrix.rid }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet workload install maui-windows
+      # RuntimeIdentifierOverride, not -r: with -r restore applies the RID to every target framework and asks for Mono.win-x64 for Android.
+      - name: Publish MAUI Windows (unpackaged, self-contained)
+        shell: bash
+        run: >-
+          dotnet publish ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -c Release
+          -f net10.0-windows10.0.19041.0 -p:RuntimeIdentifierOverride=${{ matrix.rid }} -p:SelfContained=true
+          -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true
+          -p:ApplicationDisplayVersion=${{ needs.version.outputs.version }} -p:ApplicationVersion=${{ github.run_number }}
+          -o publish/${{ matrix.rid }}
+      - name: Pack
+        shell: bash
+        run: cd publish/${{ matrix.rid }} && 7z a -tzip "../../$ASSET.zip" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ASSET }}
+          path: ${{ env.ASSET }}.zip
+
+  # Android on Windows, as in build.yml: installing maui-android on ubuntu-latest ran out of disk.
+  maui-android:
+    needs: version
+    runs-on: windows-latest
+    env:
+      ASSET: ImageGen-Maui-${{ needs.version.outputs.label }}-android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet workload install maui-android
+      # No release keystore yet: the APK is signed with the build's debug key (installable by sideloading, not for a store).
+      - name: Publish MAUI Android (APK)
+        shell: bash
+        run: >-
+          dotnet publish ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -c Release -f net10.0-android
+          -p:AndroidPackageFormat=apk
+          -p:ApplicationDisplayVersion=${{ needs.version.outputs.version }} -p:ApplicationVersion=${{ github.run_number }}
+          -o publish/android
+      - name: Pack
+        shell: bash
+        run: cp publish/android/*-Signed.apk "$ASSET.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ASSET }}
+          path: ${{ env.ASSET }}.apk
+
+  # Mac Catalyst without an Apple developer certificate: ad-hoc signed .app (Gatekeeper asks to confirm the first launch).
+  # iOS is not published: an unsigned IPA cannot be installed on a device.
+  maui-maccatalyst:
+    needs: version
+    runs-on: macos-latest
+    env:
+      ASSET: ImageGen-Maui-${{ needs.version.outputs.label }}-maccatalyst
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      # The .NET 10 MAUI workload needs a newer Xcode than the runner's default one.
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - run: dotnet workload install maui-maccatalyst
+      - name: Publish MAUI Mac Catalyst
+        run: >-
+          dotnet publish ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -c Release -f net10.0-maccatalyst
+          -p:EnableCodeSigning=false -p:CreatePackage=false
+          -p:ApplicationDisplayVersion=${{ needs.version.outputs.version }} -p:ApplicationVersion=${{ github.run_number }}
+      - name: Sign ad-hoc and pack
+        run: |
+          app=$(find ImageGen/ImageGen.Maui/bin/Release/net10.0-maccatalyst -name '*.app' -type d -prune | head -1)
+          [ -n "$app" ] || { echo "No .app in the publish output" >&2; exit 1; }
+          codesign --force --deep --sign - "$app"
+          ditto -c -k --keepParent "$app" "$ASSET.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ASSET }}
+          path: ${{ env.ASSET }}.zip
 
   publish:
-    needs: desktop
+    if: github.ref_type == 'tag'
+    needs: [avalonia, maui-windows, maui-android, maui-maccatalyst]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -44,7 +44,13 @@
 - Папка данных Avalonia задаётся переменной `IMAGEGEN_DATA_DIR` (второй профиль для ручной проверки). Тесты `ImageGen.Avalonia.Tests` её не используют: они работают во временной папке и с хранилищем ключей в памяти (`App.HostOverrides`, задача 048).
 
 ## Релиз
-- Workflow `.github/workflows/release.yml` запускается на тег `vMAJOR.MINOR.PATCH` (например, `v0.1.0`). Публикует Avalonia-десктоп для `linux-x64` и `win-x64` (self-contained, архивы) и создаёт GitHub Release с заметками из `scripts/release-notes.sh`. Папка релиза — тег без патча: `v0.1.0` → `tasks/v0.1`.
-- MAUI в релиз не входит: нужны подписи Android и Windows-сборка с сертификатом. macOS-сборка Avalonia не публикуется (нет macOS-машины, см. выше).
-- Workflow не проверен запуском на GitHub: проверено локально только `dotnet publish -r linux-x64` Avalonia и разбор YAML. Первый тег покажет, работает ли `7z` и `gh release create` на раннерах.
-- Тег `v0.1.0` не создан: в `tasks/v0.1` ещё стоит 016 (ручная проверка, `planned`).
+- Workflow `.github/workflows/release.yml` запускается на тег `vMAJOR.MINOR.PATCH` (например, `v0.1.0`) и создаёт GitHub Release с заметками из `scripts/release-notes.sh`. Папка релиза — тег без патча: `v0.1.0` → `tasks/v0.1`. Ручной запуск (`workflow_dispatch`, «Run workflow» в Actions) собирает те же пакеты как артефакты запуска, без релиза, с версией `0.0.<номер запуска>`: так проверяют workflow до тега.
+- Пакеты (решение владельца 2026-10-29: обе оболочки под все платформы):
+  - Avalonia, self-contained: `linux-x64`, `linux-arm64` (`.tar.gz`), `win-x64`, `win-arm64` (`.zip`), `osx-x64`, `osx-arm64` (`.tar.gz`, собираются на macOS-раннере: `osx-arm64` без подписи ad-hoc не запускается, а SDK подписывает apphost только на Mac).
+  - MAUI Windows: `win-x64`, `win-arm64`, без MSIX (`WindowsPackageType=None`), с Windows App SDK внутри, `.zip`.
+  - MAUI Android: `.apk`, подписан отладочным ключом сборки (ключа выпуска нет): ставится вручную, в магазин не годится.
+  - MAUI Mac Catalyst: `.app` в `.zip`, подпись ad-hoc без сертификата Apple; при первом запуске macOS просит подтвердить. Xcode на раннере выбирается последний стабильный (`maxim-lobanov/setup-xcode`).
+  - MAUI iOS не публикуется: без сертификата и профиля Apple IPA на устройство не ставится.
+- Версия MAUI: `ApplicationDisplayVersion` из тега, `ApplicationVersion` — номер запуска workflow (Android требует целое, растущее от релиза к релизу).
+- Проверено локально (Windows, 2026-10-29): публикация MAUI `win-x64` и Android APK теми же командами. Не проверено: остальные RID Avalonia, MAUI `win-arm64` и Mac Catalyst (нет macOS-машины) — первый ручной запуск workflow покажет.
+- Первый удачный релиз — `v0.1.2` (2026-10-29, только Avalonia `linux-x64` и `win-x64`); `v0.1.0` и `v0.1.1` упали на шаге публикации `win-x64`.
