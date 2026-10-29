@@ -39,7 +39,7 @@ created: 2026-10-29
 - Пересечения: 089 (`SessionsPageModel`) — эта задача его не меняет (если понадобится правка набираемого текста, она уходит в отдельную задачу). С другими задачами 088–100 файлов нет.
 
 ## План
-Для исполнителя (план рассчитан на небольшую модель): делай шаги строго по порядку, по TDD (сначала падающий тест, потом минимальный код), после каждого шага — сборка и тесты из «Проверки». Имена файлов, типов, членов, ключей строк и тестов переноси дословно. Если шаг не получается так, как написано (API другое, компилятор не принимает разметку), не придумывай обход: опиши в «Комментариях», что пробовал, поставь `blocked` и остановись.
+Для исполнителя (план рассчитан на небольшую модель): делай шаги строго по порядку, по TDD (сначала падающий тест, потом минимальный код), после каждого шага — сборка и тесты из «Проверки». Имена файлов, типов, членов, ключей строк и тестов переноси дословно. При расхождении с текущим API адаптируй имена и разметку в рамках контракта, исправь ошибку минимально и проверь сборкой. `blocked` нужен для неизвестного продуктового решения или недоступной обязательной среды, а не для рутинной ошибки компиляции.
 
 Выполнять после: — (пересечений по файлам с 088–100 нет).
 
@@ -59,11 +59,14 @@ created: 2026-10-29
    - `Match_SwappedLetters_NoMatch`: `["wtaer"]`, «water lily» → нет;
    - `Match_ShortTokenTypo_NoMatch`: `["wot"]`, «water lily» → нет.
    Запустить: первые четыре падают, остальные проходят.
+   - `Match_EmptyQuery_ReturnsNull`, `Match_EmptyText_ReturnsNull`, `Match_CyrillicTypoInPrefix_Scores1` («водопо» → «водопад») и `Match_DigitToken_ExactPrefixWins` — регрессии пустого ввода, кириллицы и цифр; не менять Unicode-токенизацию или веса ради новых случаев.
 2. В `FuzzyMatcher` добавить `private static bool IsTypo(string token, string word)` и в `ScoreWord` заменить условие ветки опечатки (`token.Length >= MinTypoLength && Distance(token, word) <= 1`) на вызов `IsTypo(token, word)`. Псевдокод `IsTypo`: если `token.Length < MinTypoLength` → false; если `Distance(token, word) <= 1` → true; если `token[0] != word[0]` → false; для `length` из (`token.Length - 1`, `token.Length`, `token.Length + 1`): если `length > 0 && length < word.Length && Distance(token, word[..length]) <= 1` → true; в конце → false. `Distance` и веса не менять. XML-комментарий класса: «1 when a word differs by one letter» → «1 when a word, or a beginning of the word with the same first letter, differs by one letter». Тесты шага 1 проходят.
 3. Тест `SessionSearchServiceTests.Search_ExactPrefixBeatsTypo`: `Create(new SearchText(First, SearchTextKind.Prompt, "date palm"), new SearchText(Second, SearchTextKind.Prompt, "water lily"))`, запрос «wate» → порядок `[Second, First]`. Должен пройти сразу; если падает — вернуться к шагу 2.
 4. Существующий Avalonia-тест `Search_FindsSessionByPromptWithTypo_ShowsSnippet` прогнать без изменений: должен проходить.
 5. Документация `docs/specs/chat-sessions.md`, раздел «S1. Сессии», после пункта S1.3 новый пункт `S1.4 Поиск сессий`, по-русски, в стиле соседних пунктов, содержание: ищется по названиям, промптам и описаниям картинок (вес 3, 2, 1); запрос делится на слова, каждое слово запроса обязано найтись; слово засчитывается, если слово текста с него начинается (3 очка), содержит его (2), или — для слов запроса от 4 букв — отличается на одну букву от слова текста или от начала слова текста с той же первой буквой (1); перестановка соседних букв считается двумя ошибками и не прощается; выдача по убыванию счёта, одна строка на сессию. `docs/architecture.md` не меняется.
-6. «Отчёт»: что сделано, тесты, и строка «Android: обновляется ли поиск по ещё не принятому клавиатурой тексту — не проверено, проверить владельцу (шаги в „Ручной проверке“ задачи)». Новых задач не создавать.
+6. «Отчёт»: что сделано, тесты; ручной сценарий Android-набора записать в 140. Если Android-проверка выявила отдельный дефект IME, зарегистрировать находку в 140 для следующей задачи по `docs/tasks.md`; код IME здесь не менять.
+
+Завершение: заполни «Отчёт» с изменениями, командами и результатами проверок, передай ручные сценарии в 016 (Windows), 046 (Avalonia), 140 (Android) по применимости. Выполни `scripts/release-task.sh 101`, затем `bash scripts/check.sh`. Недоступная ручная проверка не заменяет сборку и не оставляет готовую задачу в `in-progress`.
 
 ### Проверка
 ```
@@ -75,9 +78,9 @@ bash scripts/check.sh
 ```
 
 ### Ручная проверка
-Владельцу на Android (в «Отчёт» как «не проверено, проверить владельцу»): в списке сессий на экранной клавиатуре с подсказками набрать «watte», не нажимая пробел и не выбирая подсказку → через четверть секунды видна сессия со словом «water». Если результат появляется только после пробела или выбора подсказки — записать в «Комментарии» задачи: это отдельная задача про набираемый текст. Для MAUI под Windows дописать в `tasks/v0.1/016-skeleton-manual-check.md` пункт: поиск «watte» находит сессию с «water», «lighthu» — с «lighthouse».
+В задачу 140 (Android; отметка результата проверки в «Отчёте»): в списке сессий на экранной клавиатуре с подсказками набрать «watte», не нажимая пробел и не выбирая подсказку → через четверть секунды видна сессия со словом «water». Если результат появляется только после пробела или выбора подсказки — записать в «Комментарии» задачи: это отдельная задача про набираемый текст. Для MAUI под Windows дописать в `tasks/v0.1/016-skeleton-manual-check.md` пункт: поиск «watte» находит сессию с «water», «lighthu» — с «lighthouse».
 
-Файлы: `ImageGen/ImageGen.Core/Search/FuzzyMatcher.cs`, `ImageGen/ImageGen.Core.Tests/Search/FuzzyMatcherTests.cs`, `ImageGen/ImageGen.Core.Tests/Search/SessionSearchServiceTests.cs`, `docs/specs/chat-sessions.md`, `tasks/v0.1/016-skeleton-manual-check.md`.
+Файлы: `ImageGen/ImageGen.Core/Search/FuzzyMatcher.cs`, `ImageGen/ImageGen.Core.Tests/Search/FuzzyMatcherTests.cs`, `ImageGen/ImageGen.Core.Tests/Search/SessionSearchServiceTests.cs`, `docs/specs/chat-sessions.md`, `tasks/v0.1/016-skeleton-manual-check.md`, `tasks/backlog/140-*.md`.
 
 ## Отчёт
 

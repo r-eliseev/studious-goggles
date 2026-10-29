@@ -13,7 +13,7 @@ created: 2026-10-29
 
 Откуда надёжно брать производителя, неизвестно: префикс id до `/` (`black-forest-labs/flux.2-klein-4b`, `x-ai/grok-imagine-image-2.0`) или часть названия до двоеточия («xAI: Grok Imagine Image 2.0»); у fal формат id другой. Решить в «Анализе»; группировка и имя группы — в `Presentation`, не в оболочках.
 
-Зависит от: 090, 091 (те же файлы экрана моделей).
+Зависит от: 090 (те же файлы экрана моделей).
 Среда: Linux или Windows (как у 090).
 
 ## Критерии готовности
@@ -51,9 +51,9 @@ created: 2026-10-29
 12. Экран «Other model…» (`ModelPickerPageModel`) не меняется.
 
 ## План
-Для исполнителя (план рассчитан на небольшую модель): делай шаги строго по порядку, по TDD (сначала падающий тест, потом минимальный код), после каждого шага — сборка и тесты из «Проверки». Имена файлов, типов, членов, ключей строк и тестов переноси дословно. Если шаг не получается так, как написано (API другое, компилятор не принимает разметку), не придумывай обход: опиши в «Комментариях», что пробовал, поставь `blocked` и остановись.
+Для исполнителя (план рассчитан на небольшую модель): делай шаги строго по порядку, по TDD (сначала падающий тест, потом минимальный код), после каждого шага — сборка и тесты из «Проверки». Имена файлов, типов, членов, ключей строк и тестов переноси дословно. При расхождении с текущим API адаптируй имена и разметку в рамках описанного контракта и проверь сборкой. `blocked` нужен только для неизвестного продуктового решения или недоступной обязательной среды; ошибку компиляции исправляй минимальным изменением, без расширения задачи.
 
-Выполнять после: 090 и 091 (те же `SessionModelsPageModel`, `ImageGen.Maui/Controls/SessionModelsView.xaml`, `ImageGen.Avalonia/Views/SessionModelsView.axaml`). Если они не `done`, поставь `blocked` с комментарием «ждёт 090/091».
+Выполнять после: 090 (те же `SessionModelsPageModel`, `ImageGen.Maui/Controls/SessionModelsView.xaml`, `ImageGen.Avalonia/Views/SessionModelsView.axaml`). Если 090 ещё не `done` в main, задачу не занимать. 091 снята, её критерии перенесены в 090.
 
 Прочитай перед началом:
 - «Анализ» выше (правила 1–12).
@@ -91,12 +91,13 @@ created: 2026-10-29
 3. Модели групп. Новые файлы в `ImageGen/ImageGen.Presentation/PageModels/`.
    - `ModelGroupViewModel.cs`: `public abstract partial class ModelGroupViewModel : ObservableObject`, конструктор `(string key, string name, bool isExpanded, Action<ModelGroupViewModel> expandedChanged)`. Члены:
      - `string Key`, `string Name`;
-     - `[ObservableProperty] public partial bool IsExpanded { get; set; }`, начальное значение из конструктора, без вызова делегата. `partial void OnIsExpandedChanged(bool value)` вызывает `FillRows()`, затем `expandedChanged(this)` и уведомляет `AutomationName` и `ChevronGlyph`;
+     - `[ObservableProperty] private bool _isExpanded;` (обычный backing field, generator создаёт `IsExpanded`). В базовом конструкторе присвоить непосредственно `_isExpanded = isExpanded`, не свойство. В конструкторе нельзя вызывать виртуальный `FillRows` и delegate: `Rows` производного класса ещё не инициализирована. Производные конструкторы сначала присваивают `Matches`, создают/инициализируют `Rows`, затем один раз вызывают `FillRows`. `partial void OnIsExpandedChanged(bool value)` вызывает `FillRows()`, затем `expandedChanged(this)` и уведомляет `AutomationName` и `ChevronGlyph`;
      - `[RelayCommand] private void Toggle()` — `IsExpanded = !IsExpanded`;
      - `public abstract string HeaderText { get; }`;
      - `public string AutomationName` — `"{HeaderText}, {ModelGroupExpanded}"` или `"{HeaderText}, {ModelGroupCollapsed}"`;
      - `public string ChevronGlyph` — `IconGlyphs.Expand`, если раскрыта, иначе `IconGlyphs.Forward`;
      - `protected abstract void FillRows()`.
+   - В новом `ModelGroupViewModelTests.cs` регрессии создания: раскрытая image-группа сразу имеет строки и не вызывает callback; свёрнутая группа пуста; первый Toggle заполняет строки и вызывает callback ровно один раз. Те же случаи для assistant-группы.
    - `ImageModelGroupViewModel.cs`: `public sealed class ImageModelGroupViewModel : ModelGroupViewModel`, конструктор `(string key, string name, IReadOnlyList<ModelOptionViewModel> matches, bool isExpanded, Action<ModelGroupViewModel> expandedChanged)`. Члены:
      - `IReadOnlyList<ModelOptionViewModel> Matches`;
      - `ObservableCollection<ModelOptionViewModel> Rows` — заполняется в конструкторе и в `FillRows()`: `Matches`, если раскрыта, иначе пусто;
@@ -144,6 +145,8 @@ created: 2026-10-29
 7. Документация: в `docs/specs/chat-sessions.md`, раздел S5, добавь пункт S5.5: модели на обеих вкладках сгруппированы по производителю; перечисли правила 1–9 из «Анализа» коротко, по одной строке.
 8. Ручные пункты (см. «Ручная проверка») допиши в задачи 016 и 046.
 
+После проверок заполни «Отчёт», перечисли доступные и отложенные ручные проверки, выполни `scripts/release-task.sh 092`, затем `bash scripts/check.sh`. Отсутствие Windows/Android-устройства для ручной проверки не блокирует завершение: пункты передаются владельцу по `docs/tasks.md`.
+
 ### Проверка
 ```
 dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj
@@ -161,7 +164,7 @@ bash scripts/check.sh
 - В задачу 046 (Avalonia): то же; заголовок группы раскрывается с клавиатуры (Enter или пробел).
 - Android — в «Отчёт» этой задачи: «не проверено, проверить владельцу: группы на телефоне, скорость раскрытия большой группы».
 
-Файлы: `ImageGen/ImageGen.Presentation/PageModels/ModelVendors.cs`, `ImageGen/ImageGen.Presentation/PageModels/ModelGroupViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ImageModelGroupViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/AssistantModelGroupViewModel.cs` (новые), `ImageGen/ImageGen.Presentation/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml`, `ImageGen/ImageGen.Avalonia/Views/SessionModelsView.axaml`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ModelVendorsTests.cs` (новый), `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionModelsPageModelTests.cs`, `ImageGen/ImageGen.Avalonia.Tests/Flows/SessionModelsFlowTests.cs`, `docs/specs/chat-sessions.md`, `tasks/v0.1/016-*.md`, `tasks/backlog/046-*.md`.
+Файлы: `ImageGen/ImageGen.Presentation/PageModels/ModelVendors.cs`, `ImageGen/ImageGen.Presentation/PageModels/ModelGroupViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ImageModelGroupViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/AssistantModelGroupViewModel.cs` (новые), `ImageGen/ImageGen.Presentation/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml`, `ImageGen/ImageGen.Avalonia/Views/SessionModelsView.axaml`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ModelVendorsTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ModelGroupViewModelTests.cs` (новые), `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionModelsPageModelTests.cs`, `ImageGen/ImageGen.Avalonia.Tests/Flows/SessionModelsFlowTests.cs`, `docs/specs/chat-sessions.md`, `tasks/v0.1/016-*.md`, `tasks/backlog/046-*.md`.
 
 ## Отчёт
 

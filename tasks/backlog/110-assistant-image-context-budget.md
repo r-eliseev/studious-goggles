@@ -25,23 +25,22 @@ created: 2026-10-29
 ## Анализ
 `ContextBuilder.Select` умножает message estimates на correction factor, но `ContextBudget` не корректирует fixed/summary/images. Candidate algorithm обязан использовать одну формулу, иначе удалит image вместо старой history. Existing `AssistantAcceptsImages` задаёт ContextLength=1000 при reserve=4096; legacy image tests нужно перевести на достаточный default.
 
-Пересечение: 123 использует тот же AssistantService и logger double; порядок 110 → 114 → 123 → 117.
+Пересечение: 123 использует тот же AssistantService и logger double; порядок 110 → 114 → 123; 117 отдельно исправляет уже существующее описание контекста. `ContextBudget` также используют `ConversationSummaryService` и XML-doc `SummaryPlanner`: его не удалять и не менять в этой задаче. Необходимость: реализовать уже принятое C1.6, иначе изображения вытесняют обязательное сообщение и запрос не помещается. Общий тестовый `CapturingLogger` используют несколько suites: расширение должно сохранить прежние свойства и конструктор без аргументов.
 
 ## План
 Для Haiku/Luna: TDD pure budget helper; не менять image token price, cap 4 и current-message rule.
 
 Прочитай: C1/C2, `AssistantService.BuildRequestAsync`, `ContextBudget`, `ContextBuilder`, `TokenCorrection`, AssistantService tests/logger double.
 
-1. Изменить test helper на `AssistantAcceptsImages(int contextLength = 32_000)`; legacy tests используют default.
-2. Добавить pure `AssistantRequestBudget` helper: fixed reserve не умножается; `ceil(factor * (fixed+summary+images))` вычитается из context; selected message costs считаются тем же per-message rounding, что ContextBuilder. Helper возвращает available history и full corrected estimate.
-3. Test helper `AssertFitsContext` использует production helper/formулу, а не упрощённую сумму texts.
-4. Tests: all fit; 2 user+2 last-run и удалить ровно последнюю last-run; удалить все last-run и user с конца; 4 user means last-run outside cap and no budget warning; factor=2.0 retains images by dropping older history.
-5. Impossible test: fixed+summary+current+reserve > context без images → current полный, images 0, exactly one warning.
-6. В BuildRequest хранить sources отдельно. Initial candidate cap как критерий. Для candidate: budget → ContextBuilder.Select → full check; если only mandatory current causes overflow, remove next image and repeat.
-7. Warning один после выбора, removed count относительно capped candidate. Не считать last-run, отброшенные штатным cap.
-8. Расширить Core `CapturingLogger`: configurable minimum level и structured key/value state; regression existing logger tests. Проверить properties и отсутствие content.
-9. Raw `BuiltRequest.EstimatedTokens` считать по фактически выбранным texts/images без factor/reserve.
-10. Existing 500-message test дополнить full corrected estimate assertion.
+1. Изменить test helper на `AssistantAcceptsImages(int contextLength = 32_000)`; legacy image tests используют default. `ContextBudget`, summary service и их существующие тесты остаются без изменений.
+2. Добавить отдельный pure record `AssistantRequestBudget(int ContextLength, int FixedTokens, int ImageTokens, int SummaryTokens, double Factor)` в `Core/Context`. Члены: `HistoryBudget` (int) и `CorrectedEstimate(IReadOnlyList<ContextMessage> selected)` (int). Резерв — `TokenEstimator.ReserveForOutput`, не умножать на Factor. Fixed cost = ceil(Factor × (FixedTokens + ImageTokens + SummaryTokens)); HistoryBudget = max(0, ContextLength − reserve − fixed cost). Full estimate = reserve + fixed cost + сумма ceil(Factor × Estimate(message.Text)) отдельно по каждому selected message. Так округление совпадает с `ContextBuilder.Select`.
+3. Unit-тесты `HistoryBudget_ExcludesReserveAndCorrectedFixedParts`, `CorrectedEstimate_RoundsEachSelectedMessage`, `HistoryBudget_NeverNegative` задают небольшие входные числа и ожидаемые числа вручную. Интеграционный `AssertFitsContext` независимо складывает токены фактического request; не проверять helper вызовом самого себя.
+4. В `BuildRequestAsync` хранить два списка: user candidate = первые 4 user images, last-run candidate = первые (4 − user count) last-run images. Для каждой попытки создать budget с текущим количеством images, заново вызвать `ContextBuilder.Select(AfterCovered(...), HistoryBudget, factor)` и проверить Full estimate. Если не помещается — удалить последнюю last-run image; после исчерпания last-run удалять последнюю user image. Остановиться на первом fitting candidate или при images=0. Старую history всегда пробовать сократить до удаления изображения; current message не сокращать.
+5. Именованные сервисные тесты: `ImageBudget_AllFit_KeepsFour`, `ImageBudget_RemovesLastRunFromEnd`, `ImageBudget_ThenRemovesUserFromEnd`, `ImageBudget_FourUserImages_DoesNotWarnForCap`, `ImageBudget_CorrectionDropsOldHistoryBeforeImages`. Подобрать ContextLength из фактических costs так, чтобы каждый тест пересекал ровно нужную границу; фиксировать порядок оставшихся data URLs.
+6. `ImageBudget_MandatoryRequestTooLarge_KeepsCurrentAndWarnsOnce`: fixed + summary + current + reserve не помещаются даже без images. Сохранить current полный, удалить images, не зацикливаться, один Warning даже при изначально нулевом числе images. При обычном image removal также ровно один Warning на request. ImagesRemoved считать от capped candidate, обычный cap предупреждения не даёт.
+7. Warning имеет только SessionId/ProviderId/ModelId/ImagesKept/ImagesRemoved. Для проверки расширить `CapturingLogger<T>` необязательным constructor argument `minimumLevel = LogLevel.Trace`; `IsEnabled` и `Log` соблюдают порог. Сохранить `Entries`, `AllText` и positional constructor `LogEntry(Level, Message, Exception)`; structured state добавить отдельным свойством `State` типа `IReadOnlyDictionary<string, object?>`, копировать пары при Log, для state без пар — пустой dictionary. Добавить `CapturingLoggerTests`: default сохраняет Debug, Information исключает Debug, State содержит template properties, старые свойства доступны. Полные suites проверяют совместимость существующих callers.
+8. `BuiltRequest.EstimatedTokens` считать из фактически выбранных texts/images: raw fixed + summary + сумма Estimate(text) + EstimateImages(count), без reserve/factor. Тест после reply с PromptTokens проверяет, что correction использует этот raw estimate. Existing 500-message test дополнить независимой проверкой full corrected estimate.
+9. После проверок заполнить «Отчёт» (изменения, команды, ограничения), выполнить `scripts/release-task.sh 110` и `bash scripts/check.sh`; обновить PR по `docs/tasks.md`. Код менять маленькими шагами TDD.
 
 ### Проверка
 ```
@@ -51,7 +50,7 @@ dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-n
 bash scripts/check.sh
 ```
 
-Файлы: `ImageGen/ImageGen.Core/Context/AssistantRequestBudget.cs` (новый), `ImageGen/ImageGen.Core/Context/ContextBudget.cs` (удалить/делегировать, только если helper заменяет его без дублирования), `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Context/AssistantRequestBudgetTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/TestDoubles/CapturingLogger.cs`
+Файлы: `ImageGen/ImageGen.Core/Context/AssistantRequestBudget.cs` (новый), `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Context/AssistantRequestBudgetTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/TestDoubles/CapturingLogger.cs`, `ImageGen/ImageGen.Core.Tests/TestDoubles/CapturingLoggerTests.cs` (новый)
 
 ## Отчёт
 

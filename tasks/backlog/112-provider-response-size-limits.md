@@ -15,26 +15,28 @@ Provider JSON/image paths читают body целиком; default SendAsync м
 Среда: Linux или Windows.
 
 ## Критерии готовности
-- Proposed owner-approved limits: JSON 8 MiB, generated image 50 MiB, one constants type.
+- Пределы response body: обычный JSON8MiB, JSON синхронной генерации с base64 72MiB, binary generated image50MiB. Один MiB=1024*1024 bytes. Base64 раздувает50MiB примерно до66.7MiB; обычный JSON cap не должен обрезать допустимое изображение.
 - Base/Fal sends используют ResponseHeadersRead; timeout token покрывает send+read.
 - Header > limit rejected before body; absent/false header reads ≤ limit+1.
-- Image download request marked internal option; unmarked defaults JSON for 127.
+- Image download и JSON image-generation requests помечены общим request option body kind; unmarked defaults Json. Probe/cancel помечены отдельным SkipResponseBody=true для127.
 - Oversize from reader or future handler maps safe `ProviderException(Unknown)`.
 - Probe/cancel don't read unused body.
 
 ## Анализ
 `SendFalJsonAsync` separate path. Bounded reader alone не ограничивает current LoggingHttpHandler; это явно принимает 127. Debug logging не меняется здесь.
 
+Нужность: ограничивает allocation на недоверенном ответе. Предел72MiB сохраняет существующий b64_json путь OpenRouter/OpenAI-compatible; проверка только заголовка не защищает chunked/ложный Content-Length.
+
 ## План
 Для Haiku/Luna: только transport/parser primitives and provider tests; LoggingHttpHandler/tests не трогать.
 
-1. Add ProviderResponseLimits JSON/Image, request `HttpRequestOptionsKey` body kind, `ProviderResponseTooLargeException` safe fields.
-2. BoundedHttpContentReader bytes/text: Content-Length precheck, non-seekable read max limit+1, no partial return.
-3. Unit tests exact/+1/absent/understated header/chunked/read count.
-4. ProviderClientBase SendJson/Probe and Fal JSON/download/cancel use ResponseHeadersRead. One timeout CTS until content complete; Fal image marks option; probe/cancel dispose no body read.
-5. Catch size exception around both SendAsync and reader; map Unknown safe message without content/URL.
-6. Tests ordinary OpenAI-compatible oversize JSON; fal status/result/image; credential probe/cancel counting stream unread; external cancellation remains OCE.
-7. Document in task report that full guarantee waits 127; do not mark 127 done from this task.
+1. В `Providers/ProviderResponseLimits.cs` определить enum `ProviderResponseBodyKind` (`Json`, `GeneratedImageJson`, `Image`); static constants `Json=8*1024*1024`, `GeneratedImageJson=72*1024*1024`, `Image=50*1024*1024`. Общий `BodyKind: HttpRequestOptionsKey<ProviderResponseBodyKind>` и `SkipResponseBody: HttpRequestOptionsKey<bool>`. Метод `GetLimit(HttpRequestMessage request)` выбирает предел по option, по умолчанию Json. Не определять дубликаты enum/keys/constants в logging handler127.
+2. Создать `ProviderResponseTooLargeException` с безопасным постоянным message и полями `LimitBytes` (long), `DeclaredLength` (long?); без body, URL и key. Создать static `BoundedHttpContentReader` с `ReadBytesAsync(HttpContent content, long limitBytes, CancellationToken)` и `ReadTextAsync(HttpContent content, long limitBytes, CancellationToken)`. Content-Length >limit отклонять до получения/чтения stream. Для остальных случаев ReadAsStreamAsync и цикл чтения с остаточным бюджетом до limit+1; после превышения бросить size exception, не возвращать partial buffer. Текст декодировать с объявленной content charset (иначе UTF8), не выполнять второй неограниченный ReadAsStringAsync.
+3. Unit tests: exact limit success; +1 fail; missing/understated Content-Length; non-seekable/chunked-equivalent stream; счётчик реально прочитанных bytes никогда >limit+1; oversized header →0 stream bytes. Маленький injected test limit применить к pure reader, без выделения десятков MiB для каждой комбинации. Caller cancellation при чтении остаётся OCE.
+4. В `ProviderClientBase.SendJsonAsync` и direct Fal JSON/download использовать SendAsync с ResponseHeadersRead и reader. Тот же timeout CTS из107 живёт до завершения bounded read. Fal.Download отмечает BodyKind.Image. `OpenRouterClient.GenerateAsync` и `OpenAiCompatibleClient.GenerateAsync` помечают response BodyKind.GeneratedImageJson до SendJsonAsync; catalog/chat/status/result JSON оставляют Json. Probe/cancel выставляют SkipResponseBody=true, SendAsync ResponseHeadersRead, освобождают response без чтения неиспользуемого body.
+5. В обоих GenerateAsync проверить decoded image cap50MiB: base64 длину проверить до Convert.FromBase64String (учесть допустимый padding/whitespace по текущему parser), после decode проверить actual bytes. Не считать весь JSON binary-size и не ограничивать нормальную картинку8MiB. Ошибки превышения от reader, handler или decoder mapping → безопасный ProviderException(Unknown). Catch охватывает и SendAsync (127 сможет бросить раньше parser), и bounded read; caller OCE не преобразовывать в Unknown/Timeout.
+6. Provider tests: обычный JSON >8MiB rejected; image JSON с b64 payload >8MiB, но decoded image <50MiB принят; generation JSON превышает72MiB → Unknown; decoded image превышает50MiB → Unknown; fal status/result/image проверяют выбранный лимит; probe/cancel counting stream не читается; external cancellation остаётся OCE. Проверить option на отправленных requests через stub handler, включая разные endpoints одного client.
+7. В отчёте явно указать: текущий LoggingHttpHandler ещё предварительно читает ответ; полная production guarantee появится после127. В112 не менять handler/tests и не объявлять127 завершённой.
 
 ### Проверка
 ```
@@ -44,7 +46,9 @@ dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-n
 bash scripts/check.sh
 ```
 
-Файлы: `ImageGen/ImageGen.Core/Providers/ProviderResponseLimits.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderResponseTooLargeException.cs` (новый), `ImageGen/ImageGen.Core/Providers/BoundedHttpContentReader.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderClientBase.cs`, `ImageGen/ImageGen.Core/Fal/FalImageProvider.cs`, `ImageGen/ImageGen.Core.Tests/Providers/BoundedHttpContentReaderTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/OpenAiCompatible/OpenAiCompatibleClientTests.cs`, `ImageGen/ImageGen.Core.Tests/Fal/FalImageProviderTests.cs`
+Файлы: `ImageGen/ImageGen.Core/Providers/ProviderResponseLimits.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderResponseTooLargeException.cs` (новый), `ImageGen/ImageGen.Core/Providers/BoundedHttpContentReader.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderClientBase.cs`, `ImageGen/ImageGen.Core/Fal/FalImageProvider.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/OpenAiCompatible/OpenAiCompatibleClient.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `ImageGen/ImageGen.Core.Tests/Providers/BoundedHttpContentReaderTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/OpenAiCompatible/OpenAiCompatibleClientTests.cs`, `ImageGen/ImageGen.Core.Tests/Fal/FalImageProviderTests.cs`
+
+После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 112`, затем `bash scripts/check.sh`; отправить PR по `docs/tasks.md`.
 
 ## Отчёт
 

@@ -29,16 +29,17 @@ Manifest разрешает backup без rules; app-private SQLite, images, log
 `docs/knowledge/maui.md` также меняют 088, 095, 098, 100: перед стартом rebase, при конфликте сохранить независимые добавления; это не функциональные зависимости.
 
 ## План
-Для Haiku/Luna: точная deny-all policy, без UI/iOS. Если Android resource merger отвергает domain, записать exact build error и `blocked`, не удалять rule молча.
+Для Haiku/Luna: точная deny-all policy, без UI/iOS. Рутинные ошибки resource path/build исправлять по Android SDK без ослабления deny-all. Если конкретный domain не поддерживается документированной схемой выбранного API, записать ссылку/ошибку и согласовать изменение политики; не удалять rule молча. Отсутствие Android SDK — неподходящая среда, задачу не занимать.
 
 Прочитай: полный путь `ImageGen/ImageGen.Maui/ImageGen.Maui.csproj`, AndroidManifest, Android official page выше, `MauiStylesTests.MauiRoot`, `docs/knowledge/maui.md`.
 
-1. Добавить legacy `Platforms/Android/Resources/xml/backup_rules.xml`: `<full-backup-content>` с excludes для root/file/database/sharedpref/external/device_root/device_file/device_database/device_sharedpref; no includes.
+1. Для каждого exclude задать `path="."`: domain без пути не задаёт deny-all. Добавить legacy `Platforms/Android/Resources/xml/backup_rules.xml`: `<full-backup-content>` с excludes для root/file/database/sharedpref/external/device_root/device_file/device_database/device_sharedpref; no includes.
 2. Добавить Android 12+ `data_extraction_rules.xml`: cloud-backup и device-transfer; каждый содержит excludes для root/file/database/sharedpref/external и device_root/device_file/device_database/device_sharedpref; no includes.
 3. Manifest: `allowBackup=false`, `fullBackupContent=@xml/backup_rules`, `dataExtractionRules=@xml/data_extraction_rules`.
-4. Новый `Presentation.Tests/Design/AndroidBackupPolicyTests.cs`: repository root как MauiStylesTests; parse XDocument; exact manifest attrs; parse both resources; assert no include and expected domains in each applicable section.
+4. Новый `Presentation.Tests/Design/AndroidBackupPolicyTests.cs`: repository root как MauiStylesTests; parse XDocument; exact manifest attrs; parse both resources; assert no include, exact expected domain set и path="." у каждого exclude в каждой applicable section. Source tests подтверждают конфигурацию, но не доказывают поведение OEM transfer на устройстве.
 5. `dotnet build ... -c Release -f net10.0-android`; найти final merged manifest только под `obj/Release/net10.0-android` по build output, записать path, parse attrs. Не считать source/intermediate duplicate final output.
-6. Обновить один пункт `docs/knowledge/maui.md`, rebase-сохраняя изменения других задач.
+6. Обновить один пункт `docs/knowledge/maui.md`, rebase-сохраняя изменения других задач: app data не участвуют в Auto Backup, explicit rules для transfer, пользовательский F7.6 ещё не реализован. Не утверждать проверку на OEM-устройстве без фактического опыта.
+7. После проверок заполнить «Отчёт» (изменения, команды, ограничения), выполнить `scripts/release-task.sh 115` и `bash scripts/check.sh`; обновить PR по `docs/tasks.md`. Код менять маленькими шагами TDD.
 
 ### Проверка
 ```

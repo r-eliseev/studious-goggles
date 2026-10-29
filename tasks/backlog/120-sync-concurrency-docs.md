@@ -1,6 +1,6 @@
 ---
 id: 120
-status: approved
+status: cancelled
 assignee:
 claimed:
 created: 2026-10-29
@@ -11,7 +11,7 @@ created: 2026-10-29
 ## Описание
 Architecture «не больше 4» не задаёт scope. После 111 это четыре локально отслеживаемых jobs на provider, включая fresh submit→terminal и resumed saved-handle polling; local cancellation освобождает slot, remote cancel failure остаётся limitation.
 
-Зависит от: 111, 119.
+Зависит от: —
 Среда: Linux или Windows.
 
 ## Критерии готовности
@@ -21,24 +21,12 @@ Architecture «не больше 4» не задаёт scope. После 111 э�
 - ADR 0003 не переписывается; internal SemaphoreSlim не документируется.
 
 ## Анализ
-Последняя из doc chain 117→119→120; перед работой rebase и сохранить обе предыдущие правки architecture.
+Concurrency docs должны меняться одновременно с лимитом 111; 129 сохраняет и уточняет этот contract при объединении путей. Требования не отменены: они переданы в 111 (per-provider local slots, recovered jobs, cancellation limitation) и 129 (итоговый единый queued путь). По `docs/tasks.md`, раздел «Завершение», документацию обязан обновлять исполнитель изменения поведения. Отдельная задача дублировала эту обязанность и создавала ложную зависимость README/других задач. Исторические критерии выше сохранены для трассировки.
 
 ## План
-Для Haiku/Luna: одно contract-уточнение, no code/ADR.
-
-1. Сверить 111 tests/helper и 121 limitation.
-2. Заменить ambiguous phrase в architecture «Прогон»/«Ограничения» точным contract.
-3. Упомянуть recovered watch и failed remote cancel одним коротким предложением.
-4. Grep parallel/4 occurrences in active docs; исправить только contradictions.
-
-### Проверка
-```
-grep -rn "не больше 4\|четыр.*одноврем\|параллел" docs/architecture.md docs/specs --include='*.md'
-bash scripts/check.sh
-```
-
-Файлы: `docs/architecture.md`
+Снята в ходе ревью по поручению владельца 2026-10-29. Не занимать и не выполнять отдельно. При выполнении задач 111 (per-provider local slots, recovered jobs, cancellation limitation) и 129 (итоговый единый queued путь) сверить соответствующие критерии выше с code/tests и обновить docs в той же ветке.
 
 ## Отчёт
+2026-10-29: отменена как дублирующая задача; код не менялся. Concurrency docs должны меняться одновременно с лимитом 111; 129 сохраняет и уточняет этот contract при объединении путей. Ответственность перенесена в 111 (per-provider local slots, recovered jobs, cancellation limitation) и 129 (итоговый единый queued путь). Это не утверждение о готовности будущего поведения.
 
 ## Комментарии

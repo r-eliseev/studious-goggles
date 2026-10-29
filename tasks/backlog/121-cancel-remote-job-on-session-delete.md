@@ -11,7 +11,7 @@ created: 2026-10-29
 ## Описание
 После локальной cancellation из 108 fal job может продолжать тарифицируемую работу. Есть race: stop видит job во время SubmitAsync без handle, отменяет token, а provider всё же возвращает handle позже. Нужна race-safe публикация handle и best-effort `CancelAsync` до удаления session data.
 
-Зависит от: 107, 109, 124, 126.
+Зависит от: 124, 126.
 Среда: Linux или Windows.
 
 ## Критерии готовности
@@ -25,18 +25,20 @@ created: 2026-10-29
 ## Анализ
 Простой snapshot handle до cancellation теряет handle, возвращённый одновременно. RunningJob из 108 нужно расширить completion signal `SubmitSettled` и atomic handle publication. Нельзя использовать уже отменённый job CTS для CancelAsync.
 
+Нужность: local CTS не отменяет уже оплаченную удалённую работу. Таймаут107/validation109 доступны транзитивно через124.
+
 Пересекается с 111 по RunningJob и GenerationService; выполнить 121 до 111.
 
 ## План
 Для Haiku/Luna: только queued remote cancel при deletion, без UI-кнопок задачи 024.
 
-1. Расширить RunningJob thread-safe handle state: publish once; `SubmitSettled` завершается и при success, и при exception/cancellation. Recovery публикует deserialized handle до launch.
+1. Расширить RunningJob private lock и полями `IQueuedImageProvider? QueuedProvider`, `ProviderJobHandle? SubmittedHandle`, `TaskCompletionSource SubmitSettled` с RunContinuationsAsynchronously. `PublishHandle` сохраняет provider+handle атомарно ровно один раз ДО проверки отмены owned token и ДО сохранения JobJson; затем завершает signal через TrySetResult. `CompleteSubmitPhase` в finally завершает signal при любом исходе (ошибка подготовки, missing provider, ожидание slot, exception/OCE submit), даже без handle. Normal job также завершает signal без handle. Recovery валидно десериализованный handle публикует до открытия launch gate; malformed JSON сохраняет поведение106 и signal без handle.
 2. Race-test: SubmitAsync игнорирует initial cancellation до gate, stop begins, submit returns handle; stop обязательно вызывает CancelAsync exactly once before completion.
-3. Stop sequence для each queued job: cancel local CTS; await submit settled; if valid handle then `CancelAsync(handle, CancellationToken.None)` (его own Config.Timeout из 107 ограничивает call); затем await local Task.
+3. После ожидания start leases108 сначала снять snapshot ссылок RunningJob target session, затем отменить session StopSource. Snapshot обязателен ДО cancel: быстро завершающаяся task иначе исчезнет из `_running` вместе с handle. Для каждого snapshot job await SubmitSettled, взять опубликованную pair provider+handle; вызвать `CancelAsync(handle, CancellationToken.None)` (deadline107), затем дождаться всех local tasks. На cancel outcome не продолжать polling. Повторный Stop использует общий StopCompletion108 и не повторяет cancellation requests. Caller token Stop влияет лишь на ожидание, не на уже запущенную cleanup sequence.
 4. Не вызывать cancel для normal provider/no handle; repeated Stop/Delete не вызывает remote cancel повторно.
-5. Tests outcomes Cancelled/CancellationRequested/AlreadyCompleted/NotFound и thrown ProviderException: deletion продолжается. Operational Warning содержит ids/outcome без exception/message; отдельный Debug содержит detail; нигде выше Debug нет prompt/key/URL.
-6. Recovery test: saved handle + concurrent delete → no poll after tombstone, cancel called once.
-7. Обновить XML-doc coordinator с best-effort limitation.
+5. Tests outcomes Cancelled/CancellationRequested/AlreadyCompleted/NotFound, thrown ProviderException и unexpected exception из CancelAsync: deletion продолжается. Operational Warning содержит ids/outcome без exception/message; отдельный Debug содержит detail; нигде выше Debug нет prompt/key/URL.
+6. Recovery test с watcher, уже зарегистрированным ДО tombstone: сохранённый handle + concurrent delete → cancel once, после Stop complete no poll/write. Если tombstone уже стоит ДО recovery registration,108 пропускает watcher и remote cancel не обещает: данных RunningJob в этом процессе нет. Дополнительная гонка: submit возвращает handle после local cancellation; PublishHandle происходит до проверки token/persistence, Stop всё равно отправляет cancel. Если job уже terminal и удалена из `_running` ДО snapshot, отменять её не нужно.
+7. Обновить XML-doc coordinator и раздел удаления сессии в `docs/architecture.md`: local writes гарантированно остановлены до DB/file delete; remote cancellation best-effort с timeout, удалённый job может продолжиться при failure. Не обещать отмену работы, которую процесс ещё не зарегистрировал.
 
 ### Проверка
 ```
@@ -46,7 +48,9 @@ dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-n
 bash scripts/check.sh
 ```
 
-Файлы: `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/Services/ISessionGenerationCoordinator.cs`, `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`
+Файлы: `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/Services/ISessionGenerationCoordinator.cs`, `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `docs/architecture.md`
+
+После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 121`, затем `bash scripts/check.sh`; отправить PR по `docs/tasks.md`.
 
 ## Отчёт
 
