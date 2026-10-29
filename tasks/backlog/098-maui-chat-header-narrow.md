@@ -1,6 +1,6 @@
 ---
 id: 098
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-29
@@ -22,36 +22,74 @@ created: 2026-10-29
 - Широкая раскладка не изменилась.
 
 ## Анализ
-- **MAUI сейчас.** Шапка — `HorizontalStackLayout` (`HorizontalOptions="Start"`) из `Label` названия и трёх чипов: `Button` «Models» (`ModelsButtonText`), `Border` с `Label` ассистента (`AssistantText`, это надпись, а не кнопка) и `Button` «Parameters». Стековая раскладка меряет детей без ограничения по ширине, поэтому длинное название не обрезается, а всё, что не влезло, уходит за правый край. Название страницы (`ContentPage Title="{Binding Title}"`) уже показывает панель навигации `Shell` (`AppShell`, `FlyoutBehavior="Disabled"`), отсюда дубль на телефоне. Узкая и широкая раскладки уже различаются: `ChatPage.ApplyWidth` по порогу 840 ставит `ChatPageModel.IsWide`.
-- **Avalonia.** Та же шапка — горизонтальный `StackPanel`, та же проблема в узком окне (у окна нет `MinWidth`). Дубля в Avalonia нет: у `MainWindow` заголовок постоянный (`AppTitle`), панели навигации с названием сессии нет, поэтому название в шапке — единственное место, где оно видно, и его нельзя прятать. `IsWide` выставляет `ChatView.ApplyWidth` по тому же порогу.
-- **Варианты.** (1) Перенести чипы в `ToolbarItems` панели навигации: на Android лишнее уходит в меню «⋮», а чип ассистента — надпись, не действие. Отклонено. (2) Сетка «название `*` | чипы `Auto`»: чипы прижимаются к правому краю, и широкая раскладка заметно меняется; на 360 dp три чипа всё равно не влезают в одну строку. Отклонено. (3) **Выбрано:** шапка — раскладка с переносом (MAUI `FlexLayout` с `Wrap`, `AlignItems=Center`; Avalonia `WrapPanel`). Название в одну строку с многоточием, не шире шапки; чипы не сжимаются. Если места не хватает, чипы переносятся на следующую строку и не уходят за край. В MAUI на узкой раскладке название скрыто (`IsVisible` привязан к `IsWide`): его показывает панель навигации.
-- **Как это выполняет критерии.** 360 dp минус отступы страницы 2×16 = 328 dp. Чипы «N models × M», «Assistant: <id модели>» и «Parameters» в одну строку не помещаются, поэтому переносятся на две; все видны и нажимаются (высота чипа 28 по стилю `chip`, цель касания у `Button` по стилю — не трогаем). Очень длинный id модели в чипе ассистента обрезается многоточием по ширине шапки. Широкая раскладка с обычным названием выглядит как сейчас: всё в одну строку слева. Меняется только случай, когда название не помещается: тогда оно обрезается, а чипы уходят на вторую строку, а не за край.
-- **Неизвестно (проверка на устройстве, `poc/` не нужен):** обрезает ли MAUI `FlexLayout` `Label` с `LineBreakMode=TailTruncation` по ширине шапки. Известно, что `FlexLayout` может мерить детей без ограничения. Запасной вариант: в `ChatPage.ApplyWidth` задавать названию и чипу ассистента `MaximumWidthRequest` по ширине колонки. В `FlexLayout` нет `Spacing`, поэтому зазор 8 даётся полями (`Margin`) детей. Показывает ли панель навигации `Shell` название на Windows, тоже неизвестно; это не важно, потому что на широкой раскладке название остаётся.
-- **TDD.** Новой логики в `Presentation` нет: `IsWide` уже есть и покрыт тестами `ChatPageModelTests`. Раскладку проверяют headless-тесты Avalonia. MAUI проверяется сборкой и вручную.
-- **Пересечения.** 095 (корень `ChatPage.xaml`, стили), 097 (лента в `ChatPage.xaml`, `ChatView.axaml.cs`, `ChatPage.xaml.cs`), 088 (действия карточки в `ChatPage.xaml`). Здесь меняется только блок «Header» в `ChatPage.xaml` и `ChatView.axaml` (и, возможно, `ApplyWidth`). Порядок: **095 → 097 → 098**; при конфликтах в `ChatPage.xaml.cs` сохранить обе правки.
+- **MAUI сейчас.** Шапка — `HorizontalStackLayout` (`HorizontalOptions="Start"`): `Label` названия, `Button` «Models» (`ModelsButtonText`), `Border` с `Label` ассистента (`AssistantText`, надпись, а не кнопка), `Button` «Parameters». Стековая раскладка не ограничивает ширину детей: длинное название не обрезается, всё лишнее уходит за правый край. Название уже показывает панель навигации `Shell` (`ContentPage Title="{Binding Title}"`), отсюда дубль. `ChatPage.ApplyWidth` по порогу 840 ставит `ChatPageModel.IsWide`.
+- **Avalonia.** Та же шапка на горизонтальном `StackPanel`, та же проблема в узком окне (у окна нет `MinWidth`). Дубля нет: заголовок окна постоянный (`AppTitle`), поэтому название в шапке Avalonia остаётся.
+- **Решения (приняты владельцем).** Шапка — раскладка с переносом: MAUI `FlexLayout` (`Wrap`), Avalonia `WrapPanel`. Название в одну строку с многоточием, не шире шапки; чипы переносятся на следующую строку и не уходят за край. В MAUI на узкой раскладке (`IsWide == false`) название скрыто — его показывает панель навигации. Ширина названия и надписи ассистента ограничивается из кода по событию `SizeChanged` шапки (одинаково в обеих оболочках; не полагаемся на то, как `FlexLayout` меряет `Label`). Зазор 8 — полями детей `0,0,8,8` и полем шапки `0,0,0,-8`, чтобы высота однострочной шапки не изменилась.
+- **Почему так выполняются критерии.** 360 dp минус отступы 2×16 = 328 dp; три чипа в одну строку не помещаются и переносятся на две, все видны. При обычном названии на широком экране всё в одну строку слева, как сейчас.
+- **TDD.** Новой логики в `Presentation` нет (`IsWide` уже покрыт тестами). Раскладку проверяют headless-тесты Avalonia, разметку MAUI — текстовые тесты, как `MauiStylesTests`.
 
 ## План
-TDD для Avalonia: сначала падающий headless-тест, затем разметка.
+Выполнять после: 095 и 097 (правят `ChatPage.xaml`, `ChatPage.xaml.cs`, `ChatView.axaml.cs`; 097 создаёт `MauiChatPageMarkupTests.cs`, сюда добавляются тесты). Пересечения только текстовые: `ChatPage.xaml(.cs)` — 088, 090, 091; при rebase сохранять обе стороны.
 
-1. Avalonia, тесты (`ImageGen.Avalonia.Tests/Views/ChatLayoutTests`, на `OpenChatAsync`). Сессия переименована через `SessionService.RenameAsync` в длинное название (до `Session.MaxTitleLength`):
-   - окно 400 → три чипа (кнопки «Models», «Parameters» и надпись ассистента) видимы, и их границы (`TranslatePoint`/`Bounds` относительно `ChatView`) целиком внутри ширины представления;
-   - окно 400 → `TextBlock` названия не шире шапки (текст обрезан);
-   - окно 1100, короткое название → название и три чипа на одной строке (одинаковый центр по вертикали), чипы правее названия (широкая раскладка не изменилась).
-   Найти элементы проще с именами: `x:Name` у шапки и названия (`ChatHeader`, `ChatTitle`).
-2. Avalonia `ChatView.axaml`: горизонтальный `StackPanel` шапки заменить на `WrapPanel` (зазор 8 по горизонтали и вертикали); у названия `TextTrimming` с многоточием и `MaxWidth`, равная ширине шапки (привязка к ширине `ChatHeader` или установка в `ApplyWidth`); у текста чипа ассистента — то же обрезание. Название в Avalonia не скрывается.
-3. MAUI `ChatPage.xaml`: шапка — `FlexLayout` (`Wrap`, `Direction=Row`, `AlignItems=Center`, `JustifyContent=Start`), зазоры через `Margin`. Название: `MaxLines=1`, `LineBreakMode=TailTruncation`, `IsVisible="{Binding IsWide}"`; надпись в чипе ассистента обрезается так же. `SemanticProperties` прежние; на узкой раскладке название озвучивает панель навигации.
-4. Если на устройстве обрезание в `FlexLayout` не работает: в `ChatPage.ApplyWidth` ставить названию и чипу ассистента `MaximumWidthRequest` = ширина колонки чата минус отступы. Это код оболочки, без новой логики в модели.
-5. Ручная проверка на Android (телефон 360–412 dp, портрет и альбом): короткое и максимально длинное название (переименовать в списке сессий) → названия в шапке нет, оно в панели навигации с многоточием; три чипа видны и нажимаются: «Models» и «Parameters» открывают свои экраны. Длинный id модели ассистента → чип обрезан, не за краем. Планшет или окно ≥ 840 → название слева и чипы в строку, как раньше. Windows (CI сборка, ручная — 016): широкая раскладка без изменений. Avalonia: сузить окно до ~400 → чипы переносятся, название с многоточием. Если устройства или рабочего стола нет — пункты в `tasks/v0.1/016-skeleton-manual-check.md` и `tasks/backlog/046-desktop-manual-check.md`.
-6. Документация: `docs/design/implementation.md` — строка про шапку чата на узком экране (название только в панели навигации MAUI, чипы с переносом), если там описана шапка; иначе `docs/specs/chat-sessions.md` не трогать. `docs/knowledge/maui.md` — что выяснилось про `FlexLayout` и обрезание `Label`.
+Для исполнителя (план рассчитан на небольшую модель): делай шаги строго по порядку, по TDD (сначала падающий тест, потом минимальный код), после каждого шага — сборка и тесты из «Проверки». Имена файлов, типов, членов, ключей строк и тестов переноси дословно. Если шаг не получается так, как написано (API другое, компилятор не принимает разметку), не придумывай обход: опиши в «Комментариях», что пробовал, поставь `blocked` и остановись.
 
-Проверка:
-- `dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj`
-- `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj` (регрессия)
-- `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android` (если есть Android SDK); Windows-цель — CI
-- `dotnet format --verify-no-changes` для `ImageGen.Avalonia`, `ImageGen.Avalonia.Tests`, `ImageGen.Maui` (последний — при Android SDK)
-- `scripts/check.sh`
+Прочитай перед началом:
+- `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`: блок под комментарием `<!-- Header: title and the three chips. -->`; `ChatPage.xaml.cs` (`ApplyWidth`, конструктор);
+- `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`: блок под комментарием `<!-- Header: title and the three chips (Models, Assistant, Parameters). -->`; `ChatView.axaml.cs` (конструктор, `ApplyWidth`);
+- `ImageGen/ImageGen.Avalonia.Tests/Views/ChatLayoutTests.cs` (метод `OpenChatAsync`);
+- `ImageGen/ImageGen.Presentation.Tests/Design/MauiChatPageMarkupTests.cs` (создан в 097; если файла нет — создать класс `MauiChatPageMarkupTests` с методом `MauiRoot()`, скопированным из `MauiStylesTests.cs`);
+- `docs/design/implementation.md`, раздел «## 6. Ширина окна».
 
-Файлы: `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, при необходимости `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml.cs`; `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`, при необходимости `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml.cs`; `ImageGen/ImageGen.Avalonia.Tests/Views/ChatLayoutTests.cs`; `docs/knowledge/maui.md`, при необходимости `docs/design/implementation.md`, `tasks/v0.1/016-skeleton-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`.
+1. Avalonia, падающие тесты в `ImageGen/ImageGen.Avalonia.Tests/Views/ChatLayoutTests.cs`.
+   - Метод `OpenChatAsync(double width)` получает второй параметр `string? title = null`: если `title` не `null`, после создания сессии вызвать `SessionService.RenameAsync(session.Id, title, TestContext.Current.CancellationToken)` до перехода в чат. После перехода дождаться загрузки: `shell.WaitUntilAsync(() => model.Title == (title ?? model.Title) && model.ModelsButtonText.Length > 0, "шапка загружена")`, где `model` — `ChatPageModel` из `DataContext` чата; затем `shell.Window.UpdateLayout()`.
+   - Длинное название в тестах: `new string('W', Session.MaxTitleLength)`.
+   - Элементы: шапка `chat.FindControl<WrapPanel>("ChatHeader")`, название `chat.FindControl<TextBlock>("ChatTitle")`, надпись ассистента `chat.FindControl<TextBlock>("AssistantChipText")`; кнопки «Models» и «Parameters» — потомки шапки типа `Button` с `AutomationProperties.GetName(b)` равным `model.ModelsButtonText` и `AppResources.ChatParametersButton`.
+   - `NarrowChat_LongTitle_AllChipsInside` — ширина 360, длинное название → у каждого из трёх чипов (`Button` Models, `TextBlock AssistantChipText`, `Button` Parameters) `IsEffectivelyVisible == true` и правый край `c.TranslatePoint(new Point(c.Bounds.Width, 0), chat)!.Value.X` ≤ `chat.Bounds.Width + 0.5`.
+   - `NarrowChat_LongTitle_TitleTrimmed` — ширина 360, длинное название → `ChatTitle.IsEffectivelyVisible == true` и `ChatTitle.Bounds.Width` ≤ `ChatHeader.Bounds.Width`.
+   - `WideChat_ShortTitle_HeaderInOneRow` — ширина 1100, название `"Fox"` → вертикальные центры (`TranslatePoint(new Point(0, c.Bounds.Height / 2), chat)!.Value.Y`) названия и трёх чипов отличаются не больше чем на 1; левый край каждого чипа правее правого края названия.
+   Сейчас падают все три (нет элементов с этими именами).
+2. Avalonia `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`, блок шапки:
+   - `StackPanel Orientation="Horizontal" Spacing="8"` заменить на `WrapPanel` с `x:Name="ChatHeader"`, `Orientation="Horizontal"`, `Margin="0,0,0,-8"`; `HorizontalAlignment` не задавать (по умолчанию растягивается на колонку);
+   - каждому из четырёх прямых детей (название, кнопка Models, `Border` ассистента, кнопка Parameters) — `Margin="0,0,8,8"`;
+   - `TextBlock` названия: `x:Name="ChatTitle"`, `TextTrimming="CharacterEllipsis"`, `TextWrapping="NoWrap"`; привязка `Text="{Binding Title}"` и класс `title` прежние;
+   - `TextBlock` внутри `Border` ассистента: `x:Name="AssistantChipText"`, `TextTrimming="CharacterEllipsis"`, `TextWrapping="NoWrap"`; остальное прежнее.
+3. Avalonia `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml.cs`: в конструкторе подписать `SizeChanged` у `this.FindControl<WrapPanel>("ChatHeader")` на новый метод `private void OnHeaderSizeChanged(object? sender, SizeChangedEventArgs e)`: `ChatTitle.MaxWidth = Math.Max(0, e.NewSize.Width - 8)`, `AssistantChipText.MaxWidth = Math.Max(0, e.NewSize.Width - 40)` (8 — поле справа, 40 — поле, отступы и рамка чипа). Тесты шага 1 проходят; прогнать все `ImageGen.Avalonia.Tests`.
+4. MAUI, падающие текстовые тесты в `ImageGen/ImageGen.Presentation.Tests/Design/MauiChatPageMarkupTests.cs` (XML через `XDocument`, `x:Name` — атрибут в пространстве `http://schemas.microsoft.com/winfx/2009/xaml`, файл `Pages/ChatPage.xaml`):
+   - `ChatHeader_IsWrappingFlexLayout` — есть элемент `FlexLayout` с `x:Name="ChatHeader"`, `Wrap="Wrap"`, `Direction="Row"`, `AlignItems="Center"`, без атрибута `HorizontalOptions`; в файле нет `HorizontalStackLayout`, у которого первый дочерний элемент — `Label` с `Text="{Binding Title}"`;
+   - `ChatTitle_HiddenOnNarrowAndTruncated` — `Label` с `x:Name="ChatTitle"` имеет `Text="{Binding Title}"`, `IsVisible="{Binding IsWide}"`, `MaxLines="1"`, `LineBreakMode="TailTruncation"`;
+   - `AssistantChip_Truncated` — `Label` с `x:Name="AssistantChipText"` имеет `Text="{Binding AssistantText}"`, `MaxLines="1"`, `LineBreakMode="TailTruncation"`.
+5. MAUI `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, блок под `<!-- Header: title and the three chips. -->`:
+   - `HorizontalStackLayout Spacing="8" HorizontalOptions="Start"` заменить на `FlexLayout` с `x:Name="ChatHeader"`, `Wrap="Wrap"`, `Direction="Row"`, `AlignItems="Center"`, `JustifyContent="Start"`, `AlignContent="Start"`, `Margin="0,0,0,-8"`, без `HorizontalOptions`;
+   - каждому из четырёх прямых детей — `Margin="0,0,8,8"`;
+   - `Label` названия: добавить `x:Name="ChatTitle"`, `IsVisible="{Binding IsWide}"`, `MaxLines="1"`, `LineBreakMode="TailTruncation"`; `StyleClass`, `Text`, `VerticalOptions` прежние;
+   - `Label` внутри `Border StyleClass="chip"`: добавить `x:Name="AssistantChipText"`, `MaxLines="1"`, `LineBreakMode="TailTruncation"`; остальное прежнее, `SemanticProperties` не трогать.
+   Тесты шага 4 проходят.
+6. MAUI `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml.cs`: в конструкторе подписать `ChatHeader.SizeChanged` на `private void OnHeaderSizeChanged(object? sender, EventArgs e)`: если `ChatHeader.Width <= 0` — выйти; `ChatTitle.MaximumWidthRequest = Math.Max(0, ChatHeader.Width - 8)`, `AssistantChipText.MaximumWidthRequest = Math.Max(0, ChatHeader.Width - 40)`. Сборка Android и формат (см. «Проверку»). Если компилятор XAML не принимает какое-либо свойство `FlexLayout` из шага 5 — `blocked` с текстом ошибки.
+7. Документация:
+   - `docs/design/implementation.md`, раздел «## 6. Ширина окна», после пункта «Узкий — < 840…» — пункт: «Шапка чата: название в одну строку с многоточием, чипы переносятся на следующую строку; на узком экране MAUI название в шапке скрыто — его показывает панель навигации (задача 098). В Avalonia название остаётся всегда.»
+   - `docs/knowledge/maui.md`, раздел «Разметка и списки»: пункт «**Перенос чипов (задача 098):**» — у `FlexLayout` нет `Spacing`, зазор полями детей и отрицательным полем контейнера; ширина `Label` ограничивается `MaximumWidthRequest` из `SizeChanged` контейнера; проверено ли на устройстве.
+
+### Проверка
+```
+dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj
+dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj
+dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android
+dotnet format ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj --verify-no-changes
+dotnet format ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj --verify-no-changes
+dotnet format ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj --verify-no-changes
+dotnet format ImageGen/ImageGen.Maui/ImageGen.Maui.csproj --verify-no-changes
+bash scripts/check.sh
+```
+Сборку и формат MAUI без Android SDK пропустить и записать в «Отчёт» (Windows-цель проверит CI).
+
+### Ручная проверка
+Android (если исполнитель не проверил — в «Отчёт» как «не проверено, проверить владельцу»), телефон 360–412 dp, портрет и альбом:
+1. Сессия с коротким и с 40-символьным названием (переименовать в списке) → названия в шапке нет, оно в панели навигации; три чипа видны и нажимаются, «Models» и «Parameters» открывают свои экраны.
+2. Длинный id модели ассистента → чип обрезан многоточием, не за краем.
+3. Планшет или ширина ≥ 840 → название слева и чипы в одну строку, как раньше.
+MAUI под Windows — дописать в `tasks/v0.1/016-skeleton-manual-check.md`: широкое окно — шапка как раньше; длинное название обрезается, чипы на второй строке. Avalonia — дописать в `tasks/backlog/046-desktop-manual-check.md`: сузить окно до ~400 → чипы переносятся, название с многоточием.
+
+Файлы: `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml.cs`, `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`, `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml.cs`, `ImageGen/ImageGen.Avalonia.Tests/Views/ChatLayoutTests.cs`, `ImageGen/ImageGen.Presentation.Tests/Design/MauiChatPageMarkupTests.cs`, `docs/design/implementation.md`, `docs/knowledge/maui.md`, `tasks/v0.1/016-skeleton-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`.
 
 ## Отчёт
 
@@ -59,3 +97,6 @@ TDD для Avalonia: сначала падающий headless-тест, зате
 ### 2026-10-29, claude-plan
 - Вопрос владельцу: на узком экране MAUI название сессии убираем из шапки (оно есть в панели навигации), а чипы переносим на вторую строку. Подходит ли это или нужно оставить название в шапке? Допущение в плане: убираем.
 - Допущение: в Avalonia делаем тот же перенос и обрезание (в узком окне проблема та же), но название не скрываем: другого места, где оно видно, в Avalonia нет.
+
+### 2026-10-29, владелец (в чате, записал claude-plan)
+План одобрен; допущения из комментариев claude-plan приняты как решения. План переписан под небольшую модель.

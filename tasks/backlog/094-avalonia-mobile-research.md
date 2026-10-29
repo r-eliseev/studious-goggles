@@ -1,6 +1,6 @@
 ---
 id: 094
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-29
@@ -75,37 +75,89 @@ ADR 0006 рассматривал вариант «Avalonia везде, без M
 Пробный код лежит в `poc/` и `ImageGen/` не меняет, поэтому с 088–093, 095, 097, 098 по файлам не конфликтует. Если пробная голова подключает разметку из `ImageGen.Avalonia/Views` ссылками, правки этих задач могут её сломать; пробный код не поддерживается, в отчёте фиксируется коммит, на котором проверяли. 095 (клавиатура закрывает поле), 097 (автопрокрутка чата) и 098 (узкая шапка чата) — готовые сценарии сравнения «как это в MAUI и как в Avalonia»; результат 094 их не блокирует (решение владельца 2026-10-29).
 
 ## План
+Для исполнителя (план рассчитан на небольшую модель): делай шаги строго по порядку, по TDD (сначала падающий тест, потом минимальный код), после каждого шага — сборка и тесты из «Проверки». Имена файлов, типов, членов, ключей строк и тестов переноси дословно. Если шаг не получается так, как написано (API другое, компилятор не принимает разметку), не придумывай обход: опиши в «Комментариях», что пробовал, поставь `blocked` и остановись.
 
-Шаги исследования. Только `poc/`, `docs/` и эта задача; `ImageGen/` не меняется.
+Исключение для этой задачи (решение координатора): весь код — пробный, только в `poc/`, поэтому TDD и unit-тесты не применяются. «Сборка и тесты из „Проверки“» здесь означают команды сборки и замеров из подраздела «Проверка». `ImageGen/` не меняется ни в одном шаге. Это исследование: исход «не работает» — тоже результат. Если шаг прямо задаёт ветку на случай неудачи («если не собирается → запиши … и переходи к шагу N»), иди по ветке и `blocked` не ставь. `blocked` ставь, только если ветки нет.
 
-1. **Среда.** Linux (облачная сессия или VPS): .NET 10 SDK, workload `android`, Android SDK API 36 по `docs/knowledge/claude-cloud-session.md`. Записать версии SDK и workload. Для запуска — телефон владельца через `adb connect` с VPS (`docs/knowledge/vps-session.md`), иначе запуск помечается «не проверено».
-2. **Пробная голова** `poc/backlog/094-avalonia-mobile-research/ImageGen/ImageGen.Avalonia.Android/` (имя папки — как в «Критериях готовности»): `net10.0-android`, `Avalonia.Android` 12.1.4, `Avalonia.Themes.Fluent`, ссылки на `ImageGen.Presentation`, `ImageGen.Data`, `ImageGen.Core`. `MainActivity` (`AvaloniaMainActivity`), приложение с `ISingleViewApplicationLifetime` и `MainView` (`UserControl` с `ContentControl` для стека страниц). Разметку экранов сначала подключить из `ImageGen/ImageGen.Avalonia/Views` ссылками на файлы, без копий; если ссылка не работает (зависимость от `MainWindow`, `Window`, десктопных служб), скопировать минимум в `poc/` и записать, что мешало. Экраны минимум: список сессий и чат; по возможности ключ API и модели сессии.
-3. **Мобильные службы в пробной голове** (по одной на интерфейс, тест-кейсы проверяются руками на устройстве):
-   - `AndroidAppPaths`: папка данных → БД создаётся, лог пишется;
-   - `AndroidSecretStore`: ключ записан → после перезапуска прочитан; в файлах папки данных ключа открытым текстом нет;
-   - `AndroidImageSaver`: перенос Android-ветки `MauiImageSaver` → картинка в «Галерее», папка `Pictures/ImageGen`;
-   - файлы и буфер через `TopLevel` вместо `Window` → фото выбрано, текст скопирован;
-   - диалог слоем поверх `MainView` → подтверждение удаления сессии работает;
-   - «назад» → возврат по стеку, на корне — выход.
-   Для каждой записать: готовое API или свой код, примерный объём строк, что переносится из MAUI, что из десктопной Avalonia.
-4. **Замеры** (Release, на устройстве; одинаковые условия для MAUI и Avalonia):
-   - размер APK и AAB, набор ABI, `PublishTrimmed`; пересобрать MAUI-APK в тех же условиях, если 35 МБ получены иначе;
-   - холодный старт (`adb shell am start -W`);
-   - лента чата с 50 картинками: плавность прокрутки (способ замера для Skia-отрисовки выбрать в ходе работы: встроенная диагностика Avalonia или запись экрана), память (`dumpsys meminfo`);
-   - TalkBack: список сессий, поле ввода, кнопка «Отправить», карточка — что озвучено;
-   - клавиатура: клавиша «Отправить», Shift+Enter, поле над клавиатурой (сценарий 095), автопрокрутка (сценарий 097);
-   - узкий экран: шапка чата (098), меню «…» карточки (088), боковая панель моделей.
-5. **iOS** — только по документации, пометка «не проверено»: шаблон головы, `AvaloniaAppDelegate`, Keychain, `PHPhotoLibrary`; попытка `dotnet workload install ios` на Linux и её результат.
-6. **Сравнение вариантов** по критериям: одна разметка или две; совпадение поведения; объём своего платформенного кода; доступность; клавиатура; размер APK, старт, прокрутка; где собирается и тестируется (headless-тесты Avalonia покрывают те же view); iOS; зрелость и сторонние контролы; лицензии. Варианты: (A) две оболочки как сейчас; (B) Avalonia везде, MAUI убирается; (C) Avalonia на десктопе и Android, MAUI только на iOS. Для каждого — выигрыш, потери, примерный объём переноса (список задач-кандидатов, без создания задач до решения владельца).
-7. **Документы:**
-   - `docs/knowledge/avalonia-mobile.md` — факты и замеры с датой и версиями, «не проверено» для iOS и всего, что не запускалось;
-   - `docs/decisions/NNNN-mobile-shell.md` (следующий свободный номер в момент записи), статус «предложено»; при переходе заменит ADR 0006 в части MAUI (ADR 0006 не правится до решения владельца);
-   - `docs/knowledge/dev-environment.md` — строка «Avalonia, цель Android» в таблице «Что где собирается»;
-   - `docs/index.md` — новый файл в строке `knowledge/`;
-   - `docs/status.md`, «Открытые вопросы» — вопрос о выборе варианта; вопросы — и в «Комментарии».
-8. **Проверка:** `dotnet build` пробной головы с `-p:AndroidSdkDirectory=$ANDROID_HOME`, Release-публикация для замера; существующие тесты не затрагиваются; `scripts/check.sh`.
+Выполнять после: — (файлы других задач не меняются; разметка `ImageGen/ImageGen.Avalonia/Views` подключается ссылками и не правится).
 
-Файлы: `poc/backlog/094-avalonia-mobile-research/ImageGen/ImageGen.Avalonia.Android/**` (новые), `docs/knowledge/avalonia-mobile.md` (новый), `docs/decisions/NNNN-mobile-shell.md` (новый), `docs/knowledge/dev-environment.md`, `docs/index.md`, `docs/status.md`, `tasks/backlog/094-avalonia-mobile-research.md`.
+Решения владельца (2026-10-29), действуют во всех шагах:
+- Телефон есть и подключается с VPS через `adb connect` (`docs/knowledge/vps-session.md`, «Отладка Android: реальное устройство по сети»). Если `adb devices` не показывает устройство в состоянии `device`, шаги на устройстве не выполняются. Тогда в «Отчёте» и в `docs/knowledge/avalonia-mobile.md` пишется «не проверено, проверить владельцу», а шаги попадают в «Ручную проверку».
+- Размер MAUI-APK пересобирается в тех же условиях, что Avalonia-APK (шаг 11). Число «около 35 МБ» из «Описания» в сравнение не идёт.
+- iOS — только по документации, с пометкой «не проверено».
+- Пробная голова берёт разметку экранов из `ImageGen/ImageGen.Avalonia` ссылками на файлы. Разделение оболочки на общую библиотеку и головы — только вывод в ADR, не работа этой задачи.
+
+Обозначения: `POC` = `poc/backlog/094-avalonia-mobile-research/ImageGen/ImageGen.Avalonia.Android`, `AV` = `ImageGen/ImageGen.Avalonia`.
+
+### Прочитай перед началом
+- `poc/README.md`; `docs/tasks.md`, раздел «Завершение».
+- `docs/knowledge/claude-cloud-session.md`, раздел «Как поставить» (.NET SDK, workload, Android SDK); `docs/knowledge/vps-session.md`, раздел «Отладка Android: реальное устройство по сети».
+- `docs/knowledge/avalonia.md` целиком; `docs/decisions/0006-avalonia-desktop-and-presentation.md`, `docs/decisions/0008-desktop-secret-storage.md`.
+- `AV/App.axaml`, `AV/App.axaml.cs`, `AV/Composition/AppServices.cs`, `AV/Views/MainWindow.axaml(.cs)`, `AV/Services/AvaloniaDialogService.cs`, `ImageGen/ImageGen.Maui/Services/MauiImageSaver.cs` (ветка `#if ANDROID`).
+- «Анализ» этой задачи: таблица служб.
+
+### Шаги
+1. **Среда.** Выполни `dotnet --version` и `dotnet workload list`, проверь `echo $ANDROID_HOME`. Если нет SDK 10, workload `android` (или `maui-android`) или Android SDK с `platforms;android-36`, поставь их по `docs/knowledge/claude-cloud-session.md`, «Как поставить». Выполни `adb devices`. Запиши в «Отчёт»: версию SDK, workload, есть ли устройство (модель, версия Android из `adb shell getprop ro.build.version.release`).
+2. **Шаблон для сверки** (только в `tmp/`, в репозиторий не копировать целиком). Выполни `dotnet new install Avalonia.Templates::12.1.4`, затем `dotnet new avalonia.xplat -n Probe -o tmp/094/xplat --MVVMToolkit CommunityToolkit`. Из `tmp/094/xplat/Probe.Android/` возьми как образец `MainActivity.cs`, `Application.cs`, `Resources/` (values, drawable и их варианты `-v31`, `-night`), `Icon.png` и `.csproj`. Если параметр `--MVVMToolkit` не принят, создай шаблон без него.
+3. **Проект `POC/ImageGen.Avalonia.Android.csproj`** (SDK `Microsoft.NET.Sdk`):
+   - свойства: `OutputType=Exe`, `TargetFramework=net10.0-android`, `SupportedOSPlatformVersion=23`, `AssemblyName=ImageGen.Avalonia` (нужно, чтобы адреса `avares://ImageGen.Avalonia/...` в линкованной разметке работали), `RootNamespace=ImageGen.Avalonia`, `ApplicationId=com.eliseev.imagegen.avaloniaprobe`, `ApplicationTitle=ImageGen Probe`, `ApplicationVersion=1`, `ApplicationDisplayVersion=1.0`, `AndroidPackageFormat=apk`, `AndroidEnableProfiledAot=false`, `Nullable=enable`, `ImplicitUsings=enable`, `AvaloniaUseCompiledBindingsByDefault=true`; свойство `RepoRoot=$(MSBuildThisFileDirectory)../../../../../`;
+   - пакеты с явными версиями (центральное управление пакетами из `ImageGen/` на `poc/` не действует): `Avalonia.Android` 12.1.4, `Avalonia.Themes.Fluent` 12.1.4, `Microsoft.Extensions.DependencyInjection` той же версии, что в `ImageGen/Directory.Packages.props`, `Xamarin.AndroidX.Core.SplashScreen` той же версии, что в шаблоне шага 2;
+   - ссылки на проекты: `$(RepoRoot)ImageGen/ImageGen.Core/ImageGen.Core.csproj`, `…/ImageGen.Data/ImageGen.Data.csproj`, `…/ImageGen.Presentation/ImageGen.Presentation.csproj`;
+   - файлы из `AV` ссылками (`Link` — тот же относительный путь, что в `AV`): `Compile` — `Views/**/*.cs` без `Views/MainWindow.axaml.cs`, `Converters/**/*.cs`, `Markup/**/*.cs`, `Services/Navigation/**/*.cs`, `Services/AvaloniaMainThread.cs`, `Services/AvaloniaAppearanceApplier.cs`, `Services/Logging/**/*.cs`, `Services/Secrets/SecretFileNames.cs`; `AvaloniaXaml` — `Views/**/*.axaml` без `Views/MainWindow.axaml`, `Themes/**/*.axaml`; `AvaloniaResource` — `Assets/Fonts/**`, `Assets/Licenses/**`;
+   - ресурсы Android и `Icon.png` — копии из шаблона шага 2 в `POC/Resources/` и `POC/Icon.png`.
+   Отдельно собери проект: `dotnet build POC/ImageGen.Avalonia.Android.csproj -p:AndroidSdkDirectory=$ANDROID_HOME`. Ожидаемо упадёт: ещё нет `MobileApp` и служб. Ошибки компиляции в линкованных файлах из `AV` выпиши в «Отчёт» (файл, код ошибки) и исключи такой файл из ссылок. Если исключённый файл нужен экрану сессий или чата, запиши это как вывод «разметка не переносится без правок» и переходи к шагу 4 без этого экрана.
+4. **`POC/MobileApp.axaml` и `POC/MobileApp.axaml.cs`** (`x:Class="ImageGen.Avalonia.MobileApp"`, `public partial class MobileApp : Application`). Ресурсы и стили — те же, что в `AV/App.axaml` (`ResourceInclude` для `Common.axaml` и `Quiet.axaml`, `ErrorBrush` в словарях Light и Dark, `FluentTheme`, `StyleInclude` для `Controls.axaml`). `OnFrameworkInitializationCompleted()` повторяет `AV/App.axaml.cs` по порядку: журнал, `StartupLog`, `CrashLog`, `AvaloniaLogSink`, `AvaloniaAppearanceApplier.Start()`. Отличия:
+   - пути — `AndroidAppPaths`, секреты — `AndroidSecretStore`, контейнер — `MobileAppServices.Create(paths, secrets, secrets, configureLogging, debugTrace)`;
+   - окна нет. Если `ApplicationLifetime is IActivityApplicationLifetime activity`, ставится `activity.MainViewFactory = CreateMainView`. Иначе, если `ApplicationLifetime is ISingleViewApplicationLifetime single`, ставится `single.MainView = CreateMainView()`;
+   - `private MainView CreateMainView()` создаёт `MainView`, сохраняет его в `public static MainView? CurrentView`, вызывает `AvaloniaNavigationService.AttachHost(view.PageArea)`. При первом вызове (флаг `_started`) вызывает `GoToAsync(Routes.Sessions).FireAndForgetSafeAsync()`.
+5. **`POC/Views/MainView.axaml(.cs)`** (`public partial class MainView : UserControl`, пространство `ImageGen.Avalonia.Views`). Корень — `Grid` с двумя детьми: `ContentControl Name="PageHost"` и над ним `Grid Name="DialogLayer" IsVisible="False" Background="#80000000"`. Аксессоры: `public ContentControl PageArea` (через `FindControl`, как в `MainWindow`), `public Grid DialogArea`. В `OnAttachedToVisualTree` подпишись на `TopLevel.GetTopLevel(this)!.BackRequested`. Обработчик: если `DialogArea.IsVisible` — закрыть диалог как «Отмена», `Handled = true`. Иначе, если стек навигации глубже одной страницы (`AvaloniaNavigationService.CurrentRoute != Routes.Sessions`), вызвать `GoBackAsync()`, `Handled = true`. Иначе `Handled` не ставить: приложение уходит в фон. Если событие `BackRequested` не компилируется, запиши в «Отчёт» «нет `TopLevel.BackRequested`», удали подписку и продолжай.
+6. **Android-голова:** `POC/MainActivity.cs` (`MainActivity : AvaloniaMainActivity`, атрибут `[Activity]` как в шаблоне, `Label = "ImageGen Probe"`, `MainLauncher = true`) и `POC/MainApplication.cs` (`[Application] MainApplication : AvaloniaAndroidApplication<MobileApp>`, конструктор `(nint, JniHandleOwnership)`, `CustomizeAppBuilder` возвращает `base.CustomizeAppBuilder(builder)` без изменений).
+7. **Платформенные службы** (папка `POC/Platform/`, пространство `ImageGen.Avalonia.Platform`):
+   - `AndroidAppPaths : IAppPaths`: `DataDirectory = Path.Combine(Android.App.Application.Context.FilesDir!.AbsolutePath, "ImageGen")`, папка создаётся в конструкторе. В журнал при старте пишется ещё и значение `Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)` — для заметки в `docs/knowledge`;
+   - `AndroidSecretStore : ISecretStore, ISecretPersistence`. Ключ AES-256 с псевдонимом `ImageGenSecrets` в провайдере `AndroidKeyStore` создаётся при первой записи: `KeyGenerator` с `KeyGenParameterSpec`, назначение Encrypt|Decrypt, режим GCM, без дополнения. Файл — `SecretFileNames.PathFor(DataDirectory, name)`; в нём 12 байт IV, затем шифротекст с тегом (`Cipher` `AES/GCM/NoPadding`, тег 128 бит). `GetAsync`: файла нет → `null`; исключение при расшифровке → `null` (как `MauiSecretStore`). `SetAsync` пишет файл. `RemoveAsync` удаляет файл. `IsPersistentAsync` → `true`;
+   - `TopLevelClipboardService(Func<TopLevel?> owner) : IClipboardService` и `TopLevelFilePickerService(Func<TopLevel?> owner) : IFilePickerService` — копии `AvaloniaClipboardService` и `AvaloniaFilePickerService`, где `Window` заменён на `TopLevel`, а `window.StorageProvider` — на `topLevel.StorageProvider`;
+   - `AndroidImageSaver : IImageSaver`: `ActionLabel = AppResources.SaveToGallery`. Ветка Android 10+ (`MediaStore`, `Pictures/ImageGen`, `IsPending`) переносится из `MauiImageSaver`, `Platform.AppContext` заменяется на `Android.App.Application.Context`. Ниже Android 10 → `ImageSaveResult.Failed` (в пробнике без запроса разрешения);
+   - `MobileFolderLauncher : IFolderLauncher`: `IsSupported => false`, `OpenAsync` → `Task.CompletedTask`;
+   - `OverlayDialogService(Func<MainView?> view) : IDialogService`: все пять методов интерфейса показывают в `MainView.DialogArea` по центру `Border` (`MaxWidth=360`). Внутри: заголовок `TextBlock`, текст `TextBlock` с переносом, для `PromptAsync` — `TextBox` с `initialValue`, для `ChooseAsync` — `ListBox` с вариантами. Ниже ряд кнопок accept и cancel, у кнопки и поля `AutomationProperties.Name` равен её тексту. Ответ ждёт `TaskCompletionSource`; при закрытии слой скрывается и очищается. `BackRequested` из шага 5 вызывает отмену через `internal void CancelOpenDialog()`.
+8. **`POC/Composition/MobileAppServices.cs`** (`public static class MobileAppServices`, `public static ServiceProvider Create(IAppPaths paths, ISecretStore secrets, ISecretPersistence persistence, Action<ILoggingBuilder>? configureLogging = null, IDebugTrace? debugTrace = null)`). Копия `AV/Composition/AppServices.Create` с теми же маршрутами `PageRoutes`, моделями страниц и `ValidateOnBuild`. Отличия: `IDialogService` → `OverlayDialogService(() => MobileApp.CurrentView)`; `IFilePickerService`, `IClipboardService` → `TopLevel*`-службы с `() => TopLevel.GetTopLevel(MobileApp.CurrentView)`; `IImageSaver` → `AndroidImageSaver`; `IFolderLauncher` → `MobileFolderLauncher`. Без параметров `openRouterHandler` и `dialogs`.
+9. **Клавиатура в чате** (разметку `AV/Views/ChatView.axaml` не править, всё задаётся из кода): в `POC/Views/MobileTweaks.cs` (`public static class MobileTweaks`, `public static void Apply(Control page)`) ищется `TextBox` с именем `Input` и ему задаются `TextInputOptions.SetReturnKeyType(input, TextInputReturnKeyType.Send)` и `TextInputOptions.SetMultiline(input, true)`. Вызов — в `MainView` при смене `PageHost.Content` (подписка на `PageHost.PropertyChanged` по `ContentControl.ContentProperty`). Отдельно подпишись на `TopLevel.InputPane.StateChanged`: при `InputPaneState.Open` выставляй `PageHost.Margin` снизу равным `OccludedRect.Height`, при закрытии — 0. Если `InputPane` равен `null`, запиши это в «Отчёт».
+10. **Сборка Debug и запуск.** `dotnet build POC/ImageGen.Avalonia.Android.csproj -p:AndroidSdkDirectory=$ANDROID_HOME`. Если собирается — запиши «собирается» и число предупреждений. Если не собирается — выпиши ошибки в «Отчёт», выполни шаги 11 (только MAUI), 13 и 14 и закрой задачу с выводом «пробная голова не собралась» (вариант A в ADR). Если устройство есть (шаг 1), выполни `dotnet build … -t:Install` и `adb shell monkey -p com.eliseev.imagegen.avaloniaprobe 1`, затем `adb logcat -d | grep -i -E "avalonia|imagegen|FATAL"`. Падение при старте → стек из logcat в «Отчёт», вывод «не запускается», переходи к шагу 11.
+11. **Размер APK в одинаковых условиях.** Обе сборки — `dotnet publish <csproj> -f net10.0-android -c Release -p:RuntimeIdentifiers=android-arm64 -p:AndroidPackageFormats=apk -p:AndroidSdkDirectory=$ANDROID_HOME` для `ImageGen/ImageGen.Maui/ImageGen.Maui.csproj` и `POC/ImageGen.Avalonia.Android.csproj`. Файл ищи командой `find <папка проекта>/bin/Release -name '*-Signed.apk'`, размер — `stat -c %s`. В «Отчёт» — таблица: проект, файл, байты, МБ (байты / 1048576, 1 знак). Состав больших частей: `unzip -l <apk> | sort -k1 -n -r | head -15` для обоих.
+12. **Проверки на устройстве** (только если устройство есть; иначе все пункты — в «Ручную проверку»). Release-APK из шага 11 ставится через `adb install -r`. Результат каждого пункта — «да / нет / частично» с одной фразой в «Отчёт»:
+    1. холодный старт: `adb shell am force-stop <пакет>`, затем `adb shell am start -W -n <пакет>/<активность>` три раза, медиана `TotalTime`, для MAUI и Avalonia. Активность — из `adb shell cmd package resolve-activity --brief <пакет>`;
+    2. ключ: ввести любой текст на странице ключа, `adb shell am force-stop`, открыть снова — ключ сохранён (страница ключа не показывается). Затем `adb shell run-as com.eliseev.imagegen.avaloniaprobe ls files/ImageGen/secrets` — файл есть, `run-as … cat` — читаемого ключа нет;
+    3. список сессий и чат открываются; создание сессии, переход в чат и «назад» системной кнопкой возвращают к списку; «назад» на списке сворачивает приложение;
+    4. поле ввода чата: на экранной клавиатуре клавиша «Отправить», нажатие отправляет; поле видно над клавиатурой (сценарий задачи 095);
+    5. буфер: «Copy» у сообщения, вставка в другое приложение;
+    6. файл: скрепка открывает системный выбор, выбранное фото прикрепляется;
+    7. галерея: если в ленте есть готовая картинка (нужен ключ владельца), «Save to gallery» → картинка в «Галерее», папка `Pictures/ImageGen`;
+    8. диалог: удаление сессии спрашивает подтверждение слоем, «назад» его закрывает;
+    9. узкий экран: шапка чата (задача 098), меню «…» карточки (088), боковая панель моделей не перекрывает ленту;
+    10. память: `adb shell dumpsys meminfo <пакет> | grep TOTAL` после открытия чата, для обоих приложений.
+13. **iOS по документации** (пометка «не проверено»): выполни `dotnet workload search ios` и `dotnet workload install ios` на Linux, вывод запиши. В заметку перенеси из `tmp/094/xplat/Probe.iOS/` состав iOS-головы: `AppDelegate`, `Main.cs`, `Info.plist`, `Entitlements.plist`. Ключи на iOS — Keychain через `Security.SecRecord`; галерея — `PHPhotoLibrary`, как в `MauiImageSaver`; сборка — только на macOS или через сетевой Mac-хост (docs.avaloniaui.net, Deployment → iOS).
+14. **Документы:**
+    - `docs/knowledge/avalonia-mobile.md` (новый). Разделы: «Версии и пакеты» (из «Анализа» и шага 1), «Шаблон и голова Android» (`AvaloniaAndroidApplication<TApp>`, `IActivityApplicationLifetime.MainViewFactory`, `AssemblyName` ради `avares://`), «Перенос разметки» (какие файлы из `AV` собрались без правок, какие нет), «Платформенные службы» (таблица из «Анализа» со столбцом «результат» и числом строк своего кода по каждой службе: `wc -l POC/Platform/*.cs POC/Composition/*.cs POC/Views/*.cs`), «Замеры» (шаги 11–12), «iOS» (шаг 13, «не проверено»). У каждого факта — дата и «проверено» или «не проверено»;
+    - `docs/decisions/NNNN-mobile-shell.md` (следующий свободный номер в `docs/decisions/` в момент записи), по `_template.md`, `Статус: предложено`, строка «При принятии варианта B или C заменяет ADR 0006 в части MAUI». ADR 0006 не трогать. «Альтернативы» — варианты A (две оболочки), B (Avalonia везде), C (Avalonia на десктопе и Android, MAUI только на iOS); у каждого «выигрываем / теряем / объём переноса» — список экранов и служб из «Анализа». В «Решении» рекомендация по правилу. Обязательные критерии: голова собирается (шаг 10); запускается; ключ переживает перезапуск (12.2); «Отправить» с клавиатуры работает (12.4); Avalonia-APK не больше MAUI-APK + 10 МБ (шаг 11). Все выполнены → рекомендовать C, а B — после проверки iOS на Mac. Хоть один не выполнен → рекомендовать A. Хоть один «не проверено» (нет устройства) → рекомендовать A с пометкой «пересмотреть после проверки на устройстве»;
+    - `docs/knowledge/dev-environment.md`, таблица «Что где собирается»: новая строка «Avalonia, цель Android (пробник 094)» с результатом сборки по средам, где проверял (остальные — «не проверено»);
+    - `docs/index.md`, строка `knowledge/`: добавить `avalonia-mobile.md` (Avalonia на Android и iOS: исследование 094);
+    - `docs/status.md`, «Открытые вопросы»: «Выбор мобильной оболочки (задача 094, ADR NNNN, предложено): A, B или C — решает владелец». Тот же вопрос — в «Комментарии» задачи.
+15. **Отчёт задачи:** что собрано, что запущено, таблица APK, результаты шага 12, список «не проверено». Затем — по `docs/tasks.md`, «Завершение» (задача `done`, даже если устройства не было, — ручные пункты в «Ручной проверке» ниже).
+
+### Проверка
+```
+dotnet build poc/backlog/094-avalonia-mobile-research/ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj -p:AndroidSdkDirectory=$ANDROID_HOME
+dotnet publish ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android -c Release -p:RuntimeIdentifiers=android-arm64 -p:AndroidPackageFormats=apk -p:AndroidSdkDirectory=$ANDROID_HOME
+dotnet publish poc/backlog/094-avalonia-mobile-research/ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj -f net10.0-android -c Release -p:RuntimeIdentifiers=android-arm64 -p:AndroidPackageFormats=apk -p:AndroidSdkDirectory=$ANDROID_HOME
+adb devices
+git status --short   # в ImageGen/ нет изменений, в poc/ нет bin/ и obj/
+bash scripts/check.sh
+```
+Тесты и `dotnet format` не нужны: проекты в `ImageGen/` не меняются.
+
+### Ручная проверка
+Если устройства не было, пункты 12.1–12.10 переносятся в «Отчёт» как «не проверено, проверить владельцу», с командами из шага 12. Отдельно для владельца (всегда, потому что агент TalkBack не слушает): включить TalkBack и пройти список сессий, поле ввода, кнопку «Отправить», карточку с картинкой в обоих приложениях (MAUI и пробник), записать, что озвучено. Прокрутить ленту с ≥10 картинками в обоих приложениях и оценить «плавно / рывки». Результаты владелец дописывает в «Комментарии» задачи, исполнитель переносит их в `docs/knowledge/avalonia-mobile.md`. В задачи 016 и 046 ничего не добавляется: они про Windows и десктоп.
+
+Файлы: `poc/backlog/094-avalonia-mobile-research/ImageGen/ImageGen.Avalonia.Android/**` (новые: `ImageGen.Avalonia.Android.csproj`, `MobileApp.axaml(.cs)`, `MainActivity.cs`, `MainApplication.cs`, `Views/MainView.axaml(.cs)`, `Views/MobileTweaks.cs`, `Platform/*.cs`, `Composition/MobileAppServices.cs`, `Resources/**`, `Icon.png`), `docs/knowledge/avalonia-mobile.md` (новый), `docs/decisions/NNNN-mobile-shell.md` (новый), `docs/knowledge/dev-environment.md`, `docs/index.md`, `docs/status.md`, `tasks/backlog/094-avalonia-mobile-research.md`.
 
 ## Отчёт
 
@@ -120,3 +172,6 @@ ADR 0006 рассматривал вариант «Avalonia везде, без M
 2. Размер MAUI-APK около 35 МБ: какой это файл (APK или AAB, какие ABI)? Если неизвестно, план пересобирает MAUI-APK в тех же условиях, что Avalonia.
 3. iOS: без Mac ни Avalonia, ни MAUI под iOS не собираются. Достаточно ли сравнения по документации, или вариант «Avalonia везде» нужно отложить до появления Mac?
 4. Допущение: пробная голова подключает разметку из `ImageGen.Avalonia/Views` ссылками и не меняет `ImageGen/`; разделение оболочки на общую библиотеку и головы — только как вывод в ADR, не в этой задаче.
+
+### 2026-10-29, владелец (в чате, записал claude-plan)
+План одобрен; допущения из комментариев claude-plan приняты как решения. План переписан под небольшую модель.

@@ -1,6 +1,6 @@
 ---
 id: 101
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-29
@@ -39,29 +39,45 @@ created: 2026-10-29
 - Пересечения: 089 (`SessionsPageModel`) — эта задача его не меняет (если понадобится правка набираемого текста, она уходит в отдельную задачу). С другими задачами 088–100 файлов нет.
 
 ## План
-TDD: каждый шаг — сначала падающий тест, затем минимальный код.
+Для исполнителя (план рассчитан на небольшую модель): делай шаги строго по порядку, по TDD (сначала падающий тест, потом минимальный код), после каждого шага — сборка и тесты из «Проверки». Имена файлов, типов, членов, ключей строк и тестов переноси дословно. Если шаг не получается так, как написано (API другое, компилятор не принимает разметку), не придумывай обход: опиши в «Комментариях», что пробовал, поставь `blocked` и остановись.
 
-1. Тесты `ImageGen.Core.Tests/Search/FuzzyMatcherTests.cs` (сначала падают там, где отмечено):
-   - «watte» в тексте «water lily» → совпадение, счёт 1 (падает сейчас);
-   - «lighthu» в «Lighthouse on a rock» → совпадение, счёт 1 (падает сейчас);
-   - «brige» в «two bridges» → совпадение, счёт 1 (падает сейчас);
-   - «wate» в «water lily» → счёт 3 (точное начало; проходит сейчас, фиксирует поведение);
-   - «lighthuse» в «Lighthouse on a rock» → счёт 1 (проходит сейчас);
-   - ложные: «watte» в «watch tower» → нет; «house» в «hound» → нет; «watte» в «attempt» → нет; «wot» в «water» → нет (короткий токен);
-   - два токена «red watte» в «red water» → совпадение (каждый токен обязателен, правило работает для любого токена, не только последнего).
-2. `FuzzyMatcher`: в `ScoreWord` ветка опечатки заменяется проверкой «опечатка в слове или в его начале» (новый закрытый метод, например `IsTypoOfWordOrPrefix(token, word)`), остальное без изменений. Псевдокод: `если |t| < 4 → нет; если Distance(t, w) ≤ 1 → да; если t[0] ≠ w[0] → нет; для L в (|t|−1, |t|, |t|+1): если 0 < L < |w| и Distance(t, w[0..L)) ≤ 1 → да; иначе нет`. Допустимая оптимизация (по желанию, не обязательна): одна таблица Левенштейна `t` против `w[0..min(|w|, |t|+1))` и минимум последней строки по столбцам |t|−1..|t|+1. Обновить XML-комментарий класса: «…1 when a word or its beginning differs by one letter…».
-3. Тест `ImageGen.Core.Tests/Search/SessionSearchServiceTests.cs`: две сессии с промптами «water lily» и «date palm», запрос «wate» → обе в выдаче, «water lily» первой (точное начало 3 против опечатки 1 у «date»). Если тест проходит сразу — оставить как фиксацию порядка.
-4. Спецификация: в `docs/specs/chat-sessions.md`, раздел S1, новый пункт «S1.4 Поиск сессий» — что ищется (названия, промпты, описания картинок; веса 3/2/1), как совпадает слово (начало 3, подстрока 2, опечатка 1 — правило из «Анализа», с условиями «от 4 букв» и «та же первая буква» для начала слова), что все слова запроса обязательны, что перестановки букв не прощаются. Только то, что есть в коде после задачи.
-5. Avalonia: существующий тест `Search_FindsSessionByPromptWithTypo_ShowsSnippet` («lighthose») должен проходить; новый headless-тест не нужен — правило покрыто в ядре.
-6. Набираемый текст на Android (ручная проверка; на устройстве или в эмуляторе, если они есть в среде исполнителя): в списке сессий набрать на экранной клавиатуре (Gboard, подсказки включены) «watte», не нажимая пробел и не выбирая подсказку → ожидание: через ~0,25 с появляется сессия с «water». Результат записать в «Отчёт». Если выдача появляется только после пробела или выбора подсказки — не чинить здесь, а создать задачу `scripts/new-task.sh --publish backlog <имя>` с описанием наблюдения и упомянуть её в «Отчёте». Если устройства нет — дописать этот пункт в ручную проверку `tasks/v0.1/016-skeleton-manual-check.md` (там уже есть Android-пункты) и указать в «Отчёте», что не проверено.
+Выполнять после: — (пересечений по файлам с 088–100 нет).
 
-Проверка:
-- `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`
-- `dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj`
-- `dotnet format ImageGen/ImageGen.Core/ImageGen.Core.csproj --verify-no-changes` и то же для `ImageGen.Core.Tests`
-- `scripts/check.sh`
+Решения (приняты владельцем): перестановку соседних букв не прощать; для опечатки в начале слова первая буква обязана совпадать (для целых слов правило не меняется); порог — токен от 4 букв; Android-набор проверяет владелец вручную, в этой задаче код Presentation/MAUI не меняется.
 
-Файлы: `ImageGen/ImageGen.Core/Search/FuzzyMatcher.cs`, `ImageGen/ImageGen.Core.Tests/Search/FuzzyMatcherTests.cs`, `ImageGen/ImageGen.Core.Tests/Search/SessionSearchServiceTests.cs`, `docs/specs/chat-sessions.md`; при необходимости `tasks/v0.1/016-skeleton-manual-check.md` (ручной пункт) и новая задача про набираемый текст.
+Прочитай перед началом: `ImageGen/ImageGen.Core/Search/FuzzyMatcher.cs` (методы `ScoreWord`, `Distance`, константы `TypoScore`, `MinTypoLength`); `ImageGen/ImageGen.Core.Tests/Search/FuzzyMatcherTests.cs` и `SessionSearchServiceTests.cs` (стиль тестов, помощник `Create(params SearchText[])`); «Анализ» этой задачи (правило и примеры); `docs/specs/chat-sessions.md`, раздел «S1. Сессии».
+
+1. Тесты в `FuzzyMatcherTests` (по образцу `Match_OneTypoLongWord_Scores1`; «нет совпадения» = `Assert.Null(FuzzyMatcher.Match([...], text))`):
+   - `Match_TypoInPrefix_Scores1`: `["watte"]`, «water lily» → счёт 1, `FirstIndex` 0 (сейчас падает);
+   - `Match_TypoInPrefixOfLongWord_Scores1`: `["lighthu"]`, «Lighthouse on a rock» → счёт 1 (сейчас падает);
+   - `Match_MissingLetterInPrefix_Scores1`: `["brige"]`, «two bridges» → счёт 1, `FirstIndex` 4 (сейчас падает);
+   - `Match_TypoInPrefixEveryToken_Matches`: `["red", "watte"]`, «red water» → совпадение, счёт 4 (сейчас падает);
+   - `Match_ExactPrefix_StillScores3`: `["wate"]`, «water lily» → счёт 3;
+   - `Match_TypoInPrefixOtherFirstLetter_NoMatch`: `["watte"]`, «attempt» → нет;
+   - `Match_TwoTyposInPrefix_NoMatch`: `["watte"]`, «watch tower» → нет;
+   - `Match_DifferentEnding_NoMatch`: `["house"]`, «hound» → нет;
+   - `Match_SwappedLetters_NoMatch`: `["wtaer"]`, «water lily» → нет;
+   - `Match_ShortTokenTypo_NoMatch`: `["wot"]`, «water lily» → нет.
+   Запустить: первые четыре падают, остальные проходят.
+2. В `FuzzyMatcher` добавить `private static bool IsTypo(string token, string word)` и в `ScoreWord` заменить условие ветки опечатки (`token.Length >= MinTypoLength && Distance(token, word) <= 1`) на вызов `IsTypo(token, word)`. Псевдокод `IsTypo`: если `token.Length < MinTypoLength` → false; если `Distance(token, word) <= 1` → true; если `token[0] != word[0]` → false; для `length` из (`token.Length - 1`, `token.Length`, `token.Length + 1`): если `length > 0 && length < word.Length && Distance(token, word[..length]) <= 1` → true; в конце → false. `Distance` и веса не менять. XML-комментарий класса: «1 when a word differs by one letter» → «1 when a word, or a beginning of the word with the same first letter, differs by one letter». Тесты шага 1 проходят.
+3. Тест `SessionSearchServiceTests.Search_ExactPrefixBeatsTypo`: `Create(new SearchText(First, SearchTextKind.Prompt, "date palm"), new SearchText(Second, SearchTextKind.Prompt, "water lily"))`, запрос «wate» → порядок `[Second, First]`. Должен пройти сразу; если падает — вернуться к шагу 2.
+4. Существующий Avalonia-тест `Search_FindsSessionByPromptWithTypo_ShowsSnippet` прогнать без изменений: должен проходить.
+5. Документация `docs/specs/chat-sessions.md`, раздел «S1. Сессии», после пункта S1.3 новый пункт `S1.4 Поиск сессий`, по-русски, в стиле соседних пунктов, содержание: ищется по названиям, промптам и описаниям картинок (вес 3, 2, 1); запрос делится на слова, каждое слово запроса обязано найтись; слово засчитывается, если слово текста с него начинается (3 очка), содержит его (2), или — для слов запроса от 4 букв — отличается на одну букву от слова текста или от начала слова текста с той же первой буквой (1); перестановка соседних букв считается двумя ошибками и не прощается; выдача по убыванию счёта, одна строка на сессию. `docs/architecture.md` не меняется.
+6. «Отчёт»: что сделано, тесты, и строка «Android: обновляется ли поиск по ещё не принятому клавиатурой тексту — не проверено, проверить владельцу (шаги в „Ручной проверке“ задачи)». Новых задач не создавать.
+
+### Проверка
+```
+dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj
+dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj
+dotnet format ImageGen/ImageGen.Core/ImageGen.Core.csproj --verify-no-changes
+dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-no-changes
+bash scripts/check.sh
+```
+
+### Ручная проверка
+Владельцу на Android (в «Отчёт» как «не проверено, проверить владельцу»): в списке сессий на экранной клавиатуре с подсказками набрать «watte», не нажимая пробел и не выбирая подсказку → через четверть секунды видна сессия со словом «water». Если результат появляется только после пробела или выбора подсказки — записать в «Комментарии» задачи: это отдельная задача про набираемый текст. Для MAUI под Windows дописать в `tasks/v0.1/016-skeleton-manual-check.md` пункт: поиск «watte» находит сессию с «water», «lighthu» — с «lighthouse».
+
+Файлы: `ImageGen/ImageGen.Core/Search/FuzzyMatcher.cs`, `ImageGen/ImageGen.Core.Tests/Search/FuzzyMatcherTests.cs`, `ImageGen/ImageGen.Core.Tests/Search/SessionSearchServiceTests.cs`, `docs/specs/chat-sessions.md`, `tasks/v0.1/016-skeleton-manual-check.md`.
 
 ## Отчёт
 
@@ -72,3 +88,6 @@ TDD: каждый шаг — сначала падающий тест, зате�
 1. Прощать ли перестановку соседних букв («wtaer» → «water»)? Сейчас нет ни для целых слов, ни для начал (допущение: нет, как сейчас; это отдельное изменение на расстояние Дамерау — Левенштейна).
 2. Устраивает ли условие «первая буква совпадает» для опечатки в начале слова? Без него «watte» находит «attempt» (допущение: условие есть; для целых слов оно не вводится, чтобы не менять текущее поведение).
 3. Порог 4 буквы для опечатки в начале слова: токен «cats» найдёт и «catalog» (ниже точных совпадений). Если это шумно, порог для начала слова можно поднять до 5 (допущение: 4, как в критериях).
+
+### 2026-10-29, владелец (в чате, записал claude-plan)
+План одобрен; допущения из комментариев claude-plan приняты как решения. План переписан под небольшую модель.

@@ -1,6 +1,6 @@
 ---
 id: 089
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-29
@@ -34,7 +34,7 @@ created: 2026-10-29
 
 Решение: ядро сообщает «сессия изменилась» (id), список перечитывает одну сессию и правит её строку на месте. Через ядро, а не через `ChatPageModel`, потому что изменения приходят из разных мест (ассистент в фоне, действия карточек, будущая Web-оболочка). Новый тип ядра — небольшой издатель событий-одиночка, его получают `SessionService` и `GenerationService` (необязательным последним параметром конструктора, как `IDebugTrace`, чтобы не править шесть мест создания в тестах); событие может прийти в фоновом потоке, `SessionsPageModel` переносит правку в UI-поток через `IMainThread` (как `ChatPageModel`). Это меняет устройство: `docs/architecture.md`, абзац «Обновление экрана», дополнить одной фразой.
 
-Порядок в списке: сортировка по `UpdatedAt`, как при загрузке. Если `UpdatedAt` сессии изменился, строка переносится в начало «Today» (из «Earlier» тоже); переименование `UpdatedAt` не меняет (S1.2) и строку не двигает. Прогон без сообщения (Repeat и др.) `UpdatedAt` не меняет — строка обновляет только число прогонов и остаётся на месте. Нужно ли поднимать сессию при новом прогоне, спецификация не говорит — вопрос в «Комментариях», допущение: нет (как сейчас при загрузке).
+Порядок в списке: сортировка по `UpdatedAt`, как при загрузке. Если `UpdatedAt` сессии изменился, строка переносится в начало «Today» (из «Earlier» тоже); переименование `UpdatedAt` не меняет (S1.2) и строку не двигает. Прогон без сообщения (Repeat и др.) `UpdatedAt` не меняет — строка обновляет только число прогонов и остаётся на месте. Поднимать ли сессию при новом прогоне, спецификация не говорила; решение владельца (2026-10-29): не поднимать.
 
 Пересечения с незавершёнными задачами:
 - 101 (поиск: опечатка в недописанном слове) — может менять `SessionsPageModel` (`SearchText`) и `SessionsPageModelTests`; основная правка 101 в `ImageGen.Core/Search/FuzzyMatcher.cs`. Порядок любой; если обе меняют `SessionsPageModel`, лучше 089 первой (её правка — новые члены, поиск она не трогает), при `rebase` сохранять обе стороны.
@@ -42,48 +42,89 @@ created: 2026-10-29
 - 088 файлов этой задачи не трогает.
 
 ## План
-TDD: сначала падающий тест, потом минимальный код. Всё выполняется и проверяется на Linux.
+Для исполнителя (план рассчитан на небольшую модель): делай шаги строго по порядку, по TDD (сначала падающий тест, потом минимальный код), после каждого шага — сборка и тесты из «Проверки». Имена файлов, типов, членов, ключей строк и тестов переноси дословно. Если шаг не получается так, как написано (API другое, компилятор не принимает разметку), не придумывай обход: опиши в «Комментариях», что пробовал, поставь `blocked` и остановись.
 
-1. **Ядро: издатель изменений сессии.** Новый тип `SessionChangeNotifier` (`ImageGen.Core/Services/`, одиночка в `CoreServiceCollectionExtensions`): событие `SessionChanged` (`EventHandler<Guid>` или аргументы с `SessionId`) и метод `Notify(Guid sessionId)`. Подписчик может получить событие в любом потоке; исключение подписчика не должно ломать операцию ядра (ловится и пишется в журнал).
-   Тесты (`ImageGen.Core.Tests/Services/SessionServiceTests.cs`, `GenerationServiceTests.cs`):
-   - `SetTitleFromFirstMessageAsync` → одно событие с id сессии (и при первом сообщении, и при последующих: `UpdatedAt` меняется);
-   - `RenameAsync` → событие; `UpdateSettingsAsync`, `UpdateGenerationParametersAsync` → событие (меняют запись сессии);
-   - `CreateAsync` → событие с id новой сессии;
-   - старт прогона (`StartRunWithAttachmentsAsync`, а значит и Repeat/Edit/Other model) → событие с id сессии после записи прогона;
-   - без издателя (параметр не передан) всё работает как раньше.
-2. **`SessionItemViewModel`:** `UpdatedText` становится наблюдаемым; новый метод `Apply(Session session, int runCount)` обновляет `Title`, `RunCount`, `UpdatedText` и запоминает `UpdatedAt` (нужен для порядка). `DetailsText` уведомляется при смене `UpdatedText` и `RunCount`.
-   Тесты (`SessionItemViewModelTests`): `Apply` с новым названием → `Title` новый, событие `PropertyChanged(Title)`; с новым числом прогонов → `DetailsText` содержит «2 runs», уведомление `DetailsText`; `IsCurrent` и `SearchLine` не меняются.
-3. **`SessionsPageModel`:** новые зависимости `SessionChangeNotifier` и `IMainThread`. Подписка один раз (повторный вызов `OnAppearingAsync` не удваивает её: снять и подписать, как `tracker.Changed`). Обработчик:
-   - в UI-потоке запустить `RefreshSessionAsync(id)` (`FireAndForgetSafeAsync`);
-   - `RefreshSessionAsync`: прочитать `SessionService.GetAsync(id)` и число прогонов (`CountRunsAsync`, значение по id или 0); сессии нет (удалена) → убрать строку из всех коллекций; строки нет → создать её (как при загрузке: `IsCurrent` по трекеру) и вставить в начало `Sessions` и «Today»; строка есть → `Apply`; если `UpdatedAt` стал новее прежнего — переместить строку в начало `Sessions` и «Today» (из «Earlier» — удалить там и вставить в «Today»; внутри «Today» — `Move`, чтобы не пересоздавать элементы), затем `NotifySessionsCount`;
-   - `SearchText`, `SearchResults` и `SearchLine` не трогать; повторный поиск не запускать;
-   - ошибка чтения → журнал/диалог как в остальных методах, список не очищается.
-   Тесты (`SessionsPageModelTests`, издатель настоящий, `IMainThread` выполняет сразу, репозитории — подмены как в файле):
-   - список загружен с «New session · 0 runs»; сессия переименована в ядре и `Notify` → строка показывает новое название, `Sessions.Count` прежний, тот же объект строки;
-   - `Notify` после нового прогона (подмена `CountRunsBySessionAsync` возвращает 1) → `DetailsText` с «1 run»;
-   - сессия из «Earlier» с новым `UpdatedAt` сегодня → строка первой в «Today», в «Earlier» её нет;
-   - переименование без смены `UpdatedAt` → порядок в «Today» не меняется;
-   - введён поиск, есть результаты; `Notify` → `SearchText` прежний, строка в `SearchResults` осталась и показывает новое название;
-   - текущая сессия (`tracker.CurrentId`) после обновления сохраняет `IsCurrent = true`;
-   - `Notify` для неизвестной сессии → строка добавлена в начало «Today»; для удалённой (`GetAsync` → null) → строка убрана, `HasNoSessions` пересчитан;
-   - `OnAppearingAsync` дважды, затем один `Notify` → данные сессии прочитаны один раз (подписка не удвоилась).
-4. **Оболочки.** Регистрации DI не меняются (новые зависимости — одиночки ядра и `IMainThread`, уже зарегистрированы в `MauiProgram` и `Composition/AppServices.cs`; проверить сборкой и тестом композиции Avalonia). Разметка `SessionsListView` (MAUI и Avalonia) уже привязана к `Title` и `DetailsText` — правка не нужна; если при проверке окажется, что строка не обновляется, искать в разметке одноразовые привязки. Поведение одинаково, потому что логика вся в `Presentation`.
-5. **Документация:** `docs/architecture.md`, абзац «Обновление экрана»: список сессий обновляет строку по событию изменения сессии из ядра. Спецификация S1.2 не меняется. В `tasks/v0.1/016-*.md` и `tasks/backlog/046-*.md` дописать ручной пункт: широкое окно, новая сессия, первое сообщение → строка слева сразу с новым названием и «1 run» после прогона; поиск и прокрутка не сбрасываются.
+Выполнять после: — (101 тоже может менять `SessionsPageModel.cs` и `SessionsPageModelTests.cs`: если 101 уже в `main`, сделать `rebase` до начала; иначе 089 первой. 096 может менять `GenerationService.cs` — здесь только новый параметр и одна строка, при `rebase` сохранять обе стороны.)
 
-Крайние случаи: событие приходит, пока список ещё ни разу не загружен (до `OnAppearingAsync`) — подписки ещё нет, ничего не делается; два события подряд для одной сессии — последнее чтение побеждает, строк не становится две (поиск строки по id перед вставкой в UI-потоке); смена суток — «Today» определяется по `TimeProvider`, как при загрузке.
+Решения (владелец, 2026-10-29): ядро сообщает об изменении сессии событием, список правит одну строку на месте. Прогон без сообщения (Repeat, New seed, Edit, Other model) сессию в списке не поднимает: обновляется только число прогонов. Сессия поднимается в начало «Today», только когда её `UpdatedAt` стал новее (новое сообщение). Переименование `UpdatedAt` не меняет и строку не двигает (S1.2).
 
-Команды проверки:
-- `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`
-- `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj`
-- `dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj`
-- `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android` (при наличии Android SDK; иначе CI)
-- `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes` для Core, Presentation и их тестов
-- `scripts/check.sh`
+Прочитай перед началом:
+- этот «Анализ»;
+- `ImageGen/ImageGen.Core/Services/SessionService.cs`, `ImageGen/ImageGen.Core/Services/GenerationService.cs` (метод `CreateRunAsync`), `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`;
+- `ImageGen/ImageGen.Presentation/PageModels/SessionsPageModel.cs` (`OnAppearingAsync`, `DeleteSessionAsync`, `NotifySessionsCount`), `SessionItemViewModel.cs`;
+- `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionsPageModelTests.cs` (`CreateModel`, `FixedClock`, `NewSession`, `WaitUntilAsync`), `ImageGen/ImageGen.Presentation.Tests/PageModels/ChatPageModelTests.cs` (как подмена `IMainThread` выполняет действие сразу: `When(...BeginInvokeOnMainThread...).Do(ci => ci.Arg<Action>().Invoke())`);
+- `docs/architecture.md`, абзац «Обновление экрана»; `docs/conventions.md` (тесты: `TestContext.Current.CancellationToken`).
 
-Файлы: `ImageGen/ImageGen.Core/Services/SessionChangeNotifier.cs` (новый), `ImageGen/ImageGen.Core/Services/SessionService.cs`, `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Core.Tests/Services/SessionServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionItemViewModel.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionsPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionItemViewModelTests.cs`, `docs/architecture.md`, `tasks/v0.1/016-skeleton-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`.
+1. **`SessionChangeNotifier` (ядро).** Новый файл `ImageGen/ImageGen.Core/Services/SessionChangeNotifier.cs`, пространство `ImageGen.Core.Services`: `public sealed class SessionChangeNotifier(ILogger<SessionChangeNotifier> logger)`; член `public event EventHandler<Guid>? SessionChanged;` (комментарий: может прийти в любом потоке); метод `public void Notify(Guid sessionId)`: вызывает каждый обработчик из `GetInvocationList()` по очереди с `sender = this`; исключение обработчика ловится, пишется `logger.LogWarning(exception, "Session change handler failed for {SessionId}", sessionId)`, остальные обработчики всё равно вызываются. Регистрация: `services.AddSingleton<SessionChangeNotifier>();` в `AddImageGenCore` строкой перед `services.AddSingleton<SessionService>();`.
+   Тесты `ImageGen/ImageGen.Core.Tests/Services/SessionChangeNotifierTests.cs` (логгер `NullLogger<SessionChangeNotifier>.Instance`):
+   - `Notify_RaisesSessionChangedWithId`: подписка, `Notify(id)` → обработчик вызван один раз с этим `id`;
+   - `Notify_HandlerThrows_OtherHandlersStillCalled`: первый обработчик бросает, второй считает вызовы → `Notify` не бросает, второй вызван один раз.
+2. **`SessionService` сообщает об изменениях.** В первичный конструктор последним параметром `SessionChangeNotifier? changes = null`. После успешной записи вызвать `changes?.Notify(<id сессии>)` в `CreateAsync` (после `sessions.AddAsync`), `UpdateSettingsAsync`, `UpdateGenerationParametersAsync`, `RenameAsync`, `SetTitleFromFirstMessageAsync` (после `sessions.UpdateAsync`). Остальные места создания `SessionService` не меняются.
+   Тесты в `ImageGen/ImageGen.Core.Tests/Services/SessionServiceTests.cs` (сервис создаётся как в файле, плюс `changes: notifier`; подписка со списком полученных id):
+   - `Create_NotifiesSessionChanged` → один id, равный id новой сессии;
+   - `Rename_NotifiesSessionChanged`, `SetTitleFromFirstMessage_NotifiesSessionChanged`, `UpdateSettings_NotifiesSessionChanged`, `UpdateGenerationParameters_NotifiesSessionChanged` → один id, равный id сессии;
+   - `Rename_UnknownSession_DoesNotNotify`: `GetAsync` возвращает `null` → исключение, событий нет.
+3. **`GenerationService` сообщает о новом прогоне.** В первичный конструктор после `IDebugTrace? trace = null` добавить `SessionChangeNotifier? changes = null`. В `CreateRunAsync` после `runs.AddRunAsync(...)` и строки журнала «Run {RunId} created…», до цикла запуска генераций: `changes?.Notify(sessionId)`.
+   Тест в `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`: `StartRun_NotifiesSessionChanged` — сервис как в файле, плюс `changes: notifier` (именованный аргумент); `StartRunAsync(_session.Id, "fox", ...)` → получен ровно один id, равный `_session.Id`. Дождаться фоновых генераций `WhenIdleAsync`, как в соседних тестах.
+4. **`SessionItemViewModel.Apply`** (`ImageGen/ImageGen.Presentation/PageModels/SessionItemViewModel.cs`).
+   - `UpdatedText` становится наблюдаемым: поле `[ObservableProperty] private string _updatedText;` (стиль полей, как `_title` в этом файле), задаётся в конструкторе тем же форматом (`session.UpdatedAt.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)`); `partial void OnUpdatedTextChanged(string value) => OnPropertyChanged(nameof(DetailsText));`.
+   - Новое свойство `public DateTimeOffset UpdatedAt { get; private set; }`, в конструкторе `= session.UpdatedAt`.
+   - Новый метод `public void Apply(Session session, int runCount)`: `session` не `null`; если `session.Id != Id` → `ArgumentException`; присваивает `Title = session.Title`, `RunCount = runCount`, `UpdatedAt = session.UpdatedAt`, `UpdatedText` тем же форматом. `IsCurrent` и `SearchLine` не трогает.
+   Тесты в `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionItemViewModelTests.cs`:
+   - `Apply_NewTitle_UpdatesTitle` → `Title` новый, `PropertyChanged` для `Title` поднят;
+   - `Apply_OneRun_DetailsTextShowsOneRun` → `DetailsText` оканчивается на `AppResources.RunsCountOne` («1 run»), `PropertyChanged` для `DetailsText` поднят;
+   - `Apply_KeepsIsCurrentAndSearchLine` → заранее `IsCurrent = true`, `SearchLine = "x"`; после `Apply` значения те же;
+   - `Apply_OtherSession_Throws` → `ArgumentException`.
+5. **`SessionsPageModel` обновляет строку по событию** (`ImageGen/ImageGen.Presentation/PageModels/SessionsPageModel.cs`).
+   - В первичный конструктор последними параметрами: `SessionChangeNotifier changes, IMainThread mainThread`. DI обеих оболочек их уже знает (`AddImageGenCore`, `MauiMainThread`, `AvaloniaMainThread`).
+   - В начале `OnAppearingAsync`, рядом с `tracker.Changed -= …; += …`: `changes.SessionChanged -= OnSessionChanged; changes.SessionChanged += OnSessionChanged;`.
+   - `private void OnSessionChanged(object? sender, Guid sessionId)` → `mainThread.BeginInvokeOnMainThread(() => RefreshSessionAsync(sessionId).FireAndForgetSafeAsync())`.
+   - `private async Task RefreshSessionAsync(Guid sessionId)`, вся работа в `try`, `catch (Exception ex)` → `await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message)`:
+     1. `var session = await sessionService.GetAsync(sessionId, CancellationToken.None)`;
+     2. если `session` равно `null`: найти строку по `Id` в `Sessions`; если есть — удалить её из `Sessions`, `Today`, `Earlier`, `SearchResults`, вызвать `NotifySessionsCount()`; выйти;
+     3. `var runCount = (await sessionService.CountRunsAsync(CancellationToken.None)).GetValueOrDefault(sessionId)`;
+     4. найти строку по `Id` в `Sessions` (после всех `await`). Если строки нет: создать `new SessionItemViewModel(session, OpenSessionAsync, RenameSessionAsync, DeleteSessionAsync) { IsCurrent = session.Id == tracker.CurrentId, RunCount = runCount }`, вставить в начало `Sessions` и в начало `Today` (если `session.UpdatedAt.ToLocalTime().Date == timeProvider.GetLocalNow().Date`) или `Earlier` (иначе), вызвать `NotifySessionsCount()`; выйти;
+     5. строка есть: `var moved = session.UpdatedAt > item.UpdatedAt;` затем `item.Apply(session, runCount)`; если `moved`: в `Sessions` — `Move(<индекс>, 0)`; если строка в `Earlier` — удалить оттуда; в `Today` — `Move(<индекс>, 0)`, если она там есть, иначе `Insert(0, item)`.
+     6. `SearchText`, `SearchResults`, `SearchLine` не трогать, поиск не перезапускать.
+   - Тесты: в `SessionsPageModelTests` поле `private readonly SessionChangeNotifier _changes = new(NullLogger<SessionChangeNotifier>.Instance);` и `private readonly IMainThread _mainThread` — подмена, выполняющая действие сразу (как в `ChatPageModelTests`). В `CreateModel` передать `changes: _changes` в `new SessionService(...)` и `_changes, _mainThread` в `new SessionsPageModel(...)`. Каждый тест: настроить `_sessionRepository.ListAsync`, `_sessionRepository.GetAsync`, `_runs.CountRunsBySessionAsync`; `await model.OnAppearingAsync()`; изменить ответы подмен; `_changes.Notify(id)`; `await WaitUntilAsync(<условие>)`.
+     - `SessionChanged_NewTitle_UpdatesRowInPlace`: сессия «New session», затем `GetAsync` отдаёт её с названием «blue moon» → та же строка (`Assert.Same`) показывает `Title` «blue moon», `Sessions.Count` прежний;
+     - `SessionChanged_NewRun_UpdatesRunCount`: `CountRunsBySessionAsync` сначала пустой, затем `{id: 1}` → `DetailsText` строки оканчивается на «1 run»;
+     - `SessionChanged_EarlierSessionUpdatedToday_MovesToTopOfToday` (`FixedClock`): сессии A (сегодня) и B (вчера); B получает `UpdatedAt` = сейчас → `Today[0]` — B, `Earlier` не содержит B, `Sessions[0]` — B;
+     - `SessionChanged_RenameWithoutNewUpdatedAt_KeepsOrder`: две сессии сегодня, вторая переименована с тем же `UpdatedAt` → порядок `Today` прежний;
+     - `SessionChanged_WhileSearching_KeepsSearchTextAndResults`: `SearchText = "moon"`, дождаться результата поиска (`_searchTexts` отдаёт текст этой сессии), затем переименование и `Notify` → `SearchText` всё ещё «moon», строка в `SearchResults`, её `Title` новый;
+     - `SessionChanged_CurrentSession_StaysCurrent`: `_tracker.CurrentId = id` до `Notify` → после обновления `IsCurrent` равно `true`;
+     - `SessionChanged_UnknownSession_AddsRowOnTop`: `Notify` для id, которого не было в списке, `GetAsync` отдаёт сессию сегодня → `Today[0].Id` равен id, `HasNoSessions` равно `false`;
+     - `SessionChanged_DeletedSession_RemovesRow`: `GetAsync` отдаёт `null` → строки нет ни в `Sessions`, ни в `Today`;
+     - `SessionChanged_AfterTwoAppearings_ReadsSessionOnce`: `OnAppearingAsync` дважды, затем `Notify` → `_sessionRepository.Received(1).GetAsync(id, …)`.
+6. **Оболочки.** Разметку не менять: `SessionsListView` в MAUI (`ImageGen/ImageGen.Maui/Controls/SessionsListView.xaml`) и Avalonia (`ImageGen/ImageGen.Avalonia/Views/SessionsListView.axaml`) уже привязаны к `Title` и `DetailsText`. Проверка — сборка Android, тесты Avalonia (в том числе тест композиции, который создаёт `SessionsPageModel` через DI). Если тест композиции падает из-за новых параметров — `blocked`.
+7. **Документация.** `docs/architecture.md`, абзац «Обновление экрана»: дописать одно предложение — `SessionService` и `GenerationService` сообщают об изменении сессии через `SessionChangeNotifier`, и `SessionsPageModel` перечитывает одну сессию и обновляет её строку в UI-потоке. В список модуля `Services/` ядра (строка с `ApiKeyService, ModelCatalogService, SessionService, …`) добавить `SessionChangeNotifier`. Спецификацию `docs/specs/chat-sessions.md` не менять.
+
+### Проверка
+```
+dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj
+dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj
+dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj
+dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android
+dotnet format ImageGen/ImageGen.Core/ImageGen.Core.csproj --verify-no-changes
+dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-no-changes
+dotnet format ImageGen/ImageGen.Presentation/ImageGen.Presentation.csproj --verify-no-changes
+dotnet format ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj --verify-no-changes
+bash scripts/check.sh
+```
+
+### Ручная проверка
+Дописать одинаковый пункт в `tasks/v0.1/016-skeleton-manual-check.md` (MAUI под Windows, широкое окно) и `tasks/backlog/046-desktop-manual-check.md` (Avalonia):
+1. Новая сессия, первое сообщение → строка слева сразу показывает текст сообщения как название; после прогона — «1 run».
+2. Repeat на карточке → число прогонов в строке растёт, строка не перемещается.
+3. Введён поиск, список прокручен → после сообщения в чате поиск и прокрутка не сбросились, подсветка текущей сессии на месте.
+В «Отчёт»: «Android (узкий экран, список на отдельной странице) — не проверено, проверить владельцу».
+
+Файлы: `ImageGen/ImageGen.Core/Services/SessionChangeNotifier.cs` (новый), `ImageGen/ImageGen.Core/Services/SessionService.cs`, `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Core.Tests/Services/SessionChangeNotifierTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/SessionServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionItemViewModel.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionsPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionItemViewModelTests.cs`, `docs/architecture.md`, `tasks/v0.1/016-skeleton-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`.
 
 ## Отчёт
 
 ## Комментарии
 ### 2026-10-29, claude-plan
 Вопрос владельцу: поднимать ли сессию наверх списка (и в «Today»), когда в ней запущен прогон без нового сообщения (Repeat, New seed, Edit, Other model)? Сейчас время изменения сессии двигает только сообщение. Допущение в плане: не поднимать, обновлять только число прогонов.
+### 2026-10-29, владелец (в чате, записал claude-plan)
+План одобрен; допущения из комментариев claude-plan приняты как решения. План переписан под небольшую модель.

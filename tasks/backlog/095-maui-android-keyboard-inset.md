@@ -1,6 +1,6 @@
 ---
 id: 095
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-29
@@ -23,33 +23,50 @@ created: 2026-10-29
 - Ручная проверка на Android описана в «Отчёте»; неочевидное — в `docs/knowledge/maui.md`.
 
 ## Анализ
-- **Что сейчас.** `MainActivity` (`Platforms/Android/MainActivity.cs`) не задаёт `WindowSoftInputMode`; `App` (`App.xaml.cs`) не вызывает `UseWindowSoftInputModeAdjust`; ни одна страница и стиль не задают `SafeAreaEdges` (поиск по `ImageGen.Maui` пуст). В `ImageGen.Maui.csproj` `TargetAndroidSdkVersion` не задан, значит действует значение по умолчанию для `net10.0-android`. Какое именно (ожидаемо API 36), в этой среде не проверено: Android-нагрузки здесь нет. Сверить в `obj/.../AndroidManifest.xml` после сборки (шаг 1 плана).
-- **Почему поле уходит под клавиатуру (документация Microsoft, .NET MAUI 10).** Начиная с .NET 10, safe area на Android задаётся свойством `SafeAreaEdges` (значения `None`, `SoftInput`, `Container`, `Default`, `All`; можно задать отдельно для каждого края в порядке лево, верх, право, низ). У `ContentPage` значение по умолчанию `None` (контент от края до края), у `Layout` (`Grid` и других) — `Container`, то есть системные панели учитываются, а клавиатура нет. У `ScrollView` `SoftInput` не действует: его ставят на обёртку. Это совпадает с симптомом: корневой `Grid ChatLayout` чата учитывает системные панели, а клавиатуру нет. Документация о режиме клавиатуры: при `WindowSoftInputModeAdjust.Resize` в .NET 10 «может понадобиться» `ContentPage.SafeAreaEdges="All"`. Источники: [Safe area layout](https://learn.microsoft.com/en-us/dotnet/maui/user-interface/safe-area?view=net-maui-10.0), [Soft keyboard input mode on Android](https://learn.microsoft.com/en-us/dotnet/maui/android/platform-specifics/soft-keyboard-input-mode) (прочитаны 2026-10-29).
-- **Выбранный способ.** Основной — `SafeAreaEdges = All` на страницах: так учитываются и системные панели, и клавиатура. Задаётся одним неявным стилем `ContentPage` (`ApplyToDerivedTypes`) в `Resources/Styles/Styles.xaml`, рядом с существующим стилем `Page`, и сразу покрывает все экраны с полями ввода: `ApiKeyPage` (`Entry`), `ModelPickerPage` и `SessionModelsPage` (`SearchBar`), `SessionParametersPage`, `SettingsPage`, `ChatPage`. Режим `UseWindowSoftInputModeAdjust(Resize)` для `Application` — запасной шаг, если одного `SafeAreaEdges` на устройстве не хватит.
-- **Неизвестно (снимается на устройстве):** (1) применяется ли `SafeAreaEdges` через стиль (свойство привязываемое, но на устройстве это не проверено; запасной вариант — атрибут на каждой странице); (2) не дублируется ли верхний отступ под панелью навигации `Shell` при `All`; (3) нужен ли `Resize` при targetSdk 35 и выше (edge-to-edge там обязателен, окно не сжимается, приходят только вставки IME) и не появится ли двойной отступ на Android 14 и ниже, если включить `Resize`. Ради этого `poc/` не нужен: проверка — сборка и запуск этого же приложения на телефоне.
-- **Среда.** Сборка Android — Linux с Android SDK (облачная сессия, VPS); запуск — только на реальном устройстве (VPS: `adb connect`) или у владельца (`docs/knowledge/dev-environment.md`). На Windows `SafeAreaEdges` ничего не меняет (в документации безопасные области описаны только для Android, iOS и Mac Catalyst); Windows-цель проверяет CI.
-- **TDD.** Логики в `Presentation` нет, правка только в платформенной разметке. Avalonia не затронута: у десктопа нет экранной клавиатуры (Avalonia на мобильных — исследование 094).
-- **Пересечения.** 097 и 098 правят `ChatPage.xaml` (другие участки: шапка и лента; эта задача — разве что корневой `Grid`, если стиль не сработает). 091 (липкие кнопки моделей сессии) затрагивает `SessionModelsPage`, на которую подействует новый стиль. Порядок: **095 → 097 → 098**. Сначала 095: без неё на устройстве не проверить прокрутку при открытой клавиатуре (097). 098 правит только шапку и идёт последней.
+- **Что сейчас.** `MainActivity` (`Platforms/Android/MainActivity.cs`) не задаёт `WindowSoftInputMode`; `App` (`App.xaml.cs`) не вызывает `UseWindowSoftInputModeAdjust`; ни одна страница и стиль не задают `SafeAreaEdges`. В `ImageGen.Maui.csproj` `TargetAndroidSdkVersion` не задан — действует значение по умолчанию для `net10.0-android` (в этой среде не проверено: нет Android-нагрузки; шаг 1 записывает его в «Отчёт»).
+- **Причина (документация Microsoft, .NET MAUI 10).** Safe area на Android задаётся свойством `SafeAreaEdges` (`None`, `SoftInput`, `Container`, `Default`, `All`). У `ContentPage` по умолчанию `None`, у `Layout` (`Grid` и др.) — `Container`: системные панели учитываются, клавиатура нет. Корневой `Grid ChatLayout` чата поэтому уходит под клавиатуру. `All` — «учитывать все вставки, включая клавиатуру». При `WindowSoftInputModeAdjust.Resize` документация советует `ContentPage.SafeAreaEdges="All"`. Источники: [Safe area layout](https://learn.microsoft.com/en-us/dotnet/maui/user-interface/safe-area?view=net-maui-10.0), [Soft keyboard input mode on Android](https://learn.microsoft.com/en-us/dotnet/maui/android/platform-specifics/soft-keyboard-input-mode) (прочитаны 2026-10-29).
+- **Решение.** Атрибут `SafeAreaEdges="All"` на корневом `ContentPage` каждой из семи страниц `ImageGen.Maui/Pages/*.xaml`. Не неявным стилем: в `Styles.xaml` уже есть неявный стиль `Page` (`ApplyToDerivedTypes`, фон), а элементу MAUI достаётся один неявный стиль — стиль `ContentPage` перекрыл бы фон. Атрибут проверяется текстовым тестом, как `MauiStylesTests`. `UseWindowSoftInputModeAdjust(Resize)` не ставим; он — запасной шаг только по итогам проверки на устройстве (шаг 5).
+- **Среда.** Сборка Android — Linux с Android SDK; запуск — только на реальном устройстве. На Windows `SafeAreaEdges` ничего не меняет. Avalonia не затронута.
 
 ## План
-1. Собрать Android-цель как есть (`dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android`) и записать в «Отчёт» `targetSdkVersion` из сгенерированного `obj/.../AndroidManifest.xml`.
-2. `Resources/Styles/Styles.xaml`: неявный стиль `ContentPage` с `ApplyToDerivedTypes`, сеттер `SafeAreaEdges = All`. Если компилятор XAML не принимает стиль или на устройстве он не действует, задать `SafeAreaEdges="All"` атрибутом на каждой странице из `Pages/` (семь файлов).
-3. Сборка Android, `dotnet format ImageGen/ImageGen.Maui/ImageGen.Maui.csproj --verify-no-changes` (на Linux с Android SDK).
-4. Ручная проверка на Android (по возможности Android 15+ и Android 14 и ниже; жестовая и трёхкнопочная навигация):
-   - чат: тап по полю → поле, скрепка, строка подсказки и кнопка отправки целиком над клавиатурой; лента сжимается, шапка и панель навигации `Shell` на месте; набрать длинный текст до `MaximumHeightRequest` 160 → поле по-прежнему видно;
-   - закрыть клавиатуру («Назад» или кнопкой клавиатуры) → раскладка прежняя: нет пустой полосы снизу, поле не под системной панелью навигации; сверху нет двойного отступа под заголовком;
-   - поворот экрана с открытой клавиатурой;
-   - ключ API (`Entry`), выбор модели и модели сессии (`SearchBar` и список под ним), параметры, настройки → поле с фокусом видно над клавиатурой, список прокручивается до конца.
-5. Если клавиатура всё ещё закрывает поле: в `App` (конструктор) вызвать `On<Android>().UseWindowSoftInputModeAdjust(WindowSoftInputModeAdjust.Resize)` для `Application` и повторить шаг 4. Отдельно проверить Android 14 и ниже на двойной отступ (поле поднято выше клавиатуры на её высоту).
-6. Документация: `docs/knowledge/maui.md` — по умолчанию в .NET 10 у `ContentPage` `None`, у layout `Container`; что сработало на устройстве (стиль или атрибут, нужен ли `Resize`, версии Android). Если устройства нет, пункт ручной проверки дописать в `tasks/v0.1/016-skeleton-manual-check.md` и в «Отчёт».
+Выполнять после: — (обязательных предшественников нет). Пересечения только текстовые: `ChatPage.xaml` правят 088, 090, 091, 097, 098 (другие участки файла); `SessionModelsPage.xaml` правят 090, 091. При rebase сохранять обе стороны. 097 и 098 выполняются после этой задачи.
 
-Проверка:
-- `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android`
-- `dotnet format ImageGen/ImageGen.Maui/ImageGen.Maui.csproj --verify-no-changes`
-- Windows-цель — CI (задача `maui`)
-- `scripts/check.sh`
+Для исполнителя (план рассчитан на небольшую модель): делай шаги строго по порядку, по TDD (сначала падающий тест, потом минимальный код), после каждого шага — сборка и тесты из «Проверки». Имена файлов, типов, членов, ключей строк и тестов переноси дословно. Если шаг не получается так, как написано (API другое, компилятор не принимает разметку), не придумывай обход: опиши в «Комментариях», что пробовал, поставь `blocked` и остановись.
 
-Файлы: `ImageGen/ImageGen.Maui/Resources/Styles/Styles.xaml` (или `ImageGen/ImageGen.Maui/Pages/*.xaml`), при необходимости `ImageGen/ImageGen.Maui/App.xaml.cs`; `docs/knowledge/maui.md`; при необходимости `tasks/v0.1/016-skeleton-manual-check.md`.
+Прочитай перед началом:
+- `docs/knowledge/maui.md` (разделы «XAML и привязки», «Клавиатура Android в `Editor`»);
+- `ImageGen/ImageGen.Presentation.Tests/Design/MauiStylesTests.cs` (как тесты находят папку `ImageGen.Maui` — метод `MauiRoot()`);
+- корневой элемент каждой страницы в `ImageGen/ImageGen.Maui/Pages/` (семь файлов: `ApiKeyPage.xaml`, `ChatPage.xaml`, `ModelPickerPage.xaml`, `SessionModelsPage.xaml`, `SessionParametersPage.xaml`, `SessionsPage.xaml`, `SettingsPage.xaml`).
+
+1. Собрать Android-цель без изменений: `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android`. Найти сгенерированный манифест (`find ImageGen/ImageGen.Maui/obj -name AndroidManifest.xml`) и записать в «Отчёт» значение `android:targetSdkVersion`. Если Android SDK в среде нет — записать «не проверено: нет Android SDK» и продолжать (шаги 2–3 проверяются тестом, шаг 4 — CI).
+2. Падающий тест. Новый файл `ImageGen/ImageGen.Presentation.Tests/Design/MauiSafeAreaTests.cs`, класс `MauiSafeAreaTests` (пространство `ImageGen.Presentation.Tests.Design`), со своим закрытым методом `MauiRoot()`, скопированным из `MauiStylesTests`. Тест `Pages_RespectKeyboardSafeArea`: для каждого файла `Pages/*.xaml` разобрать XML (`XDocument.Load`), у корневого элемента (`ContentPage`) атрибут `SafeAreaEdges` равен `All`; в сообщении об ошибке — имя файла. Сейчас тест падает на всех семи файлах.
+3. В каждом из семи файлов `ImageGen/ImageGen.Maui/Pages/*.xaml` добавить корневому `ContentPage` атрибут `SafeAreaEdges="All"` (после `x:Class`/`x:DataType`, перед `Title`, если он есть). Другие атрибуты не трогать. Тест шага 2 проходит.
+4. Сборка Android и формат: `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android`, `dotnet format ImageGen/ImageGen.Maui/ImageGen.Maui.csproj --verify-no-changes`. Если компилятор XAML не принимает `SafeAreaEdges="All"` на `ContentPage` (ошибка про неизвестное свойство или преобразование) — `blocked` с текстом ошибки в «Комментариях». Если Android SDK нет — эти две команды пропустить и записать в «Отчёт»; Windows-цель проверит CI.
+5. Проверка на устройстве — только если в среде есть подключённое Android-устройство (`adb devices` показывает его). Пройти «Ручную проверку» ниже.
+   - Все пункты выполнены → записать результат в «Отчёт», перейти к шагу 6.
+   - Поле чата всё ещё закрыто клавиатурой → в `ImageGen/ImageGen.Maui/App.xaml.cs`, в конструкторе `App` после `InitializeComponent()`, вызвать для `Application` платформенную настройку `On<Microsoft.Maui.Controls.PlatformConfiguration.Android>().UseWindowSoftInputModeAdjust(WindowSoftInputModeAdjust.Resize)` (пространство `Microsoft.Maui.Controls.PlatformConfiguration.AndroidSpecific`), собрать и повторить ручную проверку. Если поле всё равно закрыто или появился двойной отступ (поле поднято выше клавиатуры ещё на её высоту) — `blocked`, описать в «Комментариях» версию Android и что видно.
+   - Устройства нет → в «Отчёт»: «На устройстве не проверено, проверить владельцу» и список из «Ручной проверки»; шаг 5 на этом закончен.
+6. Документация: `docs/knowledge/maui.md`, в раздел «XAML и привязки» после пункта «Клавиши в `Editor` на Windows» — новый пункт «**Клавиатура Android и safe area (.NET 10, задача 095):**»: у `ContentPage` по умолчанию `SafeAreaEdges=None`, у layout — `Container` (клавиатура не учитывается); все страницы приложения ставят `SafeAreaEdges="All"` атрибутом (не неявным стилем: он перекрыл бы стиль `Page`); ссылки на две страницы документации; проверено ли на устройстве и нужен ли был `Resize` (по итогам шага 5, иначе «на устройстве не проверено»).
+
+### Проверка
+```
+dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj
+dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android
+dotnet format ImageGen/ImageGen.Maui/ImageGen.Maui.csproj --verify-no-changes
+dotnet format ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj --verify-no-changes
+bash scripts/check.sh
+```
+
+### Ручная проверка
+Android (телефон; по возможности Android 15+ и Android 14 или ниже; жестовая и трёхкнопочная навигация). Если не проверено исполнителем — в «Отчёт» как «не проверено, проверить владельцу».
+1. Чат: тап по полю ввода → поле, скрепка, строка подсказки и кнопка отправки целиком над клавиатурой; лента сжалась; шапка и верхняя панель навигации на месте, сверху нет лишнего отступа.
+2. Набрать длинный текст (поле растёт до 160) → поле и кнопка отправки видны.
+3. Закрыть клавиатуру → раскладка как до открытия: снизу нет пустой полосы, поле не под системной панелью навигации.
+4. Повернуть экран с открытой клавиатурой → поле видно.
+5. Экран ключа API (поле ключа), выбор модели и модели сессии (поиск и список), параметры, настройки → поле с фокусом над клавиатурой, список прокручивается до конца.
+Windows (задача `tasks/v0.1/016-skeleton-manual-check.md`, дописать пункт): страницы выглядят как раньше (без лишних отступов).
+
+Файлы: `ImageGen/ImageGen.Maui/Pages/ApiKeyPage.xaml`, `ChatPage.xaml`, `ModelPickerPage.xaml`, `SessionModelsPage.xaml`, `SessionParametersPage.xaml`, `SessionsPage.xaml`, `SettingsPage.xaml` (все в `ImageGen/ImageGen.Maui/Pages/`); `ImageGen/ImageGen.Presentation.Tests/Design/MauiSafeAreaTests.cs` (новый); только по исходу шага 5 — `ImageGen/ImageGen.Maui/App.xaml.cs`; `docs/knowledge/maui.md`; `tasks/v0.1/016-skeleton-manual-check.md`.
 
 ## Отчёт
 
@@ -57,3 +74,6 @@ created: 2026-10-29
 ### 2026-10-29, claude-plan
 - Вопрос владельцу: на каком телефоне и какой версии Android снят скриншот? Нужно, чтобы проверить на той же версии (поведение `SafeAreaEdges` и `Resize` разное на Android 15+ и на 14 и ниже). Допущение в плане: проверяем на доступном устройстве, Android 15+ обязательно.
 - Допущение: `SafeAreaEdges = All` на всех страницах (через стиль), а не только в чате: критерии требуют, чтобы клавиатура не закрывала и остальные экраны.
+
+### 2026-10-29, владелец (в чате, записал claude-plan)
+План одобрен; допущения из комментариев claude-plan приняты как решения. План переписан под небольшую модель.

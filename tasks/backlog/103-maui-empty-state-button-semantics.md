@@ -1,6 +1,6 @@
 ---
 id: 103
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-29
@@ -50,3 +50,6 @@ bash scripts/check.sh
 ## Отчёт
 
 ## Комментарии
+
+### 2026-10-29, владелец (в чате, записал claude-plan)
+План одобрен; допущения из комментариев claude-plan приняты как решения. План переписан под небольшую модель.
