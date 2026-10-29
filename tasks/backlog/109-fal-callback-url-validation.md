@@ -26,6 +26,8 @@ Security-review 2026-10-29: fal callback URLs идут в authorized request б�
 ## Анализ
 `new Uri(base, absolute)` заменяет base. `ProviderRegistry` валидирует только config address. Fal catalog `endpoint_id` попадает в Submit. Stub handler не моделирует redirect, поэтому redirect policy не входит в эту задачу.
 
+Нужность: закрывает отправку ключа на чужой callback origin и запросы к локальным адресам из provider data; это отдельная проверка от transport redirects.
+
 Пересечения: 124 и 112 по HTTP; порядок 109 → 124 → 112. Задача 121 remote cancel зависит также от этой validation.
 
 ## План
@@ -33,12 +35,12 @@ Security-review 2026-10-29: fal callback URLs идут в authorized request б�
 
 Прочитай: `FalImageProvider`, `ProviderClientBase.CreateRequest`, `ProviderConfig/Registry`, fal tests.
 
-1. Создать `FalUrlValidator`: callback validator; image URL validator; model endpoint validator. Возвращать `Uri`/validated relative string.
+1. Создать internal `FalUrlValidator` с тремя явно названными pure методами: `ValidateCallback(string value, Uri baseAddress)` и `ValidateImage(string value)` возвращают Uri; `ValidateModelEndpoint(string value)` возвращает проверенную относительную строку. Некорректное значение → `ProviderException(Unknown, безопасное постоянное сообщение)`; не прикладывать исходную UriFormatException с URL. Ошибочный handle ProviderId проверяет FalImageProvider до secret store.
 2. Tests callback: default/effective port, host case/normalization, external host, HTTP, userinfo, fragment, malformed URI. Same-origin happy path проходит.
-3. При `SubmitAsync` валидировать model endpoint до `CreateAuthorizedRequestAsync`; tests `https://evil`, `//evil`, query, fragment, `..` и normal `fal-ai/flux/dev`.
-4. Валидировать callback URLs до сохранения handle. В Poll/Completed/Cancel сначала проверить handle provider id и URLs, затем читать key.
+3. При `SubmitAsync` валидировать model endpoint до `CreateAuthorizedRequestAsync`; tests `https://evil`, `//evil`, query, fragment, `..`, `.` segments, начальный `/`, обратный слеш, percent-encoded traversal/separators и normal `fal-ai/flux/dev`. Для endpoint проверять исходную строку до `new Uri` (нормализация иначе скроет traversal); после однократного unescape каждого segment запретить `.`, `..`, `/`, `\\` и остаточный `%` (не поддерживать многократно encoded endpoint). Разрешать обычные непустые slash-separated fal segments, не менять валидный model id.
+4. Валидировать все три callback URLs до сохранения handle; `Uri.Scheme`, `IdnHost` с OrdinalIgnoreCase и `Port` сравниваются с base, userinfo/fragment запрещены. В отличие от image URL, callback разрешает HTTP только если таков уже проверенный локальный base. Catalog и key probe ходят на собственный фиксированный ModelsAddress; same-origin callback validation к нему не применять. В Poll/Completed/Cancel сначала проверить handle provider id и URLs, затем читать key.
 5. Добавлять/заменять `logs=1` через URI API без string concatenation; сохранить остальные existing query parameters. Tests no query, one query и existing logs value.
-6. Image tests: normal HTTPS hostname проходит; запрещённые hostname/IP literals, включая IPv4-mapped IPv6, не вызывают handler.
+6. Image tests: normal HTTPS hostname проходит; localhost с/без конечной точки, IPv4 0/8, 10/8, 127/8, 169.254/16, 172.16/12, 192.168/16; IPv6 unspecified/loopback, link-local, fc00::/7 и mapped IPv4 из этих сетей не вызывают handler. IPv4-mapped адрес сначала привести к IPv4. Дополнить multicast IPv4 224/4 и IPv6 ff00::/8; запрещать IPv6 scope id. URI-normalized варианты числового IPv4 проверять через IPAddress.TryParse, а не regexp. Hostname в DNS не резолвить; это явно оставшийся риск, а не утверждение полной защиты от SSRF.
 7. Safe error/log tests: exception не содержит rejected URL, query, userinfo, prompt или key.
 8. В отчёте явно записать residual DNS risk и ссылку на 124 для redirect.
 
@@ -51,6 +53,8 @@ bash scripts/check.sh
 ```
 
 Файлы: `ImageGen/ImageGen.Core/Fal/FalUrlValidator.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalImageProvider.cs`, `ImageGen/ImageGen.Core.Tests/Fal/FalUrlValidatorTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Fal/FalImageProviderTests.cs`
+
+После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 109`, затем `bash scripts/check.sh`; код отправить PR по `docs/tasks.md`.
 
 ## Отчёт
 

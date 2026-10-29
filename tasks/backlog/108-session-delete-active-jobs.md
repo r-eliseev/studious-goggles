@@ -23,18 +23,23 @@ GenerationService не хранит SessionId/CTS у background tasks. Межд�
 - После Stop завершённая старая task не вызывает file/status writes.
 
 ## Анализ
-StartRunWithAttachments знает SessionId до await; StartRun только делегирует. Repeat/NewSeed/Edit/RunOnModel узнают SessionId после GetSource и берут lease сразу затем. Tombstone живёт lifetime singleton. RunningJob сохраняет launch gate: dictionary registration до task start.
+Нужность: без учёта стартующих run и принадлежащих сессии tasks удаление может завершиться раньше записи картинки/статуса. 108 вводит только Core lifecycle. Реальное удаление подключает 126; отмену оплаченного удалённого задания — 121.
+
+`StartRunWithAttachmentsAsync` знает SessionId до первого await; `StartRunAsync` делегирует ему. `RepeatAsync`/`NewSeedAsync`/`EditAsync`/`RunOnModelAsync` получают SessionId из `GetSourceAsync` и сразу после этого берут start lease, до чтения параметров/создания run. Tombstone хранится до конца жизни singleton: Guid удалённой сессии не используется заново.
+
+Пересечения: 089 меняет `CreateRunAsync` (сохранить touch/event после записи run); 106 меняет watcher, после неё 108 и transport-цепочка 107 → 109 → 124 независимы. Порядок lifecycle: 108 → 126 → 121. 111/113/129 сохраняют введённые здесь cancellation и registration contracts.
 
 ## План
-Для Haiku/Luna: только GenerationService + interface + Core tests. Не менять SessionService/DI/Fal remote cancel.
+Для Haiku/Luna: только GenerationService + interface + Core tests. Не менять SessionService/DI/Fal remote cancel. Ни один lock не удерживается через await; не добавлять polling/sleep для ожидания других tasks.
 
-1. Добавить `ISessionGenerationCoordinator.StopSessionAsync(Guid, CancellationToken)`; GenerationService implements, но DI пока не регистрировать.
-2. Session state под lock: Deleting, active start leases, zero-leases signal. Lease placement по Analysis; private CreateRun требует held lease.
-3. Race test gate AddRun: Stop ждёт registration; start после tombstone no AddRun/provider.
-4. RunningJob immutable ids + owned CTS + Task; launch gate preserved. Caller token only preparation, owned token through semaphore/provider/poller/references/file/persistence.
-5. Stop: tombstone, wait leases, cancel target jobs, await tasks. Repeated stop idempotent. OCE own CTS swallowed without Error; other exceptions сохраняют pre-113 behavior.
-6. Recovery registration checks state under same lock; deleting session no watch.
-7. Tests: two sessions; caller token cancelled after StartRun return does not stop job; recovery race; own cancellation; release provider/file gates after Stop and assert no subsequent file/status calls.
+1. Добавить публичный интерфейс `ISessionGenerationCoordinator` с методом `Task StopSessionAsync(Guid sessionId, CancellationToken cancellationToken)` в `ImageGen.Core.Services`. `GenerationService` реализует интерфейс; DI-регистрация — 126. Старт после tombstone отклоняется `InvalidOperationException` с безопасным сообщением до `AddRunAsync` и обращения к provider.
+2. Под одним private `_lifecycleGate` хранить `_sessionStates: Dictionary<Guid, SessionJobState>`. `SessionJobState`: `IsDeleting`, `StartLeaseCount`, `StartsDrained` (TaskCompletionSource с RunContinuationsAsynchronously, завершён при count=0), `StopSource` (session-owned CTS), `StopCompletion` (единственный результат stop). Private `AcquireStartLease(sessionId)` под lock проверяет IsDeleting, при переходе 0→1 создаёт новый StartsDrained, увеличивает count и возвращает IDisposable `StartLease`. Его Dispose под тем же lock уменьшает count и при нуле завершает signal ровно один раз. Для состояния без стартов использовать уже завершённый signal.
+3. Взять lease в public входах по «Анализу» и освобождать в finally/using на всех исходах, включая no-model/no-reference/error/caller cancellation. `CreateRunAsync` принимает held lease (private contract): `AddRunAsync` и регистрация всех jobs происходят до release. Stop, начавшийся после допуска lease, ждёт его конца; уже допущенный start завершает подготовку/регистрацию, не делает повторный отказ после successful AddRun. Start, начавшийся после tombstone, не допускается.
+4. Заменить значение `_running` на private `RunningJob` с `GenerationId`, `SessionId`, owned CTS и Task. CTS связывается с `SessionJobState.StopSource.Token`, НЕ с caller token подготовки. Сохранить launch gate: запись RunningJob регистрируется до открытия gate и выполнения work. Обычный Execute и recovery watch проходят через одну регистрацию. Owned token передать в ожидание semaphore, provider/poller, чтение references, file store и repository. `WhenIdleAsync` ждёт RunningJob.Task. Завершение удаляет job и освобождает owned CTS; session source нельзя dispose до завершения всех его jobs.
+5. `StopSessionAsync`: под lock атомарно поставить IsDeleting и создать единственный StopCompletion; последующие stop возвращают ожидание того же task. Рабочая stop-процедура без caller token: дождаться StartsDrained, отменить session StopSource, снять snapshot зарегистрированных jobs этой сессии и дождаться их всех. Никакой новой регистрации после draining быть не может. Caller token применяется только к ожиданию StopCompletion (`WaitAsync`): отмена ожидания НЕ снимает tombstone и НЕ прекращает начатый stop. Ошибку job наблюдать; до 113 сохранять fault в результате stop/WhenIdle, не объявлять успешную остановку при ошибке. Сама отмена owned token не fault и не Error.
+6. Во всех catch, которые сейчас перехватывают `Exception`, пропускать `OperationCanceledException` с отменённым owned token до внешней job-обёртки; только она завершает собственную отмену штатно. После await внешнего provider/IO проверять owned token до следующей записи/события: тестовый provider может проигнорировать cancellation. Stop не обещает отсутствия записи ДО своего завершения; он гарантирует отсутствие дальнейших writes/events ПОСЛЕ успешного завершения. Не менять сохранённые статусы на Cancelled в этой задаче: это не пользовательская отмена 024.
+7. `RecoverInterruptedAsync` для каждого resumable row берёт такой же start lease до регистрации watcher; если сессия уже tombstoned — skip без poll/submit. Lock и регистрация совпадают с новым стартом; дублирующий вызов recovery не должен заменить уже запущенную job того же GenerationId. Сохранить missing-provider handling/count semantics из 106.
+8. Детерминированные race-тесты через TaskCompletionSource (без sleeps): AddRun достиг gate → Stop ещё не завершён → разрешить AddRun → зарегистрированные jobs отменены/дожданы; tombstone раньше start → no AddRun/no provider; две сессии → останавливается только одна; отменён caller token после возврата StartRun → job продолжает работу; повторный/concurrent Stop → один stop; cancelled waiter → повторный Stop дожидается фактического окончания; recovery и stop на границе регистрации; provider игнорирует cancel → Stop ждёт его, затем no file/status/event; no-model/error подготовки освобождает lease. Каждый тест ждёт наблюдаемой фазы и проверяет только соответствующую сессию.
 
 ### Проверка
 ```
@@ -45,6 +50,8 @@ bash scripts/check.sh
 ```
 
 Файлы: `ImageGen/ImageGen.Core/Services/ISessionGenerationCoordinator.cs` (новый), `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`
+
+После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 108`, затем `bash scripts/check.sh`; код отправить PR по `docs/tasks.md`.
 
 ## Отчёт
 
