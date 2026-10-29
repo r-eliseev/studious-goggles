@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Descriptions;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Services;
@@ -173,6 +174,12 @@ public sealed partial class ChatPageModel(
                 }
             }
 
+            var summary = await sessions.GetSummaryAsync(_sessionId, CancellationToken.None);
+            if (summary is not null)
+            {
+                InsertSummaryMarker(summary);
+            }
+
             UpdateRetry();
         }
         catch (Exception ex)
@@ -294,6 +301,22 @@ public sealed partial class ChatPageModel(
     }
 
     private bool CanSend() => !IsBusy && (!string.IsNullOrWhiteSpace(InputText) || PendingAttachments.Count > 0);
+
+    /// <summary>C4.1: the marker goes after the last message the summary covers; without that message it goes first.</summary>
+    private void InsertSummaryMarker(ConversationSummary summary)
+    {
+        var covered = -1;
+        for (var i = 0; i < Items.Count; i++)
+        {
+            if (Items[i] is MessageItemViewModel message && message.Id == summary.CoversUpToMessageId)
+            {
+                covered = i;
+                break;
+            }
+        }
+
+        Items.Insert(covered + 1, new SummaryMarkerViewModel(summary, dialogs));
+    }
 
     /// <summary>S2.5: «Try again» is offered only for the last message of the chat, and only while nothing runs.</summary>
     private void UpdateRetry()

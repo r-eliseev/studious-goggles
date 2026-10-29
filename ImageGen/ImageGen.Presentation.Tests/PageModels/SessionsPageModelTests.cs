@@ -448,7 +448,7 @@ public class SessionsPageModelTests : IDisposable
     private SessionsPageModel CreateModel(TimeProvider? time = null)
     {
         var catalog = new ChatModelCatalogService(ProviderDoubles.Router(), NullLogger<ChatModelCatalogService>.Instance);
-        var sessions = new SessionService(_sessionRepository, Substitute.For<IChatMessageRepository>(), _runs, _files, catalog, TimeProvider.System);
+        var sessions = new SessionService(_sessionRepository, Substitute.For<IChatMessageRepository>(), _runs, _files, catalog, TimeProvider.System, Substitute.For<IConversationSummaryRepository>());
         var apiKeys = new ApiKeyService(ProviderDoubles.Router(_provider), _secrets, NullLogger<ApiKeyService>.Instance);
         return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs, time ?? TimeProvider.System, _tracker, new SessionSearchService(_searchTexts));
     }

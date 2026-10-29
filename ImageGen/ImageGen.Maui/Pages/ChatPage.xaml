@@ -64,6 +64,23 @@
                         </Border>
                     </DataTemplate>
                 </pmui:ChatItemTemplateSelector.MessageTemplate>
+                <pmui:ChatItemTemplateSelector.SummaryTemplate>
+                    <!-- The thin line after the last message the summary covers (task 084). -->
+                    <DataTemplate x:DataType="pm:SummaryMarkerViewModel">
+                        <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8" Margin="0,8">
+                            <BoxView Grid.Column="0" HeightRequest="1" Color="{DynamicResource IgLineColor}" VerticalOptions="Center" />
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="Center">
+                                <Label StyleClass="meta" Text="{Binding Text}" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" />
+                                <Button StyleClass="ghost,small"
+                                        Text="{Binding ShowText}"
+                                        Command="{Binding ShowCommand}"
+                                        HorizontalOptions="Center"
+                                        SemanticProperties.Description="{Binding ShowText}" />
+                            </VerticalStackLayout>
+                            <BoxView Grid.Column="2" HeightRequest="1" Color="{DynamicResource IgLineColor}" VerticalOptions="Center" />
+                        </Grid>
+                    </DataTemplate>
+                </pmui:ChatItemTemplateSelector.SummaryTemplate>
 
                 <pmui:ChatItemTemplateSelector.RunTemplate>
                     <DataTemplate x:DataType="pm:RunItemViewModel">

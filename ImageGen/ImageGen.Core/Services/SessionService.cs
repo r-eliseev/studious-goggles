@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Storage;
@@ -11,7 +12,8 @@ public sealed class SessionService(
     IRunRepository runs,
     IImageFileStore files,
     ChatModelCatalogService chatModels,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    IConversationSummaryRepository summaries)
 {
     public async Task<Session> CreateAsync(CancellationToken cancellationToken)
     {
@@ -33,6 +35,10 @@ public sealed class SessionService(
     /// <summary>Runs per session in one query; sessions without runs are absent.</summary>
     public Task<IReadOnlyDictionary<Guid, int>> CountRunsAsync(CancellationToken cancellationToken) =>
         runs.CountRunsBySessionAsync(cancellationToken);
+
+    /// <summary>The assistant's summary of the session's older history, or null when there is none (task 084).</summary>
+    public Task<ConversationSummary?> GetSummaryAsync(Guid sessionId, CancellationToken cancellationToken) =>
+        summaries.GetAsync(sessionId, cancellationToken);
 
     public Task<Session?> GetAsync(Guid sessionId, CancellationToken cancellationToken) =>
         sessions.GetAsync(sessionId, cancellationToken);

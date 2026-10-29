@@ -93,7 +93,7 @@ public class AssistantServiceTests
         _files.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns([1, 2, 3]);
 
         var sessionService = new SessionService(
-            _sessions, _messages, _runs, _files, new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance), time);
+            _sessions, _messages, _runs, _files, new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance), time, Substitute.For<IConversationSummaryRepository>());
         var attachments = new AttachmentService(_chatAttachments, _files, time);
         _generations = new GenerationService(
             _sessions, _runs, _providers, _files, catalog, _seeds, attachments, time, NullLogger<GenerationService>.Instance);

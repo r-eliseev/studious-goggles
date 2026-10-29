@@ -81,6 +81,12 @@ public static class AppResources
 
     public static string EmptyChatExample3 => Get(nameof(EmptyChatExample3));
 
+    public static string SummaryMarker => Get(nameof(SummaryMarker));
+
+    public static string SummaryTitle => Get(nameof(SummaryTitle));
+
+    public static string ShowSummary => Get(nameof(ShowSummary));
+
     public static string SaveImageAs => Get(nameof(SaveImageAs));
 
     public static string SaveToPhotos => Get(nameof(SaveToPhotos));

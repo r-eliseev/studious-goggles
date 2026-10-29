@@ -31,6 +31,7 @@ public class ChatPageModelTests
     private readonly ISeedSource _seeds = Substitute.For<ISeedSource>();
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
     private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
+    private readonly IConversationSummaryRepository _summaries = Substitute.For<IConversationSummaryRepository>();
     private readonly INavigationService _navigation = Substitute.For<INavigationService>();
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly IMainThread _mainThread = Substitute.For<IMainThread>();
@@ -146,7 +147,7 @@ public class ChatPageModelTests
         _sessionService = new SessionService(
             _sessionRepository, _messageRepository, _runRepository, _files,
             new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),
-            time);
+            time, _summaries);
         _attachments = new AttachmentService(_chatAttachments, _files, time);
         _descriptions = new ImageDescriptionService(
             _sessionRepository, _runRepository, ProviderDoubles.Router(chat: _chat),
@@ -411,6 +412,61 @@ public class ChatPageModelTests
 
         await _chat.Received(1).CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task OnAppearingAsync_WithSummary_InsertsMarkerAfterCoveredMessage()
+    {
+        var first = new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.User, Text = "first", CreatedAt = Now.AddMinutes(-3) };
+        var covered = new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.Assistant, Text = "covered", CreatedAt = Now.AddMinutes(-2) };
+        var later = new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.User, Text = "later", CreatedAt = Now.AddMinutes(-1) };
+        StoreMessage(first);
+        StoreMessage(covered);
+        StoreMessage(later);
+        _summaries.GetAsync(_session.Id, Arg.Any<CancellationToken>()).Returns(NewSummary(covered.Id));
+
+        await _model.OnAppearingAsync();
+
+        Assert.IsType<SummaryMarkerViewModel>(_model.Items[2]);
+        Assert.Equal("later", Assert.IsType<MessageItemViewModel>(_model.Items[3]).Text);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_NoSummary_NoMarker()
+    {
+        StoreMessage(new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.User, Text = "hi", CreatedAt = Now });
+
+        await _model.OnAppearingAsync();
+
+        Assert.DoesNotContain(_model.Items, item => item is SummaryMarkerViewModel);
+    }
+
+    [Fact]
+    public async Task ShowSummary_AlertsSummaryWithModelAndPrice()
+    {
+        var covered = Guid.NewGuid();
+        StoreMessage(new ChatMessage { Id = covered, SessionId = _session.Id, Role = ChatRole.User, Text = "hi", CreatedAt = Now });
+        _summaries.GetAsync(_session.Id, Arg.Any<CancellationToken>()).Returns(NewSummary(covered));
+        await _model.OnAppearingAsync();
+        var marker = Assert.IsType<SummaryMarkerViewModel>(_model.Items[1]);
+
+        await marker.ShowCommand.ExecuteAsync(null);
+
+        await _dialogs.Received(1).AlertAsync(
+            AppResources.SummaryTitle,
+            Arg.Is<string>(text => text.StartsWith("The user wants a red fox.", StringComparison.Ordinal)
+                && text.Contains("vendor/assistant", StringComparison.Ordinal)
+                && text.Contains("$0.002", StringComparison.Ordinal)));
+    }
+
+    private static ConversationSummary NewSummary(Guid coversUpTo) => new()
+    {
+        SessionId = Guid.Empty,
+        Text = "The user wants a red fox.",
+        CoversUpToMessageId = coversUpTo,
+        Model = new ModelRef(ProviderIds.OpenRouter, "vendor/assistant"),
+        CostUsd = 0.002m,
+        CreatedAt = Now,
+    };
 
     [Fact]
     public async Task OnAppearingAsync_SetsCurrentSession()

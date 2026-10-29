@@ -97,6 +97,21 @@
                         </Border>
                     </DataTemplate>
 
+                    <!-- The thin line after the last message the summary covers (task 084). -->
+                    <DataTemplate DataType="pm:SummaryMarkerViewModel" x:DataType="pm:SummaryMarkerViewModel">
+                        <Grid ColumnDefinitions="*,Auto,*" Margin="0,8">
+                            <Border Grid.Column="0" Height="1" Background="{DynamicResource IgLineBrush}" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="8,0">
+                                <TextBlock Classes="meta" Text="{Binding Text}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                <Button Classes="ghost small"
+                                        Command="{Binding ShowCommand}"
+                                        Content="{Binding ShowText}"
+                                        AutomationProperties.Name="{Binding ShowText}" />
+                            </StackPanel>
+                            <Border Grid.Column="2" Height="1" Background="{DynamicResource IgLineBrush}" VerticalAlignment="Center" />
+                        </Grid>
+                    </DataTemplate>
+
                     <DataTemplate DataType="pm:RunItemViewModel" x:DataType="pm:RunItemViewModel">
                         <Border BorderThickness="{DynamicResource IgRunBorderThickness}"
                                 BorderBrush="{DynamicResource IgLineBrush}"

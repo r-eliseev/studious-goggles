@@ -1,8 +1,8 @@
 # Контекст ассистента: бюджет и сводка истории
 
-Статус: в работе
+Статус: реализовано
 Допустимые статусы: черновик, в работе, реализовано
-Код: `ImageGen.Core/Services/AssistantService.cs` (сборка запроса), будущие `ImageGen.Core/Context/*` (задачи 082–084)
+Код: `ImageGen.Core/Services/AssistantService.cs` (сборка запроса, C1.3), `ImageGen.Core/Context/*` (бюджет, выбор сообщений, поправка, `SummaryPlanner`), `ImageGen.Core/Services/ConversationSummaryService.cs` (сводка в фоне, C3), `ImageGen.Data/Repositories/ConversationSummaryRepository.cs` (C3.4), `ImageGen.Presentation/PageModels/{ChatPageModel,SummaryMarkerViewModel}.cs` и шаблоны ленты в `ImageGen.Avalonia/Views/ChatView.axaml`, `ImageGen.Maui/Pages/ChatPage.xaml` (C4).
 
 Решения владельца — 2026-10-28, ответы на вопросы в задаче 027 и в чате. ADR 0015. Заменяет S2.6 в `chat-sessions.md` («последние 20 сообщений»).
 
