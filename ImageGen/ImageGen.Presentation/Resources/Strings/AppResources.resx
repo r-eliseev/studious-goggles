@@ -78,6 +78,24 @@
   <data name="RunsCountFormat" xml:space="preserve">
     <value>{0} runs</value>
   </data>
+  <data name="SearchSessions" xml:space="preserve">
+    <value>Search sessions</value>
+  </data>
+  <data name="ClearSearch" xml:space="preserve">
+    <value>Clear search</value>
+  </data>
+  <data name="NothingFound" xml:space="preserve">
+    <value>Nothing found</value>
+  </data>
+  <data name="SearchInTitle" xml:space="preserve">
+    <value>title</value>
+  </data>
+  <data name="SearchInPrompt" xml:space="preserve">
+    <value>prompt</value>
+  </data>
+  <data name="SearchInDescription" xml:space="preserve">
+    <value>description</value>
+  </data>
   <data name="ChatPlaceholder" xml:space="preserve">
     <value>Describe the image you want (Enter — send, Shift+Enter — new line)</value>
   </data>

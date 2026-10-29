@@ -49,6 +49,10 @@ public sealed partial class SessionItemViewModel : ObservableObject
         ? AppResources.RunsCountOne
         : string.Format(CultureInfo.CurrentCulture, AppResources.RunsCountFormat, RunCount);
 
+    /// <summary>While a search is shown: «<where matched>: <fragment>», for example «prompt: red fox…». Empty otherwise.</summary>
+    [ObservableProperty]
+    private string _searchLine = "";
+
     /// <summary>True for the session whose chat is on screen; the list marks it.</summary>
     [ObservableProperty]
     private bool _isCurrent;

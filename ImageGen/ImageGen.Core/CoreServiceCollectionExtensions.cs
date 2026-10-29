@@ -2,6 +2,7 @@ using ImageGen.Core.Context;
 using ImageGen.Core.Http;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
+using ImageGen.Core.Search;
 using ImageGen.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -49,6 +50,7 @@ public static class CoreServiceCollectionExtensions
         services.AddSingleton<ChatModelCatalogService>();
         services.AddSingleton<AssistantService>();
         services.AddSingleton<TokenCorrection>();
+        services.AddSingleton<SessionSearchService>();
 
         return services;
     }

@@ -15,22 +15,38 @@
         </Style>
     </UserControl.Styles>
     <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
-            <Button Classes="primary"
-                    Command="{Binding NewSessionCommand}"
-                    HorizontalAlignment="Stretch"
-                    AutomationProperties.Name="{markup:Res NewSession}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <TextBlock Classes="icon" Text="{x:Static glyphs:IconGlyphs.Plus}" />
-                    <TextBlock Text="{markup:Res NewSession}" />
-                </StackPanel>
-            </Button>
+            <StackPanel Spacing="8">
+                <Button Classes="primary"
+                        Command="{Binding NewSessionCommand}"
+                        HorizontalAlignment="Stretch"
+                        AutomationProperties.Name="{markup:Res NewSession}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Classes="icon" Text="{x:Static glyphs:IconGlyphs.Plus}" />
+                        <TextBlock Text="{markup:Res NewSession}" />
+                    </StackPanel>
+                </Button>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                    <TextBox x:Name="SearchBox"
+                             Text="{Binding SearchText, Mode=TwoWay}"
+                             Watermark="{markup:Res SearchSessions}"
+                             AutomationProperties.Name="{markup:Res SearchSessions}" />
+                    <Button Grid.Column="1"
+                            Classes="ghost icon"
+                            Command="{Binding ClearSearchCommand}"
+                            IsVisible="{Binding IsSearchActive}"
+                            VerticalAlignment="Center"
+                            AutomationProperties.Name="{markup:Res ClearSearch}">
+                        <TextBlock Classes="icon" Text="{x:Static glyphs:IconGlyphs.Close}" />
+                    </Button>
+                </Grid>
+            </StackPanel>
 
             <ProgressBar Grid.Row="1"
                          IsIndeterminate="True"
                          IsVisible="{Binding IsBusy}"
                          AutomationProperties.Name="{markup:Res SessionsTitle}" />
 
-            <ScrollViewer Grid.Row="2">
+            <ScrollViewer Grid.Row="2" IsVisible="{Binding !IsSearchActive}">
                 <StackPanel Spacing="6">
                     <TextBlock Classes="section" Text="{markup:Res SessionsToday}" Margin="4,8,0,0" />
                     <ItemsControl ItemsSource="{Binding Today}">
@@ -98,6 +114,31 @@
                                         <TextBlock Classes="icon" Text="{x:Static glyphs:IconGlyphs.Delete}" />
                                     </Button>
                                 </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+
+            <ScrollViewer Grid.Row="2" IsVisible="{Binding IsSearchActive}">
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="meta"
+                               Text="{markup:Res NothingFound}"
+                               IsVisible="{Binding HasNoResults}"
+                               Margin="4,8,0,0" />
+                    <ItemsControl ItemsSource="{Binding SearchResults}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="pm:SessionItemViewModel">
+                                <Button Classes="ghost"
+                                        Command="{Binding OpenCommand}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left"
+                                        AutomationProperties.Name="{Binding Title}">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Classes="meta" Text="{Binding SearchLine}" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </Button>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

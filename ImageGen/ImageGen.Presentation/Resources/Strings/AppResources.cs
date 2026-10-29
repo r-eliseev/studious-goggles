@@ -55,6 +55,18 @@ public static class AppResources
 
     public static string RunsCountOne => Get(nameof(RunsCountOne));
 
+    public static string SearchSessions => Get(nameof(SearchSessions));
+
+    public static string ClearSearch => Get(nameof(ClearSearch));
+
+    public static string NothingFound => Get(nameof(NothingFound));
+
+    public static string SearchInTitle => Get(nameof(SearchInTitle));
+
+    public static string SearchInPrompt => Get(nameof(SearchInPrompt));
+
+    public static string SearchInDescription => Get(nameof(SearchInDescription));
+
     /// <summary>Format string: the number of runs goes in <c>{0}</c>.</summary>
     public static string RunsCountFormat => Get(nameof(RunsCountFormat));
 

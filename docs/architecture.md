@@ -35,6 +35,8 @@ ImageGen/
     AnthropicCompatible/           AnthropicCompatibleClient (только чат, Messages API)
     Services/                      ApiKeyService, ModelCatalogService, SessionService, TimelineOrdering, GenerationService,
                                    AssistantService, AssistantPrompts, ISeedSource, RandomSeedSource
+    Search/                        SessionSearchService (поиск по названиям, промптам и описаниям), FuzzyMatcher (нечёткие
+                                   совпадения слов), ISearchTextSource (тексты всех сессий; реализация в Data)
     Serialization/                 CoreJsonContext
     CoreServiceCollectionExtensions.cs   AddImageGenCore()
   ImageGen.Data/                   net10.0, Microsoft.Data.Sqlite: SqliteDatabase, Migrations, репозитории, FileImageStore,

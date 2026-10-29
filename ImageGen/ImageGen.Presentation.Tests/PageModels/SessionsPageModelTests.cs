@@ -3,6 +3,7 @@ using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
+using ImageGen.Core.Search;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
 using ImageGen.Data;
@@ -323,6 +324,89 @@ public class SessionsPageModelTests : IDisposable
         await _sessionRepository.DidNotReceive().UpdateAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task Search_ShowsSessionWithSnippetOfMatchingText()
+    {
+        var fox = NewSession("Animals", DateTimeOffset.UtcNow);
+        var boat = NewSession("Boats", DateTimeOffset.UtcNow.AddMinutes(-1));
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([fox, boat]);
+        _searchTexts.ListAllAsync(Arg.Any<CancellationToken>()).Returns(
+        [
+            new SearchText(fox.Id, SearchTextKind.Prompt, "red fox in snow"),
+            new SearchText(boat.Id, SearchTextKind.Title, "Boats"),
+        ]);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        model.SearchText = "fox";
+        await WaitUntilAsync(() => model.SearchResults.Count > 0);
+
+        var hit = Assert.Single(model.SearchResults);
+        Assert.Same(model.Sessions[0], hit);
+        Assert.Equal("prompt: red fox in snow", hit.SearchLine);
+        Assert.False(model.HasNoResults);
+    }
+
+    [Fact]
+    public async Task Search_Debounced_OnlyLastQueryRuns()
+    {
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([NewSession("Fox", DateTimeOffset.UtcNow)]);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        model.SearchText = "f";
+        model.SearchText = "fo";
+        model.SearchText = "fox";
+        await Task.Delay(SessionsPageModel.SearchDebounce + TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
+
+        await _searchTexts.Received(1).ListAllAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Search_NoHits_ShowsNothingFound()
+    {
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([NewSession("Fox", DateTimeOffset.UtcNow)]);
+        _searchTexts.ListAllAsync(Arg.Any<CancellationToken>()).Returns([]);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        model.SearchText = "zebra";
+        await WaitUntilAsync(() => model.HasNoResults);
+
+        Assert.Empty(model.SearchResults);
+        Assert.False(model.IsSearching);
+    }
+
+    [Fact]
+    public async Task ClearSearch_EmptiesResultsAndSnippets()
+    {
+        var fox = NewSession("Fox", DateTimeOffset.UtcNow);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([fox]);
+        _searchTexts.ListAllAsync(Arg.Any<CancellationToken>()).Returns([new SearchText(fox.Id, SearchTextKind.Title, "Fox")]);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+        model.SearchText = "fox";
+        await WaitUntilAsync(() => model.SearchResults.Count > 0);
+
+        model.ClearSearchCommand.Execute(null);
+
+        Assert.Empty(model.SearchResults);
+        Assert.False(model.HasNoResults);
+        Assert.Equal("", model.Sessions[0].SearchLine);
+        Assert.Single(model.Sessions);
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        for (var attempt = 0; attempt < 300 && !condition(); attempt++)
+        {
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
+        Assert.True(condition());
+    }
+
+    private readonly ISearchTextSource _searchTexts = Substitute.For<ISearchTextSource>();
     private readonly CurrentSessionTracker _tracker = new();
 
     private SessionsPageModel CreateModel(TimeProvider? time = null)
@@ -330,7 +414,7 @@ public class SessionsPageModelTests : IDisposable
         var catalog = new ChatModelCatalogService(ProviderDoubles.Router(), NullLogger<ChatModelCatalogService>.Instance);
         var sessions = new SessionService(_sessionRepository, Substitute.For<IChatMessageRepository>(), _runs, _files, catalog, TimeProvider.System);
         var apiKeys = new ApiKeyService(ProviderDoubles.Router(_provider), _secrets, NullLogger<ApiKeyService>.Instance);
-        return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs, time ?? TimeProvider.System, _tracker);
+        return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs, time ?? TimeProvider.System, _tracker, new SessionSearchService(_searchTexts));
     }
 
     private static Session NewSession(string title, DateTimeOffset updatedAt) => new()

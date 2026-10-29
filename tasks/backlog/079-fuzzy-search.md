@@ -1,8 +1,8 @@
 ---
 id: 079
-status: in-progress
-assignee: claude-536f
-claimed: 2026-10-29T05:24:35Z
+status: done
+assignee:
+claimed:
 created: 2026-10-28
 ---
 
@@ -58,6 +58,24 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Search/*` (новые), `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data/Repositories/SearchTextSource.cs` (новый), `ImageGen/ImageGen.Data/DataServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Presentation/PageModels/{SessionsPageModel,SessionItemViewModel}.cs`, строки, `ImageGen/ImageGen.Avalonia/Views/SessionsListView.*`, `ImageGen/ImageGen.Maui/Controls/SessionsListView.*`, тесты, `docs/architecture.md` (модуль поиска в ядре)
 
 ## Отчёт
+
+Сделано по плану (`claude-536f`, 2026-10-29). Тесты ядра написаны до кода (падающий прогон: типов нет); в остальных слоях тесты и код писались в одном шаге.
+
+- Core, `ImageGen.Core/Search/`: `SearchTextKind`, `SearchText`, `SessionSearchHit`, `ISearchTextSource`, `FuzzyMatch`, `FuzzyMatcher` (нормализация регистра, токены по не-буквам и не-цифрам, префикс 3, подстрока 2, опечатка на одну букву 1 — только для слов от 4 букв), `SessionSearchService` (веса Title ×3, Prompt ×2, Description ×1; один лучший хит на сессию; фрагмент до 80 символов с «…»). Регистрация в `AddImageGenCore`. Тесты: `FuzzyMatcherTests` (8), `SessionSearchServiceTests` (4).
+- Data: `SearchTextSource` — один запрос `UNION ALL` по названиям, промптам прогонов и генераций и описаниям картинок, без конкатенации строк. Регистрация в `AddImageGenData`. Тест `SearchTextSourceTests.ListAll_ReturnsTitlesPromptsAndDescriptions`.
+- Presentation: `SessionsPageModel` получил `SearchText`, `SearchResults`, `IsSearching`, `HasNoResults`, `ClearSearchCommand`; дебаунс 250 мс через `TimeProvider` (отменяется предыдущий запрос); при переполнении очереди поиск выполняется только для последнего текста. `SessionItemViewModel.SearchLine` = «<где нашли>: <фрагмент>». Строки: `SearchSessions`, `ClearSearch`, `NothingFound`, `SearchInTitle`, `SearchInPrompt`, `SearchInDescription`. Тесты: 4 новых (результат с фрагментом, дебаунс, ничего не найдено, очистка).
+- Avalonia: поле поиска с кнопкой очистки; при непустом запросе вместо групп показывается список результатов с «prompt: …». Тест `Search_FindsSessionByPromptWithTypo_ShowsSnippet` использует реальную базу: «lighthose» находит сессию с промптом «lighthouse at dusk».
+- MAUI: `SearchBar` и список результатов; сборка `-f net10.0-android` проходит.
+- `docs/architecture.md`: модуль `Search/` в ядре.
+
+Проверено: Core 327/327, Data 65/65, Presentation 234/234, Avalonia 105/105 (2 пропущены, как и раньше), `dotnet format --verify-no-changes` по всем изменённым проектам чистый, MAUI Android собирается.
+
+Решения, которые отличаются от плана или требуют внимания:
+- Сортировка «при равенстве — по времени обновления» сделана на уровне страницы: список сессий уже отсортирован по времени, поэтому при равном счёте сессия выше, если она свежее (ядро времени не знает).
+- Опечатка: только один символ и только для слов от 4 букв (в плане было «≤ 1» без уточнения длины слов; короткие слова не ищутся с опечаткой, чтобы не находить лишнее).
+- Фрагмент считается с учётом многоточий: всего не больше 80 символов.
+- `FocusSearch()` из плана не добавлен: он нужен задаче 073 и будет сделан там.
+- Ручная проверка поиска на MAUI (телефон и Windows) — в задаче 016.
 
 ## Комментарии
 

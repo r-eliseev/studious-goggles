@@ -7,15 +7,20 @@
              x:Class="ImageGen.Maui.Controls.SessionsListView"
              x:DataType="pm:SessionsPageModel">
     <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
-        <Button StyleClass="primary"
-                Command="{Binding NewSessionCommand}"
-                Text="{x:Static strings:AppResources.NewSession}"
-                HorizontalOptions="Fill"
-                SemanticProperties.Description="{x:Static strings:AppResources.NewSession}">
-            <Button.ImageSource>
-                <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Plus}" Color="{DynamicResource IgOnAccentColor}" Size="16" />
-            </Button.ImageSource>
-        </Button>
+        <VerticalStackLayout Spacing="8">
+            <Button StyleClass="primary"
+                    Command="{Binding NewSessionCommand}"
+                    Text="{x:Static strings:AppResources.NewSession}"
+                    HorizontalOptions="Fill"
+                    SemanticProperties.Description="{x:Static strings:AppResources.NewSession}">
+                <Button.ImageSource>
+                    <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Plus}" Color="{DynamicResource IgOnAccentColor}" Size="16" />
+                </Button.ImageSource>
+            </Button>
+            <SearchBar Text="{Binding SearchText, Mode=TwoWay}"
+                       Placeholder="{x:Static strings:AppResources.SearchSessions}"
+                       SemanticProperties.Description="{x:Static strings:AppResources.SearchSessions}" />
+        </VerticalStackLayout>
 
         <ActivityIndicator Grid.Row="1"
                            IsRunning="{Binding IsBusy}"
@@ -23,7 +28,7 @@
                            HorizontalOptions="Start"
                            AutomationProperties.IsInAccessibleTree="False" />
 
-        <ScrollView Grid.Row="2">
+        <ScrollView Grid.Row="2" IsVisible="{Binding IsSearchInactive}">
             <VerticalStackLayout Spacing="6">
                 <Label StyleClass="section" Text="{x:Static strings:AppResources.SessionsToday}" Margin="4,8,0,0" />
                 <VerticalStackLayout BindableLayout.ItemsSource="{Binding Today}">
@@ -119,6 +124,31 @@
                                     </Button>
                                 </Grid>
                             </SwipeView>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <ScrollView Grid.Row="2" IsVisible="{Binding IsSearchActive}">
+            <VerticalStackLayout Spacing="6">
+                <Label StyleClass="meta"
+                       Text="{x:Static strings:AppResources.NothingFound}"
+                       IsVisible="{Binding HasNoResults}"
+                       Margin="4,8,0,0" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding SearchResults}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="pm:SessionItemViewModel">
+                            <VerticalStackLayout Spacing="2">
+                                <Button StyleClass="ghost"
+                                        Command="{Binding OpenCommand}"
+                                        HorizontalOptions="Fill"
+                                        Text="{Binding Title}"
+                                        SemanticProperties.Description="{Binding Title}" />
+                                <Label StyleClass="meta"
+                                       Margin="12,0,0,0"
+                                       Text="{Binding SearchLine}" />
+                            </VerticalStackLayout>
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
                 </VerticalStackLayout>
