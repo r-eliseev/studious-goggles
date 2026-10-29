@@ -5,17 +5,17 @@
 - **Windows-машина** — полная среда, включая цель Windows у MAUI. Описание: `docs/knowledge/windows-machine.md`.
 - **Облачная сессия Claude Code** (Linux-контейнер) — без цели Windows у MAUI, с целью Android. Описание: `docs/knowledge/claude-cloud-session.md`.
 - **Kiro Web** (браузерная сессия, Linux) — без цели Windows у MAUI, Android только собирается (эмулятора нет). Корень read-only, инструменты в `/projects/sandbox/.toolcache`. Описание: `docs/knowledge/kiro-web-session.md`.
-- **VPS** (постоянная Linux-машина) — без цели Windows у MAUI, с целью Android; окружение переживает сессию. Описание: `docs/knowledge/vps-session.md`.
+- **VPS** (постоянная Linux-машина) — без цели Windows у MAUI, с целью Android; окружение переживает сессию. Собирает и тестирует все Linux-проекты, включая Avalonia (headless-тесты и запуск окна под `Xvfb`). Описание: `docs/knowledge/vps-session.md`.
 
 Пункты с пометкой «не проверено» ещё не проверялись в реальной среде.
 
 ## Что где собирается
 | Проект | Windows-машина | Облачная сессия (Linux) | Kiro Web (Linux) | VPS (Linux) |
 |---|---|---|---|---|
-| `ImageGen.Core`, `ImageGen.Core.Tests` | да | да, проверено | да, проверено (59/59 тестов) | да, проверено (193/193 тестов) |
-| `ImageGen.Presentation`, `ImageGen.Presentation.Tests` | да | да, проверено (112/112 тестов) | не проверено | не проверено |
-| `ImageGen.Avalonia`, `ImageGen.Avalonia.Tests` (десктоп, headless) | да, проверено 2026-10-28 (45 тестов, 1 пропущен — Secret Service; приложение запускается) | да, проверено (4/4 тестов; запуск окна без дисплея не проверен) | не проверено | не проверено |
-| `ImageGen.Data`, `ImageGen.Data.Tests` | да | да, проверено | да, проверено (16/16 тестов) | да, проверено (38/38 тестов) |
+| `ImageGen.Core`, `ImageGen.Core.Tests` | да | да, проверено | да, проверено (59/59 тестов) | да, проверено (356/356 тестов) |
+| `ImageGen.Presentation`, `ImageGen.Presentation.Tests` | да | да, проверено (112/112 тестов) | не проверено | да, проверено (277/277 тестов) |
+| `ImageGen.Avalonia`, `ImageGen.Avalonia.Tests` (десктоп, headless) | да, проверено 2026-10-28 (45 тестов, 1 пропущен — Secret Service; приложение запускается) | да, проверено (4/4 тестов; запуск окна без дисплея не проверен) | не проверено | да, проверено (118/120 тестов, 2 пропущены — Secret Service и DPAPI); приложение запускается под `Xvfb` |
+| `ImageGen.Data`, `ImageGen.Data.Tests` | да | да, проверено | да, проверено (16/16 тестов) | да, проверено (70/70 тестов) |
 | `ImageGen.Maui`, цель Android (`net10.0-android`) | да | да, проверено (APK собран на шаблоне) | сборка да (не проверено на проекте); запуск/отладка нет — нет эмулятора, `adb`, `/dev/kvm` | сборка да, проверено (APK собран на проекте); запуск/отладка — только на реальном устройстве по сети через `adb connect`, эмулятор не работает (нет KVM) |
 | `ImageGen.Maui`, цель Windows (`net10.0-windows…`) | да | нет, проверено (XAML-компилятор только под Windows) | нет, проверено (как в облачной сессии) | сборка да, проверено, но через Wine и неофициально (1 ч 45 мин); запуск и отладка нет — WinUI 3 под Wine не работает |
 

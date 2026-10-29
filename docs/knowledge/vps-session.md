@@ -8,11 +8,14 @@
 
 ## Что работает (проверено)
 - **.NET SDK 10.0.403** — та же версия, что в `docs/knowledge/claude-cloud-session.md`. Ставится в `/usr/share/dotnet` (в облачной сессии был `~/.dotnet`).
-- **Ядро и хранилище:** `dotnet build` и `dotnet test` проходят. На `main` от 2026-10-28: Core.Tests 193 теста, Data.Tests 38 тестов, все проходят.
-- **`dotnet format --verify-no-changes`** проходит по всем пяти проектам: Core, Core.Tests, Data, Data.Tests, Maui.
+- **Ядро и хранилище:** `dotnet build` и `dotnet test` проходят. На `main` от 2026-10-29: Core.Tests 356 тестов, Data.Tests 70 — все проходят.
+- **Presentation:** `ImageGen.Presentation` и `ImageGen.Presentation.Tests` собираются и тестируются на VPS: 277/277 тестов.
+- **Avalonia:** `ImageGen.Avalonia` собирается, headless-тесты проходят — 118 из 120, два пропущены (Secret Service: нужен сессионный keyring; DPAPI — только Windows). **Приложение запускается** под виртуальным дисплеем `Xvfb` (см. ниже).
+- **`dotnet format --verify-no-changes`** проходит по всем проектам: Core, Core.Tests, Data, Data.Tests, Presentation, Presentation.Tests, Avalonia, Avalonia.Tests, Maui.
 - **MAUI, цель Android:** `dotnet build -f net10.0-android` собирает APK (`com.companyname.imagegen.maui.apk` и `-Signed.apk`), 0 предупреждений. Нагрузка `maui-android` установлена.
 - **Android SDK:** command-line tools с `dl.google.com`, лицензии приняты, `platforms;android-36`, `build-tools;36.0.0`, `platform-tools` 37.0.1, пакет `emulator`.
 - **JDK 21** (openjdk-21-jdk-headless, `/usr/lib/jvm/java-21-openjdk-amd64`) — подходит для MAUI Android.
+- **Xvfb** — виртуальный дисплей для запуска окна Avalonia на машине без экрана.
 - **Docker:** 29.9.2, демон запущен, overlayfs, cgroup v2. В отличие от облачной сессии, **Docker Hub отвечает**: анонимный `docker pull` проходит (проверено на `hello-world`).
 - **GitHub:** `gh` 2.103.3 аутентифицирован через OAuth (device flow), токен со скоупами `repo`, `read:org`, `gist`; `gh auth setup-git` настроен, HTTPS-remote работает по токену. Git 2.43.0, личность `r-eliseev <47721526+r-eliseev@users.noreply.github.com>`.
 - **Харнес:** `scripts/check.sh` проходит.
@@ -84,6 +87,22 @@ dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android -t:R
 
 Проверено на этой машине: `adb` 1.0.41 / 37.0.1 установлен, сервер поднимается на `127.0.0.1:5037`. **Сам деплой на реальное устройство не проверялся** — устройства под рукой не было.
 
+## Запуск окна Avalonia на VPS (виртуальный дисплей)
+
+Машина без экрана, но окно оболочки запускается: нужен `Xvfb` и переменная `DISPLAY`.
+
+```bash
+apt-get install -y xvfb
+Xvfb :99 -screen 0 1280x900x24 &
+export DISPLAY=:99
+export IMAGEGEN_DATA_DIR=~/igp-avalonia-data     # второй профиль, папка данных
+dotnet run --project ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj -c Release
+```
+
+Проверено 2026-10-29: приложение стартует, создаёт БД (`imagegen.db`, схема версии 8 — миграции применяются), пишет журнал в `$IMAGEGEN_DATA_DIR/logs/imagegen-yyyyMMdd.log` первой строкой с версией, оболочкой, ОС, папками данных и логов, переходит на экран сессий и экран ключа. Без `IMAGEGEN_DATA_DIR` используется папка данных по умолчанию (`~/.local/share/ImageGen`, см. `docs/knowledge/dev-environment.md`, раздел «Логи»).
+
+Оговорка: это запуск, а не ручная проверка интерфейса — экран не перед глазами. Глянуть на UI можно снимком (например, `import`/`xwd` из `x11-apps`), но кликать по окну по-прежнему нельзя. Задача 046 (ручная проверка Avalonia на Linux-рабочем столе) на VPS по-прежнему за человеком.
+
 ## Как поставить (при пересоздании машины)
 
 ```bash
@@ -96,6 +115,9 @@ export DOTNET_ROOT=/usr/share/dotnet PATH=$DOTNET_ROOT:$DOTNET_ROOT/tools:$PATH
 # JDK 21
 apt-get install -y openjdk-21-jdk-headless
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+
+# Виртуальный дисплей для запуска окна Avalonia (машина без экрана)
+apt-get install -y xvfb
 
 # Android SDK
 mkdir -p ~/android-sdk/cmdline-tools && cd ~/android-sdk
