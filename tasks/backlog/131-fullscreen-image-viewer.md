@@ -6,10 +6,10 @@ claimed:
 created: 2026-10-29
 ---
 
-# Открывать изображение на всю область приложения
+# Добавить modal image viewer и перелистывание
 
 ## Описание
-Решение владельца 2026-10-29: click/tap по готовой картинке открывает fullscreen viewer. Единый контракт этой задачи: viewer закрывает всю клиентскую область приложения и app chrome, но не включает OS immersive mode и может оставлять system bars/titlebar ОС. F6.2 также требует перелистывание внутри run; zoom/pan/compare остаются 023.
+Решение владельца 2026-10-29: click/tap по готовой картинке открывает viewer. Эта задача создаёт modal viewer на всю клиентскую область, navigation/accessibility/loading. Настоящий OS fullscreen/immersive state добавляет зависимая task137. F6.2 перелистывание внутри run здесь; zoom/pan/compare остаются 023.
 
 Зависит от: 088, 097, 098, 133.
 Среда: Linux или Windows; ручная проверка Android/desktop.
@@ -27,7 +27,7 @@ created: 2026-10-29
 ## Анализ
 Shared `IImageViewerService` лучше INavigationService/IDialogService: MAUI PushModalAsync, Avalonia undecorated owned modal matching owner client bounds. Оба закрывают app chrome, но не меняют OS fullscreen/system bars. ChatPageModel знает run/cards; GenerationItemViewModel constructor не расширять. Task133 раньше для accessible dimensions.
 
-Task023 после выделения оставляет только F6.3 compare и зависит от 131.
+Task023 после выделения оставляет F6.3 compare и зависит от OS fullscreen task137. Task131 intentionally does not claim full owner requirement until137.
 
 ## План
 Для Haiku/Luna: no zoom/pan/compare. TDD shared command first, shell UI second.
@@ -41,7 +41,7 @@ Task023 после выделения оставляет только F6.3 compa
 7. Avalonia card successful image wrapped in focusable Button with command; placeholder no trigger.
 8. Resources: Open/Close/Previous/Next/position/missing-unreadable. Label includes model, seed, dimensions from133, N/count.
 9. Tests Avalonia viewer navigation/keys/background-vs-image/focus/missing and delayed load then next/close stale result ignored; composition registration. Presentation service fake proves file load/decode is not invoked inside main-thread dispatcher callback. MAUI structural markup AspectFit/bindings/semantics; manual system back/Escape/focus.
-10. Edit task023 scope: remove F6.2/fullscreen, retain compare F6.3/metadata criterion, add dependency 131.
+10. Edit task023 scope: remove F6.2/viewer, retain compare F6.3/metadata criterion, dependency points to 137 for completed fullscreen requirement.
 
 ### Проверка
 ```
