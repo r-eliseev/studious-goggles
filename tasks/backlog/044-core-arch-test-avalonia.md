@@ -1,8 +1,8 @@
 ---
 id: 044
 status: planned
-assignee:
-claimed:
+assignee: claude-536f
+claimed: 2026-10-29T06:28:12Z
 created: 2026-10-28
 ---
 
