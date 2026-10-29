@@ -205,6 +205,7 @@ public class ChatPageModelTests
             _filePicker,
             _descriptions,
             _clipboard,
+            Substitute.For<IImageSaver>(),
             _tracker,
             NewModelsPane,
             NewParametersPane);
@@ -357,7 +358,7 @@ public class ChatPageModelTests
     public void ApplyQueryAttributes_MissingSessionId_Throws()
     {
         var model = new ChatPageModel(
-            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard, _tracker, NewModelsPane, NewParametersPane);
+            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard, Substitute.For<IImageSaver>(), _tracker, NewModelsPane, NewParametersPane);
 
         Assert.Throws<ArgumentException>(() => model.ApplyQueryAttributes(new Dictionary<string, object>()));
     }

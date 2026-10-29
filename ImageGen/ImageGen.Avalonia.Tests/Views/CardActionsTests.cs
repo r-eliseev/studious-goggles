@@ -74,6 +74,7 @@ public class CardActionsTests
                 AppResources.ActionDescribeImage,
                 AppResources.ActionPromptFromImage,
                 AppResources.CopyPrompt,
+                AppResources.SaveImageAs,
                 AppResources.OtherModel,
                 AppResources.ErrorDetailsTitle,
             },
@@ -162,6 +163,7 @@ public class CardActionsTests
             Substitute.For<IImageFileStore>(),
             Substitute.For<IDialogService>(),
             Substitute.For<IClipboardService>(),
+            SaverWithLabel(),
             _ => Task.CompletedTask,
             _ => Task.CompletedTask,
             _ => Task.CompletedTask,
@@ -171,4 +173,11 @@ public class CardActionsTests
 
     private static CopyTextAction Copy() =>
         new(Substitute.For<IClipboardService>(), Substitute.For<IMainThread>(), "text");
+
+    private static IImageSaver SaverWithLabel()
+    {
+        var saver = Substitute.For<IImageSaver>();
+        saver.ActionLabel.Returns(AppResources.SaveImageAs);
+        return saver;
+    }
 }

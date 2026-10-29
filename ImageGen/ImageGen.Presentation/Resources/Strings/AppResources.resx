@@ -96,6 +96,24 @@
   <data name="SearchInDescription" xml:space="preserve">
     <value>description</value>
   </data>
+  <data name="Saved" xml:space="preserve">
+    <value>Saved</value>
+  </data>
+  <data name="SavePermissionDenied" xml:space="preserve">
+    <value>ImageGen has no permission to save images. Allow it in the system settings.</value>
+  </data>
+  <data name="SaveFailed" xml:space="preserve">
+    <value>Could not save the image.</value>
+  </data>
+  <data name="SaveImageAs" xml:space="preserve">
+    <value>Save image as…</value>
+  </data>
+  <data name="SaveToPhotos" xml:space="preserve">
+    <value>Save to Photos</value>
+  </data>
+  <data name="SaveToGallery" xml:space="preserve">
+    <value>Save to gallery</value>
+  </data>
   <data name="ChatPlaceholder" xml:space="preserve">
     <value>Describe the image you want (Enter — send, Shift+Enter — new line)</value>
   </data>

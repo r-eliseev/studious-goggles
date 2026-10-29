@@ -56,6 +56,7 @@ public static class AppServices
         services.AddSingleton<IFilePickerService>(new AvaloniaFilePickerService(MainWindowOwner));
         services.AddSingleton<AppearanceService>();
         services.AddSingleton<IClipboardService>(new AvaloniaClipboardService(MainWindowOwner));
+        services.AddSingleton<IImageSaver>(new AvaloniaImageSaver(MainWindowOwner));
         services.AddSingleton<ICurrentSessionTracker, CurrentSessionTracker>();
 
         services.AddSingleton(sp => new PageRoutes()

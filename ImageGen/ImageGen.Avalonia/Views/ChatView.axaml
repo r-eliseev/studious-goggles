@@ -139,6 +139,7 @@
                                                         <MenuItem Header="{markup:Res ActionDescribeImage}" Command="{Binding DescribeCommand}" />
                                                         <MenuItem Header="{markup:Res ActionPromptFromImage}" Command="{Binding DescribePromptCommand}" />
                                                         <MenuItem Header="{markup:Res CopyPrompt}" Command="{Binding CopyPromptCommand}" />
+                                                        <MenuItem Header="{markup:Res SaveImageAs}" Command="{Binding SaveCommand}" IsVisible="{Binding HasImage}" />
                                                         <MenuItem Header="{markup:Res OtherModel}" Command="{Binding OtherModelCommand}" IsVisible="{Binding IsFailedOrFiltered}" />
                                                         <MenuItem Header="{markup:Res ErrorDetailsTitle}" Command="{Binding DetailsCommand}" IsVisible="{Binding IsFailed}" />
                                                     </ContextMenu>
@@ -289,6 +290,13 @@
                                                                 AutomationProperties.Name="{markup:Res CopyPrompt}">
                                                             <TextBlock Classes="icon" Text="&#xE09E;" />
                                                         </Button>
+                                                        <Button Classes="ghost icon small" Command="{Binding SaveCommand}"
+                                                                IsVisible="{Binding HasImage}"
+                                                                ToolTip.Tip="{Binding SaveLabel}"
+                                                                AutomationProperties.Name="{Binding SaveLabel}">
+                                                            <TextBlock Classes="icon" Text="&#xE0B2;" />
+                                                        </Button>
+                                                        <TextBlock Classes="meta" Text="{Binding SaveStatusText}" VerticalAlignment="Center" />
                                                         <Button Classes="ghost icon small" Command="{Binding DetailsCommand}"
                                                                 IsVisible="{Binding IsFailed}"
                                                                 ToolTip.Tip="{markup:Res ErrorDetailsTitle}"

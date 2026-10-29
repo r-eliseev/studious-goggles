@@ -1,8 +1,8 @@
 ---
 id: 080
-status: in-progress
-assignee: claude-536f
-claimed: 2026-10-29T05:32:03Z
+status: done
+assignee:
+claimed:
 created: 2026-10-28
 ---
 
@@ -55,6 +55,27 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Presentation/{Services/IImageSaver.cs,Services/ImageSaveResult.cs,Services/ImageFileNames.cs,PageModels/GenerationItemViewModel.cs,PageModels/ChatPageModel.cs}`, строки, `ImageGen/ImageGen.Avalonia/{Services/AvaloniaImageSaver.cs,Composition/AppServices.cs,Views/ChatView.axaml}`, `ImageGen/ImageGen.Maui/{Services/MauiImageSaver.cs,Platforms/Android/AndroidManifest.xml,Platforms/iOS/Info.plist,MauiProgram.cs,Pages/ChatPage.xaml}`, тесты, `tasks/backlog/029-android-gallery-save.md`, `tasks/v0.1/016-skeleton-manual-check.md`, `docs/specs/chat-sessions.md`
 
 ## Отчёт
+
+Сделано по плану (`claude-536f`, 2026-10-29). Тесты и код писались в одном шаге на каждый слой.
+
+- Presentation: `IImageSaver` (подпись действия от оболочки, `SaveAsync` → `ImageSaveResult`), `ImageSaveResult` (`Saved`, `Cancelled`, `PermissionDenied`, `Failed`), `ImageFileNames.Suggested` (`imagegen-<8 символов id>` + расширение: png, jpg для jpeg, webp; неизвестный тип → png). У `GenerationItemViewModel`: `SaveCommand` (доступна при `HasImage`), `SaveStatusText` («Saved» после сохранения), `SaveLabel`, пункт в меню действий. `ChatPageModel` получил `IImageSaver` (конструктор). Тесты: `ImageFileNamesTests` (4), `GenerationSaveTests` (6).
+- Avalonia: `AvaloniaImageSaver` через `StorageProvider.SaveFilePickerAsync` и копирование файла; регистрация в `AppServices`; в меню карточки пункт «Save image as…», на карточке кнопка сохранения и текст «Saved». Тест `AvaloniaImageSaverTests.CopyAsync_WritesAllBytesToTarget`; `CardActionsTests.ContextMenu_HasAllActions` обновлён (новый пункт).
+- MAUI: `MauiImageSaver` с ветками: Android 10+ — MediaStore (`Pictures/ImageGen`, `IsPending`), Android 9 и ниже — разрешение `StorageWrite` и копия в `Pictures/ImageGen` с `MediaScannerConnection`; iOS — `PHPhotoLibrary` (только добавление) и `PerformChanges`; Windows и Mac Catalyst — `FileSaver` из CommunityToolkit.Maui. Регистрация в `MauiProgram`; `AndroidManifest.xml`: `WRITE_EXTERNAL_STORAGE` с `maxSdkVersion="28"`; `Info.plist`: `NSPhotoLibraryAddUsageDescription`. В меню `ChatPage.xaml` пункт сохранения.
+- Задача 029 уже `cancelled` с комментарием о переносе в 080 (ничего не менялось).
+- Спецификация `docs/specs/chat-sessions.md` S4.8 добавлена; ручная проверка по сохранению — в 016 (отдельный раздел «Сохранение картинки (задача 080)»).
+
+Проверено: Presentation 244/244, Avalonia 106/106 (2 пропущены, как и раньше), Core и Data без изменений в этой задаче (327 и 65 — прежние), `dotnet format --verify-no-changes` чистый по всем изменённым проектам, MAUI собирается под `net10.0-android` (0 ошибок, 0 предупреждений), `scripts/check.sh` проходит.
+
+Не проверено и почему:
+- Ветки Windows и iOS в `MauiImageSaver` не компилируются в облачной среде (нужны Windows- и iOS-цели); Windows-цель проверит CI, iOS-ветка не проверяется нигде, пока нет macOS-машины.
+- Сохранение в галерею и Photos не запускалось на устройстве (эмулятора нет): ручная проверка в 016.
+- Диалог «Сохранить как» на Avalonia не открывался вживую; тестируется только копирование потока.
+
+Решения, которые отличаются от плана или требуют внимания:
+- Подтверждение «Saved» — текст на карточке (`SaveStatusText`), а не отдельное объявление для диктора. Объявления (`SemanticScreenReader.Announce`) на карточке не добавлены: текст видим и читается, но не объявляется сам. Пункт для будущей доработки.
+- На MAUI-карточке строка «Saved» не выведена (только пункт меню и сохранение); на Avalonia выведена.
+- На Avalonia подпись пункта меню задана ресурсом, а не привязкой: элементы `ContextMenu` не получают контекст данных при создании (тест это показал).
+- Расширение для `image/jpeg` — `.jpg`.
 
 ## Комментарии
 

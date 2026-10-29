@@ -45,5 +45,7 @@
 	</dict>
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/appicon.appiconset</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>ImageGen saves generated images to Photos.</string>
 </dict>
 </plist>

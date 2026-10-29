@@ -67,6 +67,18 @@ public static class AppResources
 
     public static string SearchInDescription => Get(nameof(SearchInDescription));
 
+    public static string Saved => Get(nameof(Saved));
+
+    public static string SavePermissionDenied => Get(nameof(SavePermissionDenied));
+
+    public static string SaveFailed => Get(nameof(SaveFailed));
+
+    public static string SaveImageAs => Get(nameof(SaveImageAs));
+
+    public static string SaveToPhotos => Get(nameof(SaveToPhotos));
+
+    public static string SaveToGallery => Get(nameof(SaveToGallery));
+
     /// <summary>Format string: the number of runs goes in <c>{0}</c>.</summary>
     public static string RunsCountFormat => Get(nameof(RunsCountFormat));
 

@@ -28,6 +28,7 @@ public sealed partial class ChatPageModel(
     IFilePickerService filePicker,
     ImageDescriptionService descriptions,
     IClipboardService clipboard,
+    IImageSaver imageSaver,
     ICurrentSessionTracker currentSession,
     Func<SessionModelsPageModel> modelsPaneFactory,
     Func<SessionParametersPageModel> parametersPaneFactory) : ObservableObject
@@ -403,7 +404,7 @@ public sealed partial class ChatPageModel(
     private GenerationItemViewModel CreateCard(Generation generation)
     {
         var card = new GenerationItemViewModel(
-            generation, files, dialogs, clipboard, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync, OtherModelCardAsync);
+            generation, files, dialogs, clipboard, imageSaver, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync, OtherModelCardAsync);
         _cards[generation.Id] = card;
         return card;
     }
