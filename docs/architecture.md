@@ -20,9 +20,11 @@ ImageGen/
     Domain/Generations/            Run, RunOrigin, Generation, GenerationStatus, ErrorKind
     Domain/Keys/                   ApiKeyStatus, SecretNames (ключ по провайдеру)
     Domain/Models/                 ImageModel, ModelRef (ссылка «провайдер:модель»)
+    Domain/Descriptions/           описания картинок (ADR 0013)
     Platform/                      ISecretStore, IAppPaths
     Storage/                       ISessionRepository, IChatMessageRepository, IRunRepository, IConversationSummaryRepository,
-                                   IImageModelRepository (кэш по провайдеру), IImageFileStore
+                                   IImageModelRepository (кэш по провайдеру), IImageFileStore, IChatAttachmentRepository,
+                                   IImageDescriptionRepository
     Providers/                     ProviderConfig, ProviderKind, ConfiguredImageModel, ProviderConfigLoader (встроенный
                                    builtin-providers.json и providers.json в DataDirectory), ProviderRegistry (проверка),
                                    IProviderRouter / ProviderRouter (клиент по id провайдера), ProviderClientBase (HTTP,
@@ -30,12 +32,19 @@ ImageGen/
     Providers/                     IProviderConnection (проверка ключа), IModelProvider (картинки: IImageGenerator,
                                    каталог), IAssistantChatClient (чат), AssistantChatMessage/Request/Result, AssistantTool,
                                    AssistantToolCall (нейтральный формат чата), ImageGenerationRequest/Result
+    Providers/                     IQueuedImageProvider (submit/poll/cancel, ADR 0003), ProviderJobHandle, JobState, JobUpdate,
+                                   CancelOutcome, ProviderJobPoller (общий опрос заданий)
+    Fal/                           FalImageProvider (очередь fal, IQueuedImageProvider)
+    Http/                          LoggingHttpHandler, BodyRedactor (журнал HTTP без секретов)
+    Diagnostics/                   IDebugTrace, TraceRedaction (отладочный трейс, docs/specs/debug-trace.md)
     OpenRouter/                    OpenRouterClient (картинки и чат)
     OpenAiCompatible/              OpenAiCompatibleClient (картинки и чат), OpenAiChatWire (формат chat/completions)
     AnthropicCompatible/           AnthropicCompatibleClient (только чат, Messages API)
     Services/                      ApiKeyService, ModelCatalogService, SessionService, TimelineOrdering, GenerationService,
                                    AssistantService, AssistantPrompts, ISeedSource, RandomSeedSource,
-                                   ConversationSummaryService (сводка старой истории в фоне; одна задача на сессию)
+                                   ConversationSummaryService (сводка старой истории в фоне; одна задача на сессию),
+                                   AttachmentService (вложения, ADR 0012), ImageDescriptionService (ADR 0013),
+                                   ChatModelCatalogService (модели ассистента), GenerationParameterPlanner (ADR 0011)
     Search/                        SessionSearchService (поиск по названиям, промптам и описаниям), FuzzyMatcher (нечёткие
                                    совпадения слов), ISearchTextSource (тексты всех сессий; реализация в Data)
     Context/                       ContextBudget (бюджет истории), ContextBuilder (выбор сообщений), TokenEstimator,
@@ -47,17 +56,23 @@ ImageGen/
   ImageGen.Core.Tests/             xUnit v3 + NSubstitute
   ImageGen.Data.Tests/             xUnit v3, временная БД в файле
   ImageGen.Presentation/           net10.0, CommunityToolkit.Mvvm: PageModels/, Services/ (INavigationService, IDialogService,
-                                   IMainThread, ISecretPersistence, AppInitializer), Routes, Utilities/, Resources/Strings/ (AppResources.resx)
+                                   IMainThread, ISecretPersistence, AppInitializer, буфер обмена, выбор файлов, сохранение картинок), Routes,
+                                   Utilities/, Resources/Strings/ (AppResources.resx), Appearance/ (стиль и тема, AppearanceService),
+                                   Logging/ (файловый журнал, FileDebugTrace)
   ImageGen.Presentation.Tests/     xUnit v3 + NSubstitute: модели страниц, маршруты, строки, архитектурный тест
-  ImageGen.Avalonia/               десктоп (Avalonia 12.1, WinExe): App, Views/ (MainWindow, SessionsView, ApiKeyView,
-                                   ChatView, SessionModelsView), Composition/AppServices, Converters/ (FilePathToBitmap),
+  ImageGen.Avalonia/               десктоп (Avalonia 12.1, WinExe): App, Views/ (MainWindow, SessionsView, SessionsListView,
+                                   ApiKeyView, ChatView, SessionModelsView, SessionParametersView, ModelPickerView, SettingsView,
+                                   StarterExamples), Themes/ (стили по макетам), Composition/AppServices, Converters/ (FilePathToBitmap),
                                    Markup/ (расширение строк), Platform/ (DesktopAppPaths, InMemorySecretStore), Services/
-                                   (AvaloniaMainThread, AvaloniaDialogService, Navigation/ — стек страниц и маршруты),
+                                   (AvaloniaMainThread, AvaloniaDialogService, буфер, выбор файлов, сохранение картинок,
+                                   AvaloniaAppearanceApplier, Logging/, Navigation/ — стек страниц и маршруты),
                                    Services/Secrets/ (DesktopSecretStore и бэкенды: SecretServiceBackend для Linux,
                                    DpapiSecretBackend для Windows, KeychainSecretBackend для macOS; ADR 0008)
   ImageGen.Avalonia.Tests/         headless (Avalonia.Headless.XUnit), xunit.v3 3.2.2 (ADR 0007)
-  ImageGen.Maui/                   MAUI: Pages/, PageModels/ (только ChatItemTemplateSelector), Services/ (MauiSecretStore,
-                                   MauiAppPaths, MauiMainThread, Shell-реализации), Converters/
+  ImageGen.Maui/                   MAUI: Pages/, Controls/ (SessionsListView, StarterExamples, ChatEditor), PageModels/ (только
+                                   ChatItemTemplateSelector), Services/ (MauiSecretStore, MauiAppPaths, MauiMainThread,
+                                   Shell-реализации, буфер, выбор файлов, MauiImageSaver, MauiAppearanceApplier), Converters/,
+                                   Platforms/
 ```
 
 Зависимости: `Maui → Presentation → Data → Core`; `Maui` ссылается также на `Core` и `Data` (регистрация в `MauiProgram`); `Avalonia → Presentation → Data → Core` (также ссылается на `Core` и `Data`, регистрация в `AppServices`); `Presentation → Core`.
@@ -74,7 +89,7 @@ ImageGen/
 2. Запрос к OpenRouter chat completions: системный промпт, текущий промпт сессии, последние 20 сообщений, инструмент `generate_images`.
 3. Вызов инструмента → `GenerationService.StartRunAsync` (прогон) и сообщение ассистента со ссылкой на прогон. Текст без вызова → сообщение ассистента. Ошибка → сообщение ассистента с признаком ошибки.
 
-**Прогон.** `GenerationService` берёт модели и N из настроек сессии, выбирает N сидов (`ISeedSource`), создаёт генерации «модель × сид» в статусе «в очереди» одной транзакцией и запускает их параллельно (не больше 4 одновременно). Каждая генерация: «идёт» → `IImageGenerator.GenerateAsync` (`POST /api/v1/images`) → файл через `IImageFileStore` → запись в БД → событие `GenerationUpdated`. Отказ модерации (403 с `metadata.reasons`) → «отфильтровано».
+**Прогон.** `GenerationService` берёт модели и N из настроек сессии, выбирает N сидов (`ISeedSource`), создаёт генерации «модель × сид» в статусе «в очереди» одной транзакцией и запускает их параллельно (не больше 4 одновременно). Путь генерации зависит от провайдера. OpenRouter и OpenAI-совместимые: «идёт» → `IImageGenerator.GenerateAsync` (`POST /api/v1/images`, синхронно) → файл через `IImageFileStore` → запись в БД → событие `GenerationUpdated`. Провайдер с очередью (`IQueuedImageProvider`, сейчас fal): submit → хэндл задания сохраняется в БД → `ProviderJobPoller` опрашивает до конечного состояния → файл, БД, событие. При старте `RecoverInterruptedAsync` снова следит за заданиями с сохранённым хэндлом, остальные незавершённые помечает «Interrupted». Отказ модерации (403 с `metadata.reasons`) → «отфильтровано».
 
 **Обновление экрана.** `ChatPageModel` после каждого своего действия перечитывает ленту сессии (`SessionService.GetTimelineAsync`), а событие `GenerationUpdated` обновляет одну карточку в UI-потоке (`IMainThread.BeginInvokeOnMainThread`; реализации `MauiMainThread` и `AvaloniaMainThread`).
 
@@ -95,7 +110,7 @@ ImageGen.Web/ClientApp   Vue 3 + Vite + TypeScript
 ImageGen.Web.Tests
 Dockerfile, docker-compose.yml   том /data
 ```
-- Провайдеры: контракт submit/poll/cancel (ADR 0003, ADR 0005) заменит узкий `IImageGenerator`, когда появятся fal и Replicate; тогда же восстановление незавершённых генераций после перезапуска. OpenRouter в нём — задание в фоне в памяти процесса (`OpenRouterJobRunner`), статус всех провайдеров читается общим опросом (`ProviderJobPoller`).
+- Провайдеры: контракт submit/poll/cancel (ADR 0003) уже есть (`IQueuedImageProvider`, fal), восстановление заданий после перезапуска тоже. По ADR 0005 OpenRouter тоже должен стать заданием в фоне в памяти процесса (`OpenRouterJobRunner`) за тем же контрактом, а узкий `IImageGenerator` — уйти. В коде этого нет: OpenRouter генерирует синхронно через `IImageGenerator`; выполнить ADR 0005 или заменить его — открытый вопрос в `docs/status.md`.
 - События: для Web подписка через `Channel` вместо события .NET.
 - Web: однопользовательский, пароль из переменной окружения, cookie-сессия; секреты в файле под Data Protection; ключи шифрования и данные в томе Docker.
 - MAUI: на телефоне вкладки внизу, на широком экране боковая панель.
