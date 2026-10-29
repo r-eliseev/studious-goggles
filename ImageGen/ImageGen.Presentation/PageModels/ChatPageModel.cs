@@ -36,6 +36,7 @@ public sealed partial class ChatPageModel(
     private readonly Dictionary<Guid, GenerationItemViewModel> _cards = [];
     private bool _imageConsentGiven;
     private Guid _sessionId;
+    private string? _pendingMessage;
     private bool _subscribed;
 
     /// <summary>Rows of the chat: <see cref="MessageItemViewModel"/> or <see cref="RunItemViewModel"/>.</summary>
@@ -104,6 +105,9 @@ public sealed partial class ChatPageModel(
         }
 
         _sessionId = sessionId;
+        _pendingMessage = query.TryGetValue(Routes.MessageParameter, out var message) && message is string encoded
+            ? Uri.UnescapeDataString(encoded)
+            : null;
     }
 
     /// <summary>Called on every appearance: subscribes once to generation updates, then loads the chat.</summary>
@@ -113,6 +117,14 @@ public sealed partial class ChatPageModel(
         generations.GenerationUpdated += OnGenerationUpdated;
         _subscribed = true;
         await ReloadAsync();
+
+        // A message that came with the route (an example on the empty sessions page) is sent once, after the first load.
+        if (_pendingMessage is { Length: > 0 } pending)
+        {
+            _pendingMessage = null;
+            InputText = pending;
+            await SendCommand.ExecuteAsync(null);
+        }
     }
 
     public void OnDisappearing() => Unsubscribe();

@@ -19,6 +19,7 @@
                         HorizontalAlignment="Center"
                         Content="{markup:Res NewSession}"
                         AutomationProperties.Name="{markup:Res NewSession}" />
+                <views:StarterExamples />
             </StackPanel>
         </Border>
     </Grid>

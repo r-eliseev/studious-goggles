@@ -34,5 +34,10 @@ public partial class SessionsView : UserControl, IAppearing
         layout.ColumnDefinitions[0].Width = wide ? new GridLength(272) : GridLength.Star;
         layout.ColumnDefinitions[1].Width = wide ? GridLength.Star : new GridLength(0);
         this.FindControl<Border>("EmptyState")!.IsVisible = wide;
+        if (DataContext is SessionsPageModel model)
+        {
+            // The examples sit in the empty-state panel when it is shown, and in the list otherwise.
+            model.ExamplesInList = !wide;
+        }
     }
 }

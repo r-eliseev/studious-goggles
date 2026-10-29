@@ -371,6 +371,48 @@ public class ChatPageModelTests
     }
 
     [Fact]
+    public async Task Query_WithMessage_SendsItOnceAfterLoad()
+    {
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AssistantChatResult("Hi", [], null));
+        _model.ApplyQueryAttributes(new Dictionary<string, object>
+        {
+            [Routes.SessionIdParameter] = _session.Id.ToString("D"),
+            [Routes.MessageParameter] = Uri.EscapeDataString("A lighthouse at dusk"),
+        });
+
+        await _model.OnAppearingAsync();
+
+        await _chat.Received(1).CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
+        Assert.Contains(_messages, m => m.Role == ChatRole.User && m.Text == "A lighthouse at dusk");
+    }
+
+    [Fact]
+    public async Task Query_WithoutMessage_SendsNothing()
+    {
+        await _model.OnAppearingAsync();
+
+        await _chat.DidNotReceive().CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Reload_AfterPendingMessageSent_DoesNotSendAgain()
+    {
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AssistantChatResult("Hi", [], null));
+        _model.ApplyQueryAttributes(new Dictionary<string, object>
+        {
+            [Routes.SessionIdParameter] = _session.Id.ToString("D"),
+            [Routes.MessageParameter] = Uri.EscapeDataString("A lighthouse at dusk"),
+        });
+        await _model.OnAppearingAsync();
+
+        await _model.OnAppearingAsync();
+
+        await _chat.Received(1).CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task OnAppearingAsync_SetsCurrentSession()
     {
         await _model.OnAppearingAsync();

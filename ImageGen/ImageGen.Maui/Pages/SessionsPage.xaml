@@ -20,6 +20,7 @@
                         Command="{Binding NewSessionCommand}"
                         HorizontalOptions="Center"
                         Text="{x:Static strings:AppResources.NewSession}" />
+                <controls:StarterExamples />
             </VerticalStackLayout>
         </Border>
     </Grid>

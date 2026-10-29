@@ -26,6 +26,28 @@ public sealed partial class SessionsPageModel(
 
     public ObservableCollection<SessionItemViewModel> Sessions { get; } = [];
 
+    /// <summary>The starter prompts of the empty state (task 078). Pressing one creates a session and sends the prompt.</summary>
+    public IReadOnlyList<string> Examples { get; } =
+    [
+        AppResources.EmptyChatExample1,
+        AppResources.EmptyChatExample2,
+        AppResources.EmptyChatExample3,
+    ];
+
+    /// <summary>True when there are no sessions.</summary>
+    public bool HasNoSessions => Sessions.Count == 0;
+
+    /// <summary>
+    /// Set by the view: the narrow layout has no empty-state panel, so the examples go into the list while it is empty.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool ExamplesInList { get; set; }
+
+    /// <summary>True when the narrow layout shows the examples in the list: the flag is set and no session exists.</summary>
+    public bool ShowsListExamples => ExamplesInList && HasNoSessions;
+
+    partial void OnExamplesInListChanged(bool value) => OnPropertyChanged(nameof(ShowsListExamples));
+
     /// <summary>Sessions that match <see cref="SearchText"/>, best match first. Their rows show <see cref="SessionItemViewModel.SearchLine"/>.</summary>
     public ObservableCollection<SessionItemViewModel> SearchResults { get; } = [];
 
@@ -120,6 +142,7 @@ public sealed partial class SessionsPageModel(
                 Sessions.Add(item);
                 (session.UpdatedAt.ToLocalTime().Date == today ? Today : Earlier).Add(item);
             }
+            NotifySessionsCount();
         }
         catch (Exception ex)
         {
@@ -233,6 +256,27 @@ public sealed partial class SessionsPageModel(
         _ => AppResources.SearchInDescription,
     };
 
+    private void NotifySessionsCount()
+    {
+        OnPropertyChanged(nameof(HasNoSessions));
+        OnPropertyChanged(nameof(ShowsListExamples));
+    }
+
+    /// <summary>Creates a session and opens its chat with the example text, which the chat sends once (task 078).</summary>
+    [RelayCommand]
+    private async Task StartExampleAsync(string? text)
+    {
+        try
+        {
+            var session = await sessionService.CreateAsync(CancellationToken.None);
+            await navigation.GoToAsync(Routes.ChatWithMessage(session.Id, text ?? string.Empty));
+        }
+        catch (Exception ex)
+        {
+            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+        }
+    }
+
     private async Task RenameSessionAsync(SessionItemViewModel item)
     {
         try
@@ -278,6 +322,7 @@ public sealed partial class SessionsPageModel(
             Sessions.Remove(item);
             Today.Remove(item);
             Earlier.Remove(item);
+            NotifySessionsCount();
             SearchResults.Remove(item);
         }
         catch (Exception ex)

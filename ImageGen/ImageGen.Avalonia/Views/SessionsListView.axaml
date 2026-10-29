@@ -3,6 +3,7 @@
              xmlns:markup="clr-namespace:ImageGen.Avalonia.Markup"
              xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels;assembly=ImageGen.Presentation"
              xmlns:glyphs="clr-namespace:ImageGen.Presentation.Appearance;assembly=ImageGen.Presentation"
+             xmlns:views="clr-namespace:ImageGen.Avalonia.Views"
              x:Class="ImageGen.Avalonia.Views.SessionsListView"
              x:DataType="pm:SessionsPageModel">
     <UserControl.Styles>
@@ -117,6 +118,9 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+
+                    <!-- Narrow layout: with no sessions the examples take the place of the empty-state panel (task 078). -->
+                    <views:StarterExamples IsVisible="{Binding ShowsListExamples}" Margin="0,8,0,0" />
                 </StackPanel>
             </ScrollViewer>
 

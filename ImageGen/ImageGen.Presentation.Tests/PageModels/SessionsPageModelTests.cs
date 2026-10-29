@@ -396,6 +396,42 @@ public class SessionsPageModelTests : IDisposable
         Assert.Single(model.Sessions);
     }
 
+    [Fact]
+    public async Task StartExample_CreatesSessionAndOpensChatWithMessage()
+    {
+        Session? created = null;
+        _sessionRepository.When(repository => repository.AddAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>()))
+            .Do(call => created = call.Arg<Session>());
+        var model = CreateModel();
+
+        await model.StartExampleCommand.ExecuteAsync(AppResources.EmptyChatExample1);
+
+        Assert.NotNull(created);
+        await _navigation.Received(1).GoToAsync(Routes.ChatWithMessage(created!.Id, AppResources.EmptyChatExample1));
+    }
+
+    [Fact]
+    public async Task ShowsListExamples_OnlyWhenExamplesAreEnabledAndNoSessions()
+    {
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([]);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        Assert.False(model.ShowsListExamples);
+        model.ExamplesInList = true;
+        Assert.True(model.ShowsListExamples);
+    }
+
+    [Fact]
+    public void Examples_AreTheThreeStarterPrompts()
+    {
+        var model = CreateModel();
+
+        Assert.Equal(
+            [AppResources.EmptyChatExample1, AppResources.EmptyChatExample2, AppResources.EmptyChatExample3],
+            model.Examples);
+    }
+
     private static async Task WaitUntilAsync(Func<bool> condition)
     {
         for (var attempt = 0; attempt < 300 && !condition(); attempt++)

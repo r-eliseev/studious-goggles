@@ -4,6 +4,7 @@
              xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels"
              xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
              xmlns:appearance="clr-namespace:ImageGen.Presentation.Appearance"
+             xmlns:controls="clr-namespace:ImageGen.Maui.Controls"
              x:Class="ImageGen.Maui.Controls.SessionsListView"
              x:DataType="pm:SessionsPageModel">
     <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
@@ -127,6 +128,9 @@
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
                 </VerticalStackLayout>
+
+                <!-- Narrow layout: with no sessions the examples take the place of the empty-state panel (task 078). -->
+                <controls:StarterExamples IsVisible="{Binding ShowsListExamples}" Margin="0,8,0,0" />
             </VerticalStackLayout>
         </ScrollView>
 
