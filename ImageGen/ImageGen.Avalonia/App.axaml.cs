@@ -13,6 +13,7 @@ using ImageGen.Avalonia.Views;
 using ImageGen.Presentation;
 using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.Logging;
+using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -72,6 +73,7 @@ public partial class App : Application
 
         new AvaloniaAppearanceApplier(Services.GetRequiredService<AppearanceService>(), this).Start();
         MainWindow = new MainWindow();
+        MainWindow.ConfigureShortcuts(Services.GetRequiredService<SessionsPageModel>(), Services.GetRequiredService<AvaloniaNavigationService>());
 
         var navigation = Services.GetRequiredService<AvaloniaNavigationService>();
         navigation.AttachHost(MainWindow.PageArea);

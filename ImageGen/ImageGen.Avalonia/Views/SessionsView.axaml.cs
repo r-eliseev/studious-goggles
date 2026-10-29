@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Avalonia.VisualTree;
 using ImageGen.Avalonia.Services.Navigation;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Utilities;
@@ -26,6 +27,9 @@ public partial class SessionsView : UserControl, IAppearing
             model.OnAppearingAsync().FireAndForgetSafeAsync();
         }
     }
+
+    /// <summary>Puts the cursor in the search field of the session list (Ctrl/Cmd+F).</summary>
+    public void FocusSearch() => this.GetVisualDescendants().OfType<SessionsListView>().FirstOrDefault()?.FocusSearch();
 
     private void ApplyWidth(double width)
     {

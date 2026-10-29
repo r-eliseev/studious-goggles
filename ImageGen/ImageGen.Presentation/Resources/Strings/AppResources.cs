@@ -87,6 +87,14 @@ public static class AppResources
 
     public static string ShowSummary => Get(nameof(ShowSummary));
 
+    public static string MenuFile => Get(nameof(MenuFile));
+
+    public static string MenuFind => Get(nameof(MenuFind));
+
+    public static string MenuSettings => Get(nameof(MenuSettings));
+
+    public static string MenuCard => Get(nameof(MenuCard));
+
     public static string SaveImageAs => Get(nameof(SaveImageAs));
 
     public static string SaveToPhotos => Get(nameof(SaveToPhotos));

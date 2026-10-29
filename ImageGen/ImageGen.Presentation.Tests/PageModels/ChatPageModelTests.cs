@@ -469,6 +469,21 @@ public class ChatPageModelTests
     };
 
     [Fact]
+    public async Task SelectCard_SetsSelectedCard()
+    {
+        var run = NewRun(_session.Id, "red fox");
+        var generations = new[] { NewGeneration(run, 5) };
+        StoreRun(run, generations);
+        await _model.OnAppearingAsync();
+        var card = Assert.IsType<RunItemViewModel>(_model.Items[^1]).Generations[0];
+        Assert.Null(_model.SelectedCard);
+
+        _model.SelectCardCommand.Execute(card);
+
+        Assert.Same(card, _model.SelectedCard);
+    }
+
+    [Fact]
     public async Task OnAppearingAsync_SetsCurrentSession()
     {
         await _model.OnAppearingAsync();

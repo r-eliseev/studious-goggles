@@ -128,6 +128,10 @@
                                                 <Border.Behaviors>
                                                     <toolkit:TouchBehavior LongPressCommand="{Binding ShowActionsCommand}" />
                                                 </Border.Behaviors>
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer Command="{Binding Source={x:Reference Page}, Path=BindingContext.SelectCardCommand}"
+                                                                          CommandParameter="{Binding .}" />
+                                                </Border.GestureRecognizers>
                                                 <FlyoutBase.ContextFlyout>
                                                     <MenuFlyout>
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.Repeat}" Command="{Binding RepeatCommand}" />
@@ -288,6 +292,33 @@
             </pmui:ChatItemTemplateSelector>
         </ResourceDictionary>
     </ContentPage.Resources>
+
+    <ContentPage.MenuBarItems>
+        <MenuBarItem Text="{x:Static strings:AppResources.MenuFile}">
+            <MenuFlyoutItem Text="{x:Static strings:AppResources.NewSession}" Command="{Binding Source={x:Reference SessionList}, Path=BindingContext.NewSessionCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="N" Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Cmd}" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{x:Static strings:AppResources.MenuSettings}" Command="{Binding Source={x:Reference SessionList}, Path=BindingContext.OpenSettingsCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="," Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Cmd}" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+        </MenuBarItem>
+        <!-- The card actions act on the card the user touched last (ChatPageModel.SelectedCard). Letter keys have no accelerator: they would take the typing in the input box. -->
+        <MenuBarItem Text="{x:Static strings:AppResources.MenuCard}">
+            <MenuFlyoutItem Text="{x:Static strings:AppResources.Repeat}" Command="{Binding SelectedCard.RepeatCommand}" />
+            <MenuFlyoutItem Text="{x:Static strings:AppResources.NewSeed}" Command="{Binding SelectedCard.NewSeedCommand}" />
+            <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionEditPrompt}" Command="{Binding SelectedCard.EditCommand}" />
+            <MenuFlyoutItem Text="{Binding SelectedCard.SaveLabel}" Command="{Binding SelectedCard.SaveCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="S" Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Cmd}" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{x:Static strings:AppResources.CopyPrompt}" Command="{Binding SelectedCard.CopyPromptCommand}" />
+        </MenuBarItem>
+    </ContentPage.MenuBarItems>
 
     <Grid x:Name="ChatLayout" ColumnDefinitions="272,*,Auto" ColumnSpacing="16" Padding="16">
         <!-- Wide layout only: the session list beside the chat (ChatPage.xaml.cs). -->

@@ -1,8 +1,8 @@
 ---
 id: 073
-status: in-progress
-assignee: claude-536f
-claimed: 2026-10-29T06:08:44Z
+status: done
+assignee:
+claimed:
 created: 2026-10-28
 ---
 
@@ -53,6 +53,24 @@ scripts/check.sh
 Файлы: `ImageGen/ImageGen.Avalonia/{Services/PlatformKeys.cs,App.axaml,Views/MainWindow.*,Views/ChatView.axaml,Views/SessionsListView.*}`, `ImageGen/ImageGen.Maui/Pages/{SessionsPage,ChatPage}.xaml`, `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs` (только `SelectedCard`), тесты, `docs/knowledge/*`, `docs/specs/chat-sessions.md`
 
 ## Отчёт
+
+Сделано по плану (`claude-536f`, 2026-10-29). Тесты писались до кода там, где код можно проверить тестом (Avalonia `PlatformKeys`, Presentation `SelectedCard`); разметка и привязки проверялись сборкой и headless-тестами.
+
+- Avalonia: `Services/PlatformKeys` (`Primary`: Meta на macOS, Control иначе; `For`, `Label`). `MainWindow.ConfigureShortcuts(sessions, navigation)` — `KeyBindings` окна для Ctrl/Cmd+N, +`,`, +F и `NativeMenu` (File: New session, Settings…; пункт Find sessions). Вызывается из `App` и из тестового harness. Ctrl/Cmd+F переходит на экран сессий, если открыт другой, и ставит курсор в поле поиска (`SessionsView.FocusSearch` → `SessionsListView.FocusSearch` → `TextBox.Focus`). Карточка: `Focusable="True"`, `KeyBinding` для R, Shift+R, E, Ctrl/Cmd+C, Ctrl/Cmd+S; подписи сочетаний в контекстном меню карточки (`InputGesture`). Поле ввода вне карточки. Тесты: `PlatformKeysTests` (4), `KeyboardShortcutsTests` (5: N, `,`, F с фокусом, R на карточке, поле ввода вне карточки).
+- Presentation: `ChatPageModel.SelectedCard` и `SelectCardCommand` (тап по карточке). Тест `SelectCard_SetsSelectedCard`.
+- MAUI: `ContentPage.MenuBarItems` на экране сессий (File: New session, Settings…; Find sessions — с фокусом поиска) и на экране чата (File, и «Card»: Repeat, New seed, Edit, Save image, Copy prompt — по `SelectedCard`). Ускорители: Ctrl/Cmd+N, +`,`, +F, +S (`OnPlatform` для WinUI и MacCatalyst). Тап по карточке выбирает её (`TapGestureRecognizer` с `x:Reference Page`). Сборка `-f net10.0-android` проходит.
+- Строки `MenuFile`, `MenuFind`, `MenuSettings`, `MenuCard`.
+- `docs/specs/chat-sessions.md`: раздел «Клавиатура» с таблицей. `docs/knowledge/avalonia.md` и `maui.md`: что сделано и что не проверено.
+- `docs/knowledge/`: отметки «не проверено» — меню macOS и ускорители MAUI на Windows и Mac.
+
+Проверено: Core 345/345, Data 69/69, Presentation 260/260, Avalonia 118/118 (2 пропущены, как раньше), `dotnet format --verify-no-changes` по всем изменённым проектам чистый, MAUI собирается, `scripts/check.sh` проходит.
+
+Отклонения от плана:
+- Буквенные ускорители (R, E) и Ctrl+C не ставятся как `KeyboardAccelerator` в MAUI: они перехватывали бы ввод в поле чата. В меню «Card» эти пункты без сочетания; сочетания работают в карточке через Avalonia-привязки и в MAUI не реализованы (на телефоне клавиатуры обычно нет).
+- Подсказки кнопок-значков карточки (`ToolTip`) с сочетанием не добавлены: сочетание показано в контекстном меню (`InputGesture`), этого достаточно для критерия «пункты меню показывают сочетание».
+- Меню `NativeMenu` и `KeyBindings` на macOS могут сработать дважды на одно сочетание (не проверено: нет macOS-машины).
+- `App`-уровневое `NativeMenu` не сделано: меню прикреплено к окну.
+- Тесты Avalonia сделаны на структуре (привязки, фокус), а не на нажатии клавиш: нажатие в headless не моделируется в этом проекте.
 
 ## Комментарии
 

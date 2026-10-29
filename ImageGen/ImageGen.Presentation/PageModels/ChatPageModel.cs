@@ -64,6 +64,16 @@ public sealed partial class ChatPageModel(
 
     partial void OnIsBusyChanged(bool value) => UpdateRetry();
 
+    /// <summary>
+    /// The card the user touched last. The menu bar's generation actions act on it (task 073); a card that is no longer
+    /// shown stays selected until another one is touched.
+    /// </summary>
+    [ObservableProperty]
+    public partial GenerationItemViewModel? SelectedCard { get; set; }
+
+    [RelayCommand]
+    private void SelectCard(GenerationItemViewModel card) => SelectedCard = card;
+
     /// <summary>True on a wide window (≥ 840). The shell sets it on resize; it decides pane versus navigation.</summary>
     [ObservableProperty]
     public partial bool IsWide { get; set; }

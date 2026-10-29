@@ -126,6 +126,18 @@
   <data name="ShowSummary" xml:space="preserve">
     <value>Show summary</value>
   </data>
+  <data name="MenuFile" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="MenuFind" xml:space="preserve">
+    <value>Find sessions</value>
+  </data>
+  <data name="MenuSettings" xml:space="preserve">
+    <value>Settings…</value>
+  </data>
+  <data name="MenuCard" xml:space="preserve">
+    <value>Card</value>
+  </data>
   <data name="SaveImageAs" xml:space="preserve">
     <value>Save image as…</value>
   </data>

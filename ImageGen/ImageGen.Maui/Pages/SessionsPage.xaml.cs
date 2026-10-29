@@ -25,6 +25,8 @@ public partial class SessionsPage : ContentPage
         _model.OnAppearingAsync().FireAndForgetSafeAsync();
     }
 
+    private void OnFindClicked(object? sender, EventArgs e) => SessionList.FocusSearch();
+
     private void ApplyWidth(double width)
     {
         if (width <= 0)

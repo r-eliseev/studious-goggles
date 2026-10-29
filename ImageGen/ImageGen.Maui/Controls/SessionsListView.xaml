@@ -18,7 +18,8 @@
                     <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Plus}" Color="{DynamicResource IgOnAccentColor}" Size="16" />
                 </Button.ImageSource>
             </Button>
-            <SearchBar Text="{Binding SearchText, Mode=TwoWay}"
+            <SearchBar x:Name="SearchField"
+                       Text="{Binding SearchText, Mode=TwoWay}"
                        Placeholder="{x:Static strings:AppResources.SearchSessions}"
                        SemanticProperties.Description="{x:Static strings:AppResources.SearchSessions}" />
         </VerticalStackLayout>

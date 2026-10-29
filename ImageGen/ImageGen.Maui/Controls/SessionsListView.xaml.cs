@@ -10,4 +10,7 @@ public partial class SessionsListView : ContentView
     {
         InitializeComponent();
     }
+
+    /// <summary>Moves the focus to the search field (the Find menu item, Ctrl/Cmd+F).</summary>
+    public void FocusSearch() => SearchField.Focus();
 }
