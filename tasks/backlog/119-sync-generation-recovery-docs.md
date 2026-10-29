@@ -6,33 +6,30 @@ claimed:
 created: 2026-10-29
 ---
 
-# Уточнить документацию восстановления генераций
+# Уточнить документацию восстановления generation
 
 ## Описание
-Найдено ревью 2026-10-29. S3.8 `docs/specs/chat-sessions.md` говорит, что все незавершённые генерации после старта становятся `Interrupted`. Реализация различает queued jobs с сохранённым handle, которые возобновляют polling без повторного submit, и задания без handle. Задача 106 также задаёт terminal-поведение для handle удалённого provider.
+S3.8 и walking-skeleton summary говорят общей «Interrupted при старте». Code различает saved handle resume, no handle Interrupted и после 106 missing provider ModelUnavailable.
 
-Зависит от: 106.
+Зависит от: 106, 117, 129.
 Среда: Linux или Windows.
 
 ## Критерии готовности
-- S3.8 различает resumable queued handle и no-handle generation.
-- Architecture описывает: saved handle → resume polling без submit; no handle → `Failed/Interrupted`; unavailable provider → результат из 106.
-- Документ не обещает восстановление синхронного provider job без handle.
-- Формулировки совпадают с SQL selection `job_json IS [NOT] NULL`.
+- S3.8 и skeleton summary: saved valid handle → resume polling/no submit; no handle → `GenerationStatus.Failed` + `ErrorKind.Interrupted`; unavailable provider → Failed/ModelUnavailable.
+- Architecture first-start/run paragraphs те же.
+- Corrupt `job_json` → `GenerationStatus.Failed` + `ErrorKind.Unknown`, как закреплено catch/test задачи 106.
+- SQL `job_json IS [NOT] NULL` semantics не искажены.
 
 ## Анализ
-- `RunRepository.ListResumableJobsAsync` выбирает Queued/Running с `job_json IS NOT NULL`.
-- `MarkUnfinishedAsInterruptedAsync` меняет только строки с `job_json IS NULL`.
-- До 106 provider, удалённый из конфигурации, оставался незавершённым; документировать новое terminal-поведение можно только после 106.
+Общий docs conflict order 117 →119 →120. Historical docs не менять.
 
 ## План
-Для исполнителя (Haiku/Luna): только два маленьких документа. Не менять код, ADR и исторические logs. Каждое утверждение сверить с актуальными `GenerationService` и SQL.
+Для Haiku/Luna: только architecture+chat spec после rebase 117.
 
-Прочитай: `GenerationService.RecoverInterruptedAsync`, `RunRepository.ListResumableJobsAsync`, `RunRepository.MarkUnfinishedAsInterruptedAsync`, `docs/architecture.md` «Первый запуск»/«Прогон», S3.8.
-
-1. Переписать S3.8 тремя случаями: saved valid handle; no handle; unavailable provider.
-2. В `docs/architecture.md` привести «Первый запуск» и paragraph «Прогон» к той же семантике. Не дублировать детали retry polling.
-3. Проверить grep `Interrupted` в active architecture/spec; исторические документы не менять.
+1. Сверить RecoverInterrupted, Watch catch, ListResumable/MarkUnfinished SQL after106.
+2. Переписать S3.8 и строку «Ходячий скелет» с точными domain status/kind.
+3. Обновить architecture «Первый запуск» и «Прогон», без retry internals.
+4. Grep Interrupted/прерван; active docs consistent, historical untouched.
 
 ### Проверка
 ```

@@ -6,39 +6,37 @@ claimed:
 created: 2026-10-29
 ---
 
-# Заменить Replicate на Together AI в активной документации
+# Заменить Replicate в нормативной документации продукта
 
 ## Описание
-Найдено ревью 2026-10-29. ADR 0017 принят и выбирает Together AI вместо Replicate, подключаемый как OpenAI-compatible provider. Активные документы `AGENTS.md`, `docs/product.md` и `docs/specs/image-client.md` продолжают обещать Replicate и отдельную asynchronous prediction integration. Исторические ADR, task reports и logs переписывать запрещено.
+ADR 0017 выбирает Together AI вместо Replicate через manual `providers.json` как `openAiCompatible`. Built-in config содержит только OpenRouter/fal; Together live response/price не проверены. Нормативные active sections всё ещё обещают Replicate. Исторические ADR/log/tasks/research факты не переписываются.
 
 Зависит от: —
 Среда: Linux или Windows.
 
 ## Критерии готовности
-- `AGENTS.md` описывает текущих встроенных провайдеров OpenRouter/fal и Together AI как настраиваемый OpenAI-compatible provider.
-- `docs/product.md` и `docs/specs/image-client.md` не называют Replicate частью актуальной цели/терминов/API-таблицы.
-- Возможности Together AI не выдуманы: непроверенные цена и live response остаются явно непроверенными со ссылкой на ADR 0017/status.
-- Исторические `docs/decisions`, `docs/log`, `tasks` и `poc` не переписаны.
-- `grep Replicate` после правки выдаёт только исторические документы или явно помеченный контекст замены.
+- AGENTS/product различают built-in OpenRouter/fal и выбранный, но manually configured Together AI.
+- Нормативные product requirements/terms/API overview не требуют Replicate client.
+- Together не назван built-in/проверенным; unknown live response/price сохранены.
+- Датированные исследования сторонних приложений, ADR context, logs, tasks, poc не изменены.
+- Финальный список Replicate occurrences классифицирован в отчёте как допустимый historical/research; запрещённых normative occurrences нет.
 
 ## Анализ
-- Реализация не содержит Replicate client.
-- Together AI использует существующий `OpenAiCompatibleClient` и `providers.json`, отдельного `ProviderKind` не нужно.
-- `docs/specs/image-client.md` содержит таблицу API, moderation examples и F2.5, связанные с Replicate; каждое место нужно либо заменить подтверждённым Together поведением, либо убрать неподтверждённую конкретику.
-- `docs/knowledge/csharp.md` также содержит активные Replicate-specific примеры аутентификации и dynamic schema; это не исторический документ.
+Большой `image-client.md` смешивает contract и датированное исследование. Нельзя механически заменить весь grep. Править только: «Цель и охват», текущий product provider/API overview и выводы, F1 provider setup, F2.5 configurable model/provider, F7.2 provider filter, active terms/mockups если они называют current provider. Historical competitor comparison остаётся с датой.
+
+`docs/knowledge/csharp.md` active HTTP/JSON guidance содержит Replicate-specific auth/schema и тоже обновляется общими подтверждёнными формулировками.
 
 ## План
-Для исполнителя (Haiku/Luna): задача только про документацию. Не меняй код, ADR, task reports и logs. Не ищи новые факты в интернете: используй только ADR 0017 и текущую реализацию; неизвестное называй неизвестным.
+Для Haiku/Luna: docs only, no internet/new facts. Перед edit составить таблицу occurrence → normative или historical; uncertain occurrence = `blocked`, не угадывать.
 
-Прочитай: ADR 0017, ADR 0009, `ProviderKind.cs`, `ProviderConfigLoader.cs`, `AGENTS.md`, `docs/product.md`, `docs/specs/image-client.md`, открытые вопросы `docs/status.md`.
+Прочитай: ADR 0017/0009, builtin-providers.json, ProviderKind/Loader, AGENTS, product, headings image-client, csharp knowledge, status Together open question.
 
-1. Составить список всех `Replicate` через grep и разделить на active docs и historical records. Записать список active docs в отчёт.
-2. Обновить вводный абзац и термины `AGENTS.md`: OpenRouter и fal встроены; Together AI подключается через `providers.json` как OpenAI-compatible.
-3. В `docs/product.md` заменить текущую тройку и схему Provider. Не утверждать, что Together key «подключается один раз» через встроенный экран, если пользовательский provider ещё требует конфиг.
-4. В `docs/specs/image-client.md` обновить цель, provider/API overview, F2.5 и примеры. Удалить Replicate-specific срок ссылок, prediction state и safety switch, если для Together нет подтверждения. Сохранить общие продуктовые требования.
-5. В `docs/knowledge/csharp.md` убрать Replicate-specific active guidance; оставить общие примеры HTTP/auth/schema либо заменить только фактами, подтверждёнными существующим OpenAI-compatible client.
-6. Не менять исторический текст ADR 0003; его заголовок/контекст остаётся записью решения того времени. ADR 0017 уже фиксирует замену.
-7. Запустить grep повторно и `scripts/check.sh`.
+1. Grep всех `Replicate`; в отчёт предварительную классификацию. Не трогать decisions/log/tasks/poc.
+2. AGENTS: built-ins OpenRouter/fal; additional OpenAI-compatible config; Together selected but not built-in/live-verified.
+3. product: purpose/provider schema/extra requirements/terms. Не обещать same UI key flow для manually configured Together.
+4. image-client только нормативные sections из Analysis. Replicate-specific expiry/prediction/safety examples убрать/обобщить; dated research оставить и при необходимости явно назвать исследованием 2026-10-27.
+5. csharp knowledge: auth/schema guidance общая или по реально существующим clients; historical facts не добавлять.
+6. Final grep и report allowed occurrences with reason.
 
 ### Проверка
 ```

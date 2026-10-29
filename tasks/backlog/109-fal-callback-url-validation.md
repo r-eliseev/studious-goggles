@@ -6,40 +6,41 @@ claimed:
 created: 2026-10-29
 ---
 
-# Проверять callback URL и URL изображения fal
+# Проверять URL и model endpoint, возвращённые fal
 
 ## Описание
-Найдено security-review 2026-10-29. fal возвращает `status_url`, `response_url`, `cancel_url` и URL результата. Callback URL без проверки передаются в `CreateAuthorizedRequestAsync`. Абсолютный URL заменяет `Config.BaseAddress`, после чего запрос получает `Authorization: Key <fal-key>`. Это позволяет отправить ключ на посторонний origin. URL изображения скачивается без Authorization, но может указывать на HTTP, localhost или приватный IP.
+Security-review 2026-10-29: fal callback URLs идут в authorized request без origin validation; absolute model id также может заменить base URI. Image URL может указывать на HTTP/localhost/private IP. Automatic redirects отдельно отключает задача 124.
 
 Зависит от: 107.
 Среда: Linux или Windows.
 
 ## Критерии готовности
-- status/response/cancel URL принимаются только как абсолютные HTTPS URL с теми же host и effective port, что `Config.BaseAddress`; userinfo и fragment запрещены.
-- Проверка выполняется при чтении submit-ответа и повторно перед использованием сохранённого handle.
-- К URI другого origin API-ключ никогда не добавляется.
-- URL изображения должен быть абсолютным HTTPS без userinfo; localhost, loopback, link-local и private IP literal отклоняются до HTTP-запроса.
-- Redirect с авторизованного callback не переносит Authorization на другой origin; это подтверждено тестом либо автоматические redirect для этого клиента отключены и обработаны явно.
-- Негативные тесты проверяют внешний host, HTTP, userinfo, loopback IPv4/IPv6 и подменённый сохранённый handle.
+- status/response/cancel: absolute URL с теми же scheme, normalized host и effective port, что уже провалидированный `Config.BaseAddress`, без userinfo/fragment; built-in fal остаётся HTTPS, локальный HTTP допустим только когда сам base прошёл localhost-исключение ProviderRegistry; проверка при submit и перед использованием persisted handle.
+- `ProviderJobHandle.ProviderId == Config.Id` до secret-store/HTTP access.
+- fal `request.ModelId` только relative endpoint id: absolute URI, `//host`, query, fragment и traversal отклоняются до secret lookup/request.
+- Image URL: absolute HTTPS без userinfo/fragment; запрещены `localhost`, `localhost.`, loopback, unspecified, link-local, RFC1918, ULA и IPv4-mapped non-public IP literals.
+- Invalid URL даёт `ProviderException(ErrorKind.Unknown)` с безопасным сообщением без исходного URL/query.
+- Existing callback query сохраняется; `logs=1` добавляется/заменяется URI-aware без потери остальных query parameters и без string concatenation.
+- DNS hostname→private IP остаётся документированным residual risk; redirect bypass закрывает 124.
 
 ## Анализ
-- `ProviderRegistry` проверяет только настроенный `baseAddress`; URL из ответа не проверяются.
-- `new Uri(Config.BaseAddress, path)` принимает абсолютный `path`.
-- Текущий встроенный fal origin — `https://queue.fal.run/`; happy-path тесты уже используют callback на этом origin.
-- DNS rebinding без собственного transport/DNS policy полностью не закрывается. В этой задаче блокируются опасные URI и IP literals; остаточный риск hostname→private IP описать в «Отчёте», не добавлять сетевой DNS lookup в валидатор.
-- Пересечение с 107 и 112 по `FalImageProvider`; выполнять после 107 и до 112.
+`new Uri(base, absolute)` заменяет base. `ProviderRegistry` валидирует только config address. Fal catalog `endpoint_id` попадает в Submit. Stub handler не моделирует redirect, поэтому redirect policy не входит в эту задачу.
+
+Пересечения: 124 и 112 по HTTP; порядок 109 → 124 → 112. Задача 121 remote cancel зависит также от этой validation.
 
 ## План
-Для исполнителя (Haiku/Luna): не создавай универсальную SSRF-библиотеку. Добавь один маленький internal validator и точечные тесты. Не ослабляй поддержку `localhost` у настраиваемых OpenAI-compatible providers: правила этой задачи относятся к URL, возвращённым fal.
+Для Haiku/Luna: один internal validator, без DNS lookup и универсальной SSRF-библиотеки. Все invalid provider data маппить в `Unknown`, не оставлять выбор ErrorKind исполнителю.
 
-Прочитай: `FalImageProvider.cs`, `ProviderClientBase.cs`, `ProviderRegistry.cs`, `FalImageProviderTests.cs`, `builtin-providers.json`.
+Прочитай: `FalImageProvider`, `ProviderClientBase.CreateRequest`, `ProviderConfig/Registry`, fal tests.
 
-1. Создать internal `FalUrlValidator` рядом с `FalImageProvider`. Методы разделить по назначению: callback с exact-origin policy; image download с HTTPS/public-literal policy. Возвращать проверенный `Uri` или бросать `ProviderException(ErrorKind.BadRequest или Unknown)` с сообщением без ключа. Выбрать один существующий kind и закрепить тестом; новый `ErrorKind` не добавлять.
-2. TDD для callback: same-origin проходит; host/port/scheme/userinfo/fragment отличаются → исключение до вызова handler.
-3. Вызывать callback validation при `SubmitAsync` перед созданием `ProviderJobHandle`, а также в `PollAsync`, `CompletedAsync` и `CancelAsync` для handle из БД.
-4. TDD для image URL: обычный HTTPS CDN проходит; HTTP, localhost, `127.0.0.1`, `::1`, RFC1918, link-local IP literals отклоняются до handler.
-5. Проверить redirect policy `IHttpClientFactory`. Добавить handler-тест, что Authorization не приходит на другой origin после redirect. Если стандартный handler нельзя проверить через текущий stub, отключить auto-redirect только для fal через отдельную регистрацию и явно отклонять 3xx; не менять все provider clients.
-6. Debug-логирование контента и ошибок оставить включаемым как сейчас; не логировать полный URL с query/userinfo и ключ.
+1. Создать `FalUrlValidator`: callback validator; image URL validator; model endpoint validator. Возвращать `Uri`/validated relative string.
+2. Tests callback: default/effective port, host case/normalization, external host, HTTP, userinfo, fragment, malformed URI. Same-origin happy path проходит.
+3. При `SubmitAsync` валидировать model endpoint до `CreateAuthorizedRequestAsync`; tests `https://evil`, `//evil`, query, fragment, `..` и normal `fal-ai/flux/dev`.
+4. Валидировать callback URLs до сохранения handle. В Poll/Completed/Cancel сначала проверить handle provider id и URLs, затем читать key.
+5. Добавлять/заменять `logs=1` через URI API без string concatenation; сохранить остальные existing query parameters. Tests no query, one query и existing logs value.
+6. Image tests: normal HTTPS hostname проходит; запрещённые hostname/IP literals, включая IPv4-mapped IPv6, не вызывают handler.
+7. Safe error/log tests: exception не содержит rejected URL, query, userinfo, prompt или key.
+8. В отчёте явно записать residual DNS risk и ссылку на 124 для redirect.
 
 ### Проверка
 ```
@@ -49,7 +50,7 @@ dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-n
 bash scripts/check.sh
 ```
 
-Файлы: `ImageGen/ImageGen.Core/Fal/FalUrlValidator.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalImageProvider.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs` (только если нужен redirect policy), `ImageGen/ImageGen.Core.Tests/Fal/FalUrlValidatorTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Fal/FalImageProviderTests.cs`
+Файлы: `ImageGen/ImageGen.Core/Fal/FalUrlValidator.cs` (новый), `ImageGen/ImageGen.Core/Fal/FalImageProvider.cs`, `ImageGen/ImageGen.Core.Tests/Fal/FalUrlValidatorTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Fal/FalImageProviderTests.cs`
 
 ## Отчёт
 

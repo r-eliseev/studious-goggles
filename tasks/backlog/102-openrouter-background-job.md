@@ -1,34 +1,50 @@
 ---
 id: 102
-status: todo
+status: planned
 assignee:
 claimed:
 created: 2026-10-29
 ---
 
-# OpenRouter как задание в фоне (ADR 0005)
+# Общий in-memory queued adapter для synchronous image transport
 
 ## Описание
-Найдено аудитом 2026-10-29 (`docs/log/2026-10-29-audit.md`). ADR 0005 (`docs/decisions/0005-openrouter-background-job.md`, «принято») требует, чтобы OpenRouter работал за контрактом submit/poll/cancel (ADR 0003) как задание в фоне в памяти процесса (`OpenRouterJobRunner`), а узкие `IImageGenerator` и `IModelProvider` ушли. Задача 025 закрыта с «отличий от плана нет», но в коде этого нет:
-- `ImageGen/ImageGen.Core/OpenRouter/` содержит только `OpenRouterClient.cs`; `OpenRouterJobRunner`, `OpenRouterImageProvider`, `IImageProvider` не существуют;
-- `ImageGen/ImageGen.Core/Providers/IImageGenerator.cs` и `IModelProvider.cs` на месте;
-- `GenerationService` ведёт два пути: синхронный `GenerateAndStoreAsync` через `IImageGenerator` (семафор на 4) и очередь `ExecuteQueuedAsync`/`WatchQueuedAsync` для `IQueuedImageProvider` (fal).
+ADR 0005 требует представить OpenRouter как background job. OpenAI-compatible transport также synchronous; чтобы позже дать GenerationService один queued path, нужен общий in-memory adapter вокруг `IImageGenerator`. Эта задача создаёт только adapter/state machine и tests. ProviderRouter integration — 128, orchestration switch — 129.
 
-Последствия: отмена (задача 024) для OpenRouter невозможна единым путём; у генерации OpenRouter после перезапуска нет хэндла, она помечается «Interrupted».
-
-Решение владельца уже записано в `docs/status.md`: ADR 0005 выполнять. Сначала завершить узкие lifecycle-задачи 106–113, затем детализировать эту задачу под актуальный `GenerationService`; не предлагать вариант отмены ADR заново.
-
-Зависит от: 113.
+Зависит от: 122, 130.
 Среда: Linux или Windows.
 
 ## Критерии готовности
-- Решение владельца выполнить ADR 0005 сохранено в `docs/status.md`.
-- OpenRouter-генерации идут через `IQueuedImageProvider` (или общий контракт ADR 0003) с заданием в памяти процесса, `GenerationService` имеет один путь, `IImageGenerator` удалён или оставлен с обоснованием; тесты ядра на submit, poll, отмену и перезапуск (задание в памяти теряется → «Interrupted»).
-- `docs/architecture.md` совпадает с кодом.
+- Adapter implements IQueuedImageProvider поверх IImageGenerator для любого provider id; own HTTP CTS, observed task, thread-safe state.
+- Submit регистрирует job до task start и сразу возвращает serializable local handle; второго concurrency semaphore нет (owner — GenerationService 111).
+- Poll states Queued/Running/terminal; ProviderException maps kind, Moderated→Filtered; unexpected→Failed/Unknown; task never unobserved fault.
+- Cancel idempotent и отменяет transport CTS; точные CancelOutcome tests.
+- Handle неизвестного нового process adapter → terminal Failed/Interrupted без нового paid submit.
+- Terminal jobs сохраняются 10 минут (`TerminalRetention`), затем удаляются sweep при Submit/Poll/Cancel; deterministic TimeProvider tests, no timer sleeps.
 
 ## Анализ
+ADR 0019 (задача 130) заменяет несовместимые детали ADR0005 и фиксирует один вариант: общий adapter OpenRouter/OpenAI-compatible, semaphore только GenerationService, без queue-position обещания, terminal TTL 10 минут. Эта задача реализует state machine; normal orchestration path удалит 129. Adapter не занимается catalog/chat, persistence/files или provider concurrency. ProviderJobHandle использует ProviderId+RequestId; URL fields получают безопасные local `memory://` values и никогда не идут в HTTP/FalUrlValidator.
 
 ## План
+Для Haiku/Luna: pure Core class + tests; ProviderRouter/GenerationService не менять.
+
+1. Создать `InMemoryQueuedImageProvider(IImageGenerator transport, string providerId, TimeProvider)`. Internal JobEntry: state/result/error, own CTS, observed Task, timestamps.
+2. Submit: validate request; create GUID request id/local handle; add entry; start task only after registration gate; return handle without waiting transport.
+3. Task state machine: Running; await GenerateAsync own token; Succeeded result; ProviderException mapping; own OCE Cancelled; unexpected Failed/Unknown. Catch all inside task.
+4. Poll validate ProviderId/local handle/request id. Existing returns snapshot. Unknown id/new adapter returns Failed/Interrupted. Terminal result remains available until TTL.
+5. Cancel atomic/idempotent: unknown → NotFound; terminal → AlreadyCompleted; active → cancel CTS и return CancellationRequested. Poll позже показывает Cancelled после observed OCE.
+6. Sweep terminal entries старше `TerminalRetention = 10 minutes` на Submit/Poll/Cancel using TimeProvider; no fire-and-forget timer. Active jobs never removed by TTL.
+7. Tests registration race, immediate handle, states, result, each exception mapping, cancellation race/repeat, unknown after new instance, TTL/sweep, no internal concurrency cap.
+
+### Проверка
+```
+dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj
+dotnet format ImageGen/ImageGen.Core/ImageGen.Core.csproj --verify-no-changes
+dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-no-changes
+bash scripts/check.sh
+```
+
+Файлы: `ImageGen/ImageGen.Core/Providers/InMemoryQueuedImageProvider.cs` (новый), `ImageGen/ImageGen.Core.Tests/Providers/InMemoryQueuedImageProviderTests.cs` (новый)
 
 ## Отчёт
 

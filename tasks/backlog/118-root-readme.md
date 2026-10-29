@@ -6,39 +6,36 @@ claimed:
 created: 2026-10-29
 ---
 
-# Добавить корневой README для пользователя и разработчика
+# Добавить корневой README без обещаний roadmap-функций
 
 ## Описание
-Найдено ревью 2026-10-29. В публичном репозитории нет корневого `README.md`. `AGENTS.md` и `docs/index.md` рассчитаны на агентов и внутреннюю разработку, но GitHub landing page не объясняет, что уже работает, где скачать релиз, как запустить приложение, настроить OpenRouter/fal и где лежат пользовательские данные.
+У GitHub repo нет landing README. Нужен краткий user/developer start, основанный только на merged code/release после исправлений docs/privacy/arm64.
 
-Зависит от: 100, 116.
+Зависит от: 100, 115, 116, 117, 119, 120.
 Среда: Linux или Windows.
 
 ## Критерии готовности
-- Корневой README кратко разделяет «работает сейчас» и roadmap; не выдаёт Web/Docker/галерею/расходы за готовые функции.
-- Есть ссылки на GitHub Releases, лицензию, `docs/index.md`, `docs/product.md` и troubleshooting/development docs.
-- Для пользователя описаны варианты Avalonia/MAUI, первый запуск, ввод ключа, локальное хранение данных и предупреждение о Debug trace.
-- Для разработчика указаны .NET 10, команды сборки Avalonia и четыре тестовых проекта из `AGENTS.md`; platform limits не дублируются подробно, а ссылаются на `docs/knowledge/dev-environment.md`.
-- Инструкция ARM64 соответствует результату задачи 100; до её завершения README не рекомендует ошибочный MAUI win-arm64 asset.
-- Нет badges или заявлений о поддержке, которые не подтверждаются CI/релизом.
+- «Current» и roadmap разделены; Web/Docker/gallery/spending не названы готовыми.
+- Built-in: OpenRouter/fal. Additional OpenAI-compatible config manual; Together selected, not built-in/live-verified.
+- Fal Core support не выдаётся за тот же first-run UI setup, пока экран/flow не подтверждён.
+- Download table только фактические release.yml assets после 100; Android debug-signed sideload, no store/MSIX/update claims.
+- Privacy: local app data с учётом отключённого backup 115; обычные Debug logs и debug trace могут содержать user/provider content, их нельзя публиковать.
+- Dev .NET10/Avalonia/four test commands, platform details ссылкой.
+- Все relative links проходят check-docs; no badges/unverified support/app id.
 
 ## Анализ
-- В репозитории есть `docs/design/README.md` и `poc/README.md`, но они не являются корневым introduction.
-- README зависит от 116, чтобы не повторить устаревший Replicate, и от 100, чтобы не рекламировать неверный arm64 package.
-- Скриншот не обязателен: стабильного пользовательского изображения в assets не найдено; не добавлять бинарник ради этой задачи.
+README выполняется последним в doc chain. `scripts/check-docs.sh` проверяет markdown links во всём repo, включая root README. ApplicationId target в status не совпадает current csproj до task030, поэтому не упоминать.
 
 ## План
-Для исполнителя (Haiku/Luna): задача только документационная. Не копируй большие разделы из docs и не выдумывай installation commands. Все команды сначала сверь с `AGENTS.md` и workflow.
+Для Haiku/Luna: сначала evidence table в отчёте, затем README. Никакого internet copy.
 
-Прочитай: `docs/product.md`, `docs/status.md`, `docs/index.md`, `docs/knowledge/dev-environment.md`, `AGENTS.md`, `.github/workflows/build.yml`, `.github/workflows/release.yml`, `LICENSE`.
-
-1. Создать `README.md` со структурой: название/одно предложение; Current features; Download; First run and keys; Local data/privacy; Development; Documentation; Roadmap; License.
-2. Current features перечисляет только реализованное в текущем коде: sessions/chat assistant, multi-model runs, OpenRouter/fal, configurable compatible providers, local SQLite/files, MAUI/Avalonia packages по факту release workflow.
-3. Download ведёт на `https://github.com/r-eliseev/studious-goggles/releases`; platform table строить только по успешным артефактам после задачи 100. Для debug-signed Android явно написать «sideload, not store-signed».
-4. First run не содержит ключей-примеров. Объяснить, что secrets сохраняются через platform secret store; fallback Avalonia без системного backend живёт только до выхода.
-5. Privacy: prompts/images local; обычные logs не содержат bodies на Information; тела и подробности ошибок доступны на Debug, полный debug trace включается отдельно и содержит пользовательский контент. Не советовать публиковать debug folder.
-6. Development: prerequisites .NET 10; команды build Avalonia и `dotnet test --project` для Core/Data/Presentation/Avalonia tests; MAUI и platform matrix — ссылка на dev-environment.
-7. Проверить все относительные ссылки и выполнить harness.
+1. Evidence table claim→source: builtin config; provider setup page models; release workflow after100; platform matrix; logging handlers/spec; secret stores; status roadmap.
+2. Создать sections: purpose; Current; Download; First run/keys; Local data/privacy; Development; Documentation; Roadmap; License.
+3. Current перечисляет только code evidence. Together wording строго как criteria.
+4. Download: Releases link; exact outputs workflow. No MAUI iOS/MacCatalyst, store Android, installer/auto-update.
+5. Privacy: prompts/images DB/files local and Android automatic backup disabled after115; Debug logs **и** debug folder sensitive; Information no bodies; secrets platform stores/fallback caveat.
+6. Development commands copied exactly from AGENTS/build workflow; no local test counts.
+7. Validate links with check.sh and manually list external links.
 
 ### Проверка
 ```

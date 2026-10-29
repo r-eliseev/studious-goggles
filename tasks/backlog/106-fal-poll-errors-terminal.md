@@ -9,35 +9,37 @@ created: 2026-10-29
 # Ошибка polling fal всегда завершает генерацию
 
 ## Описание
-Найдено ревью 2026-10-29. После успешного submit `ProviderJobPoller` повторяет только `ProviderException` с `ErrorKind.Network`. Ошибки `InvalidKey`, `RateLimited`, `BadRequest`, `ModelUnavailable` и другие выходят из итератора. `GenerationService.WatchQueuedAsync` их не ловит, фоновая задача faulted, а генерация остаётся `Queued` или `Running`. При следующем старте тот же сохранённый handle запускается снова. Задание с handle от удалённого из `providers.json` провайдера также остаётся незавершённым навсегда.
+Найдено ревью 2026-10-29. После submit `ProviderJobPoller` повторяет только `ErrorKind.Network`. Остальные `ProviderException` выходят из iterator; `GenerationService.WatchQueuedAsync` их не ловит, background task faulted, generation остаётся `Queued`/`Running`. Handle удалённого provider также остаётся незавершённым.
 
 Зависит от: —
 Среда: Linux или Windows.
 
 ## Критерии готовности
-- Любая `ProviderException` из polling переводит генерацию в `Failed`, сохраняет исходный `ErrorKind` и сообщение, задаёт `CompletedAt` и публикует обновление.
-- Неожиданное исключение polling переводит генерацию в `Failed/Unknown`; исключение не остаётся ненаблюдаемым.
-- Задание с сохранённым handle, провайдер которого больше не настроен, становится `Failed/ModelUnavailable` при восстановлении.
-- Сетевые ошибки по-прежнему повторяются по правилам `ProviderJobPoller`; submit платного задания не повторяется.
-- Добавлены тесты всех трёх сценариев.
+- `ProviderException` именно из получения следующего poll update завершает generation: `Moderated` → `Filtered`, остальные kinds → `Failed`; kind/message и `CompletedAt` сохраняются, event публикуется один раз.
+- Operational Warning/Error polling failure содержит только GenerationId, ProviderId, status и ErrorKind; ProviderException.Message и полный exception только отдельной Debug-записью. Prompt, response content, URL/query и key не попадают выше Debug.
+- Неожиданное исключение из polling становится `Failed/Unknown` и не остаётся ненаблюдаемым.
+- Ошибки `ApplyUpdateAsync`, file store и persistence не классифицируются как polling failure.
+- Handle отсутствующего provider становится `Failed/ModelUnavailable`, без submit/poll.
+- `RecoverInterruptedAsync` возвращает сумму missing-provider rows и строк, помеченных `Interrupted` bulk update.
+- Network retry и запрет повторного submit сохраняются.
 
 ## Анализ
-- `ProviderJobPoller.WatchAsync` ловит только `ErrorKind.Network`: `ImageGen/ImageGen.Core/Providers/ProviderJobPoller.cs`.
-- `GenerationService.WatchQueuedAsync` ловит только `JsonException`, `InvalidOperationException` и `IOException`: `ImageGen/ImageGen.Core/Services/GenerationService.cs`.
-- `RecoverInterruptedAsync` запускает только найденный `IQueuedImageProvider`, но `MarkUnfinishedAsInterruptedAsync` намеренно не трогает строки с `job_json`: `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`.
-- Задачи 107, 108, 111 и 113 также меняют `GenerationService`; выполнять их последовательно, не параллельно. Рекомендуемый порядок: 106 → 107 → 108 → 111 → 113.
+Текущий catch охватывает весь `await foreach`, поэтому ловит также ошибки обработки update. Нужен явный async enumerator: polling catch только вокруг `MoveNextAsync`, а `Current`/`ApplyUpdateAsync` вне него. `SaveAndNotifyAsync` пока подавляет repository error; это исправляет 113, поэтому 106 не тестирует propagation `UpdateGenerationAsync`.
+
+Пересечения: 107, 108, 111 и 113 меняют `GenerationService`. Порядок общей цепочки: 106 → 107 → 109 → 124 → 108 → 121 → 111 → 113 → 122.
 
 ## План
-Для исполнителя (план рассчитан на Haiku/Luna): делай шаги строго по порядку и по TDD. Сначала добавляй один падающий тест, затем минимальную правку для него. Не меняй публичные контракты вне указанного. Если текущие типы отличаются от плана или выбранный `ErrorKind` отсутствует, запиши это в «Комментарии», поставь `blocked` и остановись.
+Для Haiku/Luna: строго TDD, один сценарий за шаг. Не менять `ProviderJobPoller`: его network retry уже правилен. Если async-enumerator API не совпадает, записать compiler error, `blocked`, без альтернативного широкого catch.
 
-Прочитай перед началом: `docs/conventions.md`, `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/Providers/ProviderJobPoller.cs`, `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`.
+Прочитай: `GenerationService.WatchQueuedAsync/RecoverInterruptedAsync`, `ProviderJobPoller`, `RunRepository` resumable methods, `GenerationServiceTests`.
 
-1. В `GenerationServiceTests` добавить тест: восстановленное queued-задание, у которого `PollAsync` бросает `ProviderException(ErrorKind.InvalidKey, ...)`, после `WhenIdleAsync` имеет `Failed`, `InvalidKey`, сообщение и `CompletedAt`; `UpdateGenerationAsync` вызван, `SubmitAsync` не вызван.
-2. В `WatchQueuedAsync` отдельно обработать `ProviderException`: записать warning без промпта/ключа, перенести kind/message в generation, завершить и сохранить её. Сетевые повторы остаются внутри `ProviderJobPoller`.
-3. Добавить тест на обычное неожиданное исключение именно при получении следующего provider update: состояние `Failed`, kind `Unknown`, задача `WhenIdleAsync` не падает. Получать элементы async-enumerator так, чтобы catch охватывал только `MoveNextAsync`/`PollAsync`; `ApplyUpdateAsync`, сохранение файла и persistence выполнять вне этого catch. Ошибки `ApplyUpdateAsync` должны доходить до supervisor задачи 113, а не превращаться в polling failure. Не перехватывать отмену, если token отменён после задачи 108.
-4. Добавить отдельный тест границы: `ApplyUpdateAsync` получает Succeeded, а `SaveAsync` или `UpdateGenerationAsync` бросает исключение → polling catch его не маскирует и не записывает второй terminal status.
-5. Добавить тест восстановления handle с отсутствующим провайдером. В `RecoverInterruptedAsync` явно завершить такую строку как `Failed/ModelUnavailable`, вместо того чтобы оставлять её без изменений.
-6. Выполнить проверки и записать в «Отчёт» результаты новых тестов.
+1. Тест `PollAsync` бросает `ProviderException(InvalidKey)` → terminal Failed, исходные kind/message, `CompletedAt`, один persisted update/event, no submit.
+2. Тест `PollAsync` бросает обычный exception → terminal Failed/Unknown, `WhenIdleAsync` не faulted.
+3. Переписать watch на `GetAsyncEnumerator`/`MoveNextAsync`. Только `MoveNextAsync` внутри catches. `ProviderException` маппить по критериям; active job cancellation после 108 не маппить в Unknown. Operational log без exception object/provider message; detail отдельным LogDebug. ApplyUpdate/file/persistence этим catch/log не охватывать.
+4. Boundary-тест: poll возвращает Succeeded, `IImageFileStore.SaveAsync` бросает. Ошибка не превращается в второй terminal polling status. До 113 `WhenIdleAsync` ожидаемо faulted; в 113 этот тест обновляется под supervisor log.
+5. Test malformed persisted JobJson: JsonException → Failed/Unknown, CompletedAt, один persisted update/event, no submit/poll; operational log safe, exception detail only Debug.
+6. Тест missing provider при recovery: `Failed/ModelUnavailable`, no submit/poll, update/event, count = missing count + bulk repository count.
+7. Обновить XML-doc `RecoverInterruptedAsync` под count semantics и missing-provider behavior.
 
 ### Проверка
 ```

@@ -9,37 +9,39 @@ created: 2026-10-29
 # Выполнить C1.6: убирать картинки при нехватке контекста
 
 ## Описание
-Найдено ревью 2026-10-29. `docs/specs/assistant-context.md` помечен «реализовано», но требование C1.6 отсутствует: если запрос с картинками не помещается, сначала удаляются картинки последнего прогона, затем лишние пользовательские вложения, и пишется warning. Сейчас `AssistantService.BuildRequestAsync` объединяет оба источника, берёт первые четыре и уменьшает только бюджет текстовой истории.
+`assistant-context.md` помечен реализованным, но C1.6 отсутствует: при переполнении сначала убрать last-run images, затем user attachments, warning один раз. Сейчас sources объединяются и уменьшается только text history budget.
 
 Зависит от: —
 Среда: Linux или Windows.
 
 ## Критерии готовности
-- При достаточном контексте поведение не меняется: пользовательские картинки идут раньше картинок последнего прогона, максимум четыре.
-- При переполнении сначала удаляются картинки последнего прогона, затем пользовательские с конца списка, пока оценка запроса не помещается.
-- Текущее пользовательское сообщение остаётся в запросе по C1.4.
-- Каждое сокращение набора картинок даёт один Warning с session/model и числами оставленных/убранных картинок, без текста сообщения и data URL.
-- Итоговая оценка не превышает context length, если обязательная fixed part, reserve и текущее user message сами помещаются. Для физически невозможного меньшего контекста текущее сообщение сохраняется и пишется Warning.
-- Критерий готовности спецификации про 500 длинных сообщений остаётся зелёным.
+- Initial cap сохраняется: `userImages.Take(4)`, затем last-run до общего 4.
+- Для каждого image candidate сначала пересобирается максимально возможная history; картинка удаляется только если request всё ещё не помещается из-за обязательного current message.
+- Удаление по одной с конца last-run, затем с конца user; первый fitting candidate побеждает.
+- Full corrected estimate = reserve + corrected fixed/summary/images + corrected selected messages; если fixed+current+reserve физически не помещаются, current остаётся, images=0, один warning.
+- `BuiltRequest.EstimatedTokens` остаётся raw estimate без reserve/factor для `TokenCorrection.Record`.
+- Один Warning содержит structured SessionId/ProviderId/ModelId/ImagesKept/ImagesRemoved, без user text/data URL.
 
 ## Анализ
-- Источники картинок теряются после `images.AddRange`; код уже не знает, что можно удалить первым.
-- `ContextBuilder.Select` зависит от бюджета, а бюджет зависит от числа картинок. Нужно повторно выбирать историю для каждого кандидата набора картинок, а не удалить картинки после единственного выбора.
-- Пересекается с 114 по `AssistantService` и тесты; выполнять 110 до 114.
+`ContextBuilder.Select` умножает message estimates на correction factor, но `ContextBudget` не корректирует fixed/summary/images. Candidate algorithm обязан использовать одну формулу, иначе удалит image вместо старой history. Existing `AssistantAcceptsImages` задаёт ContextLength=1000 при reserve=4096; legacy image tests нужно перевести на достаточный default.
+
+Пересечение: 123 использует тот же AssistantService и logger double; порядок 110 → 114 → 123 → 117.
 
 ## План
-Для исполнителя (Haiku/Luna): TDD и маленькие pure helpers. Не меняй `TokenEstimator.ImageTokens`, лимит четырёх вложений и порядок сообщений. Не добавляй реальный вызов провайдера в тесты.
+Для Haiku/Luna: TDD pure budget helper; не менять image token price, cap 4 и current-message rule.
 
-Прочитай: `docs/specs/assistant-context.md` C1, `AssistantService.BuildRequestAsync`, `ContextBudget`, `ContextBuilder`, `AssistantServiceTests`.
+Прочитай: C1/C2, `AssistantService.BuildRequestAsync`, `ContextBudget`, `ContextBuilder`, `TokenCorrection`, AssistantService tests/logger double.
 
-1. В тестах добавить явные модели с контролируемым `ContextLength` и отличимые data URL для пользовательских и last-run изображений.
-2. Падающий тест: всё помещается → присутствуют все допустимые картинки, warning отсутствует.
-3. Падающий тест: одна картинка лишняя → удаляется last-run, пользовательские остаются.
-4. Падающий тест: после удаления всех last-run всё ещё тесно → пользовательские удаляются с конца, текущее сообщение остаётся, один warning содержит только количества.
-5. В `BuildRequestAsync` хранить `userImages` и `lastRunImages` раздельно. Сформировать начальный список с текущим приоритетом и лимитом четыре.
-6. Выделить internal helper, который перебирает кандидаты от полного набора к меньшему в порядке C1.6. Для каждого кандидата строит `ContextBudget`, вызывает `ContextBuilder.Select` и проверяет полную оценку. Первый помещающийся кандидат возвращает картинки и selected history.
-7. Если даже запрос без картинок формально превышает контекст из-за обязательной части и текущего сообщения, оставить обязательную часть по C1.4 и записать Warning; не удалять текущее сообщение и не бросать исключение.
-8. Сохранить существующий расчёт `BuiltRequest.EstimatedTokens` для `TokenCorrection` по фактически выбранным сообщениям и картинкам.
+1. Изменить test helper на `AssistantAcceptsImages(int contextLength = 32_000)`; legacy tests используют default.
+2. Добавить pure `AssistantRequestBudget` helper: fixed reserve не умножается; `ceil(factor * (fixed+summary+images))` вычитается из context; selected message costs считаются тем же per-message rounding, что ContextBuilder. Helper возвращает available history и full corrected estimate.
+3. Test helper `AssertFitsContext` использует production helper/formулу, а не упрощённую сумму texts.
+4. Tests: all fit; 2 user+2 last-run и удалить ровно последнюю last-run; удалить все last-run и user с конца; 4 user means last-run outside cap and no budget warning; factor=2.0 retains images by dropping older history.
+5. Impossible test: fixed+summary+current+reserve > context без images → current полный, images 0, exactly one warning.
+6. В BuildRequest хранить sources отдельно. Initial candidate cap как критерий. Для candidate: budget → ContextBuilder.Select → full check; если only mandatory current causes overflow, remove next image and repeat.
+7. Warning один после выбора, removed count относительно capped candidate. Не считать last-run, отброшенные штатным cap.
+8. Расширить Core `CapturingLogger`: configurable minimum level и structured key/value state; regression existing logger tests. Проверить properties и отсутствие content.
+9. Raw `BuiltRequest.EstimatedTokens` считать по фактически выбранным texts/images без factor/reserve.
+10. Existing 500-message test дополнить full corrected estimate assertion.
 
 ### Проверка
 ```
@@ -49,7 +51,7 @@ dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-n
 bash scripts/check.sh
 ```
 
-Файлы: `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core/Context/` (один новый helper только если нужен), `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Context/` (тест helper только если он создан)
+Файлы: `ImageGen/ImageGen.Core/Context/AssistantRequestBudget.cs` (новый), `ImageGen/ImageGen.Core/Context/ContextBudget.cs` (удалить/делегировать, только если helper заменяет его без дублирования), `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Context/AssistantRequestBudgetTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/TestDoubles/CapturingLogger.cs`
 
 ## Отчёт
 

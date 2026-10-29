@@ -6,41 +6,37 @@ claimed:
 created: 2026-10-29
 ---
 
-# Ограничить активные генерации отдельно для каждого провайдера
+# Ограничить локально отслеживаемые jobs отдельно для каждого provider
 
 ## Описание
-Найдено ревью 2026-10-29. ADR 0003 требует семафор на провайдера. Сейчас `GenerationService` использует один глобальный `SemaphoreSlim(4)`. Для queued provider слот удерживается только на submit и освобождается до polling, поэтому удалённо может одновременно выполняться больше четырёх fal-заданий; медленные submit одного провайдера при этом блокируют другой.
+ADR 0003 требует per-provider semaphore. Сейчас один global slot pool, а queued slot освобождается после submit. Нужно не более четырёх локально отслеживаемых jobs provider от submit до terminal/local cancellation и независимость разных providers.
 
-Зависит от: 108.
+Зависит от: 121, 130.
 Среда: Linux или Windows.
 
 ## Критерии готовности
-- У каждого provider id свой лимит `MaxParallelGenerations = 4`.
-- Пятый job одного провайдера не submit-ится/не генерируется, пока один из первых четырёх не достиг terminal state.
-- Четыре активных задания provider A не мешают начать задания provider B.
-- Для queued provider слот удерживается от начала submit до terminal update или отмены.
-- Сбой или отмена всегда освобождает слот ровно один раз.
-- Тесты не используют `Task.Delay` для синхронизации; только `TaskCompletionSource` и bounded ожидание тестового фреймворка.
+- Provider id имеет собственный limit 4; provider A не блокирует B.
+- Fresh normal/queued и recovered watch используют один общий helper acquisition.
+- Queued slot удерживается submit→terminal либо до локальной cancellation.
+- Отменённый WaitAsync не вызывает Release; acquired slot освобождается exactly once.
+- Если remote cancel failed, удалённая операция может остаться неизвестной; лимит гарантирует только локально отслеживаемые jobs.
+- OpenRouter adapter 102 не добавляет второй semaphore; ownership лимита остаётся GenerationService по superseding ADR задачи 130.
+- `RunningJob.SubmitSettled` завершается exactly once при каждом выходе pre-submit/submit phase, включая cancellation во время ожидания slot; после успешного submit handle публикуется до signal.
 
 ## Анализ
-- Текущий `_slots` глобальный и создаётся в поле `GenerationService`.
-- `ExecuteQueuedAsync` освобождает `_slots` перед `WatchQueuedAsync` по старому комментарию «queue can take minutes»; это прямо противоречит ограничению активных provider jobs.
-- После задачи 108 token и running job уже должны передаваться через весь pipeline; использовать их, не создавать второй cancellation-механизм.
-- Пересекается с 106/108/113 по `GenerationService`; выполнять после 108 и до 113.
+После 108/121 единственный lifetime token — RunningJob CTS. Recovery сейчас обходит `_slots`. Semaphore dictionary живёт весь lifetime singleton и не dispose-ится per job.
 
 ## План
-Для исполнителя (Haiku/Luna): не переписывай provider interfaces. Сначала зафиксируй семантику тестами. Для тестовой синхронизации используй gates и счётчики `Interlocked`; никаких ожиданий «100 ms и проверить».
+Для Haiku/Luna: provider interfaces не менять. Tests синхронизировать gates/TCS, без timing sleeps.
 
-Прочитай: ADR 0003, `GenerationService.cs`, `GenerationServiceTests.cs`, тесты queued provider.
-
-1. Добавить test double provider с gate и счётчиками current/max concurrency.
-2. Падающий тест normal provider: пять generation одного provider → до открытия gate стартуют ровно четыре; max равно четырём; после открытия заканчиваются все.
-3. Падающий тест два provider: четыре заблокированных у A не мешают одному job B войти в provider call.
-4. Падающий queued-тест: первые четыре submit завершены и polling заблокирован; пятый submit ещё не вызван. После terminal update пятый запускается.
-5. Заменить `_slots` на потокобезопасное хранилище `providerId → SemaphoreSlim`; создавать семафор лениво с `StringComparer.Ordinal` семантикой provider id.
-6. Получать слот перед provider work. Для normal path освобождать после результата; для queued path — только после окончания watch. `finally` обязан покрывать submit, watch, exception и cancellation.
-7. Удалить/обновить комментарий, который говорит, что queued slot освобождается после submit. Публичную константу лимита не менять.
-8. Проверить, что recovery saved handle также получает provider slot и не обходит лимит.
+1. Test normal same provider: 5 jobs, до gate ровно 4 entered; после release все terminal; max 4.
+2. Test two providers: 4 blocked A не мешают B. Настроить router для обоих ids.
+3. Queued test: 4 submitted и polling blocked; fifth SubmitAsync not called до terminal/local cancel.
+4. Recovery test: 4 recovered handles занимают slots; fifth fresh/recovered ждёт.
+5. Добавить `ConcurrentDictionary<string, SemaphoreSlim>` с ordinal ids и private `RunWithProviderSlotAsync(providerId, ownedToken, work)`. Использовать для normal, queued и recovery.
+6. Wait flag/acquired scope должен исключить Release после cancelled wait. Slot release в one finally вокруг полного lifecycle. На любом выходе slot-wait/submit phase завершить `RunningJob.SubmitSettled` exactly once; success сначала atomically publishes handle, потом signal. Recovery pre-completes signal after handle publication before launch.
+7. Deterministic deletion test: 4 jobs hold slots, fifth waits; Stop fifth returns без открытия gate, SubmitAsync/CancelAsync не вызваны, unacquired semaphore не Release.
+8. Own deletion cancellation 108 освобождает slot; failed remote cancel limitation остаётся в log/docs.
 
 ### Проверка
 ```
