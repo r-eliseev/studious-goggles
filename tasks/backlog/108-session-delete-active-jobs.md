@@ -1,8 +1,8 @@
 ---
 id: 108
-status: in-progress
-assignee: codex-luna
-claimed: 2026-10-30T09:25:34Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -54,5 +54,12 @@ bash scripts/check.sh
 После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 108`, затем `bash scripts/check.sh`; код отправить PR по `docs/tasks.md`.
 
 ## Отчёт
+
+- Добавлен `ISessionGenerationCoordinator`; `GenerationService.StopSessionAsync` ставит постоянный tombstone, ждёт все допущенные start leases, отменяет session-owned jobs и ожидает их завершения. Caller cancellation отменяет только ожидание общего stop task.
+- Все пути создания run (обычный старт, repeat/new seed/edit/other model) получают lease до подготовки и держат его через `AddRunAsync` и регистрацию jobs. Recovery также использует lease; tombstoned rows пропускаются, duplicate watcher registration не заменяет уже зарегистрированную job.
+- Каждый `RunningJob` хранит session/generation ids, owned linked CTS и task. Caller preparation token не связывается с job. Cancellation проходит в semaphore, provider/poller, чтение вложений, image file store и repository; отмена session не записывает новый terminal status, а отменённые jobs не fault-ят `WhenIdleAsync`. Ошибки job остаются наблюдаемыми через `WhenIdleAsync`/stop.
+- Добавлены детерминированные тесты на tombstone-before-start, preparation lease release, start-versus-stop на `AddRunAsync`, caller cancellation после старта, раздельную отмену двух сессий, независимое ожидание stop, provider/file no-write после stop, отменённого stop waiter, ошибку job, tombstoned recovery и duplicate recovery.
+- Проверки: Core.Tests 414/414; Core build без предупреждений/ошибок; `dotnet format` Core и Core.Tests; `git diff --check`; `bash scripts/check.sh`.
+- Подключение SessionService/DI и remote provider cancellation остаются в задачах 126 и 121 соответственно, как определено планом.
 
 ## Комментарии
