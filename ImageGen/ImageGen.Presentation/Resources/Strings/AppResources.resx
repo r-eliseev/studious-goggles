@@ -591,4 +591,10 @@
   <data name="ErrorKindModelWithoutReferences" xml:space="preserve">
     <value>No run was started: the model does not take reference images.</value>
   </data>
+  <data name="ImageViewerOpen" xml:space="preserve"><value>Open image</value></data>
+  <data name="ImageViewerClose" xml:space="preserve"><value>Close</value></data>
+  <data name="ImageViewerPrevious" xml:space="preserve"><value>Previous</value></data>
+  <data name="ImageViewerNext" xml:space="preserve"><value>Next</value></data>
+  <data name="ImageViewerPositionFormat" xml:space="preserve"><value>{0} of {1}</value></data>
+  <data name="ImageViewerUnreadable" xml:space="preserve"><value>This image is missing or unreadable.</value></data>
 </root>

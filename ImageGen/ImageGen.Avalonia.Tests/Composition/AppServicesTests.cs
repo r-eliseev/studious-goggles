@@ -36,6 +36,7 @@ public class AppServicesTests
 
         Assert.NotNull(provider.GetRequiredService<SessionsPageModel>());
         Assert.NotNull(provider.GetRequiredService<ChatPageModel>());
+        Assert.IsType<ImageGen.Avalonia.Services.AvaloniaImageViewerService>(provider.GetRequiredService<ImageGen.Presentation.Services.IImageViewerService>());
         Assert.NotNull(provider.GetRequiredService<ApiKeyPageModel>());
     }
 }

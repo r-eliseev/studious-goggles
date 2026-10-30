@@ -36,6 +36,7 @@ public class ChatPageModelTests
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly IMainThread _mainThread = Substitute.For<IMainThread>();
     private readonly IClipboardService _clipboard = Substitute.For<IClipboardService>();
+    private readonly IImageViewerService _imageViewer = Substitute.For<IImageViewerService>();
     private readonly IFilePickerService _filePicker = Substitute.For<IFilePickerService>();
     private readonly IChatAttachmentRepository _chatAttachments = Substitute.For<IChatAttachmentRepository>();
     private Action? _onMainThreadCallback;
@@ -241,7 +242,8 @@ public class ChatPageModelTests
             Substitute.For<IImageSaver>(),
             _tracker,
             NewModelsPane,
-            NewParametersPane);
+            NewParametersPane,
+            _imageViewer);
         model.ApplyQueryAttributes(new Dictionary<string, object>
         {
             [Routes.SessionIdParameter] = sessionId.ToString("D"),
@@ -339,6 +341,62 @@ public class ChatPageModelTests
         Assert.IsType<MessageItemViewModel>(_model.Items[1]);
         var runItem = Assert.IsType<RunItemViewModel>(_model.Items[2]);
         Assert.Equal(2, runItem.Generations.Count);
+    }
+
+    [Fact]
+    public async Task OpenImageCommand_UsesSuccessfulImagesFromContainingRunAndSelectsCard()
+    {
+        var run = NewRun(_session.Id, "red fox");
+        var first = NewGeneration(run, 5);
+        first.ImagePath = "images/s/first.png";
+        first.SortOrder = 0;
+        var failed = NewGeneration(run, 6, GenerationStatus.Failed);
+        failed.SortOrder = 1;
+        var last = NewGeneration(run, 7);
+        last.ImagePath = "images/s/last.png";
+        last.SortOrder = 2;
+        var otherRun = NewRun(_session.Id, "blue bird");
+        var other = NewGeneration(otherRun, 8);
+        other.ImagePath = "images/s/other.png";
+        StoreRun(run, first, failed, last);
+        StoreRun(otherRun, other);
+        await _model.OnAppearingAsync();
+        var runItem = _model.Items.OfType<RunItemViewModel>().Single(item => item.Id == run.Id);
+        var card = runItem.Generations[2];
+        var firstCard = runItem.Generations[0];
+
+        await _model.OpenImageCommand.ExecuteAsync(card);
+
+        Assert.Same(card, _model.SelectedCard);
+        var expected = new[]
+        {
+            new ImageViewerItem(firstCard.Id, "/data/images/s/first.png", ViewerAccessibleLabel(firstCard)),
+            new ImageViewerItem(card.Id, "/data/images/s/last.png", ViewerAccessibleLabel(card)),
+        };
+        await _imageViewer.Received(1).ShowAsync(
+            Arg.Is<IReadOnlyList<ImageViewerItem>>(items => items.SequenceEqual(expected)),
+            1,
+            Arg.Any<CancellationToken>());
+    }
+
+    private static string ViewerAccessibleLabel(GenerationItemViewModel card) =>
+        string.Join(", ", new[] { card.ModelText, card.SeedText, card.ImageDimensionsText, card.SummaryText }
+            .Where(text => !string.IsNullOrWhiteSpace(text)));
+
+    [Fact]
+    public async Task OpenImageCommand_NonImageCard_DoesNothing()
+    {
+        var run = NewRun(_session.Id, "red fox");
+        var failed = NewGeneration(run, 5, GenerationStatus.Failed);
+        StoreRun(run, failed);
+        await _model.OnAppearingAsync();
+        var card = Assert.Single(_model.Items.OfType<RunItemViewModel>()).Generations[0];
+
+        await _model.OpenImageCommand.ExecuteAsync(card);
+
+        Assert.Null(_model.SelectedCard);
+        await _imageViewer.DidNotReceive().ShowAsync(
+            Arg.Any<IReadOnlyList<ImageViewerItem>>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -617,7 +675,7 @@ public class ChatPageModelTests
     public void ApplyQueryAttributes_MissingSessionId_Throws()
     {
         var model = new ChatPageModel(
-            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard, Substitute.For<IImageSaver>(), _tracker, NewModelsPane, NewParametersPane);
+            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard, Substitute.For<IImageSaver>(), _tracker, NewModelsPane, NewParametersPane, _imageViewer);
 
         Assert.Throws<ArgumentException>(() => model.ApplyQueryAttributes(new Dictionary<string, object>()));
     }

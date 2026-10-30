@@ -160,6 +160,13 @@
                                                                    IsVisible="{Binding HasImage}"
                                                                    Aspect="AspectFill"
                                                                    AutomationProperties.IsInAccessibleTree="False" />
+                                                            <Button Text=""
+                                                                    IsVisible="{Binding HasImage}"
+                                                                    Command="{Binding Source={x:Reference Page}, Path=BindingContext.OpenImageCommand}"
+                                                                    CommandParameter="{Binding .}"
+                                                                    HorizontalOptions="Fill" VerticalOptions="Fill"
+                                                                    BackgroundColor="Transparent" BorderWidth="0" Padding="0"
+                                                                    SemanticProperties.Description="{x:Static strings:AppResources.ImageViewerOpen}" />
 
                                                             <!-- Running: an indicator. -->
                                                             <Grid IsVisible="{Binding IsActive}" BackgroundColor="{DynamicResource IgSunkenColor}">

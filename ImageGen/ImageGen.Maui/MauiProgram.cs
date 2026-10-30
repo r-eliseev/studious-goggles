@@ -80,6 +80,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<MauiAppearanceApplier>();
         builder.Services.AddSingleton<IClipboardService, MauiClipboardService>();
         builder.Services.AddSingleton<IImageSaver, MauiImageSaver>();
+        builder.Services.AddSingleton<IImageViewerService, MauiImageViewerService>();
         builder.Services.AddSingleton<ICurrentSessionTracker, CurrentSessionTracker>();
 
         // Pages and page models

@@ -326,6 +326,18 @@ public static class AppResources
 
     public static string ImageDimensionsFormat => Get(nameof(ImageDimensionsFormat));
 
+    public static string ImageViewerOpen => Get(nameof(ImageViewerOpen));
+
+    public static string ImageViewerClose => Get(nameof(ImageViewerClose));
+
+    public static string ImageViewerPrevious => Get(nameof(ImageViewerPrevious));
+
+    public static string ImageViewerNext => Get(nameof(ImageViewerNext));
+
+    public static string ImageViewerPositionFormat => Get(nameof(ImageViewerPositionFormat));
+
+    public static string ImageViewerUnreadable => Get(nameof(ImageViewerUnreadable));
+
     public static string RemoveAttachment => Get(nameof(RemoveAttachment));
 
     public static string DescribeButton => Get(nameof(DescribeButton));
