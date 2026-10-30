@@ -1,7 +1,6 @@
 namespace ImageGen.Core.Providers;
 
-public interface IImageGenerator
+public interface ISynchronousImageTransport
 {
-    /// <summary>Generates one image. Throws <see cref="ProviderException"/> on provider errors.</summary>
     Task<ImageGenerationResult> GenerateAsync(ImageGenerationRequest request, CancellationToken cancellationToken);
 }

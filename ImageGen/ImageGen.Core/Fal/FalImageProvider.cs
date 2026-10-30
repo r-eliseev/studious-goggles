@@ -86,33 +86,7 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
         return result;
     }
 
-    /// <summary>Submit, then wait for the job and return its image; a filtered or failed job throws like the other providers.</summary>
-    public async Task<ImageGenerationResult> GenerateAsync(ImageGenerationRequest request, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        var handle = await SubmitAsync(request, cancellationToken);
-        await foreach (var update in ProviderJobPoller.WatchAsync(this, handle, PollMinInterval, PollMaxInterval, MaxNetworkFailures, cancellationToken))
-        {
-            switch (update.State)
-            {
-                case JobState.Succeeded:
-                    return update.Result!;
-                case JobState.Filtered:
-                    throw new ProviderException(ErrorKind.Moderated, update.ErrorMessage ?? "The provider filtered this image.");
-                case JobState.Failed:
-                    throw new ProviderException(update.ErrorKind ?? ErrorKind.Unknown, update.ErrorMessage ?? "fal failed the job.");
-                case JobState.Cancelled:
-                    throw new ProviderException(ErrorKind.Unknown, "The fal job was cancelled.");
-            }
-        }
-
-        throw new ProviderException(ErrorKind.EmptyResponse, "fal ended the job without a result.");
-    }
-
     private const string ModelsAddress = "https://api.fal.ai/v1/models";
-    private static readonly TimeSpan PollMinInterval = TimeSpan.FromSeconds(1);
-    private static readonly TimeSpan PollMaxInterval = TimeSpan.FromSeconds(5);
-    private const int MaxNetworkFailures = 5;
 
     protected override void Authenticate(HttpRequestMessage request, string apiKey) =>
         request.Headers.TryAddWithoutValidation("Authorization", "Key " + apiKey);

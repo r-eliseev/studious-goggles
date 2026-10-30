@@ -8,13 +8,13 @@ public sealed class InMemoryQueuedImageProvider : IQueuedImageProvider
 {
     public static readonly TimeSpan TerminalRetention = TimeSpan.FromMinutes(10);
 
-    private readonly IImageGenerator _transport;
+    private readonly ISynchronousImageTransport _transport;
     private readonly string _providerId;
     private readonly string _encodedProviderId;
     private readonly TimeProvider _timeProvider;
     private readonly ConcurrentDictionary<string, JobEntry> _jobs = new(StringComparer.Ordinal);
 
-    public InMemoryQueuedImageProvider(IImageGenerator transport, string providerId, TimeProvider timeProvider)
+    public InMemoryQueuedImageProvider(ISynchronousImageTransport transport, string providerId, TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(transport);
         ArgumentException.ThrowIfNullOrWhiteSpace(providerId);
@@ -39,6 +39,7 @@ public sealed class InMemoryQueuedImageProvider : IQueuedImageProvider
             throw new InvalidOperationException("A duplicate in-memory request identifier was generated.");
         }
 
+        SetRunning(entry);
         // Do not pass the caller token: it only governs submit preparation, not the accepted transport job.
         entry.Work = Task.Run(() => RunWorkerAsync(entry, request));
         return Task.FromResult(entry.Handle);
@@ -116,7 +117,9 @@ public sealed class InMemoryQueuedImageProvider : IQueuedImageProvider
         try
         {
             var result = await _transport.GenerateAsync(request, entry.TransportCancellation.Token).ConfigureAwait(false);
-            Complete(entry, new JobUpdate(JobState.Succeeded, Result: result));
+            Complete(entry, IsCancellationRequested(entry)
+                ? new JobUpdate(JobState.Cancelled)
+                : new JobUpdate(JobState.Succeeded, Result: result));
         }
         catch (ProviderException exception)
         {

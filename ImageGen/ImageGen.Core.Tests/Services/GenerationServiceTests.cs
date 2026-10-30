@@ -25,7 +25,7 @@ public class GenerationServiceTests
 
     private readonly ISessionRepository _sessions = Substitute.For<ISessionRepository>();
     private readonly IRunRepository _runs = Substitute.For<IRunRepository>();
-    private readonly IModelProvider _generator = Substitute.For<IModelProvider>();
+    private readonly ISynchronousImageTransport _generator = Substitute.For<ISynchronousImageTransport>();
     private readonly IProviderRouter _providers = Substitute.For<IProviderRouter>();
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
     private readonly ISeedSource _seeds = Substitute.For<ISeedSource>();
@@ -70,7 +70,7 @@ public class GenerationServiceTests
         _session.Settings.RunsPerModel = 1;
         _modelRepository.ListAsync("fal", Arg.Any<CancellationToken>()).Returns([ModelCatalogServiceTests.Model("flux", "Flux", providerId: "fal")]);
         _providers.GetImageProvider("fal").Returns(imageProvider);
-        _providers.GetConnection("fal").Returns(connection);
+        _providers.GetQueuedImageProvider("fal").Returns(queued);
         queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(async _ =>
         {
             entered.TrySetResult();
@@ -103,7 +103,7 @@ public class GenerationServiceTests
         _session.Settings.RunsPerModel = 1;
         _modelRepository.ListAsync("fal", Arg.Any<CancellationToken>()).Returns([ModelCatalogServiceTests.Model("flux", "Flux", providerId: "fal")]);
         _providers.GetImageProvider("fal").Returns(imageProvider);
-        _providers.GetConnection("fal").Returns(connection);
+        _providers.GetQueuedImageProvider("fal").Returns((IQueuedImageProvider)connection);
         queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(async _ =>
         {
             entered.TrySetResult();
@@ -146,8 +146,9 @@ public class GenerationServiceTests
         };
         _sessions.GetAsync(otherSession.Id, Arg.Any<CancellationToken>()).Returns(otherSession);
         _modelRepository.ListAsync("fal", Arg.Any<CancellationToken>()).Returns([ModelCatalogServiceTests.Model("flux", "Flux", providerId: "fal")]);
-        var providerB = Substitute.For<IModelProvider>();
-        _providers.GetImageProvider("fal").Returns(providerB);
+        var providerB = Substitute.For<ISynchronousImageTransport>();
+        _providers.GetImageProvider("fal").Returns(Substitute.For<IModelProvider>());
+        _providers.GetQueuedImageProvider("fal").Returns(new InMemoryQueuedImageProvider(providerB, "fal", TimeProvider.System));
         _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
         _session.Settings.RunsPerModel = 4;
         var providerAEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -189,7 +190,7 @@ public class GenerationServiceTests
         var connection = Substitute.For<IProviderConnection, IModelProvider, IQueuedImageProvider>();
         var queued = (IQueuedImageProvider)connection;
         _providers.GetImageProvider("fal").Returns((IModelProvider)connection);
-        _providers.GetConnection("fal").Returns(connection);
+        _providers.GetQueuedImageProvider("fal").Returns((IQueuedImageProvider)connection);
         var submitCount = 0;
         var pollCount = 0;
         var fourPollsEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -238,7 +239,7 @@ public class GenerationServiceTests
         var connection = Substitute.For<IProviderConnection, IModelProvider, IQueuedImageProvider>();
         var queued = (IQueuedImageProvider)connection;
         _providers.GetImageProvider("fal").Returns((IModelProvider)connection);
-        _providers.GetConnection("fal").Returns(connection);
+        _providers.GetQueuedImageProvider("fal").Returns((IQueuedImageProvider)connection);
         var submitCount = 0;
         var pollCount = 0;
         var fourPollsEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -286,7 +287,7 @@ public class GenerationServiceTests
         _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns(generations);
         var connection = Substitute.For<IProviderConnection, IModelProvider, IQueuedImageProvider>();
         var queued = (IQueuedImageProvider)connection;
-        _providers.GetConnection("fal").Returns(connection);
+        _providers.GetQueuedImageProvider("fal").Returns((IQueuedImageProvider)connection);
         _providers.GetImageProvider("fal").Returns((IModelProvider)connection);
         var pollCount = 0;
         var fourPollsEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -389,6 +390,74 @@ public class GenerationServiceTests
         var error = Assert.Single(_logger.Entries, entry => entry.Level == LogLevel.Error);
         Assert.Null(error.Exception);
         Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception is StorageWriteException);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_HandlePersistenceFailure_CancelsSubmittedJobOnce()
+    {
+        var handle = Handle();
+        var queued = Substitute.For<IQueuedImageProvider>();
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _providers.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(queued);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(handle);
+        queued.CancelAsync(handle, Arg.Any<CancellationToken>()).Returns(CancelOutcome.CancellationRequested);
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            if (call.Arg<Generation>().JobJson is not null)
+            {
+                throw new StorageWriteException("temporary handle write failure", true);
+            }
+
+            return Task.CompletedTask;
+        });
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        await queued.Received(1).CancelAsync(handle, Arg.Any<CancellationToken>());
+        await queued.DidNotReceive().PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>());
+        Assert.DoesNotContain(_events, generation => generation.Status == GenerationStatus.Succeeded);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_HandlePersistenceFailureRacingSessionStop_CancelsRemoteJobOnce()
+    {
+        var handle = Handle();
+        var queued = Substitute.For<IQueuedImageProvider>();
+        var handleWriteEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseHandleWrite = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var firstHandleWrite = 0;
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _providers.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(queued);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(handle);
+        queued.CancelAsync(handle, Arg.Any<CancellationToken>()).Returns(CancelOutcome.CancellationRequested);
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            if (call.Arg<Generation>().JobJson is not null && Interlocked.Exchange(ref firstHandleWrite, 1) == 0)
+            {
+                handleWriteEntered.TrySetResult();
+                await releaseHandleWrite.Task;
+                throw new StorageWriteException("temporary handle write failure", true);
+            }
+
+            if (call.Arg<Generation>().JobJson is not null)
+            {
+                throw new StorageWriteException("temporary handle write failure", true);
+            }
+
+            await Task.CompletedTask;
+        });
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await handleWriteEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var stop = _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+        releaseHandleWrite.TrySetResult();
+        await stop.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        await queued.Received(1).CancelAsync(handle, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -603,7 +672,7 @@ public class GenerationServiceTests
         var generation = ResumableGeneration();
         var queued = QueuedProviderThatFails(new ProviderException(ErrorKind.InvalidKey, "unused"));
         _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns([generation]);
-        _providers.GetConnection("fal").Returns((IProviderConnection)queued);
+        _providers.GetQueuedImageProvider("fal").Returns(queued);
         await _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
 
         await _service.RecoverInterruptedAsync(TestContext.Current.CancellationToken);
@@ -629,7 +698,7 @@ public class GenerationServiceTests
             pollEntered.TrySetResult();
             return release.Task;
         });
-        _providers.GetConnection("fal").Returns(connection);
+        _providers.GetQueuedImageProvider("fal").Returns((IQueuedImageProvider)connection);
 
         await _service.RecoverInterruptedAsync(TestContext.Current.CancellationToken);
         await pollEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
@@ -642,7 +711,7 @@ public class GenerationServiceTests
 
     public GenerationServiceTests()
     {
-        _providers.GetImageProvider(ProviderIds.OpenRouter).Returns(_generator);
+        _providers.GetImageProvider(ProviderIds.OpenRouter).Returns(Substitute.For<IModelProvider>());
         _providers.ImageProviderIds.Returns([ProviderIds.OpenRouter]);
         _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(
             [
@@ -656,6 +725,7 @@ public class GenerationServiceTests
         _seeds.NextSeed().Returns(11L, 22L, 33L);
         _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>())
             .Returns(new ImageGenerationResult(Image, "image/png", 0.014m));
+        _providers.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(new InMemoryQueuedImageProvider(_generator, ProviderIds.OpenRouter, time));
         _files.SaveAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns("images/session/generation.png");
         _runs.AddRunAsync(Arg.Do<Run>(r => _savedRuns[r.Id] = r), Arg.Do<IReadOnlyList<Generation>>(g => _added = g), Arg.Any<CancellationToken>())
@@ -785,7 +855,7 @@ public class GenerationServiceTests
         var router = new ProviderRouter(registry, httpClientFactory, secrets, TimeProvider.System);
         var connection = router.GetConnection(ProviderIds.OpenRouter);
         Assert.IsType<InMemoryQueuedImageConnection>(connection);
-        Assert.False(connection is IQueuedImageProvider);
+        Assert.IsAssignableFrom<IQueuedImageProvider>(connection);
         var catalog = new ModelCatalogService(router, _modelRepository, NullLogger<ModelCatalogService>.Instance);
         var service = new GenerationService(
             _sessions, _runs, router, _files, catalog, _seeds, _attachments, TimeProvider.System, _logger, _changes);
@@ -793,7 +863,7 @@ public class GenerationServiceTests
         await service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
         await service.WhenIdleAsync();
 
-        Assert.Null(Assert.Single(_added).JobJson);
+        Assert.NotNull(Assert.Single(_added).JobJson);
         Assert.Single(handler.Requests);
         Assert.Equal("https://openrouter.ai/api/v1/images", handler.Requests.Single().RequestUri!.AbsoluteUri);
     }
@@ -811,10 +881,9 @@ public class GenerationServiceTests
             .Where(e => e.Message.Contains(first.Id.ToString(), StringComparison.Ordinal))
             .Select(e => e.Message)
             .ToList();
-        Assert.Contains("is Queued", messages[0], StringComparison.Ordinal);
-        Assert.Contains("is Running", messages[1], StringComparison.Ordinal);
-        Assert.Contains("is Succeeded", messages[2], StringComparison.Ordinal);
-        Assert.Equal(3, messages.Count);
+        Assert.Contains(messages, message => message.Contains("is Queued", StringComparison.Ordinal));
+        Assert.Contains(messages, message => message.Contains("is Running", StringComparison.Ordinal));
+        Assert.Contains(messages, message => message.Contains("is Succeeded", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -1082,7 +1151,7 @@ public class GenerationServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         _session.Settings.ImageModels = [new ModelRef("fal", "fal-ai/flux/dev")];
-        _providers.GetImageProvider("fal").Returns<IModelProvider>(_ => throw new ProviderException(ErrorKind.ModelUnavailable, "Provider 'fal' is not configured."));
+        _providers.GetQueuedImageProvider("fal").Returns<IQueuedImageProvider>(_ => throw new ProviderException(ErrorKind.ModelUnavailable, "Provider 'fal' is not configured."));
 
         await _service.StartRunAsync(_session.Id, "a fox", ct);
         await _service.WhenIdleAsync();
@@ -1278,7 +1347,7 @@ public class GenerationServiceTests
         var queued = (IQueuedImageProvider)connection;
         queued.PollAsync(handle, Arg.Any<CancellationToken>()).Returns(
             new JobUpdate(JobState.Succeeded, Result: new ImageGenerationResult([1, 2], "image/png", null)));
-        _providers.GetConnection("fal").Returns(connection);
+        _providers.GetQueuedImageProvider("fal").Returns((IQueuedImageProvider)connection);
         _files.SaveAsync(_session.Id, generation.Id, Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>())
             .Returns("images/fox.png");
 
@@ -1344,7 +1413,7 @@ public class GenerationServiceTests
         var queued = (IQueuedImageProvider)connection;
         queued.PollAsync(handle, Arg.Any<CancellationToken>()).Returns(
             new JobUpdate(JobState.Succeeded, Result: new ImageGenerationResult([1, 2], "image/png", null)));
-        _providers.GetConnection("fal").Returns(connection);
+        _providers.GetQueuedImageProvider("fal").Returns((IQueuedImageProvider)connection);
 
         // The file store fails only after the test has taken the running task, so the failure is seen for sure.
         var gate = new TaskCompletionSource();
@@ -1394,7 +1463,7 @@ public class GenerationServiceTests
         var ct = TestContext.Current.CancellationToken;
         var generation = ResumableGeneration();
         _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns([generation]);
-        _providers.GetConnection("fal").Returns(_ => throw new ProviderException(ErrorKind.ModelUnavailable, "no provider configured"));
+        _providers.GetQueuedImageProvider("fal").Returns(_ => throw new ProviderException(ErrorKind.ModelUnavailable, "no provider configured"));
 
         await _service.RecoverInterruptedAsync(ct);
         await _service.WhenIdleAsync();
@@ -1412,12 +1481,12 @@ public class GenerationServiceTests
         var missing = ResumableGeneration();
         var resumed = ResumableGeneration("fal2");
         _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns([missing, resumed]);
-        _providers.GetConnection("fal").Returns(_ => throw new ProviderException(ErrorKind.ModelUnavailable, "no provider configured"));
+        _providers.GetQueuedImageProvider("fal").Returns(_ => throw new ProviderException(ErrorKind.ModelUnavailable, "no provider configured"));
         var connection = Substitute.For<IProviderConnection, IQueuedImageProvider>();
         var queued = (IQueuedImageProvider)connection;
         queued.PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>()).Returns(
             new JobUpdate(JobState.Succeeded, Result: new ImageGenerationResult([1, 2], "image/png", null)));
-        _providers.GetConnection("fal2").Returns(connection);
+        _providers.GetQueuedImageProvider("fal2").Returns((IQueuedImageProvider)connection);
         _files.SaveAsync(_session.Id, resumed.Id, Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>())
             .Returns("images/fox.png");
         _runs.MarkUnfinishedAsInterruptedAsync(Now, Arg.Any<CancellationToken>()).Returns(2);
@@ -1453,7 +1522,7 @@ public class GenerationServiceTests
         var queued = (IQueuedImageProvider)connection;
         queued.PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>())
             .Returns<Task<JobUpdate>>(_ => throw failure);
-        _providers.GetConnection("fal").Returns(connection);
+        _providers.GetQueuedImageProvider("fal").Returns((IQueuedImageProvider)connection);
         return queued;
     }
 

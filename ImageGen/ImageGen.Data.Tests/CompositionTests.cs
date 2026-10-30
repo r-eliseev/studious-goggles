@@ -25,6 +25,7 @@ public class CompositionTests
         var openRouter = Assert.IsType<InMemoryQueuedImageConnection>(router.GetConnection(ProviderIds.OpenRouter));
         Assert.Same(openRouter, router.GetImageProvider(ProviderIds.OpenRouter));
         Assert.Same(openRouter, router.GetChatClient(ProviderIds.OpenRouter));
+        Assert.Same(openRouter, router.GetQueuedImageProvider(ProviderIds.OpenRouter));
         Assert.NotNull(provider.GetRequiredService<ISeedSource>());
         Assert.NotNull(provider.GetRequiredService<ApiKeyService>());
         Assert.NotNull(provider.GetRequiredService<ModelCatalogService>());
@@ -71,6 +72,7 @@ public class CompositionTests
         var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource<ImageGenerationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         var providerClient = Substitute.For<IModelProvider>();
+        var imageTransport = Substitute.For<ISynchronousImageTransport>();
         providerClient.ListImageModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ImageModel>>(
         [
             new ImageModel
@@ -85,15 +87,16 @@ public class CompositionTests
                 Parameters = [],
             },
         ]));
-        providerClient.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
+        imageTransport.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
         {
             entered.TrySetResult(call.Arg<CancellationToken>());
             return release.Task;
         });
         var router = Substitute.For<IProviderRouter>();
         router.ImageProviderIds.Returns([ProviderIds.OpenRouter]);
-        router.GetConnection(ProviderIds.OpenRouter).Returns(providerClient);
         router.GetImageProvider(ProviderIds.OpenRouter).Returns(providerClient);
+        router.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(
+            new InMemoryQueuedImageProvider(imageTransport, ProviderIds.OpenRouter, TimeProvider.System));
 
         using var provider = BuildProvider(directory, router);
         var cancellationToken = TestContext.Current.CancellationToken;

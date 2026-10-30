@@ -27,7 +27,7 @@ public class ChatPageModelTests
     private readonly IChatMessageRepository _messageRepository = Substitute.For<IChatMessageRepository>();
     private readonly IRunRepository _runRepository = Substitute.For<IRunRepository>();
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
-    private readonly IModelProvider _generator = Substitute.For<IModelProvider>();
+    private readonly ISynchronousImageTransport _generator = Substitute.For<ISynchronousImageTransport>();
     private readonly ISeedSource _seeds = Substitute.For<ISeedSource>();
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
     private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
@@ -182,7 +182,7 @@ public class ChatPageModelTests
             .Returns(ci => $"images/s/attachments/{ci.ArgAt<Guid>(1):N}.png");
         _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
         _generationService = new GenerationService(
-            _sessionRepository, _runRepository, ProviderDoubles.Router(_generator), _files, catalog, _seeds, _attachments, time, NullLogger<GenerationService>.Instance, new SessionChangeNotifier());
+            _sessionRepository, _runRepository, ProviderDoubles.Router(transport: _generator), _files, catalog, _seeds, _attachments, time, NullLogger<GenerationService>.Instance, new SessionChangeNotifier());
         _assistant = new AssistantService(
             _sessionService, _messageRepository, _runRepository, ProviderDoubles.Router(chat: _chat), _generationService,
             new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),
@@ -916,6 +916,7 @@ public class ChatPageModelTests
             Assert.Equal("/data/images/s/g.png", card.ImageFilePath);
         });
         Assert.Same(item, _model.Items.Last());
+        Assert.All(_rows, generation => Assert.Equal(0.014m, generation.CostUsd));
     }
 
     [Fact]
@@ -971,6 +972,7 @@ public class ChatPageModelTests
         await _generationService.WhenIdleAsync();
 
         Assert.Same(item, _model.Items.Last());
+        Assert.All(_rows, generation => Assert.Equal(0.014m, generation.CostUsd));
         Assert.Contains("2 of 2", item.HeaderText);
         Assert.EndsWith("$0.014", item.HeaderText, StringComparison.Ordinal);
     }
@@ -1012,8 +1014,8 @@ public class ChatPageModelTests
         await _generationService.StartRunAsync(_session.Id, "red fox", TestContext.Current.CancellationToken);
         await _generationService.WhenIdleAsync();
 
-        // Two generations, each reports "Generating" and "Done": four events for one subscription.
-        _mainThread.Received(4).BeginInvokeOnMainThread(Arg.Any<Action>());
+        // Two generations, each reports Queued, Running, and Done for one subscription.
+        _mainThread.Received(6).BeginInvokeOnMainThread(Arg.Any<Action>());
     }
 
     [Fact]

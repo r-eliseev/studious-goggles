@@ -26,7 +26,7 @@ public class AssistantServiceTests
     private readonly IChatMessageRepository _messages = Substitute.For<IChatMessageRepository>();
     private readonly IRunRepository _runs = Substitute.For<IRunRepository>();
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
-    private readonly IModelProvider _generator = Substitute.For<IModelProvider>();
+    private readonly ISynchronousImageTransport _generator = Substitute.For<ISynchronousImageTransport>();
     private readonly IProviderRouter _providers = Substitute.For<IProviderRouter>();
     private readonly ISeedSource _seeds = Substitute.For<ISeedSource>();
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
@@ -49,12 +49,14 @@ public class AssistantServiceTests
         _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(
             [ModelCatalogServiceTests.Model(ImageModel, "Image")]);
         _providers.ImageProviderIds.Returns([ProviderIds.OpenRouter]);
-        _providers.GetImageProvider(ProviderIds.OpenRouter).Returns(_generator);
+        _providers.GetImageProvider(ProviderIds.OpenRouter).Returns(Substitute.For<IModelProvider>());
         _providers.GetChatClient(ProviderIds.OpenRouter).Returns(_chat);
         var catalog = new ModelCatalogService(_providers, _modelRepository, NullLogger<ModelCatalogService>.Instance);
         _seeds.NextSeed().Returns(7L);
         _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>())
             .Returns(new ImageGenerationResult(Image, "image/png", 0.01m));
+        _providers.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(
+            new InMemoryQueuedImageProvider(_generator, ProviderIds.OpenRouter, time));
         _files.SaveAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns("images/session/generation.png");
 
