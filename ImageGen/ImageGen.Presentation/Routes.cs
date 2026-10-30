@@ -1,6 +1,6 @@
 namespace ImageGen.Presentation;
 
-/// <summary>Shell route names and the query parameter that carries the session id.</summary>
+/// <summary>Shell route names and their query parameters.</summary>
 public static class Routes
 {
     public const string Sessions = "sessions";
@@ -13,6 +13,10 @@ public static class Routes
     public const string SessionIdParameter = "sessionId";
     public const string GenerationIdParameter = "generationId";
     public const string MessageParameter = "message";
+    public const string ProviderIdParameter = "providerId";
+
+    public static string ApiKeyFor(string providerId) =>
+        $"{ApiKey}?{ProviderIdParameter}={Uri.EscapeDataString(providerId)}";
 
     public static string ChatFor(Guid sessionId) => $"{Chat}?{SessionIdParameter}={sessionId:D}";
 

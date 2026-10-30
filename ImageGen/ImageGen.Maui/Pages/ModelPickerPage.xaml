@@ -21,13 +21,15 @@
                 <VerticalStackLayout BindableLayout.ItemsSource="{Binding UsedModels}">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="pm:ModelOptionViewModel">
-                            <Button StyleClass="ghost"
-                                    HorizontalOptions="Fill"
-                                    Margin="0,2"
-                                    Command="{Binding BindingContext.PickCommand, Source={x:Reference Page}}"
-                                    CommandParameter="{Binding}"
-                                    Text="{Binding Name}"
-                                    SemanticProperties.Description="{Binding Name}" />
+                            <VerticalStackLayout Margin="0,2" Spacing="0">
+                                <Button StyleClass="ghost"
+                                        HorizontalOptions="Fill"
+                                        Command="{Binding BindingContext.PickCommand, Source={x:Reference Page}}"
+                                        CommandParameter="{Binding}"
+                                        Text="{Binding Name}"
+                                        SemanticProperties.Description="{Binding AccessibilityName}" />
+                                <Label StyleClass="meta" Text="{Binding ProviderText}" Margin="12,0" />
+                            </VerticalStackLayout>
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
                 </VerticalStackLayout>
@@ -45,13 +47,15 @@
                     <VerticalStackLayout BindableLayout.ItemsSource="{Binding AllModels}">
                         <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="pm:ModelOptionViewModel">
-                                <Button StyleClass="ghost"
-                                        HorizontalOptions="Fill"
-                                        Margin="0,2"
-                                        Command="{Binding BindingContext.PickCommand, Source={x:Reference Page}}"
-                                        CommandParameter="{Binding}"
-                                        Text="{Binding Name}"
-                                        SemanticProperties.Description="{Binding Name}" />
+                                <VerticalStackLayout Margin="0,2" Spacing="0">
+                                    <Button StyleClass="ghost"
+                                            HorizontalOptions="Fill"
+                                            Command="{Binding BindingContext.PickCommand, Source={x:Reference Page}}"
+                                            CommandParameter="{Binding}"
+                                            Text="{Binding Name}"
+                                            SemanticProperties.Description="{Binding AccessibilityName}" />
+                                    <Label StyleClass="meta" Text="{Binding ProviderText}" Margin="12,0" />
+                                </VerticalStackLayout>
                             </DataTemplate>
                         </BindableLayout.ItemTemplate>
                     </VerticalStackLayout>

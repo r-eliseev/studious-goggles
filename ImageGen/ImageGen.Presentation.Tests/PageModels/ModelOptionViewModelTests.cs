@@ -10,16 +10,39 @@ public class ModelOptionViewModelTests
     [Fact]
     public void Constructor_CopiesIdAndName()
     {
-        var model = new ModelOptionViewModel(TestModels.Model("vendor/alpha", "Alpha"), isSelected: false);
+        var model = new ModelOptionViewModel(TestModels.Model("vendor/alpha", "Alpha"), "OpenRouter", isSelected: false);
 
         Assert.Equal("vendor/alpha", model.Id);
         Assert.Equal("Alpha", model.Name);
     }
 
     [Fact]
+    public void ProviderText_IncludesDisplayNameAndId()
+    {
+        var model = new ModelOptionViewModel(TestModels.Model("vendor/alpha", "Alpha"), "OpenRouter", false);
+
+        Assert.Equal("OpenRouter (openrouter)", model.ProviderText);
+        Assert.Equal("Alpha, OpenRouter (openrouter)", model.AccessibilityName);
+    }
+
+    [Fact]
+    public void SameModelNameFromDifferentProviders_HasDistinctAccessibleLabels()
+    {
+        var openRouter = TestModels.Model("vendor/model", "Same name");
+        var together = TestModels.Model("vendor/model", "Same name");
+        together.ProviderId = "together";
+
+        var first = new ModelOptionViewModel(openRouter, "OpenRouter", false);
+        var second = new ModelOptionViewModel(together, "Together AI", false);
+
+        Assert.NotEqual(first.ProviderText, second.ProviderText);
+        Assert.NotEqual(first.AccessibilityName, second.AccessibilityName);
+    }
+
+    [Fact]
     public void DetailsText_SeedSupported_ShowsIdAndSeed()
     {
-        var model = new ModelOptionViewModel(TestModels.Model("vendor/alpha", "Alpha", supportsSeed: true), false);
+        var model = new ModelOptionViewModel(TestModels.Model("vendor/alpha", "Alpha", supportsSeed: true), "OpenRouter", false);
 
         Assert.Equal("vendor/alpha · seed · price unknown", model.DetailsText);
     }
@@ -27,7 +50,7 @@ public class ModelOptionViewModelTests
     [Fact]
     public void DetailsText_SeedNotSupported_ShowsIdAndNoSeed()
     {
-        var model = new ModelOptionViewModel(TestModels.Model("vendor/beta", "Beta", supportsSeed: false), false);
+        var model = new ModelOptionViewModel(TestModels.Model("vendor/beta", "Beta", supportsSeed: false), "OpenRouter", false);
 
         Assert.Equal("vendor/beta · no seed · price unknown", model.DetailsText);
     }
@@ -37,7 +60,7 @@ public class ModelOptionViewModelTests
     {
         var imageModel = TestModels.Model("black-forest-labs/flux.2-klein-4b", "FLUX.2 Klein 4B");
         imageModel.Prices = [new ImageModelPrice("output_image", ImagePriceUnit.Megapixel, 0.014m, null)];
-        var model = new ModelOptionViewModel(imageModel, isSelected: false);
+        var model = new ModelOptionViewModel(imageModel, "OpenRouter", isSelected: false);
 
         Assert.Equal("black-forest-labs/flux.2-klein-4b · seed · $0.014 / MP", model.DetailsText);
         Assert.Equal("$0.014 / MP", model.PriceText);
@@ -46,7 +69,7 @@ public class ModelOptionViewModelTests
     [Fact]
     public void IsSelected_StartsWithConstructorValue()
     {
-        var model = new ModelOptionViewModel(TestModels.Model("vendor/alpha", "Alpha"), isSelected: true);
+        var model = new ModelOptionViewModel(TestModels.Model("vendor/alpha", "Alpha"), "OpenRouter", isSelected: true);
 
         Assert.True(model.IsSelected);
     }
@@ -54,7 +77,7 @@ public class ModelOptionViewModelTests
     [Fact]
     public void IsSelected_Change_RaisesPropertyChanged()
     {
-        var model = new ModelOptionViewModel(TestModels.Model("vendor/alpha", "Alpha"), isSelected: false);
+        var model = new ModelOptionViewModel(TestModels.Model("vendor/alpha", "Alpha"), "OpenRouter", isSelected: false);
         var changed = new List<string?>();
         model.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
 

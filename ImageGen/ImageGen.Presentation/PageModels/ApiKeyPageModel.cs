@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ImageGen.Core.Domain.Keys;
@@ -10,10 +11,34 @@ namespace ImageGen.Presentation.PageModels;
 
 public sealed partial class ApiKeyPageModel(
     ApiKeyService apiKeyService,
+    ProviderRegistry providers,
     INavigationService navigation,
     IDialogService dialogs,
     ISecretPersistence persistence) : ObservableObject
 {
+    private bool _invalidRouteAlertShown;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    public partial string? ProviderId { get; private set; }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyPropertyChangedFor(nameof(ProviderTitle))]
+    [NotifyPropertyChangedFor(nameof(ProviderDescription))]
+    public partial string ProviderDisplayName { get; private set; } = "";
+
+    [ObservableProperty]
+    public partial bool IsRouteInvalid { get; private set; }
+
+    public string ProviderTitle => string.IsNullOrEmpty(ProviderDisplayName)
+        ? AppResources.ApiKeyHeading
+        : string.Format(CultureInfo.CurrentCulture, AppResources.ProviderKeyTitleFormat, ProviderDisplayName);
+
+    public string ProviderDescription => string.IsNullOrEmpty(ProviderDisplayName)
+        ? AppResources.ApiKeyDescription
+        : string.Format(CultureInfo.CurrentCulture, AppResources.ProviderKeyDescriptionFormat, ProviderDisplayName);
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     public partial string ApiKey { get; set; } = "";
@@ -31,16 +56,50 @@ public sealed partial class ApiKeyPageModel(
     [NotifyPropertyChangedFor(nameof(HasPersistenceWarning))]
     public partial string PersistenceWarning { get; set; } = "";
 
-    /// <summary>True when the key would not be kept safely; the page shows <see cref="PersistenceWarning"/>.</summary>
+    /// <summary>True when the key would not be kept safely; the page shows the warning.</summary>
     public bool HasPersistenceWarning => PersistenceWarning.Length > 0;
 
     /// <summary>True when the last check failed (rejected key or no network), so the field shows the error.</summary>
     [ObservableProperty]
     public partial bool HasError { get; set; }
 
-    /// <summary>Checks where the key would be kept. The page calls it when it appears.</summary>
+    /// <summary>Receives the decoded provider id from the shell route.</summary>
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        ProviderId = null;
+        ProviderDisplayName = "";
+        ApiKey = "";
+        StatusText = "";
+        HasError = false;
+        PersistenceWarning = "";
+        IsRouteInvalid = !query.TryGetValue(Routes.ProviderIdParameter, out var value)
+            || value is not string providerId
+            || !providers.TryGet(providerId, out _);
+        if (!IsRouteInvalid && value is string validProviderId && providers.TryGet(validProviderId, out var provider))
+        {
+            ProviderId = provider.Id;
+            ProviderDisplayName = provider.DisplayName;
+        }
+
+        _invalidRouteAlertShown = false;
+    }
+
+    /// <summary>Checks persistence and safely rejects a missing/unknown provider route once.</summary>
     public async Task OnAppearingAsync()
     {
+        if (IsRouteInvalid || ProviderId is null)
+        {
+            if (!_invalidRouteAlertShown)
+            {
+                _invalidRouteAlertShown = true;
+                await dialogs.AlertAsync(AppResources.ErrorTitle, AppResources.ProviderKeyUnknown);
+                await navigation.GoBackAsync();
+            }
+
+            return;
+        }
+
         var persistent = await persistence.IsPersistentAsync(CancellationToken.None);
         PersistenceWarning = persistent ? "" : AppResources.ApiKeyNotPersisted;
     }
@@ -48,12 +107,18 @@ public sealed partial class ApiKeyPageModel(
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync()
     {
+        var providerId = ProviderId;
+        if (providerId is null || !providers.TryGet(providerId, out var provider))
+        {
+            return;
+        }
+
         IsBusy = true;
         HasError = false;
         StatusText = AppResources.ApiKeyChecking;
         try
         {
-            var status = await apiKeyService.SaveAsync(ProviderIds.OpenRouter, ApiKey, CancellationToken.None);
+            var status = await apiKeyService.SaveAsync(providerId, ApiKey, CancellationToken.None);
             if (status == ApiKeyStatus.Valid)
             {
                 ApiKey = "";
@@ -65,8 +130,8 @@ public sealed partial class ApiKeyPageModel(
             HasError = true;
             StatusText = status switch
             {
-                ApiKeyStatus.Invalid => AppResources.ApiKeyInvalid,
-                _ => AppResources.ApiKeyNetworkError,
+                ApiKeyStatus.Invalid => string.Format(CultureInfo.CurrentCulture, AppResources.ProviderKeyInvalidFormat, provider.DisplayName),
+                _ => string.Format(CultureInfo.CurrentCulture, AppResources.ProviderKeyNetworkErrorFormat, provider.DisplayName),
             };
         }
         catch (Exception ex)
@@ -80,5 +145,5 @@ public sealed partial class ApiKeyPageModel(
         }
     }
 
-    private bool CanSave() => !IsBusy && !string.IsNullOrWhiteSpace(ApiKey);
+    private bool CanSave() => ProviderId is not null && !IsRouteInvalid && !IsBusy && !string.IsNullOrWhiteSpace(ApiKey);
 }

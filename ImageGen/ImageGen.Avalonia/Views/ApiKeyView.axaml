@@ -15,15 +15,15 @@
                 BorderThickness="1"
                 CornerRadius="{DynamicResource IgRadiusLg}">
             <StackPanel Spacing="12">
-                <TextBlock Classes="heading" Text="{markup:Res ApiKeyHeading}" TextWrapping="Wrap" />
-                <TextBlock Classes="muted" Text="{markup:Res ApiKeyDescription}" TextWrapping="Wrap" />
+                <TextBlock Classes="heading" Text="{Binding ProviderTitle}" TextWrapping="Wrap" />
+                <TextBlock Classes="muted" Text="{Binding ProviderDescription}" TextWrapping="Wrap" />
 
                 <TextBox Text="{Binding ApiKey, Mode=TwoWay}"
                          Classes.error="{Binding HasError}"
                          PasswordChar="*"
-                         PlaceholderText="{markup:Res ApiKeyPlaceholder}"
-                         AutomationProperties.Name="{markup:Res ApiKeyTitle}"
-                         AutomationProperties.HelpText="{markup:Res ApiKeyDescription}" />
+                         PlaceholderText="{markup:Res ProviderKeyPlaceholder}"
+                         AutomationProperties.Name="{Binding ProviderTitle}"
+                         AutomationProperties.HelpText="{Binding ProviderDescription}" />
 
                 <Button Classes="primary"
                         Command="{Binding SaveCommand}"

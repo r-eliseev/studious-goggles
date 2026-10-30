@@ -144,7 +144,7 @@ public class SessionModelsFlowTests
         shell.Window.UpdateLayout();
 
         var checkbox = expander.GetVisualDescendants().OfType<CheckBox>().Single();
-        Assert.Equal("Beta Pro", AutomationProperties.GetName(checkbox));
+        Assert.Equal("Beta Pro, OpenRouter (openrouter)", AutomationProperties.GetName(checkbox));
     }
 
     [AvaloniaFact]

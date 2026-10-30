@@ -1,9 +1,9 @@
 using System.Collections.ObjectModel;
-using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.Platform;
+using ImageGen.Core.Providers;
+using ImageGen.Core.Services;
 using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.Logging;
 using ImageGen.Presentation.Resources.Strings;
@@ -12,23 +12,23 @@ using ImageGen.Presentation.Services;
 namespace ImageGen.Presentation.PageModels;
 
 /// <summary>
-/// The settings screen: the OpenRouter key (last four characters only), the appearance (style and theme, saved at once)
+/// The settings screen: provider keys, the appearance (style and theme, saved at once)
 /// and the logs folder where the shell can open it.
 /// </summary>
 public sealed partial class SettingsPageModel(
     AppearanceService appearance,
-    ISecretStore secrets,
+    ApiKeyService apiKeys,
+    ProviderRegistry providers,
     INavigationService navigation,
     IFolderLauncher folders,
-    IAppPaths paths) : ObservableObject
+    IAppPaths paths,
+    IDialogService dialogs) : ObservableObject
 {
-    private const int KeyTailLength = 4;
-
     /// <summary>The style cards; built on the first <see cref="LoadCommand"/>, because they refer to this page model.</summary>
     public ObservableCollection<StyleOptionViewModel> Styles { get; } = [];
 
-    [ObservableProperty]
-    private string _keyText = "";
+    /// <summary>Configured providers and their masked key status, in registry order.</summary>
+    public ObservableCollection<ProviderKeyItemViewModel> ProviderKeys { get; } = [];
 
     /// <summary>The theme in effect; the radio buttons show it. Changed through <see cref="SelectThemeCommand"/>.</summary>
     [ObservableProperty]
@@ -55,16 +55,21 @@ public sealed partial class SettingsPageModel(
             Styles.Add(new StyleOptionViewModel(AppearanceStyle.Notebook, AppResources.StyleNotebook, AppResources.StyleNotebookHint, SelectStyleAsync));
         }
 
-        var key = await secrets.GetAsync(SecretNames.OpenRouterApiKey, CancellationToken.None);
-        KeyText = string.IsNullOrEmpty(key)
-            ? AppResources.SettingsKeyMissing
-            : string.Format(CultureInfo.CurrentCulture, AppResources.SettingsKeyConnectedFormat, Tail(key));
+        if (ProviderKeys.Count == 0)
+        {
+            foreach (var provider in providers.All)
+            {
+                ProviderKeys.Add(new ProviderKeyItemViewModel(provider.Id, provider.DisplayName, apiKeys, navigation, dialogs));
+            }
+        }
+
+        foreach (var key in ProviderKeys)
+        {
+            await key.RefreshAsync();
+        }
 
         ShowAppearance(appearance.Current);
     }
-
-    [RelayCommand]
-    private Task ChangeKeyAsync() => navigation.GoToAsync(Routes.ApiKey);
 
     [RelayCommand]
     private Task OpenLogsAsync() => folders.OpenAsync(LogsFolder, CancellationToken.None);
@@ -98,6 +103,4 @@ public sealed partial class SettingsPageModel(
         OnPropertyChanged(nameof(IsLightTheme));
         OnPropertyChanged(nameof(IsDarkTheme));
     }
-
-    private static string Tail(string key) => key[^Math.Min(KeyTailLength, key.Length)..];
 }

@@ -426,6 +426,39 @@
   <data name="ApiKeyHeading" xml:space="preserve">
     <value>Connect OpenRouter</value>
   </data>
+  <data name="ProviderKeyTitleFormat" xml:space="preserve">
+    <value>Connect {0}</value>
+  </data>
+  <data name="ProviderKeyDescriptionFormat" xml:space="preserve">
+    <value>Enter the API key for {0}. It is kept in the system secure storage and sent only to {0}.</value>
+  </data>
+  <data name="ProviderKeyPlaceholder" xml:space="preserve">
+    <value>API key</value>
+  </data>
+  <data name="ProviderKeyInvalidFormat" xml:space="preserve">
+    <value>{0} rejected this key.</value>
+  </data>
+  <data name="ProviderKeyNetworkErrorFormat" xml:space="preserve">
+    <value>Could not reach {0}. Check the connection and try again.</value>
+  </data>
+  <data name="ProviderKeyRemoveTitle" xml:space="preserve">
+    <value>Remove API key</value>
+  </data>
+  <data name="ProviderKeyRemoveConfirmFormat" xml:space="preserve">
+    <value>Remove the saved API key for {0}?</value>
+  </data>
+  <data name="ProviderKeyRemoveOpenRouterWarning" xml:space="preserve">
+    <value>The assistant requires OpenRouter. Removing this key prevents assistant requests until it is added again.</value>
+  </data>
+  <data name="ProviderKeyRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="ProviderKeyUnknown" xml:space="preserve">
+    <value>This provider is not configured.</value>
+  </data>
+  <data name="SettingsProviders" xml:space="preserve">
+    <value>Provider API keys</value>
+  </data>
   <data name="ImageModelsSelectedFormat" xml:space="preserve">
     <value>Image models · {0} selected</value>
   </data>

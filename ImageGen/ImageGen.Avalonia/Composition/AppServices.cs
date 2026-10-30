@@ -68,7 +68,7 @@ public static class AppServices
 
         services.AddSingleton(sp => new PageRoutes()
             .Add(Routes.Sessions, _ => new SessionsView { DataContext = sp.GetRequiredService<SessionsPageModel>() })
-            .Add(Routes.ApiKey, _ => new ApiKeyView { DataContext = sp.GetRequiredService<ApiKeyPageModel>() })
+            .Add(Routes.ApiKey, query => Page(sp.GetRequiredService<ApiKeyPageModel>(), query, model => new ApiKeyView { DataContext = model }))
             .Add(Routes.Chat, query => Page(sp.GetRequiredService<ChatPageModel>(), query, model => new ChatView { DataContext = model, SessionPicker = sp.GetRequiredService<SessionsPageModel>() }))
             .Add(Routes.SessionModels, query => Page(sp.GetRequiredService<SessionModelsPageModel>(), query, model => new SessionModelsView { DataContext = model }))
             .Add(Routes.SessionParameters, query => Page(sp.GetRequiredService<SessionParametersPageModel>(), query, model => new SessionParametersView { DataContext = model }))
@@ -105,6 +105,9 @@ public static class AppServices
         {
             case ChatPageModel chat:
                 chat.ApplyQueryAttributes(values);
+                break;
+            case ApiKeyPageModel apiKey:
+                apiKey.ApplyQueryAttributes(values);
                 break;
             case SessionModelsPageModel models:
                 models.ApplyQueryAttributes(values);

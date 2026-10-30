@@ -1,5 +1,7 @@
 using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.Platform;
+using ImageGen.Core.Providers;
+using ImageGen.Core.Services;
 using ImageGen.Presentation;
 using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.Logging;
@@ -17,11 +19,20 @@ public sealed class SettingsPageModelTests : IDisposable
     private readonly ISecretStore _secrets = Substitute.For<ISecretStore>();
     private readonly INavigationService _navigation = Substitute.For<INavigationService>();
     private readonly IFolderLauncher _folders = Substitute.For<IFolderLauncher>();
+    private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
+    private readonly IProviderRouter _router = Substitute.For<IProviderRouter>();
+    private readonly ProviderRegistry _registry = new([
+        new ProviderConfig(ProviderIds.OpenRouter, ProviderKind.OpenRouter, "OpenRouter", new Uri("https://openrouter.ai/api/v1/"), TimeSpan.FromSeconds(10), []),
+        new ProviderConfig(ProviderIds.Fal, ProviderKind.Fal, "fal.ai", new Uri("https://queue.fal.run/"), TimeSpan.FromSeconds(10), []),
+        new ProviderConfig("together", ProviderKind.OpenAiCompatible, "Together AI", new Uri("https://api.together.ai/v1/"), TimeSpan.FromSeconds(10), []),
+    ]);
+    private readonly ApiKeyService _keyService;
     private readonly AppearanceService _appearance;
 
     public SettingsPageModelTests()
     {
         Directory.CreateDirectory(_directory);
+        _keyService = new ApiKeyService(_router, _secrets, NullLogger<ApiKeyService>.Instance);
         _appearance = new AppearanceService(new TestPaths(_directory), NullLogger<AppearanceService>.Instance);
     }
 
@@ -41,7 +52,9 @@ public sealed class SettingsPageModelTests : IDisposable
 
         await model.LoadCommand.ExecuteAsync(null);
 
-        Assert.Equal(string.Format(AppResources.SettingsKeyConnectedFormat, "1234"), model.KeyText);
+        var row = Assert.Single(model.ProviderKeys, item => item.ProviderId == ProviderIds.OpenRouter);
+        Assert.Equal(string.Format(AppResources.SettingsKeyConnectedFormat, "1234"), row.KeyText);
+        Assert.True(row.HasKey);
     }
 
     [Fact]
@@ -52,7 +65,9 @@ public sealed class SettingsPageModelTests : IDisposable
 
         await model.LoadCommand.ExecuteAsync(null);
 
-        Assert.Equal(AppResources.SettingsKeyMissing, model.KeyText);
+        var row = Assert.Single(model.ProviderKeys, item => item.ProviderId == ProviderIds.OpenRouter);
+        Assert.Equal(AppResources.SettingsKeyMissing, row.KeyText);
+        Assert.False(row.HasKey);
     }
 
     [Fact]
@@ -93,13 +108,80 @@ public sealed class SettingsPageModelTests : IDisposable
     }
 
     [Fact]
-    public async Task ChangeKey_NavigatesToApiKey()
+    public async Task Load_ListsConfiguredProvidersInOrderAndRefreshesWithoutDuplicates()
     {
+        _secrets.GetAsync("provider.fal.api_key", Arg.Any<CancellationToken>()).Returns("fal-5678");
+        _secrets.GetAsync("provider.together.api_key", Arg.Any<CancellationToken>()).Returns((string?)null);
         var model = CreateModel();
 
-        await model.ChangeKeyCommand.ExecuteAsync(null);
+        await model.LoadCommand.ExecuteAsync(null);
+        var rows = model.ProviderKeys.ToArray();
+        await model.LoadCommand.ExecuteAsync(null);
 
-        await _navigation.Received(1).GoToAsync(Routes.ApiKey);
+        Assert.Equal([ProviderIds.OpenRouter, ProviderIds.Fal, "together"], model.ProviderKeys.Select(row => row.ProviderId));
+        Assert.Equal(rows, model.ProviderKeys);
+        Assert.Equal("fal.ai", model.ProviderKeys[1].DisplayName);
+        Assert.Equal(string.Format(AppResources.SettingsKeyConnectedFormat, "5678"), model.ProviderKeys[1].KeyText);
+    }
+
+    [Fact]
+    public async Task ProviderChangeCommand_NavigatesWithProviderId()
+    {
+        var model = CreateModel();
+        await model.LoadCommand.ExecuteAsync(null);
+
+        await model.ProviderKeys.Single(item => item.ProviderId == "together").ChangeCommand.ExecuteAsync(null);
+
+        await _navigation.Received(1).GoToAsync(Routes.ApiKeyFor("together"));
+    }
+
+    [Fact]
+    public async Task RemoveCommand_Cancel_DoesNotRemoveSecret()
+    {
+        _secrets.GetAsync("provider.together.api_key", Arg.Any<CancellationToken>()).Returns("secret-5678");
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        var model = CreateModel();
+        await model.LoadCommand.ExecuteAsync(null);
+        var row = model.ProviderKeys.Single(item => item.ProviderId == "together");
+
+        await row.RemoveCommand.ExecuteAsync(null);
+
+        await _secrets.DidNotReceive().RemoveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        Assert.True(row.HasKey);
+    }
+
+    [Theory]
+    [InlineData("together", "provider.together.api_key", false)]
+    [InlineData(ProviderIds.OpenRouter, SecretNames.OpenRouterApiKey, true)]
+    public async Task RemoveCommand_Confirm_RemovesOnlySelectedSecret(string providerId, string secretName, bool openRouter)
+    {
+        var stored = true;
+        _secrets.GetAsync(secretName, Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult(stored ? "secret-5678" : null));
+        _secrets.RemoveAsync(secretName, Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            stored = false;
+            return Task.CompletedTask;
+        });
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+        var model = CreateModel();
+        await model.LoadCommand.ExecuteAsync(null);
+        var row = model.ProviderKeys.Single(item => item.ProviderId == providerId);
+
+        await row.RemoveCommand.ExecuteAsync(null);
+
+        await _secrets.Received(1).RemoveAsync(secretName, Arg.Any<CancellationToken>());
+        await _secrets.DidNotReceive().RemoveAsync(Arg.Is<string>(name => name != secretName), Arg.Any<CancellationToken>());
+        Assert.False(row.HasKey);
+        Assert.Equal(AppResources.SettingsKeyMissing, row.KeyText);
+        await _navigation.DidNotReceive().GoBackAsync();
+        if (openRouter)
+        {
+            await _dialogs.Received(1).ConfirmAsync(
+                AppResources.ProviderKeyRemoveTitle,
+                Arg.Is<string>(message => message.Contains(AppResources.ProviderKeyRemoveOpenRouterWarning, StringComparison.Ordinal)),
+                AppResources.ProviderKeyRemove,
+                AppResources.Cancel);
+        }
     }
 
     [Fact]
@@ -123,7 +205,7 @@ public sealed class SettingsPageModelTests : IDisposable
         Assert.True(CreateModel().CanOpenLogs);
     }
 
-    private SettingsPageModel CreateModel() => new(_appearance, _secrets, _navigation, _folders, new TestPaths(_directory));
+    private SettingsPageModel CreateModel() => new(_appearance, _keyService, _registry, _navigation, _folders, new TestPaths(_directory), _dialogs);
 
     private sealed record TestPaths(string DataDirectory) : IAppPaths;
 }

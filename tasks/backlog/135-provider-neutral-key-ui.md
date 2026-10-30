@@ -1,6 +1,6 @@
 ---
 id: 135
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -55,6 +55,23 @@ bash scripts/check.sh
 Файлы: `ImageGen/ImageGen.Presentation/Routes.cs`, `ImageGen/ImageGen.Presentation/PageModels/ApiKeyPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SettingsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ModelPickerPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ProviderKeyItemViewModel.cs` (новый), `ImageGen/ImageGen.Presentation/PageModels/ModelOptionViewModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Presentation.Tests/RoutesTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ApiKeyPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SettingsPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionsPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionModelsPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ModelPickerPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ModelOptionViewModelTests.cs`, `ImageGen/ImageGen.Maui/MauiProgram.cs`, `ImageGen/ImageGen.Maui/Pages/ApiKeyPage.xaml`, `ImageGen/ImageGen.Maui/Pages/ApiKeyPage.xaml.cs`, `ImageGen/ImageGen.Maui/Pages/SettingsPage.xaml`, `ImageGen/ImageGen.Maui/Pages/SettingsPage.xaml.cs`, `ImageGen/ImageGen.Maui/Pages/ModelPickerPage.xaml`, `ImageGen/ImageGen.Maui/Pages/SessionModelsPage.xaml`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Avalonia/Views/ModelPickerView.axaml`, `ImageGen/ImageGen.Avalonia/Views/SessionModelsView.axaml`, `ImageGen/ImageGen.Avalonia/Views/ApiKeyView.axaml`, `ImageGen/ImageGen.Avalonia/Views/ApiKeyView.axaml.cs`, `ImageGen/ImageGen.Avalonia/Views/SettingsView.axaml`, `ImageGen/ImageGen.Avalonia/Views/SettingsView.axaml.cs`, `ImageGen/ImageGen.Avalonia/Composition/AppServices.cs`, `ImageGen/ImageGen.Avalonia.Tests/Views/ViewsAccessibilityTests.cs`, `ImageGen/ImageGen.Avalonia.Tests/Flows/StartFlowTests.cs`, `ImageGen/ImageGen.Avalonia.Tests/Composition/AppServicesTests.cs`, `ImageGen/ImageGen.Presentation.Tests/Design/MauiProviderKeysMarkupTests.cs` (новый), `docs/specs/chat-sessions.md`, `docs/architecture.md`, задачи ручных проверок016/046/140
 
 ## Отчёт
+
+Сделано:
+- API-key route принимает provider id с URL escaping; MAUI и Avalonia передают query в общий PageModel. Невалидный/отсутствующий id показывает один alert и безопасно возвращается назад.
+- Экран настроек перечисляет провайдеры в порядке registry, показывает только маскированный статус и даёт отдельно изменить или удалить ключ. Удаление подтверждается; для OpenRouter есть предупреждение, настройки остаются открыты.
+- Первый запуск по-прежнему запрашивает только OpenRouter. Строки моделей показывают имя и id провайдера, сохраняя идентичность модели по provider/model id.
+- Добавлены Presentation, Avalonia flow/accessibility и MAUI markup проверки; обновлены спецификация, архитектура и сценарии ручной проверки платформ.
+
+Проверки:
+- Presentation tests: 384/384.
+- Avalonia headless tests: 143 passed, 2 skipped (DPAPI и Secret Service недоступны на этой платформе).
+- MAUI Android build: успешно, 0 warnings/errors.
+- `dotnet format --verify-no-changes`: Presentation, Presentation.Tests, Avalonia, Avalonia.Tests и MAUI прошли.
+- `bash scripts/check.sh`: все проверки пройдены.
+
+Не проверено вручную: ввод реальных ключей/живой запрос, MAUI Windows и Android UI, Avalonia desktop UI. Сценарии добавлены в задачи 016, 140 и 046 соответственно; проверка настоящих ключей остаётся владельцу.
+
+Отклонений от плана нет.
 
 ## Комментарии
 

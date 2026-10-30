@@ -70,3 +70,11 @@ scripts/check.sh
 
 ### 2026-10-29, codex-review
 Ручная задача остаётся planned: нужен человек на Linux desktop/Windows. Уточнены актуальные recovery expectations, цена не обещается заранее, проверка Secret Service не выводит сохранённые секреты.
+
+### 2026-10-30, codex-gpt6 (задача 135)
+После135/136 проверить provider-neutral keys в Avalonia Linux и Windows:
+1. Settings перечисляет providers в порядке конфигурации, показывает только маску последних четырёх символов или Not connected; Change ведёт на экран с display name выбранного provider.
+2. При наличии безопасных тестовых ключей проверить разные provider ids (OpenRouter, fal, Together после136): валидный ключ сохраняется для выбранного provider, invalid key не заменяет прежний.
+3. Remove необязательного ключа удаляет только выбранный ключ и не закрывает Settings. Remove OpenRouter просит подтверждение с предупреждением; после выхода в Sessions форма OpenRouter появляется снова.
+4. Вызов провайдера без его ключа показывает InvalidKey и не завершает приложение. Проверить обычный лог и debug trace: ключ и Authorization отсутствуют на всех уровнях; секреты/логи не прикладывать к отчёту.
+5. В экранах моделей карточки с одинаковым именем от разных providers имеют различимые provider display name/id и доступные подписи.

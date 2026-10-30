@@ -125,7 +125,7 @@ public sealed partial class SessionsPageModel(
             await initializer.EnsureInitializedAsync();
             if (!await apiKeyService.HasKeyAsync(ProviderIds.OpenRouter, CancellationToken.None))
             {
-                await navigation.GoToAsync(Routes.ApiKey);
+                await navigation.GoToAsync(Routes.ApiKeyFor(ProviderIds.OpenRouter));
                 return;
             }
 

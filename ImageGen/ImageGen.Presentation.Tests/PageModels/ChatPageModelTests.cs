@@ -219,7 +219,7 @@ public class ChatPageModelTests
     private ModelCatalogService Catalog => new(ProviderDoubles.Router(), _modelRepository, NullLogger<ModelCatalogService>.Instance);
 
     private SessionModelsPageModel NewModelsPane() =>
-        new(_sessionService, Catalog, ChatModels, _navigation, _dialogs);
+        new(_sessionService, Catalog, ChatModels, ProviderDoubles.BuiltInRegistry(), _navigation, _dialogs);
 
     private SessionParametersPageModel NewParametersPane() =>
         new(_sessionService, Catalog, _navigation, _dialogs);

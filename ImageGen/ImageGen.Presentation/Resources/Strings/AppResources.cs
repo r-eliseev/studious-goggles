@@ -202,6 +202,28 @@ public static class AppResources
 
     public static string ApiKeyHeading => Get(nameof(ApiKeyHeading));
 
+    public static string ProviderKeyTitleFormat => Get(nameof(ProviderKeyTitleFormat));
+
+    public static string ProviderKeyDescriptionFormat => Get(nameof(ProviderKeyDescriptionFormat));
+
+    public static string ProviderKeyPlaceholder => Get(nameof(ProviderKeyPlaceholder));
+
+    public static string ProviderKeyInvalidFormat => Get(nameof(ProviderKeyInvalidFormat));
+
+    public static string ProviderKeyNetworkErrorFormat => Get(nameof(ProviderKeyNetworkErrorFormat));
+
+    public static string ProviderKeyRemoveTitle => Get(nameof(ProviderKeyRemoveTitle));
+
+    public static string ProviderKeyRemoveConfirmFormat => Get(nameof(ProviderKeyRemoveConfirmFormat));
+
+    public static string ProviderKeyRemoveOpenRouterWarning => Get(nameof(ProviderKeyRemoveOpenRouterWarning));
+
+    public static string ProviderKeyRemove => Get(nameof(ProviderKeyRemove));
+
+    public static string ProviderKeyUnknown => Get(nameof(ProviderKeyUnknown));
+
+    public static string SettingsProviders => Get(nameof(SettingsProviders));
+
     public static string NewSeed => Get(nameof(NewSeed));
 
     public static string Edit => Get(nameof(Edit));
