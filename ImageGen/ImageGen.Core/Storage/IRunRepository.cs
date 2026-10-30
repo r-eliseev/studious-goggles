@@ -20,7 +20,8 @@ public interface IRunRepository
     /// <summary>Generations of the session ordered by run creation time, then <see cref="Generation.SortOrder"/>.</summary>
     Task<IReadOnlyList<Generation>> ListGenerationsBySessionAsync(Guid sessionId, CancellationToken cancellationToken);
 
-    /// <summary>Overwrites all mutable fields of the generation.</summary>
+    /// <summary>Overwrites all mutable fields of the generation and confirms that exactly one row was updated.</summary>
+    /// <exception cref="StorageWriteException">The update did not affect exactly one row or storage rejected the write.</exception>
     Task UpdateGenerationAsync(Generation generation, CancellationToken cancellationToken);
 
     /// <summary>Marks every Queued or Running generation as Failed with <see cref="ErrorKind.Interrupted"/>.</summary>
