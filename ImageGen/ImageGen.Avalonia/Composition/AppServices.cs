@@ -64,7 +64,11 @@ public static class AppServices
         services.AddSingleton<AppearanceService>();
         services.AddSingleton<IClipboardService>(new AvaloniaClipboardService(MainWindowOwner));
         services.AddSingleton<IImageSaver>(new AvaloniaImageSaver(MainWindowOwner));
-        services.AddSingleton<IImageViewerService>(new AvaloniaImageViewerService(MainWindowOwner));
+        services.AddSingleton<AvaloniaFullScreenController>();
+        services.AddSingleton<IImageViewerService>(sp => new AvaloniaImageViewerService(
+            MainWindowOwner,
+            sp.GetRequiredService<AvaloniaFullScreenController>(),
+            sp.GetRequiredService<IDialogService>()));
         services.AddSingleton<ICurrentSessionTracker, CurrentSessionTracker>();
 
         services.AddSingleton(sp => new PageRoutes()

@@ -8,11 +8,15 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using ImageGen.Presentation.Utilities;
 
 namespace ImageGen.Avalonia.Services;
 
 /// <summary>Displays image snapshots in an owned modal window sized to the owner client area.</summary>
-public sealed class AvaloniaImageViewerService(Func<Window?> owner) : IImageViewerService
+public sealed class AvaloniaImageViewerService(
+    Func<Window?> owner,
+    AvaloniaFullScreenController fullScreen,
+    IDialogService dialogs) : IImageViewerService
 {
     private int _isOpen;
 
@@ -29,16 +33,20 @@ public sealed class AvaloniaImageViewerService(Func<Window?> owner) : IImageView
         }
 
         var snapshot = items.ToArray();
-        var window = new ImageViewerWindow(snapshot, initialIndex, parent);
+        var window = new ImageViewerWindow(snapshot, initialIndex, parent, dialogs);
+        IDisposable? fullScreenLease = null;
         try
         {
             if (cancellationToken.IsCancellationRequested) return;
+            fullScreenLease = fullScreen.Enter(window);
             var showTask = window.ShowDialog(parent);
             using var registration = cancellationToken.Register(() => Dispatcher.UIThread.Post(window.Close));
+            window.StartLoading();
             await showTask;
         }
         finally
         {
+            fullScreenLease?.Dispose();
             window.DisposeImage();
             Interlocked.Exchange(ref _isOpen, 0);
         }
@@ -50,14 +58,17 @@ internal sealed class ImageViewerWindow : Window
     private readonly IReadOnlyList<ImageViewerItem> _items;
     private readonly Image _image = new() { Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
     private readonly TextBlock _position = new() { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Foreground = Brushes.White };
+    private readonly IDialogService _dialogs;
     private Bitmap? _bitmap;
     private int _index;
     private int _epoch;
+    private bool _started;
 
-    public ImageViewerWindow(IReadOnlyList<ImageViewerItem> items, int initialIndex, Window owner)
+    public ImageViewerWindow(IReadOnlyList<ImageViewerItem> items, int initialIndex, Window owner, IDialogService dialogs)
     {
         _items = items;
         _index = initialIndex;
+        _dialogs = dialogs;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         WindowState = WindowState.Normal;
         WindowDecorations = WindowDecorations.None;
@@ -93,7 +104,13 @@ internal sealed class ImageViewerWindow : Window
         KeyDown += OnKeyDown;
         Closed += (_, _) => _epoch++;
         Opened += (_, _) => close.Focus();
-        _ = LoadAsync(_index);
+    }
+
+    public void StartLoading()
+    {
+        if (_started) return;
+        _started = true;
+        LoadAsync(_index).FireAndForgetSafeAsync();
     }
 
     public void DisposeImage()
@@ -124,7 +141,7 @@ internal sealed class ImageViewerWindow : Window
         var next = _index + delta;
         if ((uint)next >= (uint)_items.Count) return;
         _index = next;
-        _ = LoadAsync(next);
+        LoadAsync(next).FireAndForgetSafeAsync();
     }
 
     private async Task LoadAsync(int index)
@@ -157,13 +174,14 @@ internal sealed class ImageViewerWindow : Window
             if (epoch != _epoch) return;
             if (_bitmap is null)
             {
-                await Dispatcher.UIThread.InvokeAsync(() => Content = new TextBlock
+                try
                 {
-                    Text = AppResources.ImageViewerUnreadable,
-                    Foreground = Brushes.White,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
-                });
+                    await _dialogs.AlertAsync(AppResources.ErrorTitle, AppResources.ImageViewerUnreadable);
+                }
+                finally
+                {
+                    Close();
+                }
             }
             else
             {

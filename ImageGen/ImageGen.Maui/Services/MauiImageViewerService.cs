@@ -1,10 +1,11 @@
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using ImageGen.Presentation.Utilities;
 
 namespace ImageGen.Maui.Services;
 
 /// <summary>Shows an image snapshot in a modal page without changing platform immersive state.</summary>
-public sealed class MauiImageViewerService : IImageViewerService
+public sealed class MauiImageViewerService(IMauiFullScreenController fullScreen) : IImageViewerService
 {
     private int _isOpen;
 
@@ -22,13 +23,20 @@ public sealed class MauiImageViewerService : IImageViewerService
 
         var page = new MauiImageViewerPage(items.ToArray(), initialIndex);
         using var registration = cancellationToken.Register(() => MainThread.BeginInvokeOnMainThread(page.Close));
+        MauiViewerFullscreenSession? fullscreenSession = null;
         try
         {
             await Shell.Current.Navigation.PushModalAsync(page);
+            if (page.Window is { } window)
+            {
+                fullscreenSession = new MauiViewerFullscreenSession(window, fullScreen);
+            }
+            page.StartLoading();
             await page.Closed;
         }
         finally
         {
+            fullscreenSession?.Dispose();
             if (Shell.Current.Navigation.ModalStack.LastOrDefault() == page)
             {
                 await Shell.Current.Navigation.PopModalAsync();
@@ -48,6 +56,7 @@ internal sealed class MauiImageViewerPage : ContentPage
     private int _index;
     private int _epoch;
     private bool _closing;
+    private bool _started;
 #if WINDOWS
     private Microsoft.UI.Xaml.FrameworkElement? _nativeView;
 #endif
@@ -77,10 +86,16 @@ internal sealed class MauiImageViewerPage : ContentPage
         };
         root.GestureRecognizers.Add(backgroundTap);
         Content = root;
-        _ = LoadAsync(_index);
     }
 
     public Task Closed => _closed.Task;
+
+    public void StartLoading()
+    {
+        if (_started || _closing) return;
+        _started = true;
+        LoadAsync(_index).FireAndForgetSafeAsync();
+    }
 
     protected override bool OnBackButtonPressed()
     {
@@ -139,7 +154,7 @@ internal sealed class MauiImageViewerPage : ContentPage
         var next = _index + delta;
         if ((uint)next >= (uint)_items.Count) return;
         _index = next;
-        _ = LoadAsync(next);
+        LoadAsync(next).FireAndForgetSafeAsync();
     }
 
     private async Task LoadAsync(int index)
@@ -165,7 +180,14 @@ internal sealed class MauiImageViewerPage : ContentPage
             {
                 _index = Math.Max(0, index - 1);
             }
-            await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(AppResources.ErrorTitle, AppResources.ImageViewerUnreadable, AppResources.Ok));
+            try
+            {
+                await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(AppResources.ErrorTitle, AppResources.ImageViewerUnreadable, AppResources.Ok));
+            }
+            finally
+            {
+                if (_image.Source is null) Close();
+            }
         }
     }
 

@@ -15,6 +15,10 @@
 - Ресурсы: `Resources/AppIcon`, `Splash`, `Images`, `Fonts`, `Raw`, `Styles`; `MauiImage` масштабируется Resizetizer (SVG и PNG), имена только в нижнем регистре, цифры и подчёркивание.
 - Все платформенные точки входа вызывают `MauiProgram.CreateMauiApp()`.
 
+### Android window и системные панели (задача 137)
+- В .NET MAUI 10 `IWindowHandler.PlatformView` для Android — `Android.App.Activity`; `Window.Handler` можно проверить как `IWindowHandler`, затем брать `Activity.Window` именно у окна viewer. Не искать произвольный `Application.Current.Windows` и не полагаться на статический `Platform.CurrentActivity`. Источник: [IWindowHandler.cs](https://github.com/dotnet/maui/blob/43db9d77f2ff59999dea36ab8befb8541e919013/src/Core/src/Handlers/Window/IWindowHandler.cs); локальная Android-сборка также проверяет тип.
+- `WindowInsetsControllerCompat` из имеющегося `Xamarin.AndroidX.Core` работает с status/navigation bars; видимость и `SystemBarsBehavior` нужно сохранить отдельно для каждого типа, затем восстановить. До первых `RootWindowInsets` нельзя выдумывать исходную видимость: fullscreen lease остаётся ожидающим и отменяемым.
+
 ## Приложение и жизненный цикл
 - `App.CreateWindow(IActivationState?)` возвращает `Window` со стартовой страницей или `Shell` (`MainPage` у `Application` в новых проектах не используется).
 - События страницы: `Appearing`, `Disappearing`, `NavigatedTo`, `NavigatedFrom`; события окна: `Created`, `Activated`, `Deactivated`, `Stopped`, `Resumed`, `Destroying` (для сохранения состояния и остановки подписок).
