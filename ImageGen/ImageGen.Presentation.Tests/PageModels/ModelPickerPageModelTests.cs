@@ -164,4 +164,20 @@ public class ModelPickerPageModelTests
         Assert.Equal([("vendor/beta", 33L, "a red fox")], _added.Select(g => (g.ModelId, g.Seed, g.Prompt)));
         await _navigation.Received(1).GoBackAsync();
     }
+
+    [Fact]
+    public async Task Pick_TargetDoesNotSupportSourceReferences_ShowsErrorAndStaysOnPage()
+    {
+        _source.ReferenceAttachmentIds = [Guid.NewGuid()];
+        _runs.ListGenerationsBySessionAsync(SessionId, Arg.Any<CancellationToken>()).Returns(System.Array.Empty<Generation>());
+        var model = await OpenAsync();
+
+        await model.PickCommand.ExecuteAsync(model.AllModels.Single(option => option.Id == "vendor/beta"));
+
+        await _dialogs.Received(1).AlertAsync(
+            AppResources.ErrorTitle,
+            Arg.Is<string>(message => message.Contains("reference", StringComparison.OrdinalIgnoreCase)));
+        await _navigation.DidNotReceive().GoBackAsync();
+        await _runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
+    }
 }

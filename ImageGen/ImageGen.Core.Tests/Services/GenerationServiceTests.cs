@@ -1680,6 +1680,101 @@ public class GenerationServiceTests
     }
 
     [Fact]
+    public async Task RunOnModelAsync_TargetDoesNotSupportReferences_RejectsBeforeCreatingRun()
+    {
+        var source = Existing(_session.Id, Seeded, seed: 33);
+        source.ReferenceAttachmentIds = [Guid.NewGuid()];
+        _runs.GetGenerationAsync(source.Id, Arg.Any<CancellationToken>()).Returns(source);
+        _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>())
+            .Returns([ModelWithReferences(Unseeded, 0)]);
+
+        var error = await Assert.ThrowsAsync<ProviderException>(() =>
+            _service.RunOnModelAsync(source.Id, new ModelRef(ProviderIds.OpenRouter, Unseeded), TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.ModelWithoutReferences, error.Kind);
+        await _runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
+        await _generator.DidNotReceive().GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RunOnModelAsync_TargetReferenceLimitIsTooSmall_RejectsBeforeCreatingRun()
+    {
+        var source = Existing(_session.Id, Seeded, seed: 33);
+        source.ReferenceAttachmentIds = [Guid.NewGuid(), Guid.NewGuid()];
+        _runs.GetGenerationAsync(source.Id, Arg.Any<CancellationToken>()).Returns(source);
+        _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>())
+            .Returns([ModelWithReferences(Unseeded, 1)]);
+
+        var error = await Assert.ThrowsAsync<ProviderException>(() =>
+            _service.RunOnModelAsync(source.Id, new ModelRef(ProviderIds.OpenRouter, Unseeded), TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.BadRequest, error.Kind);
+        Assert.Contains("2", error.Message, StringComparison.Ordinal);
+        Assert.Contains("1", error.Message, StringComparison.Ordinal);
+        await _runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
+        await _generator.DidNotReceive().GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RunOnModelAsync_UnknownTargetWithReferences_RejectsBeforeCreatingRun()
+    {
+        var source = Existing(_session.Id, Seeded, seed: 33);
+        source.ReferenceAttachmentIds = [Guid.NewGuid()];
+        _runs.GetGenerationAsync(source.Id, Arg.Any<CancellationToken>()).Returns(source);
+
+        var error = await Assert.ThrowsAsync<ProviderException>(() =>
+            _service.RunOnModelAsync(source.Id, new ModelRef(ProviderIds.OpenRouter, "vendor/missing"), TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.ModelWithoutReferences, error.Kind);
+        await _runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    public async Task RunOnModelAsync_TargetSupportsAllReferences_PreservesOrderAndRunSettings(int targetLimit)
+    {
+        var references = new[] { Guid.NewGuid(), Guid.NewGuid() };
+        var source = Existing(_session.Id, Seeded, seed: 33, prompt: "a red fox");
+        source.ReferenceAttachmentIds = references;
+        var parameters = new GenerationParameters { AspectRatio = "3:2", Resolution = "1K" };
+        _runs.GetGenerationAsync(source.Id, Arg.Any<CancellationToken>()).Returns(source);
+        _runs.GetRunAsync(source.RunId, Arg.Any<CancellationToken>()).Returns(new Run
+        {
+            Id = source.RunId,
+            SessionId = _session.Id,
+            Prompt = source.Prompt,
+            Origin = RunOrigin.Assistant,
+            CreatedAt = Now,
+            Parameters = parameters,
+        });
+        var target = ModelWithReferences(Unseeded, targetLimit);
+        _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns([target]);
+        foreach (var id in references)
+        {
+            var attachment = new ChatAttachment
+            {
+                Id = id,
+                SessionId = _session.Id,
+                RelativePath = $"images/{id:N}.png",
+                MediaType = "image/png",
+                CreatedAt = Now,
+            };
+            _chatAttachments.GetAsync(id, Arg.Any<CancellationToken>()).Returns(attachment);
+            _files.ReadAsync(attachment.RelativePath, Arg.Any<CancellationToken>()).Returns([1, 2, 3]);
+        }
+
+        var run = await _service.RunOnModelAsync(source.Id, new ModelRef(ProviderIds.OpenRouter, Unseeded), TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal("a red fox", run.Prompt);
+        Assert.Equal(parameters, run.Parameters);
+        Assert.Equal(references, Assert.Single(_added).ReferenceAttachmentIds);
+        Assert.Equal(33, Assert.Single(_added).Seed);
+        Assert.Equal(RunOrigin.OtherModel, run.Origin);
+    }
+
+    [Fact]
     public async Task RepeatAsync_UnknownGeneration_Throws()
     {
         var id = Guid.NewGuid();
