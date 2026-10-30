@@ -655,7 +655,7 @@ public class GenerationServiceTests
     }
 
     [Fact]
-    public async Task StartRunAsync_ImageSaveThrows_DoesNotInventCleanupPath()
+    public async Task StartRunAsync_ImageSaveThrows_MarksGenerationFailedWithoutInventingCleanupPath()
     {
         var queued = Substitute.For<IQueuedImageProvider>();
         var handle = new ProviderJobHandle(ProviderIds.OpenRouter, "req-1", "https://q/s", "https://q/r", "https://q/c");
@@ -671,9 +671,92 @@ public class GenerationServiceTests
         await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
         await _service.WhenIdleAsync();
 
+        var failed = Assert.Single(_events, generation => generation.Status == GenerationStatus.Failed);
+        Assert.Equal(ErrorKind.ImageSaveFailed, failed.ErrorKind);
+        Assert.Equal("Could not save the generated image. Check free space and folder permissions.", failed.ErrorMessage);
+        Assert.Equal(0.014m, failed.CostUsd);
+        await _files.Received(1).SaveAsync(_session.Id, Arg.Any<Guid>(), Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>());
         await _files.DidNotReceive().DeleteFileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
         await _files.DidNotReceive().DeleteSessionFilesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         Assert.DoesNotContain(_events, generation => generation.Status == GenerationStatus.Succeeded);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_NativeQueuedImageSaveThrows_MarksGenerationFailedWithoutResubmitting()
+    {
+        var queued = Substitute.For<IQueuedImageProvider>();
+        var handle = new ProviderJobHandle(ProviderIds.OpenRouter, "req-1", "https://q/s", "https://q/r", "https://q/c");
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _providers.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(queued);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(handle);
+        queued.PollAsync(handle, Arg.Any<CancellationToken>()).Returns(new JobUpdate(
+            JobState.Succeeded, Result: new ImageGenerationResult(Image, "image/png", 0.014m)));
+        _files.SaveAsync(_session.Id, Arg.Any<Guid>(), Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>())
+            .Returns<Task<string>>(_ => throw new UnauthorizedAccessException("private path detail"));
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        var failed = Assert.Single(_events, generation => generation.Status == GenerationStatus.Failed);
+        Assert.Equal(ErrorKind.ImageSaveFailed, failed.ErrorKind);
+        Assert.Equal(0.014m, failed.CostUsd);
+        Assert.DoesNotContain("private path detail", failed.ErrorMessage, StringComparison.Ordinal);
+        await queued.Received(1).SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+        await queued.Received(1).PollAsync(handle, Arg.Any<CancellationToken>());
+        await _files.Received(1).SaveAsync(_session.Id, Arg.Any<Guid>(), Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>());
+        await _files.DidNotReceive().DeleteFileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StartRunAsync_ImageSaveFailureAndFailedTerminalWrite_DoesNotRetryTerminalWrite()
+    {
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _files.SaveAsync(_session.Id, Arg.Any<Guid>(), Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>())
+            .Returns<Task<string>>(_ => throw new IOException("disk is full"));
+        var failedWrites = 0;
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            if (call.Arg<Generation>().Status == GenerationStatus.Failed)
+            {
+                failedWrites++;
+                throw new StorageWriteException("database unavailable", false);
+            }
+
+            return Task.CompletedTask;
+        });
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal(1, failedWrites);
+        Assert.DoesNotContain(_events, generation => generation.Status == GenerationStatus.Failed);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is null);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_OwnedCancellationDuringImageSave_DoesNotBecomeSaveFailure()
+    {
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        var saveEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _files.SaveAsync(_session.Id, Arg.Any<Guid>(), Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>())
+            .Returns(async call =>
+            {
+                saveEntered.TrySetResult();
+                await Task.Delay(Timeout.InfiniteTimeSpan, call.Arg<CancellationToken>());
+                return "unused";
+            });
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await saveEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        Assert.DoesNotContain(_events, generation => generation.Status == GenerationStatus.Failed);
+        await _runs.DidNotReceive().UpdateGenerationAsync(
+            Arg.Is<Generation>(generation => generation.ErrorKind == ErrorKind.ImageSaveFailed), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -1700,7 +1783,7 @@ public class GenerationServiceTests
     }
 
     [Fact]
-    public async Task WatchQueuedAsync_FileStoreError_IsNotAPollingFailure()
+    public async Task WatchQueuedAsync_FileStoreError_PersistsImageSaveFailureNotPollingFailure()
     {
         var ct = TestContext.Current.CancellationToken;
         var generation = ResumableGeneration();
@@ -1725,13 +1808,13 @@ public class GenerationServiceTests
         var idle = _service.WhenIdleAsync();
         gate.SetResult();
 
-        // The supervisor observes the file-store failure without turning it into a terminal persistence/event.
+        // File persistence failure is converted to one safe terminal result, not a polling failure.
         await idle;
-        Assert.NotEqual(GenerationStatus.Failed, generation.Status);
-        Assert.DoesNotContain(_events, e => e.Status == GenerationStatus.Failed);
+        Assert.Equal(GenerationStatus.Failed, generation.Status);
+        Assert.Equal(ErrorKind.ImageSaveFailed, generation.ErrorKind);
+        Assert.Equal("Could not save the generated image. Check free space and folder permissions.", generation.ErrorMessage);
+        Assert.Single(_events, e => e.Status == GenerationStatus.Failed);
         Assert.DoesNotContain(_logger.Entries, entry => entry.Message.Contains("Polling of generation", StringComparison.Ordinal));
-        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is null);
-        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception is IOException);
     }
 
     [Fact]

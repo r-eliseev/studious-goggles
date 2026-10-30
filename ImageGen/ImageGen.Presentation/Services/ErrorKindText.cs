@@ -26,6 +26,7 @@ public static class ErrorKindText
         ErrorKind.AttachmentUnreadable => AppResources.ErrorKindAttachmentUnreadable,
         ErrorKind.ReferenceUnreadable => AppResources.ErrorKindReferenceUnreadable,
         ErrorKind.ModelWithoutReferences => AppResources.ErrorKindModelWithoutReferences,
+        ErrorKind.ImageSaveFailed => AppResources.ErrorKindImageSaveFailed,
         _ => AppResources.ErrorKindUnknown,
     };
 }

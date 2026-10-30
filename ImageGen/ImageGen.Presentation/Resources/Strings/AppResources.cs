@@ -402,6 +402,8 @@ public static class AppResources
 
     public static string ErrorKindModelWithoutReferences => Get(nameof(ErrorKindModelWithoutReferences));
 
+    public static string ErrorKindImageSaveFailed => Get(nameof(ErrorKindImageSaveFailed));
+
     public static string OtherModel => Get(nameof(OtherModel));
 
     public static string CopyPrompt => Get(nameof(CopyPrompt));

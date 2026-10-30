@@ -26,4 +26,10 @@ public class ErrorKindTextTests
     {
         Assert.Equal(AppResources.ErrorKindRateLimited, ErrorKindText.Of(ErrorKind.RateLimited));
     }
+
+    [Fact]
+    public void Of_ImageSaveFailed_ShowsTheSaveErrorText()
+    {
+        Assert.Equal(AppResources.ErrorKindImageSaveFailed, ErrorKindText.Of(ErrorKind.ImageSaveFailed));
+    }
 }
