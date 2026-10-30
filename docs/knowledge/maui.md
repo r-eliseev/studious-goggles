@@ -122,3 +122,9 @@
 - Выбранная карточка — `ChatPageModel.SelectedCard`: тап по карточке (`TapGestureRecognizer` с `x:Reference Page`) вызывает `SelectCardCommand`; пункты меню «Card» привязаны к `SelectedCard.<Команда>`.
 - **Не проверено:** поведение строки меню и ускорителей под Windows и Mac Catalyst (нужны Windows и macOS, пункт в задаче 016); на телефонах `MenuBarItems` не показываются.
 
+## Публикация MAUI под Windows с RID
+- Для многоцелевого MAUI-проекта `dotnet publish -f net10.0-windows10.0.19041.0 -r <rid>` задаёт RID при restore всех target frameworks; при restore Android может завершиться `NU1102` для `Mono.win-x64`. `-p:TargetFrameworks=net10.0-windows10.0.19041.0` сужает restore приложения, но глобальное MSBuild-свойство попадает и в project references: в запуске 10 это привело к `NETSDK1005` — Core, Data и Presentation ожидали отсутствующий `net10.0`.
+- `-p:RuntimeIdentifierOverride=<rid>` не задаёт SDK RID: в релизе `v0.1.4` (проверено 2026-10-29) пакет `win-arm64` содержал x64 PE-файлы.
+- Рабочий способ проверен 2026-10-30 в GitHub Actions `release.yml`, запуск 11 (`441c03ac3cbb9cc0525e8d51f1da5093e1add720`): передать `-p:ImageGenWindowsRid=<rid>`, а в `ImageGen.Maui.csproj` установить `RuntimeIdentifier` только когда target platform — Windows и свойство задано. Так project references не получают RID и сохраняют свои TFM.
+- Шаг `Check PE machine` проверяет `ImageGen.Maui.exe`, `coreclr.dll` и `Microsoft.WindowsAppRuntime.Bootstrap.dll` до упаковки. Артефакты запуска 11 дополнительно проверены через `file`: все пять проверенных PE-файлов x64 пакета (`ImageGen.Maui.exe`, `coreclr.dll`, `hostfxr.dll`, `Microsoft.WindowsAppRuntime.Bootstrap.dll`, `Microsoft.ui.xaml.dll`) — x86-64; в arm64 пакете те же файлы — AArch64. Запуск пакета на Windows on ARM не проверен.
+

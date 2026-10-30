@@ -1,8 +1,8 @@
 ---
 id: 100
-status: in-progress
-assignee: codex-luna
-claimed: 2026-10-30T09:46:42Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -90,6 +90,21 @@ bash scripts/check.sh
 Файлы: `.github/workflows/release.yml`, `docs/knowledge/maui.md`, `docs/knowledge/dev-environment.md`; только при варианте 2а — `ImageGen/ImageGen.Maui/ImageGen.Maui.csproj`.
 
 ## Отчёт
+
+- Подтверждено: архив `v0.1.4` `win-arm64` был собран с x64 PE-файлами. В ручном workflow запуске 9 (SHA `2db711495651097564cbf0e20c590fb9059b8530`) `win-x64` прошёл проверку; `win-arm64` провалил её с `0x8664, expected 0xAA64` для `ImageGen.Maui.exe`, `coreclr.dll` и `Microsoft.WindowsAppRuntime.Bootstrap.dll`. `maui-android` и все шесть Avalonia jobs прошли.
+- Вариант 2 с глобальным `TargetFrameworks` не сработал: запуск 10 (SHA `62f550cfe009f1edbf45333a4fd8b0e8d6dbadea`) завершил обе Windows публикации ошибкой `NETSDK1005`; Core, Data и Presentation references ожидали TFM `net10.0`, отсутствующий в их assets-файлах.
+- Рабочий вариант 2а: `ImageGenWindowsRid` устанавливает `RuntimeIdentifier` только для Windows TFM. Ручной запуск 11 (SHA `441c03ac3cbb9cc0525e8d51f1da5093e1add720`) прошёл полностью: 6 Avalonia jobs, `maui-android`, `maui-windows (win-x64)` и `maui-windows (win-arm64)` — success. Локально также прошёл `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android`.
+- Проверены скачанные и распакованные zip запуска 11 (`file`):
+
+  | RID | `ImageGen.Maui.exe` | `coreclr.dll` | `hostfxr.dll` | `Microsoft.WindowsAppRuntime.Bootstrap.dll` | `Microsoft.ui.xaml.dll` |
+  |---|---|---|---|---|---|
+  | `win-x64` | x86-64 (`0x8664`) | x86-64 (`0x8664`) | x86-64 (`0x8664`) | x86-64 (`0x8664`) | x86-64 (`0x8664`) |
+  | `win-arm64` | AArch64 (`0xAA64`) | AArch64 (`0xAA64`) | AArch64 (`0xAA64`) | AArch64 (`0xAA64`) | AArch64 (`0xAA64`) |
+
+- SHA-256 zip: x64 `2c02fca6f074deda39bb50b96b37de7a5f16bc0b989e5395ca348642f8f7aad2`; arm64 `ab9bc65bb1d2a9b8e11756f551a47b0e4d3a4bd200843255ddce23bdacd1a9f1`.
+- `scripts/check.sh` — пройдено. Пробный запуск arm64-пакета на Windows on ARM недоступен, устройства нет.
+- Ручное действие владельца: удалить из релиза `v0.1.4` неверный `ImageGen-Maui-v0.1.4-win-arm64.zip` командой `gh release delete-asset v0.1.4 ImageGen-Maui-v0.1.4-win-arm64.zip` или через GitHub Releases. Сам релиз не изменялся.
+- Следующий тег должен сохранять проверку поля PE Machine для файлов приложения и среды выполнения.
 
 ## Комментарии
 ### 2026-10-29, claude-plan
