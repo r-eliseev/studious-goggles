@@ -123,8 +123,14 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsCancelled { get; set; }
 
+    private decimal? _costUsd;
+
     /// <summary>Price in USD when known; used by the run header to total the cost.</summary>
-    public decimal? CostUsd { get; private set; }
+    public decimal? CostUsd
+    {
+        get => _costUsd;
+        private set => SetProperty(ref _costUsd, value);
+    }
 
     [ObservableProperty]
     public partial string ErrorText { get; set; } = "";

@@ -863,6 +863,24 @@ public class ChatPageModelTests
     }
 
     [Fact]
+    public async Task SendCommand_PostAcceptFailure_KeepsEditorClearedAndShowsTerminalError()
+    {
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<AssistantChatResult>(new InvalidOperationException("private provider detail")));
+        await _model.OnAppearingAsync();
+        _model.InputText = "question";
+
+        await _model.SendCommand.ExecuteAsync(null);
+
+        Assert.Equal(string.Empty, _model.InputText);
+        Assert.Empty(_model.PendingAttachments);
+        Assert.False(_model.IsBusy);
+        await _dialogs.DidNotReceive().AlertAsync(Arg.Any<string>(), Arg.Any<string>());
+        Assert.Equal(2, _model.Items.Count);
+        Assert.True(Assert.IsType<MessageItemViewModel>(_model.Items.Last()).IsError);
+    }
+
+    [Fact]
     public async Task SendCommand_WhileSending_IsBusyShowsThinkingAndCannotSendAgain()
     {
         var reply = new TaskCompletionSource<AssistantChatResult>();
@@ -974,7 +992,7 @@ public class ChatPageModelTests
         Assert.Same(item, _model.Items.Last());
         Assert.All(_rows, generation => Assert.Equal(0.014m, generation.CostUsd));
         Assert.Contains("2 of 2", item.HeaderText);
-        Assert.EndsWith("$0.014", item.HeaderText, StringComparison.Ordinal);
+        Assert.EndsWith("$0.028", item.HeaderText, StringComparison.Ordinal);
     }
 
     [Fact]
