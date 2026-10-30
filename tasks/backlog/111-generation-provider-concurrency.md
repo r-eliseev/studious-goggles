@@ -1,8 +1,8 @@
 ---
 id: 111
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-10-30T13:23:45Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -56,5 +56,11 @@ bash scripts/check.sh
 После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 111`, затем `bash scripts/check.sh`; отправить PR по `docs/tasks.md`.
 
 ## Отчёт
+
+- Глобальный semaphore заменён словарём semaphore по provider id; общий launch helper используется normal generate, fresh queued submit + watch и recovery watcher. Лимит четыре удерживается до окончания job/local cancellation; cancelled slot wait не вызывает Release.
+- Документация уточняет per-provider cap, независимость providers, полный queued lifecycle и ограничение после failed remote cancel.
+- Добавлены deterministic tests: четыре job одного provider не блокируют другой; queued slot удерживается до terminal; отмена задачи, ожидающей slot, не отправляет submit и не освобождает чужой slot; четыре recovery watchers занимают тот же лимит.
+- Проверки: Core tests 557/557; `dotnet format` Core и Core.Tests `--verify-no-changes --no-restore`; `bash scripts/check.sh` — все проверки пройдены.
+- Отличие от плана: нет.
 
 ## Комментарии
