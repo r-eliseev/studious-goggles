@@ -27,6 +27,24 @@ task_done_ids() {
   [ -f "$1/tasks/DONE.md" ] && sed -nE 's/^- ([0-9]+) \|.*/\1/p' "$1/tasks/DONE.md" || true
 }
 
+# task_done_at <ref>: строки "NNN<TAB>заголовок" для задач со статусом done в версии ref
+# Задача, есть и в файле задачи, и в tasks/DONE.md, берётся из файла.
+task_done_at() {
+  local ref="$1"
+  {
+    git ls-tree -r --name-only "$ref" tasks 2>/dev/null | grep -E '/[0-9][0-9]*-[^/]*\.md$' | while IFS= read -r path; do
+      status=$(git show "$ref:$path" 2>/dev/null | awk '/^---$/{n++; next} n==1 && index($0,"status:")==1 {sub("^status:[ ]*",""); print; exit}')
+      [ "$status" = "done" ] || continue
+      id=$(basename "$path" | sed -E 's/^([0-9]+)-.*/\1/')
+      title=$(git show "$ref:$path" 2>/dev/null | grep -m1 '^# ' | sed 's/^# //')
+      printf '0\t%s\t%s\n' "$id" "$title"
+    done
+    if git cat-file -e "$ref:tasks/DONE.md" 2>/dev/null; then
+      git show "$ref:tasks/DONE.md" 2>/dev/null | awk -F' \\| ' '$3 == "done" { id=$1; sub(/^- /, "", id); printf "1\t%s\t%s\n", id, $5 }'
+    fi
+  } | sort -t$'\t' -k2,2n -k1,1 | awk -F'\t' '!seen[$2]++ { printf "%s\t%s\n", $2, $3 }'
+}
+
 # task_next_id <корень>: следующий свободный номер задачи (с учётом tasks/DONE.md: номера не используются повторно)
 task_next_id() {
   local last

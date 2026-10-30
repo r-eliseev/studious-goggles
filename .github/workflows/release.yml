@@ -133,19 +133,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
           path: assets
           merge-multiple: true
       - name: Release notes
         run: |
-          # Release folder is the tag without its patch number: v0.1.0 -> tasks/v0.1 (scripts/release-notes.sh).
-          release="${GITHUB_REF_NAME%.*}"
-          if [ -d "tasks/$release" ]; then
-            bash scripts/release-notes.sh "$release" > notes.md
-          else
-            echo "Release notes: no tasks folder for $release; see the commits." > notes.md
-          fi
+          # Tasks done since the previous vX.Y.Z tag (scripts/release-notes.sh).
+          bash scripts/release-notes.sh "$GITHUB_REF_NAME" > notes.md
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
