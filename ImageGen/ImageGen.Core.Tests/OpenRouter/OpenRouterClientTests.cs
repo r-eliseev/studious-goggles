@@ -435,6 +435,60 @@ public class OpenRouterClientTests
         Assert.Equal(ErrorKind.EmptyResponse, ex.Kind);
     }
 
+    [Fact]
+    public async Task GenerateImageAsync_SetsGeneratedImageJsonLimit()
+    {
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            Assert.True(request.Options.TryGetValue(ProviderResponseLimits.BodyKind, out var bodyKind));
+            Assert.Equal(ProviderResponseBodyKind.GeneratedImageJson, bodyKind);
+            return JsonResponse(HttpStatusCode.OK, """{"data":[{"b64_json":"AQ=="}]}""");
+        });
+        var client = CreateClient(handler);
+
+        await client.GenerateAsync(new ImageGenerationRequest("m/x", "p", null), TestContext.Current.CancellationToken);
+
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task GenerateImageAsync_ResponseOverDefaultJsonLimit_IsAcceptedForImagePayload()
+    {
+        var payload = Convert.ToBase64String(new byte[7 * 1024 * 1024]);
+        var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, $"{{\"data\":[{{\"b64_json\":\"{payload}\"}}]}}");
+        var client = CreateClient(handler);
+
+        var result = await client.GenerateAsync(new ImageGenerationRequest("m/x", "p", null), TestContext.Current.CancellationToken);
+
+        Assert.Equal(7 * 1024 * 1024, result.Content.Length);
+    }
+
+    [Fact]
+    public async Task GenerateImageAsync_JsonOverGeneratedImageLimit_MapsToUnknown()
+    {
+        using var content = new ByteArrayContent([]);
+        content.Headers.ContentLength = ProviderResponseLimits.GeneratedImageJson + 1;
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
+        var client = CreateClient(handler);
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => client.GenerateAsync(
+            new ImageGenerationRequest("m/x", "p", null), TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+    }
+
+    [Fact]
+    public async Task GenerateImageAsync_DecodedImageOverLimit_MapsToUnknown()
+    {
+        var encoded = Convert.ToBase64String(new byte[ProviderResponseLimits.Image + 1]);
+        var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, $"{{\"data\":[{{\"b64_json\":\"{encoded}\"}}]}}"));
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => client.GenerateAsync(
+            new ImageGenerationRequest("m/x", "p", null), TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+    }
+
     [Theory]
     [InlineData(400, """{"error":{"code":400,"message":"bad"}}""", ErrorKind.BadRequest)]
     [InlineData(401, """{"error":{"code":401,"message":"no auth"}}""", ErrorKind.InvalidKey)]
