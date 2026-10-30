@@ -46,6 +46,7 @@
 
 ## Релиз
 - Workflow `.github/workflows/release.yml` запускается на тег `vMAJOR.MINOR.PATCH` (например, `v0.1.0`) и создаёт GitHub Release с заметками из `scripts/release-notes.sh`. Заметки перечисляют задачи, ставшие `done` после предыдущего по версии тега `vX.Y.Z` (по файлам задач и `tasks/DONE.md` в версии тега; папка задачи не важна), и заканчиваются ссылкой на сравнение коммитов; у первого тега — все завершённые задачи. Тот же текст локально: `git fetch --tags && scripts/release-notes.sh <тег> [<предыдущий тег>]`. Ручной запуск (`workflow_dispatch`, «Run workflow» в Actions) собирает те же пакеты как артефакты запуска, без релиза, с версией `0.0.<номер запуска>`: так проверяют workflow до тега.
+- Shell-регрессия release notes (в том числе пустой предыдущий набор done-задач): `bash scripts/tests/release-notes-empty-previous.sh`.
 - Пакеты (решение владельца 2026-10-29: обе оболочки под все платформы):
   - Avalonia, self-contained: `linux-x64`, `linux-arm64` (`.tar.gz`), `win-x64`, `win-arm64` (`.zip`), `osx-x64`, `osx-arm64` (`.tar.gz`, собираются на macOS-раннере: `osx-arm64` без подписи ad-hoc не запускается, а SDK подписывает apphost только на Mac).
   - MAUI Windows: `win-x64`, `win-arm64`, без MSIX (`WindowsPackageType=None`), с Windows App SDK внутри, `.zip`.

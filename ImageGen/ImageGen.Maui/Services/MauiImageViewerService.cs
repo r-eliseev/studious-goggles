@@ -1,3 +1,4 @@
+using ImageGen.Core.Storage;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
 using ImageGen.Presentation.Utilities;
@@ -5,7 +6,7 @@ using ImageGen.Presentation.Utilities;
 namespace ImageGen.Maui.Services;
 
 /// <summary>Shows an image snapshot in a modal page without changing platform immersive state.</summary>
-public sealed class MauiImageViewerService(IMauiFullScreenController fullScreen) : IImageViewerService
+public sealed class MauiImageViewerService(IMauiFullScreenController fullScreen, IImageFileStore files) : IImageViewerService
 {
     private int _isOpen;
 
@@ -21,7 +22,7 @@ public sealed class MauiImageViewerService(IMauiFullScreenController fullScreen)
             return;
         }
 
-        var page = new MauiImageViewerPage(items.ToArray(), initialIndex);
+        var page = new MauiImageViewerPage(items.ToArray(), initialIndex, files, cancellationToken);
         using var registration = cancellationToken.Register(() => MainThread.BeginInvokeOnMainThread(page.Close));
         MauiViewerFullscreenSession? fullscreenSession = null;
         try
@@ -49,22 +50,26 @@ public sealed class MauiImageViewerService(IMauiFullScreenController fullScreen)
 internal sealed class MauiImageViewerPage : ContentPage
 {
     private readonly IReadOnlyList<ImageViewerItem> _items;
+    private readonly IImageFileStore _files;
+    private readonly CancellationToken _cancellationToken;
     private readonly Image _image = new() { Aspect = Aspect.AspectFit, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill };
     private readonly Label _position = new() { TextColor = Colors.White, HorizontalTextAlignment = TextAlignment.Center, VerticalTextAlignment = TextAlignment.Center };
     private readonly Button _closeButton;
     private readonly TaskCompletionSource _closed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private int _index;
-    private int _epoch;
+    private readonly ImageViewerNavigationState _navigation;
+    private ImageDimensions? _imageDimensions;
     private bool _closing;
     private bool _started;
 #if WINDOWS
     private Microsoft.UI.Xaml.FrameworkElement? _nativeView;
 #endif
 
-    public MauiImageViewerPage(IReadOnlyList<ImageViewerItem> items, int initialIndex)
+    public MauiImageViewerPage(IReadOnlyList<ImageViewerItem> items, int initialIndex, IImageFileStore files, CancellationToken cancellationToken)
     {
         _items = items;
-        _index = initialIndex;
+        _files = files;
+        _cancellationToken = cancellationToken;
+        _navigation = new ImageViewerNavigationState(items.Count, initialIndex);
         BackgroundColor = Colors.Black;
         _closeButton = MakeButton(AppResources.ImageViewerClose, Close);
         var previous = MakeButton(AppResources.ImageViewerPrevious, () => Navigate(-1));
@@ -82,7 +87,14 @@ internal sealed class MauiImageViewerPage : ContentPage
         var backgroundTap = new TapGestureRecognizer();
         backgroundTap.Tapped += (_, args) =>
         {
-            if (args.GetPosition(_image) is null && args.GetPosition(controls) is null) Close();
+            var point = args.GetPosition(root);
+            ImageViewerPoint? tap = point is { } value ? new ImageViewerPoint(value.X, value.Y) : null;
+            var imageBounds = ToViewerRect(_image.Bounds);
+            var visibleImage = _imageDimensions is { } dimensions
+                ? ImageViewerHitTest.GetAspectFitRect(imageBounds, dimensions.Width, dimensions.Height)
+                : null;
+            var protectedControls = new[] { ToViewerRect(controls.Bounds), ToViewerRect(_closeButton.Bounds) };
+            if (ImageViewerHitTest.IsBackgroundTap(tap, imageBounds, visibleImage, protectedControls, _imageDimensions is not null)) Close();
         };
         root.GestureRecognizers.Add(backgroundTap);
         Content = root;
@@ -94,7 +106,7 @@ internal sealed class MauiImageViewerPage : ContentPage
     {
         if (_started || _closing) return;
         _started = true;
-        LoadAsync(_index).FireAndForgetSafeAsync();
+        LoadAsync(_navigation.InitialRequest).FireAndForgetSafeAsync();
     }
 
     protected override bool OnBackButtonPressed()
@@ -137,7 +149,7 @@ internal sealed class MauiImageViewerPage : ContentPage
     {
         if (_closing) return;
         _closing = true;
-        _epoch++;
+        _navigation.Close();
         _closed.TrySetResult();
     }
 
@@ -149,44 +161,44 @@ internal sealed class MauiImageViewerPage : ContentPage
         return button;
     }
 
+    private static ImageViewerRect ToViewerRect(Rect bounds) =>
+        new(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+
     private void Navigate(int delta)
     {
-        var next = _index + delta;
-        if ((uint)next >= (uint)_items.Count) return;
-        _index = next;
-        LoadAsync(next).FireAndForgetSafeAsync();
+        if (_navigation.TryNavigate(delta, out var request)) LoadAsync(request).FireAndForgetSafeAsync();
     }
 
-    private async Task LoadAsync(int index)
+    private async Task LoadAsync((int Index, int Epoch) request)
     {
-        var epoch = ++_epoch;
         try
         {
-            var bytes = await File.ReadAllBytesAsync(_items[index].AbsolutePath);
+            var bytes = await File.ReadAllBytesAsync(_items[request.Index].AbsolutePath, _cancellationToken);
             if (!ImageBytesAreReadable(bytes)) throw new InvalidDataException();
+            var relativePath = _items[request.Index].RelativePath;
+            var dimensions = string.IsNullOrWhiteSpace(relativePath)
+                ? null
+                : await _files.TryReadDimensionsAsync(relativePath, _cancellationToken);
             var source = ImageSource.FromStream(() => new MemoryStream(bytes, writable: false));
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
-                if (_closing || epoch != _epoch) return;
+                if (_closing || !_navigation.TryCommit(request)) return;
+                _imageDimensions = dimensions;
                 _image.Source = source;
-                SemanticProperties.SetDescription(_image, _items[index].AccessibleLabel);
-                _position.Text = string.Format(System.Globalization.CultureInfo.CurrentCulture, AppResources.ImageViewerPositionFormat, index + 1, _items.Count);
+                SemanticProperties.SetDescription(_image, _items[request.Index].AccessibleLabel);
+                _position.Text = string.Format(System.Globalization.CultureInfo.CurrentCulture, AppResources.ImageViewerPositionFormat, request.Index + 1, _items.Count);
             });
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or NotSupportedException)
         {
-            if (index != _index || _closing || epoch != _epoch) return;
-            if (index != 0 || _image.Source is null)
-            {
-                _index = Math.Max(0, index - 1);
-            }
+            if (_closing || !_navigation.TryFail(request, out var failureEpoch, out var displayedIndex)) return;
             try
             {
                 await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(AppResources.ErrorTitle, AppResources.ImageViewerUnreadable, AppResources.Ok));
             }
             finally
             {
-                if (_image.Source is null) Close();
+                if (displayedIndex is null && !_closing && _navigation.IsCurrentEpoch(failureEpoch)) Close();
             }
         }
     }

@@ -22,4 +22,6 @@ public enum ErrorKind
     ReferenceUnreadable = 14,
     /// <summary>The model does not take reference images, so the assistant could not start the run.</summary>
     ModelWithoutReferences = 15,
+    /// <summary>The generated image could not be saved locally.</summary>
+    ImageSaveFailed = 16,
 }

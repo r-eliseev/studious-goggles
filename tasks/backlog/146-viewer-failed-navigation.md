@@ -1,6 +1,6 @@
 ---
 id: 146
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-30
@@ -51,6 +51,10 @@ bash scripts/check.sh
 После изменения каждого проекта: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`; после всех изменений — перечисленные тесты и `bash scripts/check.sh`. В отчёте указать команды, результаты, ручные ограничения и отличие от плана. Код писать только после одобрения плана по docs/tasks.md.
 
 ## Отчёт
+
+Вынесено общее состояние навигации в Presentation. Ошибка актуальной загрузки откатывает requested index к последнему успешному изображению; устаревшие ответы и ответы после закрытия игнорируются. Avalonia и MAUI показывают локализованное сообщение и сохраняют bitmap/source, позицию и доступное имя при ошибке соседнего файла. Начальная ошибка закрывает пустой viewer после сообщения. Добавлены тесты состояния и Avalonia-проверки failed previous/next с сохранением показа и повторной попыткой. В `TestAppBuilder` включён Skia для декодирования многопиксельных изображений в headless-тестах.
+
+Presentation.Tests — 394/394; Avalonia.Tests — 149 passed, 2 skipped (D-Bus/Windows-only); MAUI Android build — успешно, 0 warnings/errors. `dotnet format --verify-no-changes` для Presentation, Presentation.Tests, Avalonia, Avalonia.Tests и MAUI прошёл. Ручные проверки Android, Windows MAUI и desktop внесены в задачи 140, 016 и 046; реальные устройства/Windows в этой среде недоступны.
 
 ## Комментарии
 

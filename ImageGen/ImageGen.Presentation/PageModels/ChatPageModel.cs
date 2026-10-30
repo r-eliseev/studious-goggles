@@ -109,7 +109,8 @@ public sealed partial class ChatPageModel(
                 item.Id,
                 item.ImageFilePath,
                 string.Join(", ", new[] { item.ModelText, item.SeedText, item.ImageDimensionsText, item.SummaryText }
-                    .Where(text => !string.IsNullOrWhiteSpace(text))))).ToList(),
+                    .Where(text => !string.IsNullOrWhiteSpace(text))),
+                item.RelativeImagePath)).ToList(),
             initialIndex,
             CancellationToken.None);
     }

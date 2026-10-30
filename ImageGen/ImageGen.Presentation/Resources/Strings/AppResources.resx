@@ -591,6 +591,9 @@
   <data name="ErrorKindModelWithoutReferences" xml:space="preserve">
     <value>No run was started: the model does not take reference images.</value>
   </data>
+  <data name="ErrorKindImageSaveFailed" xml:space="preserve">
+    <value>Could not save the generated image. Check free space and folder permissions.</value>
+  </data>
   <data name="ImageViewerOpen" xml:space="preserve"><value>Open image</value></data>
   <data name="ImageViewerClose" xml:space="preserve"><value>Close</value></data>
   <data name="ImageViewerPrevious" xml:space="preserve"><value>Previous</value></data>

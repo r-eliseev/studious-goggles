@@ -1,6 +1,6 @@
 ---
 id: 144
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-30
@@ -51,6 +51,10 @@ bash scripts/check.sh
 После изменения каждого проекта: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`; после всех изменений — перечисленные тесты и `bash scripts/check.sh`. В отчёте указать команды, результаты, ручные ограничения и отличие от плана. Код писать только после одобрения плана по docs/tasks.md.
 
 ## Отчёт
+
+Добавлен `ErrorKind.ImageSaveFailed` и безопасный текст. Узкий catch обрабатывает только `IOException`/`UnauthorizedAccessException` от `IImageFileStore.SaveAsync`; поколение завершается через обычное сохранение terminal state и одно подтверждённое событие. Известная стоимость результата сохраняется. Ошибка terminal DB update не перехватывается повторно, owned cancellation не становится ImageSaveFailed, неизвестный путь не удаляется. Обновлены архитектурное описание и текст ошибки.
+
+Тесты: Core.Tests — 634/634; Presentation.Tests — 388/388. Проверены in-memory и native queued варианты, UnauthorizedAccessException, отсутствие повторного submit/save/cleanup, ошибка terminal persistence и отмена во время записи. Форматирование и harness будут выполнены после завершения набора задач этого PR.
 
 ## Комментарии
 

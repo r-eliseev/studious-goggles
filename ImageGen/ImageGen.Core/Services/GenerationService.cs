@@ -927,8 +927,24 @@ public sealed class GenerationService(
         ImageGenerationResult result,
         CancellationToken cancellationToken)
     {
-        var relativePath = await files.SaveAsync(
-            generation.SessionId, generation.Id, result.Content, result.MediaType, cancellationToken).ConfigureAwait(false);
+        string relativePath;
+        try
+        {
+            relativePath = await files.SaveAsync(
+                generation.SessionId, generation.Id, result.Content, result.MediaType, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            generation.CostUsd = result.CostUsd;
+            await FailGenerationAsync(
+                generation,
+                ErrorKind.ImageSaveFailed,
+                "Could not save the generated image. Check free space and folder permissions.",
+                cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
         generation.ImagePath = relativePath;
         generation.MediaType = result.MediaType;
         generation.CostUsd = result.CostUsd;

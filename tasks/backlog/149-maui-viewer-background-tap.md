@@ -1,6 +1,6 @@
 ---
 id: 149
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-30
@@ -51,6 +51,10 @@ bash scripts/check.sh
 После изменения каждого проекта: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`; после всех изменений — перечисленные тесты и `bash scripts/check.sh`. В отчёте указать команды, результаты, ручные ограничения и отличие от плана. Код писать только после одобрения плана по docs/tasks.md.
 
 ## Отчёт
+
+Добавлен framework-neutral hit-test с расчётом видимого прямоугольника AspectFit и безопасным поведением при null/неизвестных dimensions. Snapshot теперь содержит необязательный relative path, GenerationItemViewModel отдаёт имеющееся значение без I/O, ChatPageModel передаёт его; MAUI читает размеры через IImageFileStore и применяет только вместе с успешной актуальной загрузкой. Tap проверяет локальную координату root, видимую область bitmap, image viewport и bounds controls/Close.
+
+Presentation.Tests — 401/401; MAUI Android build — успешно, 0 warnings/errors. Проверены visible bitmap, боковые AspectFit-поля, toolbar/Close, padding, null point и неизвестная геометрия. Ручные Android/Windows taps и портретные/альбомные изображения добавлены в задачи 140/016; устройство и Windows недоступны в этой среде.
 
 ## Комментарии
 
