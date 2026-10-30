@@ -64,6 +64,13 @@
 - Код в `Platforms/Android` за интерфейсом ядра (например `IGallerySaver`), на других платформах свои реализации: iOS — `PHPhotoLibrary` (+ ключ `NSPhotoLibraryAddUsageDescription` в `Info.plist`), Mac Catalyst — `NSSavePanel`/Photos, Windows — `FileSavePicker` или копирование в `Pictures`.
 - Рядом хранится копия в собственном репозитории результатов, файл в галерее — экспорт.
 
+## Бэкап и перенос данных на Android (задача 115)
+- Приложение не участвует в автоматическом бэкапе: в `Platforms/Android/AndroidManifest.xml` стоит `android:allowBackup="false"`, плюс `android:fullBackupContent="@xml/backup_rules"` и `android:dataExtractionRules="@xml/data_extraction_rules"`.
+- Явные правила deny-all — defense in depth: документация Android не обещает, что инструмент переноса OEM учитывает один только флаг манифеста. `backup_rules.xml` (Android 11 и ниже) и `data_extraction_rules.xml` (Android 12+, секции `cloud-backup` и `device-transfer`) исключают все девять доменов схемы с `path="."`: `root`, `file`, `database`, `sharedpref`, `external`, `device_root`, `device_file`, `device_database`, `device_sharedpref`. Ни одного `include`.
+- Проверено: `ImageGen.Presentation.Tests/Design/AndroidBackupPolicyTests.cs` проверяет атрибуты манифеста, отсутствие `include` и точный набор доменов в обеих секциях; сборка Android и разбор итогового манифеста из APK (`aapt2 dump xmltree`) подтверждают, что правила попали в пакет.
+- **Не проверено на устройстве:** поведение переноса данных (D2D) на реальном телефоне. Source-тесты подтверждают конфигурацию, но не поведение OEM-инструмента.
+- Свой экспорт пользовательских данных (F7.6) ещё не реализован: приложение не умеет отдавать зашифрованную копию, поэтому и включать её в правила нечего.
+
 ## Темизация, шрифты, иконки
 - Иконки через шрифт и `FontImageSource` (как в примере) или SVG через `MauiImage`.
 - Шрифты в `Resources/Fonts`, регистрация в `ConfigureFonts` с псевдонимом.

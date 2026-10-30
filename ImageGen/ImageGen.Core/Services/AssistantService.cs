@@ -277,23 +277,79 @@ public sealed class AssistantService(
         var currentLine = lastRun is null ? AssistantPrompts.NoCurrentPrompt : AssistantPrompts.CurrentPrompt(lastRun.Prompt);
 
         // Images reach the assistant only when its model takes them: the user's own images first, then the last run's.
-        var images = new List<string>();
+        var userCandidates = new List<string>();
+        var lastRunCandidates = new List<string>();
         if (userImages.Count > 0 || lastRun is not null)
         {
             if (await chatModels.IsImageInputAsync(assistantModel, cancellationToken))
             {
-                images.AddRange(userImages);
-                images.AddRange(await LastRunImagesAsync(session, lastRun, cancellationToken));
+                userCandidates.AddRange(userImages);
+                lastRunCandidates.AddRange(await LastRunImagesAsync(session, lastRun, cancellationToken));
             }
         }
 
-        // C1.1: the history gets what the model's context leaves after the fixed part, the pictures and the reserve.
-        var attachedImages = images.Take(AttachmentService.MaxAttachmentsPerMessage).ToList();
+        // The cap of four pictures: the user's own first, the last run's into the room that is left. The cap itself is
+        // not a loss of data and is not warned about; only pictures dropped beyond it are.
+        var cappedUser = userCandidates.Take(AttachmentService.MaxAttachmentsPerMessage).ToList();
+        var cappedLastRun = lastRunCandidates.Take(AttachmentService.MaxAttachmentsPerMessage - cappedUser.Count).ToList();
+        var cappedTotal = cappedUser.Count + cappedLastRun.Count;
+
         var fixedTokens = AssistantPrompts.FixedTokens(currentLine);
         var summaryTokens = summary is null ? 0 : TokenEstimator.Estimate(AssistantPrompts.SummaryLine(summary.Text));
         var contextLength = await chatModels.ContextLengthAsync(assistantModel, cancellationToken);
-        var budget = new ContextBudget(contextLength, fixedTokens, TokenEstimator.EstimateImages(attachedImages.Count), summaryTokens);
-        var selected = ContextBuilder.Select(AfterCovered(history, summary), budget.HistoryBudget, correction.FactorFor(assistantModel));
+        var factor = correction.FactorFor(assistantModel);
+        var covered = AfterCovered(history, summary);
+
+        // C1.6: the history is shortened first; a picture is dropped only when the request still does not fit. The
+        // pictures of the last run go first, from the end, then the user's own ones.
+        var userCount = cappedUser.Count;
+        var lastRunCount = cappedLastRun.Count;
+        List<string> attachedImages;
+        IReadOnlyList<ContextMessage> selected;
+        var fits = false;
+        while (true)
+        {
+            attachedImages = cappedUser.Take(userCount).Concat(cappedLastRun.Take(lastRunCount)).ToList();
+            var budget = new AssistantRequestBudget(
+                contextLength,
+                fixedTokens,
+                TokenEstimator.EstimateImages(attachedImages.Count),
+                summaryTokens,
+                factor);
+            selected = ContextBuilder.Select(covered, budget.HistoryBudget, factor);
+            if (budget.CorrectedEstimate(selected) <= contextLength)
+            {
+                fits = true;
+                break;
+            }
+
+            if (attachedImages.Count == 0)
+            {
+                // The mandatory part alone does not fit: the current message stays, the pictures are already gone.
+                break;
+            }
+
+            if (lastRunCount > 0)
+            {
+                lastRunCount--;
+            }
+            else
+            {
+                userCount--;
+            }
+        }
+
+        var removed = cappedTotal - attachedImages.Count;
+        if (removed > 0 || !fits)
+        {
+            logger.LogWarning(
+                "Pictures of session {SessionId} were dropped for provider {ProviderId} and model {ModelId}: {ImagesRemoved} removed, {ImagesKept} kept.",
+                session.Id,
+                assistantModel.ProviderId,
+                assistantModel.ModelId,
+                removed,
+                attachedImages.Count);
+        }
 
         var chat = new List<AssistantChatMessage>
         {

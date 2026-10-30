@@ -1,6 +1,6 @@
 ---
 id: 110
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -53,5 +53,39 @@ bash scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Context/AssistantRequestBudget.cs` (новый), `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Context/AssistantRequestBudgetTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/TestDoubles/CapturingLogger.cs`, `ImageGen/ImageGen.Core.Tests/TestDoubles/CapturingLoggerTests.cs` (новый)
 
 ## Отчёт
+C1.6 реализована: при нехватке контекста картинки убираются, история сокращается в первую очередь, предупреждение ровно одно.
+
+Изменения:
+- `ImageGen/ImageGen.Core/Context/AssistantRequestBudget.cs` (новый): чистый бюджет запроса. `HistoryBudget` = context − резерв − исправленная фиксированная часть (`ceil(Factor × (fixed + картинки + сводка))`, всегда ≥ 0). `CorrectedEstimate(selected)` = резерв + исправленная фиксированная часть + сумма `ceil(Factor × Estimate(text))`, посчитанная по каждому сообщению отдельно — так округление совпадает с `ContextBuilder.Select`. Резерв `TokenEstimator.ReserveForOutput` на фактор не умножается.
+- `ImageGen/ImageGen.Core/Services/AssistantService.cs`: картинки разделены на два кандидата (свои пользователя и последнего прогона), каждый ограничен общим пределом четыре (свои пользователя — первыми). Пока запрос не помещается, история пересобирается заново под текущий бюджет; если не помогло — убирается последняя картинка прогона, затем последняя картинка пользователя. Первая помещающаяся комбинация и есть ответ; при картинках = 0 текущее сообщение сохраняется целиком и пишется одно предупреждение. Предупреждение содержит только SessionId, ProviderId, ModelId, ImagesKept, ImagesRemoved — без текста пользователя и без data URL.
+- `ImageGen/ImageGen.Core.Tests/TestDoubles/CapturingLogger.cs`: необязательный порог `minimumLevel` (по умолчанию Trace), `IsEnabled` и `Log` его соблюдают; у записи появилось свойство `State` (`IReadOnlyDictionary<string, object?>`) с копией пар при логировании; `{OriginalFormat}` — маркер расширений логирования, а не свойство вызывающего, поэтому в `State` не попадает. `Entries`, `AllText` и позиционный конструктор `LogEntry(Level, Message, Exception)` сохранены.
+- `ImageGen/ImageGen.Core.Tests/Context/AssistantRequestBudgetTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/TestDoubles/CapturingLoggerTests.cs` (новый) — шесть тестов.
+- `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`: `AssistantAcceptsImages(int contextLength = 32_000)` (было жёсткое 1000 — с ним обязательная часть не помещается и картинки выбрасывались бы), шесть именованных тестов на бюджет картинок, независимая проверка полной оценки в тесте на 500 сообщений.
+- `docs/specs/assistant-context.md`: статус «в работе» (поставлен задачей 117 из-за отсутствия C1.6) → «реализовано», с пометкой, что C1.6 сделана. Файл не был указан в «Файлах» плана, но статус спецификации обязан соответствовать коду.
+
+`BuiltRequest.EstimatedTokens` не менялся: это и раньше была «сырая» оценка (fixed + сводка + сумма Estimate(тексты) + картинки) без резерва и без фактора — именно её `TokenCorrection.Record` и использует.
+
+Проверка тестов не пустая: с прежней логикой `AssistantService` (без C1.6) из шести новых тестов падают четыре — те, что проверяют удаление картинок и предупреждение; два оставшихся («всё помещается» и «четыре картинки пользователя не дают предупреждения») проходят и раньше, это страховки.
+
+Границы (числа посчитаны для тестовой модели: fixed = 325, картинка = 1600, резерв = 4096):
+- `ImageBudget_AllFit_KeepsFour` — контекст 32 000: четыре картинки (одна своя + три прогона) помещаются, предупреждений нет.
+- `ImageBudget_RemovesLastRunFromEnd` — контекст 8000: три картинки требуют 9229 токенов, две помещаются (7629) — уходит последняя картинка прогона; в предупреждении ImagesRemoved = 1, ImagesKept = 2.
+- `ImageBudget_ThenRemovesUserFromEnd` — контекст 7000: сначала уходит картинка прогона (7629 > 7000), потом последняя картинка пользователя (6029 ≤ 7000) — остаётся первая.
+- `ImageBudget_FourUserImages_DoesNotWarnForCap` — четыре свои картинки занимают весь предел, картинки прогона не влезают: это сам предел, а не потеря, предупреждения нет.
+- `ImageBudget_CorrectionDropsOldHistoryBeforeImages` — ответ модели с `PromptTokens = 1602` при сырой оценке 801 даёт фактор 2; при контексте 12 000 старое сообщение (1650 символов) выходит за бюджет и выбрасывается, а обе картинки остаются — история сокращается раньше картинок.
+- `ImageBudget_MandatoryRequestTooLarge_KeepsCurrentAndWarnsOnce` — контекст 4300: обязательная часть не помещается даже без картинок; текущее сообщение сохраняется целиком, картинок ноль, предупреждение ровно одно (ImagesKept = 0, ImagesRemoved = 2).
+
+Проверено:
+```
+dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj        → 384 теста, 0 упавших
+dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj        → 70 тестов, 0 упавших
+dotnet test --project ImageGen/ImageGen.Presentation.Tests/…                         → 281 тест, 0 упавших
+dotnet test --project ImageGen/ImageGen.Avalonia.Tests/…                             → 120 тестов, 0 упавших (2 пропущены)
+dotnet format ImageGen/ImageGen.Core/… --verify-no-changes                          → без изменений
+dotnet format ImageGen/ImageGen.Core.Tests/… --verify-no-changes                    → без изменений
+bash scripts/check.sh                                                                 → все проверки пройдены
+```
+
+Ограничения: поведение переноса картинок на живом устройстве не проверялось (тесты работают на подменённых данных); `ContextBudget` не тронут — его по-прежнему использует `ConversationSummaryService`.
 
 ## Комментарии

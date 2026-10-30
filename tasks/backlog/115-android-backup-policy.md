@@ -1,6 +1,6 @@
 ---
 id: 115
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -52,5 +52,41 @@ bash scripts/check.sh
 Файлы: `ImageGen/ImageGen.Maui/Platforms/Android/AndroidManifest.xml`, `ImageGen/ImageGen.Maui/Platforms/Android/Resources/xml/backup_rules.xml` (новый), `ImageGen/ImageGen.Maui/Platforms/Android/Resources/xml/data_extraction_rules.xml` (новый), `ImageGen/ImageGen.Presentation.Tests/Design/AndroidBackupPolicyTests.cs` (новый), `docs/knowledge/maui.md`
 
 ## Отчёт
+Изменения:
+- `ImageGen/ImageGen.Maui/Platforms/Android/AndroidManifest.xml`: `android:allowBackup` «true» → «false», добавлены `android:fullBackupContent="@xml/backup_rules"` и `android:dataExtractionRules="@xml/data_extraction_rules"`.
+- `ImageGen/ImageGen.Maui/Platforms/Android/Resources/xml/backup_rules.xml` (новый): `<full-backup-content>` с девятью `<exclude domain="…" path="." />` и без единого `<include>`.
+- `ImageGen/ImageGen.Maui/Platforms/Android/Resources/xml/data_extraction_rules.xml` (новый): `<data-extraction-rules>` с секциями `<cloud-backup>` и `<device-transfer>`, в каждой девять `<exclude … path="." />`, без `<include>`.
+- `ImageGen/ImageGen.Presentation.Tests/Design/AndroidBackupPolicyTests.cs` (новый): проверка атрибутов манифеста, отсутствия `include` и точного набора доменов в обеих секциях.
+- `docs/knowledge/maui.md`: раздел «Бэкап и перенос данных на Android».
+
+Набор доменов — документированная схема Android (страница [Android Auto Backup](https://developer.android.com/identity/data/autobackup), 2026-10-30): девять доменов `file`, `database`, `sharedpref`, `external`, `root`, `device_file`, `device_database`, `device_sharedpref`, `device_root`. Набор одинаков для legacy `full-backup-content` и для обеих секций `data-extraction-rules`; адаптация имён не потребовалась. У каждого `exclude` путь `"."` — домен без пути deny-all не задаёт.
+
+TDD: тест написан первым, до правок падали четыре случая (манифест, legacy-правила, две секции `data-extraction-rules`); после добавления ресурсов и манифеста — все проходят.
+
+Проверка итогового манифеста (план, шаг 5). Собран APK (`bin/Debug/net10.0-android/com.companyname.imagegen.maui-Signed.apk`). Итоговый (merged) манифест — `obj/Debug/net10.0-android/android/AndroidManifest.xml`:
+```
+android:allowBackup="false"
+android:dataExtractionRules="@xml/data_extraction_rules"
+android:fullBackupContent="@xml/backup_rules"
+```
+Из самого APK (`aapt2 dump xmltree --file AndroidManifest.xml`):
+```
+A: android:allowBackup(0x01010280)=false
+A: android:fullBackupContent(0x010104eb)=@0x7f120000
+A: android:dataExtractionRules(0x0101063e)=@0x7f120001
+```
+В APK лежат оба правила (`res/xml/backup_rules.xml`, `res/xml/data_extraction_rules.xml`); разбор `data_extraction_rules.xml` из APK даёт обе секции и 18 `<exclude>` (по девять на секцию) с `path="."` — компилятор ресурсов принял схему.
+
+**Release-сборка Android на этой машине не проходит** — и это не связано с задачей: `dotnet build … -c Release -f net10.0-android` падает с `NU1102: Unable to find package Microsoft.NETCore.App.Runtime.Mono.linux-x64 with version (= 10.0.14)`. Проверено на чистом коде без моих правок — падает так же. Причина: пакетов `Microsoft.NETCore.App.Runtime.Mono.linux-x64` версии 10.x на nuget.org нет вовсе (всего 148 версий, последние — 9.x), то есть хостовые Mono-пакеты для linux-x64 не публикуются начиная с .NET 10. CI собирает Release в задаче `maui` на `windows-latest`, где пакет для win-x64 существует, поэтому там сборка проходит. На Linux-хосте Release-сборка Android недоступна, и merged-манифест проверен по Debug-сборке; merger манифеста в обеих конфигурациях один и тот же.
+
+Проверено:
+```
+dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android        → успешно, без предупреждений
+dotnet test --project ImageGen/ImageGen.Presentation.Tests/…                       → 281 тест, 0 упавших
+dotnet format ImageGen/ImageGen.Presentation.Tests/… --verify-no-changes           → без изменений
+bash scripts/check.sh                                                               → все проверки пройдены
+```
+
+Ограничения: поведение переноса данных (D2D) на реальном OEM-устройстве не проверялось — source-тесты подтверждают конфигурацию, но не поведение инструмента переноса. F7.6 (свой зашифрованный экспорт) не реализован, включать его в правила нечего.
 
 ## Комментарии

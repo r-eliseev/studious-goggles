@@ -39,6 +39,7 @@
                 <Button StyleClass="primary"
                         Command="{Binding NewSessionCommand}"
                         HorizontalOptions="Center"
+                        SemanticProperties.Description="{x:Static strings:AppResources.NewSession}"
                         Text="{x:Static strings:AppResources.NewSession}" />
                 <controls:StarterExamples />
             </VerticalStackLayout>

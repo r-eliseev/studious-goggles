@@ -1,6 +1,6 @@
 ---
 id: 103
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -48,6 +48,25 @@ bash scripts/check.sh
 Файлы: `ImageGen/ImageGen.Maui/Pages/SessionsPage.xaml`, `tasks/v0.1/016-skeleton-manual-check.md` (пункт ручной проверки)
 
 ## Отчёт
+Изменена одна кнопка: `ImageGen/ImageGen.Maui/Pages/SessionsPage.xaml`, блок `Border x:Name="EmptyState"` — у `Button` с `Command="{Binding NewSessionCommand}"` добавлен атрибут `SemanticProperties.Description="{x:Static strings:AppResources.NewSession}"` (тот же ключ `AppResources.NewSession`, что у `Text`). Других правок нет.
+
+Проверка шага 2 (одноразовый скрипт `tmp/check_button_semantics.py`, разбор XML через `xml.etree.ElementTree`, выбор элементов по local name — `Button`/`ImageButton`, поэтому `Button.Triggers` и `Button.ImageSource` не считаются кнопками):
+
+```
+MAUI: проверено кнопок — 40
+Avalonia: проверено кнопок — 42
+Все кнопки описаны.
+```
+
+Пропусков не найдено: ни в MAUI-разметке, ни в Avalonia. В Avalonia у той же кнопки `AutomationProperties.Name` уже был — правка там не понадобилась, как и предполагал план.
+
+Проверка не пустая: на откаченной версии `SessionsPage.xaml` тот же скрипт находит ровно один пропуск (`<Button>` без `SemanticProperties.Description`) и возвращает код 1. На исправленной версии — код 0.
+
+Совпадений с другими задачами по этому файлу не возникло: 095 меняет `Pages/SessionsPage.xaml` (стиль keyboard inset), участки независимы — описание кнопки добавлено, стиль не тронут. Задача 095 сейчас в работе у другого исполнителя; при rebase обе правки должны сохраниться.
+
+Проверено: `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android` — успешно, без предупреждений; `bash scripts/check.sh` проходит.
+
+Ручная проверка: владельцу в 016 — на пустом списке сессий в MAUI под Windows экранный диктор читает у кнопки «New session». Пункт добавлен в 016. Формат XAML не менялся, отдельный тест не писался (по плану проверка разметки — шаг 2).
 
 ## Комментарии
 
