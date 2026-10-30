@@ -77,6 +77,23 @@ public sealed class ProviderRegistry
                 $"Provider '{provider.Id}': imageModels is allowed only for kind openAiCompatible.");
         }
 
+        if ((provider.ImageResponseFormat is not null || provider.ImageOutputFormat is not null)
+            && provider.Kind != ProviderKind.OpenAiCompatible)
+        {
+            throw new ProviderConfigException(
+                $"Provider '{provider.Id}': image formats are allowed only for kind openAiCompatible.");
+        }
+
+        if (provider.ImageResponseFormat is not null && provider.ImageResponseFormat is not ("base64" or "b64_json"))
+        {
+            throw new ProviderConfigException($"Provider '{provider.Id}': imageResponseFormat has an unsupported value.");
+        }
+
+        if (provider.ImageOutputFormat is not null && provider.ImageOutputFormat is not ("png" or "jpeg"))
+        {
+            throw new ProviderConfigException($"Provider '{provider.Id}': imageOutputFormat has an unsupported value.");
+        }
+
         foreach (var model in provider.ImageModels)
         {
             if (string.IsNullOrWhiteSpace(model.Id) || model.MaxImagesPerRequest < 1)

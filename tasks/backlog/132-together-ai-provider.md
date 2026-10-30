@@ -1,8 +1,8 @@
 ---
 id: 132
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-10-30T14:20:04Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -55,6 +55,10 @@ bash scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Providers/ProviderConfig.cs`, `ImageGen/ImageGen.Core/Providers/ProviderConfigLoader.cs`, `ImageGen/ImageGen.Core/Providers/ProviderRegistry.cs`, `ImageGen/ImageGen.Core/Providers/ProviderClientBase.cs`, `ImageGen/ImageGen.Core/OpenAiCompatible/OpenAiCompatibleClient.cs`, `ImageGen/ImageGen.Core.Tests/Providers/ProviderConfigLoaderTests.cs`, `ImageGen/ImageGen.Core.Tests/Providers/ProviderRegistryTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Providers/ProviderClientBaseTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/OpenAiCompatible/OpenAiCompatibleClientTests.cs`, `docs/knowledge/together-ai.md` (новый), `docs/decisions/NNNN-provider-image-formats.md` (новый)
 
 ## Отчёт
+
+Добавлены опциональные `imageResponseFormat` и `imageOutputFormat` для `openAiCompatible` с whitelist-проверкой при разборе JSON и прямой регистрации провайдера. Клиент передаёт указанные форматы, декодирует `data[0].b64_json` и выбирает `image/png` или `image/jpeg`; конфигурации без параметров сохраняют прежнее тело запроса и PNG media type. Общая карта статусов расширена для 413, 404, 504 и 524; 422 оставлен `Unknown`. Добавлены Together contract/key-probe tests, пример конфигурации, справка по моделям/ограничениям и ADR 0023. Живой вызов и списание не выполнялись: тесты используют HTTP заглушки, а `CostUsd` остаётся `null`.
+
+Проверки: Core tests 627/627; `dotnet format` Core и Core.Tests — прошли. `bash scripts/check.sh` запускается при закрытии задачи.
 
 ## Комментарии
 

@@ -73,6 +73,49 @@ public class ProviderConfigLoaderTests
     }
 
     [Fact]
+    public void Parse_OpenAiCompatibleImageFormats_ReadsOptions()
+    {
+        const string json = """{"providers":[{"id":"together","kind":"openAiCompatible","displayName":"Together AI","baseAddress":"https://api.together.ai/v1","imageResponseFormat":"base64","imageOutputFormat":"png"}]}""";
+
+        var provider = Assert.Single(ProviderConfigLoader.Parse(json));
+
+        Assert.Equal("base64", provider.ImageResponseFormat);
+        Assert.Equal("png", provider.ImageOutputFormat);
+    }
+
+    [Fact]
+    public void Parse_NullImageFormat_KeepsDefault()
+    {
+        const string json = """{"providers":[{"id":"x","kind":"openAiCompatible","displayName":"X","baseAddress":"https://x.test/v1","imageResponseFormat":null,"imageOutputFormat":null}]}""";
+
+        var provider = Assert.Single(ProviderConfigLoader.Parse(json));
+
+        Assert.Null(provider.ImageResponseFormat);
+        Assert.Null(provider.ImageOutputFormat);
+    }
+
+    [Theory]
+    [InlineData("imageResponseFormat", "\"url\"")]
+    [InlineData("imageResponseFormat", "\"\"")]
+    [InlineData("imageResponseFormat", "42")]
+    [InlineData("imageOutputFormat", "\"webp\"")]
+    [InlineData("imageOutputFormat", "false")]
+    public void Parse_InvalidImageFormat_Throws(string name, string value)
+    {
+        var json = "{\"providers\":[{\"id\":\"x\",\"kind\":\"openAiCompatible\",\"displayName\":\"X\",\"baseAddress\":\"https://x.test/v1\",\"" + name + "\":" + value + "}]}";
+
+        Assert.Throws<ProviderConfigException>(() => ProviderConfigLoader.Parse(json));
+    }
+
+    [Fact]
+    public void Parse_ImageFormatOnOtherKind_Throws()
+    {
+        const string json = """{"providers":[{"id":"x","kind":"openRouter","displayName":"X","baseAddress":"https://x.test/v1","imageResponseFormat":"base64"}]}""";
+
+        Assert.Throws<ProviderConfigException>(() => ProviderConfigLoader.Parse(json));
+    }
+
+    [Fact]
     public void Parse_ApiKeyField_ThrowsBecauseKeysAreNotStoredInConfig()
     {
         const string json = """{"providers":[{"id":"x","kind":"openRouter","displayName":"X","baseAddress":"https://x.test/","timeoutSeconds":10,"apiKey":"sk-secret"}]}""";

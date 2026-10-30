@@ -132,12 +132,13 @@ public abstract class ProviderClientBase(
     /// <summary>Maps an error code (the HTTP status in practice) to <see cref="ErrorKind"/>.</summary>
     public static ErrorKind MapErrorKind(int code, bool hasModerationReasons) => code switch
     {
-        400 => ErrorKind.BadRequest,
+        400 or 413 => ErrorKind.BadRequest,
         401 => ErrorKind.InvalidKey,
         402 => ErrorKind.InsufficientFunds,
         403 when hasModerationReasons => ErrorKind.Moderated,
         403 => ErrorKind.Forbidden,
-        408 => ErrorKind.Timeout,
+        404 => ErrorKind.ModelUnavailable,
+        408 or 504 or 524 => ErrorKind.Timeout,
         429 => ErrorKind.RateLimited,
         502 or 503 or 529 => ErrorKind.ModelUnavailable,
         _ => ErrorKind.Unknown,
