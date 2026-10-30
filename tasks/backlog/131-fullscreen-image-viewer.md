@@ -61,6 +61,8 @@ bash scripts/check.sh
 
 ## Отчёт
 
+Follow-up при проверке Windows CI для PR #51: Avalonia ChatView создавал `Bitmap` прямо из пути, из-за чего Windows удерживал PNG открытым до освобождения UI bitmap и не давал удалить тестовую папку. Конвертер теперь декодирует из байтов в памяти; добавлен регрессионный тест удаления файла при живом bitmap. Это не меняет поведение viewer.
+
 Добавлен общий `IImageViewerService`; ChatPageModel передаёт в него успешные изображения выбранного run в исходном порядке и отмечает выбранную карточку. Растянутая на картинку кнопка открывает viewer; card actions и placeholder не открывают. MAUI показывает modal page с AspectFit, navigation без wrap, Close/Android Back/Windows Escape, фоновым чтением файлов и `ImageSource.FromStream`. Avalonia показывает owned modal без OS fullscreen, с AspectFit, Escape/Left/Right, фоновым созданием Bitmap, проверкой формата/декодирования и освобождением Bitmap. Добавлены строки, обновлена F6.2.
 
 Platform view деревья сделаны программно внутри page/service вместо отдельных XAML files; это отклонение от плана, контракт и dependency boundaries сохранены. Проверено: Presentation.Tests — 387/387; Avalonia.Tests — 143 passed, 2 skipped (DPAPI и Secret Service недоступны в этой среде); Avalonia build и MAUI Android build прошли; форматирование всех изменённых проектов прошло. Ручной UI не запускался в этой среде; сценарии переданы в 016/046/140. iOS/MacCatalyst не собирались.
