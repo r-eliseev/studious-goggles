@@ -330,6 +330,9 @@
   <data name="ReferenceFormat" xml:space="preserve">
     <value>Reference images: {0}</value>
   </data>
+  <data name="ImageDimensionsFormat" xml:space="preserve">
+    <value>{0}×{1} px · {2}:{3}</value>
+  </data>
   <data name="RemoveAttachment" xml:space="preserve">
     <value>Remove</value>
   </data>

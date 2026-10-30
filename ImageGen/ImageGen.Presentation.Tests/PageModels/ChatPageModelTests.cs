@@ -38,6 +38,8 @@ public class ChatPageModelTests
     private readonly IClipboardService _clipboard = Substitute.For<IClipboardService>();
     private readonly IFilePickerService _filePicker = Substitute.For<IFilePickerService>();
     private readonly IChatAttachmentRepository _chatAttachments = Substitute.For<IChatAttachmentRepository>();
+    private Action? _onMainThreadCallback;
+    private int _mainThreadCallbackDepth;
     private AttachmentService _attachments = null!;
     private ImageDescriptionService _descriptions = null!;
 
@@ -146,12 +148,26 @@ public class ChatPageModelTests
         _files.SaveAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns("images/s/g.png");
         _files.GetFullPath(Arg.Any<string>()).Returns(ci => "/data/" + ci.Arg<string>());
+        _files.TryReadDimensionsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<ImageDimensions?>(null));
 
         _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
             .Returns(new AssistantChatResult("Here you go.", [], null));
 
         _mainThread.When(m => m.BeginInvokeOnMainThread(Arg.Any<Action>()))
-            .Do(ci => ci.Arg<Action>().Invoke());
+            .Do(ci =>
+            {
+                Interlocked.Increment(ref _mainThreadCallbackDepth);
+                try
+                {
+                    ci.Arg<Action>().Invoke();
+                    _onMainThreadCallback?.Invoke();
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref _mainThreadCallbackDepth);
+                }
+            });
 
         _sessionService = new SessionService(
             _sessionRepository, _messageRepository, _runRepository, _files,
@@ -323,6 +339,64 @@ public class ChatPageModelTests
         Assert.IsType<MessageItemViewModel>(_model.Items[1]);
         var runItem = Assert.IsType<RunItemViewModel>(_model.Items[2]);
         Assert.Equal(2, runItem.Generations.Count);
+    }
+
+    [Fact]
+    public async Task ReloadAsync_DimensionsReadIsOffThreadAndDoesNotBlockRows_StaleReadIgnored()
+    {
+        var run = NewRun(_session.Id, "red fox");
+        var generation = NewGeneration(run, 5);
+        StoreRun(run, generation);
+
+        var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var firstRead = new TaskCompletionSource<ImageDimensions?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondRead = new TaskCompletionSource<ImageDimensions?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var firstApply = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondApply = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var readInsideMainThreadCallback = false;
+        var call = 0;
+        _files.TryReadDimensionsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            readInsideMainThreadCallback = Volatile.Read(ref _mainThreadCallbackDepth) > 0;
+            if (Interlocked.Increment(ref call) == 1)
+            {
+                firstStarted.TrySetResult();
+                return firstRead.Task;
+            }
+
+            secondStarted.TrySetResult();
+            return secondRead.Task;
+        });
+        _onMainThreadCallback = () =>
+        {
+            if (_model.Items.OfType<RunItemViewModel>().Single().Generations.Single().HasImageDimensions)
+            {
+                secondApply.TrySetResult();
+            }
+            else
+            {
+                firstApply.TrySetResult();
+            }
+        };
+
+        await _model.OnAppearingAsync();
+        await firstStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+        Assert.False(readInsideMainThreadCallback);
+        var originalCard = _model.Items.OfType<RunItemViewModel>().Single().Generations.Single();
+
+        await _model.ReloadAsync();
+        await secondStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+        var reloadedCard = _model.Items.OfType<RunItemViewModel>().Single().Generations.Single();
+        Assert.NotSame(originalCard, reloadedCard);
+
+        firstRead.SetResult(new ImageDimensions(640, 480));
+        await firstApply.Task.WaitAsync(TestContext.Current.CancellationToken);
+        Assert.Empty(reloadedCard.ImageDimensionsText);
+
+        secondRead.SetResult(new ImageDimensions(1200, 800));
+        await secondApply.Task.WaitAsync(TestContext.Current.CancellationToken);
+        Assert.Equal("1200×800 px · 3:2", reloadedCard.ImageDimensionsText);
     }
 
     [Fact]
@@ -930,6 +1004,8 @@ public class ChatPageModelTests
     [Fact]
     public async Task OnAppearingAsync_CalledTwice_SubscribesOnlyOnce()
     {
+        _files.TryReadDimensionsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new TaskCompletionSource<ImageDimensions?>().Task);
         await _model.OnAppearingAsync();
         await _model.OnAppearingAsync();
 

@@ -255,6 +255,12 @@
                                                         <Label StyleClass="meta" Text="{Binding CostText}" />
                                                     </HorizontalStackLayout>
 
+                                                    <Label StyleClass="meta"
+                                                           Text="{Binding ImageDimensionsText}"
+                                                           IsVisible="{Binding HasImageDimensions}"
+                                                           SemanticProperties.Description="{Binding ImageDimensionsText}"
+                                                           LineBreakMode="WordWrap" />
+
                                                     <!-- Notice: dropped parameters and the filtered explanation. -->
                                                     <Label StyleClass="meta"
                                                            Text="{Binding NoticeText}"

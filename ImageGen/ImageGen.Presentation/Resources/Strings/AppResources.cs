@@ -294,6 +294,8 @@ public static class AppResources
 
     public static string ReferenceFormat => Get(nameof(ReferenceFormat));
 
+    public static string ImageDimensionsFormat => Get(nameof(ImageDimensionsFormat));
+
     public static string RemoveAttachment => Get(nameof(RemoveAttachment));
 
     public static string DescribeButton => Get(nameof(DescribeButton));

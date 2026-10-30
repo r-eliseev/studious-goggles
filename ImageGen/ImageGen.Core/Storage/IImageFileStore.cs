@@ -14,6 +14,9 @@ public interface IImageFileStore
     /// <summary>Reads the image at a relative path. A missing file throws <see cref="FileNotFoundException"/>.</summary>
     Task<byte[]> ReadAsync(string relativePath, CancellationToken cancellationToken);
 
+    /// <summary>Reads raster pixel dimensions from a stored image, or returns null for missing or unreadable data.</summary>
+    Task<ImageDimensions?> TryReadDimensionsAsync(string relativePath, CancellationToken cancellationToken);
+
     /// <summary>Converts a relative path returned by <see cref="SaveAsync"/> to an absolute path.</summary>
     string GetFullPath(string relativePath);
 

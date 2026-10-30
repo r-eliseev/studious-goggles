@@ -51,7 +51,8 @@ ImageGen/
                                    TokenCorrection (поправка по usage), SummaryPlanner и SummaryPlan (когда и что сводить, C3)
     Serialization/                 CoreJsonContext
     CoreServiceCollectionExtensions.cs   AddImageGenCore()
-  ImageGen.Data/                   net10.0, Microsoft.Data.Sqlite: SqliteDatabase, Migrations, репозитории, FileImageStore,
+  ImageGen.Data/                   net10.0, Microsoft.Data.Sqlite, MetadataExtractor (ADR 0021): SqliteDatabase, Migrations,
+                                   репозитории, FileImageStore (чтение размеров из заголовков файла в ограниченном фоне),
                                    DataServiceCollectionExtensions (AddImageGenData())
   ImageGen.Core.Tests/             xUnit v3 + NSubstitute
   ImageGen.Data.Tests/             xUnit v3, временная БД в файле

@@ -1,4 +1,6 @@
+using System.Reflection;
 using ImageGen.Core.Platform;
+using ImageGen.Core.Storage;
 using ImageGen.Data.Tests.TestDoubles;
 using Microsoft.Extensions.Logging;
 
@@ -78,6 +80,63 @@ public sealed class FileImageStoreTests : IDisposable
     {
         await Assert.ThrowsAsync<FileNotFoundException>(
             () => _store.ReadAsync("images/none/none.png", TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("dimensions.jpg", "image/jpeg", 800, 600)]
+    [InlineData("dimensions.png", "image/png", 8, 12)]
+    [InlineData("dimensions.webp", "image/webp", 16, 16)]
+    [InlineData("dimensions.gif", "image/gif", 10, 10)]
+    public async Task TryReadDimensionsAsync_ValidImage_ReturnsHeaderDimensions(string fixture, string mediaType, int width, int height)
+    {
+        var bytes = ReadFixture(fixture);
+        var path = await _store.SaveAsync(Guid.NewGuid(), Guid.NewGuid(), bytes, mediaType, TestContext.Current.CancellationToken);
+
+        var dimensions = await _store.TryReadDimensionsAsync(path, TestContext.Current.CancellationToken);
+
+        Assert.Equal(new ImageDimensions(width, height), dimensions);
+        Assert.Equal(bytes, await _store.ReadAsync(path, TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("random.bin", new byte[] { 1, 2, 3, 4, 5 })]
+    [InlineData("truncated.png", new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 })]
+    public async Task TryReadDimensionsAsync_CorruptOrUnsupported_ReturnsNull(string name, byte[] bytes)
+    {
+        var path = $"images/{Guid.NewGuid():N}/{name}";
+        Directory.CreateDirectory(Path.GetDirectoryName(_store.GetFullPath(path))!);
+        await File.WriteAllBytesAsync(_store.GetFullPath(path), bytes, TestContext.Current.CancellationToken);
+
+        var dimensions = await _store.TryReadDimensionsAsync(path, TestContext.Current.CancellationToken);
+
+        Assert.Null(dimensions);
+    }
+
+    [Fact]
+    public async Task TryReadDimensionsAsync_MissingFile_ReturnsNull()
+    {
+        var dimensions = await _store.TryReadDimensionsAsync("images/missing/no-image.png", TestContext.Current.CancellationToken);
+
+        Assert.Null(dimensions);
+    }
+
+    [Fact]
+    public async Task TryReadDimensionsAsync_PreCancelled_ThrowsCancellation()
+    {
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => _store.TryReadDimensionsAsync("images/missing/no-image.png", cancellation.Token));
+    }
+
+    private static byte[] ReadFixture(string name)
+    {
+        using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"TestData/{name}");
+        Assert.NotNull(stream);
+        using var memory = new MemoryStream();
+        stream.CopyTo(memory);
+        return memory.ToArray();
     }
 
     [Fact]

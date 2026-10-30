@@ -274,6 +274,12 @@
                                                         <TextBlock Classes="meta" Text="{Binding CostText}" />
                                                     </StackPanel>
 
+                                                    <TextBlock Classes="meta"
+                                                               Text="{Binding ImageDimensionsText}"
+                                                               IsVisible="{Binding HasImageDimensions}"
+                                                               AutomationProperties.Name="{Binding ImageDimensionsText}"
+                                                               TextWrapping="Wrap" />
+
                                                     <!-- Notice: dropped parameters and the filtered explanation. -->
                                                     <TextBlock Classes="meta"
                                                                Text="{Binding NoticeText}"
