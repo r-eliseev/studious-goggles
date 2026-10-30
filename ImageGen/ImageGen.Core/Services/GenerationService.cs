@@ -24,6 +24,7 @@ public sealed class GenerationService(
     AttachmentService attachments,
     TimeProvider timeProvider,
     ILogger<GenerationService> logger,
+    SessionChangeNotifier changes,
     IDebugTrace? trace = null)
 {
     private readonly IDebugTrace _trace = trace ?? NullDebugTrace.Instance;
@@ -290,6 +291,7 @@ public sealed class GenerationService(
         }
 
         await runs.AddRunAsync(run, generations, cancellationToken);
+        changes.Notify(sessionId);
         logger.LogInformation(
             "Run {RunId} created in session {SessionId} ({Origin}): {GenerationCount} generations.",
             run.Id,

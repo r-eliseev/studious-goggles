@@ -1,8 +1,8 @@
 ---
 id: 089
-status: in-progress
-assignee: codex-luna
-claimed: 2026-10-30T07:31:50Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -128,6 +128,12 @@ bash scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Services/SessionChangeNotifier.cs` (новый), `ImageGen/ImageGen.Core/Services/SessionService.cs`, `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Core.Tests/Services/SessionChangeNotifierTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/Services/SessionServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionItemViewModel.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionsPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionItemViewModelTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ChatPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionModelsPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionParametersPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ModelPickerPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/Services/AppInitializerTests.cs`, `docs/architecture.md`, `tasks/v0.1/016-skeleton-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`.
 
 ## Отчёт
+
+- Добавлен `SessionChangeNotifier`; `SessionService` публикует изменения после записи и успешного удаления, `GenerationService` — после сохранения нового run.
+- `SessionsPageModel` подписывается один раз при появлении, сериализует начальную загрузку, обновления и удаление общим gate, перечитывает одну сессию и меняет observable-коллекции через `IMainThread`. Существующая строка обновляет заголовок и число прогонов; новая добавляется по времени; удалённая исчезает из всех списков. Поиск и его результаты при обновлении строки сохраняются.
+- `SessionItemViewModel.Apply` обновляет заголовок, время и число прогонов. Обновлена архитектурная документация; ручные сценарии широкого MAUI окна и Avalonia переданы в задачи 016 и 046.
+- Проверки: Core.Tests 393/393; Presentation.Tests 288/288; Avalonia.Tests 118 прошли, 2 пропущены (Secret Service и DPAPI недоступны в Linux); Android build успешен. `dotnet format` для Core, Core.Tests, Presentation и Presentation.Tests и `bash scripts/check.sh` прошли.
+- Ручная проверка на Windows, Avalonia desktop и Android не выполнялась в этой сессии. Android (узкий экран, список на отдельной странице) проверить владельцу.
 
 ## Комментарии
 ### 2026-10-29, claude-plan

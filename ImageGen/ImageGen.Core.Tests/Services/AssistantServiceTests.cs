@@ -94,10 +94,10 @@ public class AssistantServiceTests
         _files.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns([1, 2, 3]);
 
         var sessionService = new SessionService(
-            _sessions, _messages, _runs, _files, new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance), time, Substitute.For<IConversationSummaryRepository>());
+            _sessions, _messages, _runs, _files, new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance), time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier());
         var attachments = new AttachmentService(_chatAttachments, _files, time);
         _generations = new GenerationService(
-            _sessions, _runs, _providers, _files, catalog, _seeds, attachments, time, NullLogger<GenerationService>.Instance);
+            _sessions, _runs, _providers, _files, catalog, _seeds, attachments, time, NullLogger<GenerationService>.Instance, new SessionChangeNotifier());
         var chatModels = new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance);
         _summaries.GetAsync(_session.Id, Arg.Any<CancellationToken>()).Returns((ConversationSummary?)null);
         var correction = new TokenCorrection();

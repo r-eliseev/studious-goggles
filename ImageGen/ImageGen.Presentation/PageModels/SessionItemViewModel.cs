@@ -29,14 +29,17 @@ public sealed partial class SessionItemViewModel : ObservableObject
         Id = session.Id;
         _title = session.Title;
         UpdatedText = session.UpdatedAt.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+        UpdatedAt = session.UpdatedAt;
     }
 
     public Guid Id { get; }
 
+    public DateTimeOffset UpdatedAt { get; private set; }
+
     [ObservableProperty]
     private string _title;
 
-    public string UpdatedText { get; }
+    public string UpdatedText { get; private set; }
 
     /// <summary>Number of runs of the session; the list shows it next to the time of the last change.</summary>
     [ObservableProperty]
@@ -58,6 +61,21 @@ public sealed partial class SessionItemViewModel : ObservableObject
     private bool _isCurrent;
 
     partial void OnRunCountChanged(int value) => OnPropertyChanged(nameof(DetailsText));
+
+    public void Apply(Session session, int runCount)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        if (session.Id != Id)
+        {
+            throw new ArgumentException("Session id does not match this row.", nameof(session));
+        }
+
+        Title = session.Title;
+        UpdatedAt = session.UpdatedAt;
+        UpdatedText = session.UpdatedAt.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+        RunCount = runCount;
+        OnPropertyChanged(nameof(DetailsText));
+    }
 
     [RelayCommand]
     private Task OpenAsync() => _open(this);

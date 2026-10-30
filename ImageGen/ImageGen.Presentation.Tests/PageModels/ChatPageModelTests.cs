@@ -147,7 +147,7 @@ public class ChatPageModelTests
         _sessionService = new SessionService(
             _sessionRepository, _messageRepository, _runRepository, _files,
             new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),
-            time, _summaries);
+            time, _summaries, new SessionChangeNotifier());
         _attachments = new AttachmentService(_chatAttachments, _files, time);
         _descriptions = new ImageDescriptionService(
             _sessionRepository, _runRepository, ProviderDoubles.Router(chat: _chat),
@@ -157,7 +157,7 @@ public class ChatPageModelTests
             .Returns(ci => $"images/s/attachments/{ci.ArgAt<Guid>(1):N}.png");
         _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
         _generationService = new GenerationService(
-            _sessionRepository, _runRepository, ProviderDoubles.Router(_generator), _files, catalog, _seeds, _attachments, time, NullLogger<GenerationService>.Instance);
+            _sessionRepository, _runRepository, ProviderDoubles.Router(_generator), _files, catalog, _seeds, _attachments, time, NullLogger<GenerationService>.Instance, new SessionChangeNotifier());
         _assistant = new AssistantService(
             _sessionService, _messageRepository, _runRepository, ProviderDoubles.Router(chat: _chat), _generationService,
             new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),

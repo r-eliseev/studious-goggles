@@ -33,6 +33,7 @@ public class GenerationServiceTests
     private readonly IChatAttachmentRepository _chatAttachments = Substitute.For<IChatAttachmentRepository>();
     private readonly AttachmentService _attachments;
     private readonly GenerationService _service;
+    private readonly SessionChangeNotifier _changes = new();
     private readonly Session _session;
     private IReadOnlyList<Generation> _added = [];
     private readonly ConcurrentDictionary<Guid, Run> _savedRuns = new();
@@ -77,7 +78,7 @@ public class GenerationServiceTests
 
         _attachments = new AttachmentService(_chatAttachments, _files, time);
         _service = new GenerationService(
-            _sessions, _runs, _providers, _files, catalog, _seeds, _attachments, time, _logger);
+            _sessions, _runs, _providers, _files, catalog, _seeds, _attachments, time, _logger, _changes);
         _service.GenerationUpdated += (_, e) => _events.Enqueue(e.Generation);
     }
 
@@ -114,7 +115,7 @@ public class GenerationServiceTests
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
         var traced = new GenerationService(
-            _sessions, _runs, _providers, _files, catalog, _seeds, _attachments, time, _logger, trace);
+            _sessions, _runs, _providers, _files, catalog, _seeds, _attachments, time, _logger, _changes, trace);
 
         await traced.StartRunAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
 

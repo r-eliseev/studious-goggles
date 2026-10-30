@@ -19,7 +19,9 @@ public sealed partial class SessionsPageModel(
     IDialogService dialogs,
     TimeProvider timeProvider,
     ICurrentSessionTracker tracker,
-    SessionSearchService searchService) : ObservableObject
+    SessionSearchService searchService,
+    SessionChangeNotifier changes,
+    IMainThread mainThread) : ObservableObject
 {
     /// <summary>Pause after the last keystroke before the search runs.</summary>
     public static readonly TimeSpan SearchDebounce = TimeSpan.FromMilliseconds(250);
@@ -52,6 +54,7 @@ public sealed partial class SessionsPageModel(
     public ObservableCollection<SessionItemViewModel> SearchResults { get; } = [];
 
     private CancellationTokenSource? _searchCancellation;
+    private readonly SemaphoreSlim _refreshGate = new(1, 1);
 
     /// <summary>Sessions last changed today (local date), newest first.</summary>
     public ObservableCollection<SessionItemViewModel> Today { get; } = [];
@@ -114,6 +117,8 @@ public sealed partial class SessionsPageModel(
     {
         tracker.Changed -= OnCurrentSessionChanged;
         tracker.Changed += OnCurrentSessionChanged;
+        changes.SessionChanged -= OnSessionChanged;
+        changes.SessionChanged += OnSessionChanged;
         IsBusy = true;
         try
         {
@@ -124,25 +129,36 @@ public sealed partial class SessionsPageModel(
                 return;
             }
 
-            SearchText = "";
-            ClearSearchResults();
-            var sessions = await sessionService.ListAsync(CancellationToken.None);
-            var runCounts = await sessionService.CountRunsAsync(CancellationToken.None);
-            var today = timeProvider.GetLocalNow().Date;
-            Sessions.Clear();
-            Today.Clear();
-            Earlier.Clear();
-            foreach (var session in sessions.OrderByDescending(session => session.UpdatedAt))
+            await _refreshGate.WaitAsync();
+            try
             {
-                var item = new SessionItemViewModel(session, OpenSessionAsync, RenameSessionAsync, DeleteSessionAsync)
+                SearchText = "";
+                ClearSearchResults();
+                var sessions = await sessionService.ListAsync(CancellationToken.None);
+                var runCounts = await sessionService.CountRunsAsync(CancellationToken.None);
+                await DispatchAsync(() =>
                 {
-                    IsCurrent = session.Id == tracker.CurrentId,
-                    RunCount = runCounts.GetValueOrDefault(session.Id),
-                };
-                Sessions.Add(item);
-                (session.UpdatedAt.ToLocalTime().Date == today ? Today : Earlier).Add(item);
+                    var today = timeProvider.GetLocalNow().Date;
+                    Sessions.Clear();
+                    Today.Clear();
+                    Earlier.Clear();
+                    foreach (var session in sessions.OrderByDescending(session => session.UpdatedAt))
+                    {
+                        var item = new SessionItemViewModel(session, OpenSessionAsync, RenameSessionAsync, DeleteSessionAsync)
+                        {
+                            IsCurrent = session.Id == tracker.CurrentId,
+                            RunCount = runCounts.GetValueOrDefault(session.Id),
+                        };
+                        Sessions.Add(item);
+                        (session.UpdatedAt.ToLocalTime().Date == today ? Today : Earlier).Add(item);
+                    }
+                    NotifySessionsCount();
+                });
             }
-            NotifySessionsCount();
+            finally
+            {
+                _refreshGate.Release();
+            }
         }
         catch (Exception ex)
         {
@@ -151,6 +167,122 @@ public sealed partial class SessionsPageModel(
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    private void OnSessionChanged(object? sender, Guid sessionId) =>
+        mainThread.BeginInvokeOnMainThread(() => RefreshSessionAsync(sessionId).FireAndForgetSafeAsync());
+
+    private async Task RefreshSessionAsync(Guid sessionId)
+    {
+        await _refreshGate.WaitAsync();
+        try
+        {
+            var session = await sessionService.GetAsync(sessionId, CancellationToken.None);
+            if (session is null)
+            {
+                await DispatchAsync(() => RemoveSessionRow(sessionId));
+                return;
+            }
+
+            var runCount = (await sessionService.CountRunsAsync(CancellationToken.None)).GetValueOrDefault(sessionId);
+            await DispatchAsync(() => ApplySessionRow(session, runCount));
+        }
+        catch (Exception ex)
+        {
+            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+        }
+        finally
+        {
+            _refreshGate.Release();
+        }
+    }
+
+    private async Task DispatchAsync(Action action)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        mainThread.BeginInvokeOnMainThread(() =>
+        {
+            try
+            {
+                action();
+                completion.SetResult();
+            }
+            catch (Exception ex)
+            {
+                completion.SetException(ex);
+            }
+        });
+        await completion.Task;
+    }
+
+    private void RemoveSessionRow(Guid sessionId)
+    {
+        var item = Sessions.FirstOrDefault(row => row.Id == sessionId);
+        if (item is null)
+        {
+            return;
+        }
+
+        Sessions.Remove(item);
+        Today.Remove(item);
+        Earlier.Remove(item);
+        SearchResults.Remove(item);
+        NotifySessionsCount();
+    }
+
+    private void ApplySessionRow(Session session, int runCount)
+    {
+        var item = Sessions.FirstOrDefault(row => row.Id == session.Id);
+        if (item is null)
+        {
+            item = new SessionItemViewModel(session, OpenSessionAsync, RenameSessionAsync, DeleteSessionAsync)
+            {
+                IsCurrent = session.Id == tracker.CurrentId,
+                RunCount = runCount,
+            };
+            var index = Sessions.TakeWhile(row => row.UpdatedAt >= session.UpdatedAt).Count();
+            Sessions.Insert(index, item);
+            var group = session.UpdatedAt.ToLocalTime().Date == timeProvider.GetLocalNow().Date ? Today : Earlier;
+            var groupIndex = group.TakeWhile(row => row.UpdatedAt >= session.UpdatedAt).Count();
+            group.Insert(groupIndex, item);
+            NotifySessionsCount();
+            return;
+        }
+
+        var moved = session.UpdatedAt > item.UpdatedAt;
+        item.Apply(session, runCount);
+        if (!moved)
+        {
+            return;
+        }
+
+        var sessionIndex = Sessions.IndexOf(item);
+        if (sessionIndex > 0)
+        {
+            Sessions.Move(sessionIndex, 0);
+        }
+        if (session.UpdatedAt.ToLocalTime().Date != timeProvider.GetLocalNow().Date)
+        {
+            Today.Remove(item);
+            var earlierIndex = Earlier.TakeWhile(row => row.UpdatedAt >= session.UpdatedAt).Count();
+            Earlier.Insert(earlierIndex, item);
+        }
+        else
+        {
+            Earlier.Remove(item);
+            if (!Today.Contains(item))
+            {
+                Today.Insert(0, item);
+            }
+            else
+            {
+                var todayIndex = Today.IndexOf(item);
+                if (todayIndex > 0)
+                {
+                    Today.Move(todayIndex, 0);
+                }
+            }
         }
     }
 
@@ -318,12 +450,16 @@ public sealed partial class SessionsPageModel(
 
         try
         {
-            await sessionService.DeleteAsync(item.Id, CancellationToken.None);
-            Sessions.Remove(item);
-            Today.Remove(item);
-            Earlier.Remove(item);
-            NotifySessionsCount();
-            SearchResults.Remove(item);
+            await _refreshGate.WaitAsync();
+            try
+            {
+                await sessionService.DeleteAsync(item.Id, CancellationToken.None);
+                await DispatchAsync(() => RemoveSessionRow(item.Id));
+            }
+            finally
+            {
+                _refreshGate.Release();
+            }
         }
         catch (Exception ex)
         {

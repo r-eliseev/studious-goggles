@@ -82,7 +82,7 @@ public class AppInitializerTests : IDisposable
             Substitute.For<ISeedSource>(),
             new AttachmentService(Substitute.For<IChatAttachmentRepository>(), Substitute.For<IImageFileStore>(), TimeProvider.System),
             TimeProvider.System,
-            NullLogger<GenerationService>.Instance);
+            NullLogger<GenerationService>.Instance, new SessionChangeNotifier());
         return new AppInitializer(_database, generation, ProviderDoubles.BuiltInRegistry());
     }
 }
