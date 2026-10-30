@@ -4,8 +4,8 @@ namespace ImageGen.Core.Search;
 
 /// <summary>
 /// Case-insensitive matching of query words against a text. A query word scores 3 when a word of the text starts with it,
-/// 2 when a word contains it, and 1 when a word differs by one letter (only for words of four letters or more). Every
-/// query word must match, otherwise the text does not match.
+/// 2 when a word contains it, and 1 when a word, or a beginning of the word with the same first letter, differs by one
+/// letter (only for words of four letters or more). Every query word must match, otherwise the text does not match.
 /// </summary>
 public static class FuzzyMatcher
 {
@@ -75,12 +75,42 @@ public static class FuzzyMatcher
             return (SubstringScore, start + position);
         }
 
-        if (token.Length >= MinTypoLength && Distance(token, word) <= 1)
+        if (IsTypo(token, word))
         {
             return (TypoScore, start);
         }
 
         return null;
+    }
+
+    /// <summary>True when the token differs from the word, or from a beginning of the word with the same first letter,
+    /// by one letter. Tokens shorter than four letters are never treated as a typo.</summary>
+    private static bool IsTypo(string token, string word)
+    {
+        if (token.Length < MinTypoLength)
+        {
+            return false;
+        }
+
+        if (Distance(token, word) <= 1)
+        {
+            return true;
+        }
+
+        if (token[0] != word[0])
+        {
+            return false;
+        }
+
+        foreach (var length in new[] { token.Length - 1, token.Length, token.Length + 1 })
+        {
+            if (length > 0 && length < word.Length && Distance(token, word[..length]) <= 1)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Levenshtein distance between two words (insertions, deletions and substitutions cost 1).</summary>

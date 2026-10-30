@@ -7,6 +7,12 @@ on:
 jobs:
   core:
     runs-on: ubuntu-latest
+    # Единая UTF-8 локаль для всех Linux-задач: под C.UTF-8 инструменты, работающие
+    # с кириллицей (grep -E по диапазонам, сортировка), ведут себя иначе, чем в
+    # en_US.UTF-8, и результат может зависеть от образа runner.
+    env:
+      LC_ALL: en_US.UTF-8
+      LANG: en_US.UTF-8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -27,6 +33,9 @@ jobs:
 
   avalonia:
     runs-on: ubuntu-latest
+    env:
+      LC_ALL: en_US.UTF-8
+      LANG: en_US.UTF-8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4

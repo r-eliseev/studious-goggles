@@ -1,6 +1,6 @@
 ---
 id: 104
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -41,6 +41,17 @@ bash scripts/check.sh
 Файлы: `ImageGen/Directory.Packages.props`
 
 ## Отчёт
+Задача остаётся нужной: `ImageGen/Directory.Packages.props` объявлял пакет версии, на который никто не ссылался — лишняя декларация зависимости в централизованном списке версий.
+
+Поиск до удаления (`grep -rn "Avalonia\.Fonts\.Inter|WithInterFont" ImageGen --include=*.csproj --include=*.cs --include=*.props --include=*.axaml`): ровно одно совпадение — сама декларация в `ImageGen/Directory.Packages.props:24`. Поиск по всему репозиторию (включая `poc/`) дал то же единственное совпадение; вызовов `WithInterFont()` нет. Совпадений в комментариях нет.
+
+Изменено: удалена единственная строка `<PackageVersion Include="Avalonia.Fonts.Inter" Version="12.1.4" />`. Больше ничего в файле не менялось; шрифт приложения не трогался.
+
+Поиск после удаления: 0 совпадений.
+
+Проверено: `dotnet build ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj` — успешно, без предупреждений; `ImageGen.Avalonia.Tests` — 120 тестов, 0 упавших (2 пропущены, как и до правки: Secret Service и DPAPI); `bash scripts/check.sh` проходит.
+
+Новые тесты для удаления неиспользуемой декларации не нужны: проверяемое условие — отсутствие потребителей и успешная сборка.
 
 ## Комментарии
 

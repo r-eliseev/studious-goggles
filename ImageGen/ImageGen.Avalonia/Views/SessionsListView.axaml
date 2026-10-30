@@ -29,7 +29,7 @@
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
                     <TextBox x:Name="SearchBox"
                              Text="{Binding SearchText, Mode=TwoWay}"
-                             Watermark="{markup:Res SearchSessions}"
+                             PlaceholderText="{markup:Res SearchSessions}"
                              AutomationProperties.Name="{markup:Res SearchSessions}" />
                     <Button Grid.Column="1"
                             Classes="ghost icon"

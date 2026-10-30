@@ -1,6 +1,6 @@
 ---
 id: 101
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -83,6 +83,34 @@ bash scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Search/FuzzyMatcher.cs`, `ImageGen/ImageGen.Core.Tests/Search/FuzzyMatcherTests.cs`, `ImageGen/ImageGen.Core.Tests/Search/SessionSearchServiceTests.cs`, `docs/specs/chat-sessions.md`, `tasks/v0.1/016-skeleton-manual-check.md`, `tasks/backlog/140-*.md`.
 
 ## Отчёт
+Сделано по плану, TDD: сначала падающие тесты, потом минимальный код.
+
+Изменения:
+- `ImageGen/ImageGen.Core/Search/FuzzyMatcher.cs` — добавлен `private static bool IsTypo(string token, string word)`: токен короче `MinTypoLength` (4) опечаткой не считается; расстояние до целого слова ≤ 1 — опечатка; иначе первая буква токена обязана совпадать с первой буквой слова, и для длин начала `L` из {|t|−1, |t|, |t|+1} при `L < |w|` расстояние до `w[0..L)` должно быть ≤ 1. В `ScoreWord` условие ветки опечатки заменено на вызов `IsTypo`. `Distance` и веса не менялись. В XML-комментарий класса внесена правка: «1 when a word, or a beginning of the word with the same first letter, differs by one letter».
+- `ImageGen/ImageGen.Core.Tests/Search/FuzzyMatcherTests.cs` — 14 новых тестов: четыре на опечатку в начале слова (`Match_TypoInPrefix_Scores1`, `Match_TypoInPrefixOfLongWord_Scores1`, `Match_MissingLetterInPrefix_Scores1`, `Match_TypoInPrefixEveryToken_Matches`), шесть на отсутствие ложных совпадений (`Match_ExactPrefix_StillScores3`, `Match_TypoInPrefixOtherFirstLetter_NoMatch`, `Match_TwoTyposInPrefix_NoMatch`, `Match_DifferentEnding_NoMatch`, `Match_SwappedLetters_NoMatch`, `Match_ShortTokenTypo_NoMatch`), четыре регрессии (`Match_EmptyQuery_ReturnsNull`, `Match_EmptyText_ReturnsNull`, `Match_CyrillicTypoInPrefix_Scores1`, `Match_DigitToken_ExactPrefixWins`).
+- `ImageGen/ImageGen.Core.Tests/Search/SessionSearchServiceTests.cs` — `Search_ExactPrefixBeatsTypo`: запрос «wate» даёт порядок `[Second, First]` (точное начало «water» выше опечатки «date»).
+- `docs/specs/chat-sessions.md` — после S1.3 добавлен пункт S1.4 «Поиск сессий» с правилом весов и опечаток. `docs/architecture.md` не менялся.
+
+Ход работы (TDD):
+1. Добавлены тесты. Перед кодом падали 5: четыре на опечатку в начале слова и `Match_CyrillicTypoInPrefix_Scores1`; остальные новые тесты (отрицательные и регрессии) проходили сразу — как и ожидалось по плану.
+2. После реализации все тесты проходят.
+
+Отклонение от плана: перебор длин начала слова сначала был записан как `foreach (var length in (token.Length - 1, token.Length, token.Length + 1))` — компилятор вывел именованный кортеж `(int, int Length, int)` (из-за имени свойства `Length`) и `foreach` не компилировался (CS1579). Заменено на `new[] { ... }`, смысл не изменился.
+
+Проверено:
+```
+dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj      → 371 тест, 0 упавших
+dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj → 120 тестов, 0 упавших (2 пропущены: Secret Service, DPAPI)
+dotnet format ImageGen/ImageGen.Core/ImageGen.Core.csproj --verify-no-changes          → без изменений
+dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-no-changes → без изменений
+bash scripts/check.sh                                                                 → все проверки пройдены
+```
+
+Про вторую возможную причину (набираемый клавиатурой Android текст): по коду проекта не видно, передаёт ли Android-реализация `SearchBar` в `Text` ещё не принятый текст, — это проверяется только на устройстве. Симптом владельца («watte» → «Nothing found») полностью объясняется правилом опечатки и от этого не зависит. Ручной сценарий записан в 140 (пункт 5 плана): набрать «watte» на экранной клавиатуре с подсказками, не нажимая пробел и не выбирая подсказку; если результат появляется только после пробела или выбора подсказки — это отдельная задача про набираемый текст, код IME здесь не менялся.
+
+Ручная проверка MAUI под Windows дописана в 016 (пункт 11 плана): «watte» находит сессию с «water», «lighthu» — с «lighthouse», точное начало стоит в выдаче выше опечатки.
+
+Не проверено в этой среде: ручной сценарий на Android-устройстве и запуск MAUI под Windows — по среде их нет.
 
 ## Комментарии
 
