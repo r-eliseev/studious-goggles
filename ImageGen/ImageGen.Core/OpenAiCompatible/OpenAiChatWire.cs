@@ -59,13 +59,37 @@ internal static class OpenAiChatWire
         {
             foreach (var call in calls)
             {
-                var name = call?["function"]?["name"]?.GetValue<string>();
+                if (call is not JsonObject callObject)
+                {
+                    throw MalformedToolCall();
+                }
+
+                if (!callObject.TryGetPropertyValue("function", out var functionNode) || functionNode is null)
+                {
+                    continue;
+                }
+
+                if (functionNode is not JsonObject function)
+                {
+                    throw MalformedToolCall();
+                }
+
+                if (!function.TryGetPropertyValue("name", out var nameNode) || nameNode is null)
+                {
+                    continue;
+                }
+
+                if (nameNode is not JsonValue nameValue || !nameValue.TryGetValue<string>(out var name))
+                {
+                    throw MalformedToolCall();
+                }
+
                 if (string.IsNullOrEmpty(name))
                 {
                     continue;
                 }
 
-                var arguments = call!["function"]!["arguments"];
+                var arguments = function["arguments"];
                 var argumentsJson = arguments is JsonValue argumentsValue && argumentsValue.TryGetValue<string>(out var s)
                     ? s
                     : arguments?.ToJsonString() ?? "{}";
@@ -75,6 +99,9 @@ internal static class OpenAiChatWire
 
         return (text, toolCalls);
     }
+
+    private static ProviderException MalformedToolCall() =>
+        new(ErrorKind.Unknown, "The assistant response contained a malformed tool call.");
 
     private static JsonObject BuildMessage(AssistantChatMessage message)
     {

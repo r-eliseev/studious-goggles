@@ -177,6 +177,23 @@ public class OpenAiCompatibleClientTests
         Assert.Null(reply.Text);
     }
 
+    [Theory]
+    [InlineData("42")]
+    [InlineData("{}")]
+    public async Task CompleteChatAsync_MalformedToolName_ReturnsSafeUnknownError(string name)
+    {
+        var response = "{\"choices\":[{\"message\":{\"tool_calls\":[{\"function\":{\"name\":" + name + "}}]}}]}";
+        var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, response));
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => client.CompleteChatAsync(
+            new AssistantChatRequest("m", [AssistantChatMessage.User("hi")], []),
+            TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+        Assert.Equal("The assistant response contained a malformed tool call.", exception.Message);
+        Assert.DoesNotContain(name, exception.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task CheckKeyAsync_ModelsEndpoint_ReturnsStatus()
     {
