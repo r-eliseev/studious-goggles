@@ -29,11 +29,13 @@ ImageGen/
                                    builtin-providers.json и providers.json в DataDirectory), ProviderRegistry (проверка),
                                    IProviderRouter / ProviderRouter (клиент по id провайдера), ProviderClientBase (HTTP,
                                    таймаут из конфига, коды ошибок), ProviderException, ProviderConfigException
-    Providers/                     IProviderConnection (проверка ключа), IModelProvider (картинки: IImageGenerator,
-                                   каталог), IAssistantChatClient (чат), AssistantChatMessage/Request/Result, AssistantTool,
+    Providers/                     IProviderConnection (проверка ключа), IModelProvider (каталог),
+                                   ISynchronousImageTransport (HTTP transport внутри queued adapter), IAssistantChatClient (чат),
+                                   AssistantChatMessage/Request/Result, AssistantTool,
                                    AssistantToolCall (нейтральный формат чата), ImageGenerationRequest/Result
-    Providers/                     IQueuedImageProvider (submit/poll/cancel, ADR 0003), ProviderJobHandle, JobState, JobUpdate,
-                                   CancelOutcome, ProviderJobPoller (общий опрос заданий)
+    Providers/                     IQueuedImageProvider (submit/poll/cancel, ADR 0003), InMemoryQueuedImageProvider и
+                                   InMemoryQueuedImageConnection (адаптер синхронного транспорта), ProviderJobHandle,
+                                   JobState, JobUpdate, CancelOutcome, ProviderJobPoller (общий опрос заданий)
     Fal/                           FalImageProvider (очередь fal, IQueuedImageProvider)
     Http/                          LoggingHttpHandler, BodyRedactor (журнал HTTP без секретов)
     Diagnostics/                   IDebugTrace, TraceRedaction (отладочный трейс, docs/specs/debug-trace.md)
@@ -83,14 +85,14 @@ ImageGen/
 Логика страниц (PageModels, маршруты, строки, `AppInitializer`) живёт в `ImageGen.Presentation` и не использует типы UI-фреймворков: тестируется обычными тестами на Linux, без ссылок на файлы MAUI. Типы MAUI (`IQueryAttributable`, `MainThread`, `ImageSource`) остаются в страницах, конвертерах и реализациях интерфейсов (`IMainThread`, `INavigationService`, `IDialogService`) в `ImageGen.Maui`.
 
 ## Скелет v0.1: потоки
-**Первый запуск.** `App` оболочки вызывает `AppInitializer` (`ImageGen.Presentation`): он инициализирует БД (`SqliteDatabase.InitializeAsync`) и восстанавливает незавершённые генерации (`GenerationService.RecoverInterruptedAsync`): генерации с сохранённым хэндлом задания возобновляются без повторного submit, генерации провайдера, которого больше нет в конфигурации, завершаются «ModelUnavailable», остальные помечаются «Interrupted». Если ключа OpenRouter нет (`ApiKeyService.HasKeyAsync`), открывается страница ключа; ключ проверяется `GET /api/v1/key` и сохраняется через `ISecretStore` (реализации — в разделе «Скелет v0.1: хранение»).
+**Первый запуск.** `App` оболочки вызывает `AppInitializer` (`ImageGen.Presentation`): он инициализирует БД (`SqliteDatabase.InitializeAsync`) и восстанавливает незавершённые генерации (`GenerationService.RecoverInterruptedAsync`). Для Fal сохранённый хэндл позволяет продолжить polling без повторного submit. Хэндлы in-memory адаптера действуют только пока работает процесс: после перезапуска такой запрос завершается как прерванный, без повторной платной генерации. Генерации провайдера, которого больше нет в конфигурации, завершаются «ModelUnavailable», остальные без восстанавливаемого хэндла помечаются «Interrupted». Если ключа OpenRouter нет (`ApiKeyService.HasKeyAsync`), открывается страница ключа; ключ проверяется `GET /api/v1/key` и сохраняется через `ISecretStore` (реализации — в разделе «Скелет v0.1: хранение»).
 
 **Сообщение в чат.** `ChatPageModel` → `AssistantService.SendUserMessageAsync`:
 1. Сообщение пользователя пишется в БД; у новой сессии название берётся из первых 40 символов.
 2. Запрос к OpenRouter chat completions: системный промпт, текущий промпт сессии, при наличии — сводка старой части истории, затем сообщения сессии по бюджету контекста модели (текущее сообщение пользователя — дословно), инструмент `generate_images`. Правила бюджета и сводки — `docs/specs/assistant-context.md`, ADR 0015.
 3. Вызов инструмента → `GenerationService.StartRunAsync` (прогон) и сообщение ассистента со ссылкой на прогон. Текст без вызова → сообщение ассистента. Ошибка → сообщение ассистента с признаком ошибки.
 
-**Прогон.** `GenerationService` берёт модели и N из настроек сессии, выбирает N сидов (`ISeedSource`), создаёт генерации «модель × сид» в статусе «в очереди» одной транзакцией и запускает их параллельно: не более 4 локально отслеживаемых jobs на provider id. Provider A не блокирует provider B. Для queued jobs slot удерживается от submit до terminal status или локальной cancellation; восстановленные watchers используют тот же лимит. После неудачного remote cancel лимит гарантирует только локально отслеживаемые jobs, а не остановку оставшейся удалённой работы. Путь генерации зависит от провайдера. OpenRouter и OpenAI-совместимые: «идёт» → `IImageGenerator.GenerateAsync` (`POST /api/v1/images`, синхронно) → файл через `IImageFileStore` → запись в БД → событие `GenerationUpdated`. Провайдер с очередью (`IQueuedImageProvider`, сейчас fal): submit → хэндл задания сохраняется в БД → `ProviderJobPoller` опрашивает до конечного состояния → файл, БД, событие. При старте `RecoverInterruptedAsync` снова следит за заданиями с сохранённым хэндлом (без повторного submit), задания провайдера, которого больше нет в конфигурации, завершает «ModelUnavailable», остальные незавершённые помечает «Interrupted». Ошибка самого опроса завершает генерацию: «Moderated» — «отфильтровано», остальные ошибки провайдера — «ошибка» с его кодом; ошибка обработки результата (файл, сохранение) ошибкой опроса не считается. Отказ модерации (403 с `metadata.reasons`) → «отфильтровано».
+**Прогон.** `GenerationService` берёт модели и N из настроек сессии, выбирает N сидов (`ISeedSource`), создаёт генерации «модель × сид» в статусе «в очереди» одной транзакцией и запускает их параллельно: не более 4 локально отслеживаемых jobs на provider id. Provider A не блокирует provider B. Все провайдеры проходят общий путь: `IQueuedImageProvider.SubmitAsync` → сохранённый в БД хэндл → `ProviderJobPoller` → терминальное состояние → файл через `IImageFileStore`, запись в БД и событие `GenerationUpdated`. Fal хранит удалённый хэндл и продолжает polling после перезапуска. OpenRouter и OpenAI-совместимые клиенты выполняют синхронный HTTP transport (`ISynchronousImageTransport`) внутри `InMemoryQueuedImageProvider`; их handle живёт только в памяти процесса, поэтому после перезапуска генерация прерывается без повторного submit. Локальный адаптер быстро опрашивается (50–250 мс), native provider — с интервалом 1–5 секунд. Лимит provider slot удерживается до terminal status; при удалении сессии локальный adapter также ожидает завершения отменённого transport. Если remote cancel не удался, лимит гарантирует только локально отслеживаемую работу, а не остановку удалённой операции. Ошибка polling завершает генерацию: «Moderated» — «отфильтровано», остальные ошибки провайдера — «ошибка» с его кодом; ошибка обработки результата (файл, сохранение) ошибкой polling не считается. Отказ модерации (403 с `metadata.reasons`) → «отфильтровано».
 
 **Обновление экрана.** `ChatPageModel` после каждого своего действия перечитывает ленту сессии (`SessionService.GetTimelineAsync`), а событие `GenerationUpdated` обновляет одну карточку в UI-потоке (`IMainThread.BeginInvokeOnMainThread`; реализации `MauiMainThread` и `AvaloniaMainThread`). `SessionService` и `GenerationService` сообщают об изменении сессии через `SessionChangeNotifier`, и `SessionsPageModel` перечитывает одну сессию и обновляет её строку в UI-потоке.
 
@@ -103,7 +105,7 @@ SQLite-файл `imagegen.db` в `IAppPaths.DataDirectory`, схема в `Image
 
 ## Целевая раскладка (после скелета)
 ```
-ImageGen.Core       + Providers/Fal за контрактом ADR 0003, Together AI как OpenAI-совместимый провайдер (ADR 0017); Catalog с фильтрами; расходы
+ImageGen.Core       + Providers/Fal за контрактом ADR 0003, общий queued lifecycle с in-memory adapter для synchronous transports (ADR 0020), Together AI как OpenAI-совместимый провайдер (ADR 0017); Catalog с фильтрами; расходы
 ImageGen.Data       + таблица расходов, теги, коллекции
 ImageGen.Presentation, ImageGen.Avalonia   + модели и экраны новых фич (раскладка — «Текущая раскладка»)
 ImageGen.Maui       + Галерея, Сравнение, Расходы, Настройки; сохранение в галерею Android и iOS; ru-локализация
@@ -113,7 +115,7 @@ ImageGen.Web/ClientApp   Vue 3 + Vite + TypeScript
 ImageGen.Web.Tests
 Dockerfile, docker-compose.yml   том /data
 ```
-- Провайдеры: контракт submit/poll/cancel (ADR 0003) уже есть (`IQueuedImageProvider`, fal), восстановление заданий после перезапуска тоже. По ADR 0005 OpenRouter тоже должен стать заданием в фоне в памяти процесса (`OpenRouterJobRunner`) за тем же контрактом, а узкий `IImageGenerator` — уйти. В коде этого нет: OpenRouter генерирует синхронно через `IImageGenerator`; владелец решил выполнить ADR 0005 (2026-10-29), до этого описание выше — задуманное, а не текущее.
+- Provider connections retain catalog/key/chat responsibilities; synchronous image HTTP calls are transport-only and wrapped by `InMemoryQueuedImageProvider` before orchestration sees them. ADR 0020 replaces ADR 0005's proposed OpenRouter-specific runner with this shared adapter for OpenRouter and OpenAI-compatible clients.
 - События: для Web подписка через `Channel` вместо события .NET.
 - Web: однопользовательский, пароль из переменной окружения, cookie-сессия; секреты в файле под Data Protection; ключи шифрования и данные в томе Docker.
 - MAUI: на телефоне вкладки внизу, на широком экране боковая панель.

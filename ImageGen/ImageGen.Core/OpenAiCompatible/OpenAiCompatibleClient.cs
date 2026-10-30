@@ -16,7 +16,7 @@ public sealed class OpenAiCompatibleClient(
     IHttpClientFactory httpClientFactory,
     ISecretStore secretStore,
     TimeProvider timeProvider)
-    : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient
+    : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient, ISynchronousImageTransport
 {
     protected override void Authenticate(HttpRequestMessage request, string apiKey) => AuthenticateBearer(request, apiKey);
 

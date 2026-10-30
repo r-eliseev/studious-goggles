@@ -16,7 +16,7 @@ public sealed class OpenRouterClient(
     IHttpClientFactory httpClientFactory,
     ISecretStore secretStore,
     TimeProvider timeProvider)
-    : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient
+    : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient, ISynchronousImageTransport
 {
     private const int PriceRequestParallelism = 4;
 

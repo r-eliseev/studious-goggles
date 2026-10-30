@@ -16,7 +16,7 @@ public sealed class InMemoryQueuedImageProviderTests
     {
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource<ImageGenerationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var transport = Substitute.For<IImageGenerator>();
+        var transport = Substitute.For<ISynchronousImageTransport>();
         transport.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(_ =>
         {
             entered.TrySetResult();
@@ -43,7 +43,7 @@ public sealed class InMemoryQueuedImageProviderTests
     {
         var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource<ImageGenerationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var transport = Substitute.For<IImageGenerator>();
+        var transport = Substitute.For<ISynchronousImageTransport>();
         transport.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
         {
             entered.TrySetResult(call.Arg<CancellationToken>());
@@ -159,7 +159,7 @@ public sealed class InMemoryQueuedImageProviderTests
     [Fact]
     public async Task Cancel_UnknownJob_NotFound()
     {
-        var provider = NewProvider(Substitute.For<IImageGenerator>());
+        var provider = NewProvider(Substitute.For<ISynchronousImageTransport>());
         var handle = Handle("custom-provider", Guid.NewGuid().ToString("N"));
 
         Assert.Equal(CancelOutcome.NotFound,
@@ -169,7 +169,7 @@ public sealed class InMemoryQueuedImageProviderTests
     [Fact]
     public async Task Poll_UnknownJob_ReturnsInterruptedWithoutSubmitting()
     {
-        var transport = Substitute.For<IImageGenerator>();
+        var transport = Substitute.For<ISynchronousImageTransport>();
         var provider = NewProvider(transport);
         var handle = Handle("custom-provider", Guid.NewGuid().ToString("N"));
 
@@ -185,7 +185,7 @@ public sealed class InMemoryQueuedImageProviderTests
     [InlineData("custom-provider", "malformed")]
     public async Task Poll_InvalidHandle_ThrowsUnknownProviderException(string providerId, string requestId)
     {
-        var provider = NewProvider(Substitute.For<IImageGenerator>());
+        var provider = NewProvider(Substitute.For<ISynchronousImageTransport>());
         var handle = Handle(providerId, requestId);
 
         var error = await Assert.ThrowsAsync<ProviderException>(() =>
@@ -197,7 +197,7 @@ public sealed class InMemoryQueuedImageProviderTests
     [Fact]
     public async Task Poll_TamperedLocalUrls_ThrowsWithoutTransportAccess()
     {
-        var transport = Substitute.For<IImageGenerator>();
+        var transport = Substitute.For<ISynchronousImageTransport>();
         var provider = NewProvider(transport);
         var valid = Handle("custom-provider", Guid.NewGuid().ToString("N"));
         var tampered = valid with { StatusUrl = "https://example.invalid/status" };
@@ -209,7 +209,7 @@ public sealed class InMemoryQueuedImageProviderTests
     [Fact]
     public async Task Poll_HandleFromPreviousProviderInstance_ReturnsInterrupted()
     {
-        var transport = Substitute.For<IImageGenerator>();
+        var transport = Substitute.For<ISynchronousImageTransport>();
         var first = NewProvider(transport);
         var (_, handle, _, release) = await StartGatedAsync(provider: first, transport: transport);
         release.SetResult(Result);
@@ -244,7 +244,7 @@ public sealed class InMemoryQueuedImageProviderTests
     public async Task Submit_SweepsExpiredTerminalJobs()
     {
         var time = new ManualTimeProvider();
-        var transport = Substitute.For<IImageGenerator>();
+        var transport = Substitute.For<ISynchronousImageTransport>();
         var gates = new ConcurrentQueue<TaskCompletionSource<ImageGenerationResult>>();
         transport.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(_ =>
         {
@@ -300,7 +300,7 @@ public sealed class InMemoryQueuedImageProviderTests
     [Fact]
     public async Task Submit_PreCancelledCaller_DoesNotRegisterOrStartTransport()
     {
-        var transport = Substitute.For<IImageGenerator>();
+        var transport = Substitute.For<ISynchronousImageTransport>();
         var provider = NewProvider(transport);
         using var caller = new CancellationTokenSource();
         caller.Cancel();
@@ -315,7 +315,7 @@ public sealed class InMemoryQueuedImageProviderTests
         const int count = 5;
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var releases = new ConcurrentDictionary<CancellationToken, TaskCompletionSource<ImageGenerationResult>>();
-        var transport = Substitute.For<IImageGenerator>();
+        var transport = Substitute.For<ISynchronousImageTransport>();
         var started = 0;
         transport.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
         {
@@ -344,18 +344,18 @@ public sealed class InMemoryQueuedImageProviderTests
     }
 
     private static InMemoryQueuedImageProvider NewProvider(
-        IImageGenerator transport,
+        ISynchronousImageTransport transport,
         TimeProvider? timeProvider = null) => new(transport, "custom-provider", timeProvider ?? new ManualTimeProvider());
 
     private static async Task<(InMemoryQueuedImageProvider Provider, ProviderJobHandle Handle, CancellationToken Token,
         TaskCompletionSource<ImageGenerationResult> Release)> StartGatedAsync(
         TimeProvider? timeProvider = null,
-        IImageGenerator? transport = null,
+        ISynchronousImageTransport? transport = null,
         InMemoryQueuedImageProvider? provider = null)
     {
         var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource<ImageGenerationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        transport ??= Substitute.For<IImageGenerator>();
+        transport ??= Substitute.For<ISynchronousImageTransport>();
         transport.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
         {
             entered.TrySetResult(call.Arg<CancellationToken>());

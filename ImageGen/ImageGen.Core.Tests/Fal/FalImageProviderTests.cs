@@ -762,7 +762,7 @@ public class FalImageProviderTests
     }
 
     [Fact]
-    public async Task GenerateAsync_SubmitsAndWaitsForTheImage()
+    public async Task PollAsync_CompletedJobReturnsTheImage()
     {
         var handler = new StubHttpMessageHandler(req =>
         {
@@ -786,14 +786,16 @@ public class FalImageProviderTests
         });
         var provider = CreateProvider(handler);
 
-        var result = await provider.GenerateAsync(Request(), TestContext.Current.CancellationToken);
+        var handle = await provider.SubmitAsync(Request(), TestContext.Current.CancellationToken);
+        var result = await provider.PollAsync(handle, TestContext.Current.CancellationToken);
 
-        Assert.Equal(new byte[] { 5, 6 }, result.Content);
-        Assert.Equal("image/png", result.MediaType);
+        Assert.Equal(JobState.Succeeded, result.State);
+        Assert.Equal(new byte[] { 5, 6 }, result.Result!.Content);
+        Assert.Equal("image/png", result.Result.MediaType);
     }
 
     [Fact]
-    public async Task GenerateAsync_Filtered_ThrowsModerated()
+    public async Task PollAsync_CompletedFilteredJobReturnsFilteredState()
     {
         var handler = new StubHttpMessageHandler(req =>
         {
@@ -808,8 +810,10 @@ public class FalImageProviderTests
         });
         var provider = CreateProvider(handler);
 
-        var ex = await Assert.ThrowsAsync<ProviderException>(() => provider.GenerateAsync(Request(), TestContext.Current.CancellationToken));
+        var handle = await provider.SubmitAsync(Request(), TestContext.Current.CancellationToken);
+        var update = await provider.PollAsync(handle, TestContext.Current.CancellationToken);
 
-        Assert.Equal(ErrorKind.Moderated, ex.Kind);
+        Assert.Equal(JobState.Filtered, update.State);
+        Assert.Equal(ErrorKind.Moderated, update.ErrorKind);
     }
 }

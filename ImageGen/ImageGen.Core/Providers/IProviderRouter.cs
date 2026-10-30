@@ -8,6 +8,8 @@ public interface IProviderRouter
 
     IProviderConnection GetConnection(string providerId);
 
+    IQueuedImageProvider GetQueuedImageProvider(string providerId);
+
     IModelProvider GetImageProvider(string providerId);
 
     IAssistantChatClient GetChatClient(string providerId);

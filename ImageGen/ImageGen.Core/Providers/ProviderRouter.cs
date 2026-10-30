@@ -28,6 +28,10 @@ public sealed class ProviderRouter(
         GetConnection(providerId) as IModelProvider
         ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not generate images.");
 
+    public IQueuedImageProvider GetQueuedImageProvider(string providerId) =>
+        GetConnection(providerId) as IQueuedImageProvider
+        ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support queued image generation.");
+
     public IAssistantChatClient GetChatClient(string providerId) =>
         GetConnection(providerId) as IAssistantChatClient
         ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support assistant chat.");
@@ -41,6 +45,6 @@ public sealed class ProviderRouter(
         _ => throw new InvalidOperationException($"Unknown provider kind {config.Kind}."),
     };
 
-    private InMemoryQueuedImageConnection Wrap(IModelProvider provider, string providerId) =>
-        new(provider, (IAssistantChatClient)provider, providerId, timeProvider);
+    private InMemoryQueuedImageConnection Wrap(IProviderConnection provider, string providerId) =>
+        new((IModelProvider)provider, (IAssistantChatClient)provider, (ISynchronousImageTransport)provider, providerId, timeProvider);
 }

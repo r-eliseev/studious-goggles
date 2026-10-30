@@ -1,6 +1,6 @@
 ---
 id: 129
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -59,5 +59,13 @@ bash scripts/check.sh
 После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 129`, затем `bash scripts/check.sh`; отправить PR по `docs/tasks.md`.
 
 ## Отчёт
+
+- Переведены Fal, OpenRouter и OpenAI-compatible generations на один queued dispatch в `GenerationService`. Вынесен `ISynchronousImageTransport`, `IModelProvider` оставлен для каталога/ключа; OpenRouter и OpenAI-compatible клиенты адаптируются в queued providers, Fal оставлен native queued provider.
+- Удалён старый `IImageGenerator` и synchronous generation path Fal; обновлены router, Data composition, Core/Presentation doubles и тесты. Для сохранённого handle добавлена компенсационная best-effort отмена после ошибки записи. Успешный результат сохраняет стоимость. Локальные handles при восстановлении не запускают повторную генерацию; Fal продолжает polling.
+- Обновлены `docs/architecture.md` и `docs/specs/chat-sessions.md` про общий lifecycle, память локального handle и восстановление.
+- Отмена локального job ждёт терминальное состояние адаптера перед удалением сессии; повторные queued/running polling updates не отправляются как дубли.
+- Проверки: Core 564/564; Data 95/95; Presentation 366/366; Avalonia 141 passed, 2 skipped из-за отсутствующей Windows DPAPI и D-Bus Secret Service; Avalonia build без предупреждений. `dotnet format --verify-no-changes --no-restore` прошёл для Core, Core.Tests, Data.Tests и Presentation.Tests.
+- Добавлены тесты: после исчерпания retries записанный handle отменяется без polling; гонка этой отмены с удалением сессии отправляет один remote cancel.
+- Вне Linux-проверки: живые ответы провайдеров и платформенные Secret Service/DPAPI проверки.
 
 ## Комментарии
