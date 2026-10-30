@@ -1,6 +1,6 @@
 ---
 id: 095
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -71,6 +71,13 @@ Windows (задача `tasks/v0.1/016-skeleton-manual-check.md`, дописат�
 Файлы: `ImageGen/ImageGen.Maui/Pages/ApiKeyPage.xaml`, `ChatPage.xaml`, `ModelPickerPage.xaml`, `SessionModelsPage.xaml`, `SessionParametersPage.xaml`, `SessionsPage.xaml`, `SettingsPage.xaml` (все в `ImageGen/ImageGen.Maui/Pages/`); `ImageGen/ImageGen.Presentation.Tests/Design/MauiSafeAreaTests.cs` (новый); только по исходу шага 5 — `ImageGen/ImageGen.Maui/App.xaml.cs`; `docs/knowledge/maui.md`; `tasks/v0.1/016-skeleton-manual-check.md`, задача ручной проверки Android 140.
 
 ## Отчёт
+
+- В семи MAUI страницах (`ApiKeyPage`, `ChatPage`, `ModelPickerPage`, `SessionModelsPage`, `SessionParametersPage`, `SessionsPage`, `SettingsPage`) явно задан `SafeAreaEdges="All"` на корневом `ContentPage`. Добавлен `MauiSafeAreaTests.Pages_RespectKeyboardSafeArea`, проверяющий все `Pages/*.xaml`.
+- Целевая среда: Android target SDK **36**, проверено по сгенерированному `ImageGen.Maui/obj/Debug/net10.0-android/android/AndroidManifest.xml`.
+- Проверки: исходная Android-сборка до правок и сборка после правок прошли; тест safe area прошёл (1/1); собран проект Presentation.Tests; `dotnet format` для MAUI и Presentation.Tests прошёл. Полный запуск тестов Presentation и `scripts/check.sh` выполняются перед завершением.
+- На устройстве не проверено, проверить владельцу: Android 15+ и Android 14 или ниже; жестовая и трёхкнопочная навигация; чат с коротким и длинным вводом, закрытие клавиатуры и поворот; поля API key, поиска моделей и параметров; настройки. `adb devices` не показывает подключённых устройств. `WindowSoftInputModeAdjust(Resize)` не добавлялся до проверки на устройстве.
+- Непроверенное Windows-визуальное поведение добавлено в задачу 016; Android-сценарии добавлены в задачу 140. Документация MAUI обновлена.
+- Тестовый SDK `dotnet test --project ...` в этой среде завершался ошибкой handshake до запуска тестов; использован собранный xUnit apphost.
 
 ## Комментарии
 ### 2026-10-29, claude-plan

@@ -30,6 +30,24 @@ public class ChatPaneTests
     }
 
     [AvaloniaFact]
+    public async Task Wide_ModelsPane_HasTabs()
+    {
+        using var shell = new ShellHarness(openRouter: OpenRouterFakes.Create());
+        var chat = await OpenWideChatAsync(shell);
+        await chat.OpenModelsCommand.ExecuteAsync(null);
+        shell.Window.UpdateLayout();
+
+        var view = SidePane(shell).GetVisualDescendants().OfType<SessionModelsView>().Single();
+        var tabs = view.GetVisualDescendants().OfType<TabControl>().Single();
+        Assert.Equal(2, tabs.Items.Count);
+
+        var save = view.FindControl<Button>("SaveButton")!;
+        var cancel = view.FindControl<Button>("CancelButton")!;
+        Assert.Empty(save.GetVisualAncestors().OfType<ScrollViewer>());
+        Assert.Empty(cancel.GetVisualAncestors().OfType<ScrollViewer>());
+    }
+
+    [AvaloniaFact]
     public async Task Narrow_ModelsButton_Navigates()
     {
         using var shell = new ShellHarness();

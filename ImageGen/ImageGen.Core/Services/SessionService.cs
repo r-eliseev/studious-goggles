@@ -13,7 +13,8 @@ public sealed class SessionService(
     IImageFileStore files,
     ChatModelCatalogService chatModels,
     TimeProvider timeProvider,
-    IConversationSummaryRepository summaries)
+    IConversationSummaryRepository summaries,
+    SessionChangeNotifier changes)
 {
     public async Task<Session> CreateAsync(CancellationToken cancellationToken)
     {
@@ -48,6 +49,7 @@ public sealed class SessionService(
     {
         await sessions.DeleteAsync(sessionId, cancellationToken);
         await files.DeleteSessionFilesAsync(sessionId, cancellationToken);
+        changes.Notify(sessionId);
     }
 
     /// <summary>Validates and saves new settings. Duplicate image models are removed, keeping the order.</summary>
@@ -75,6 +77,7 @@ public sealed class SessionService(
         };
         session.UpdatedAt = timeProvider.GetUtcNow();
         await sessions.UpdateAsync(session, cancellationToken);
+        changes.Notify(sessionId);
         return session;
     }
 
@@ -110,6 +113,7 @@ public sealed class SessionService(
         session.Settings.Parameters = parameters;
         session.UpdatedAt = timeProvider.GetUtcNow();
         await sessions.UpdateAsync(session, cancellationToken);
+        changes.Notify(sessionId);
         return session;
     }
 
@@ -175,6 +179,7 @@ public sealed class SessionService(
         var trimmed = title.Trim();
         session.Title = trimmed.Length > Session.MaxTitleLength ? trimmed[..Session.MaxTitleLength] : trimmed;
         await sessions.UpdateAsync(session, cancellationToken);
+        changes.Notify(sessionId);
         return session;
     }
 
@@ -191,6 +196,7 @@ public sealed class SessionService(
         }
 
         await sessions.UpdateAsync(session, cancellationToken);
+        changes.Notify(sessionId);
     }
 
     public async Task<SessionTimeline> GetTimelineAsync(Guid sessionId, CancellationToken cancellationToken)

@@ -23,7 +23,7 @@ ADR 0005 требует представить OpenRouter как background job.
 - Terminal jobs сохраняются 10 минут (`TerminalRetention`), затем удаляются sweep при Submit/Poll/Cancel; deterministic TimeProvider tests, no timer sleeps.
 
 ## Анализ
-Новый ADR задачи 130 (фактический свободный номер выбирается при её реализации) заменяет несовместимые детали ADR0005 и фиксирует один вариант: общий adapter OpenRouter/OpenAI-compatible, semaphore только GenerationService, без queue-position обещания, terminal TTL 10 минут. Эта задача реализует state machine; normal orchestration path удалит 129. Adapter не занимается catalog/chat, persistence/files или provider concurrency. ProviderJobHandle использует ProviderId+RequestId; URL fields получают безопасные local `memory://` values и никогда не идут в HTTP/FalUrlValidator.
+Принятый [ADR 0020](../../docs/decisions/0020-common-in-memory-queued-adapter.md) заменяет несовместимые детали ADR0005 и фиксирует один вариант: общий adapter OpenRouter/OpenAI-compatible, semaphore только GenerationService, без queue-position обещания, terminal TTL 10 минут. Эта задача реализует state machine; normal orchestration path удалит 129. Adapter не занимается catalog/chat, persistence/files или provider concurrency. ProviderJobHandle использует ProviderId+RequestId; URL fields получают безопасные local `memory://` values и никогда не идут в HTTP/FalUrlValidator.
 
 Нужность: общий adapter устраняет дублирование фонового выполнения OpenRouter и OpenAI-compatible, сохраняя один orchestration path. 122 не предпосылка: adapter не сохраняет файлы/БД; его файлы не пересекаются с 111–125. После 130 можно выполнять независимо от lifecycle-цепочки GenerationService.
 

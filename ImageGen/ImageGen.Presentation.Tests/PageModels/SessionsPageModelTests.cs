@@ -29,6 +29,9 @@ public class SessionsPageModelTests : IDisposable
     private readonly IModelProvider _provider = Substitute.For<IModelProvider>();
     private readonly INavigationService _navigation = Substitute.For<INavigationService>();
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
+    private readonly ISearchTextSource _searchTexts = Substitute.For<ISearchTextSource>();
+    private readonly IMainThread _mainThread = Substitute.For<IMainThread>();
+    private readonly SessionChangeNotifier _changes = new();
 
     public SessionsPageModelTests()
     {
@@ -37,6 +40,8 @@ public class SessionsPageModelTests : IDisposable
             .Returns(Task.FromResult(0));
         _secrets.GetAsync(SecretNames.OpenRouterApiKey, Arg.Any<CancellationToken>()).Returns("sk-or-saved");
         _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([]);
+        _mainThread.When(thread => thread.BeginInvokeOnMainThread(Arg.Any<Action>()))
+            .Do(call => call.Arg<Action>().Invoke());
     }
 
     public void Dispose()
@@ -125,6 +130,119 @@ public class SessionsPageModelTests : IDisposable
         await model.OnAppearingAsync();
 
         Assert.Single(model.Sessions);
+    }
+
+    [Fact]
+    public async Task SessionChanged_NewTitle_UpdatesExistingRow()
+    {
+        var session = NewSession("New session", DateTimeOffset.UtcNow);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
+        _sessionRepository.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        _runs.CountRunsBySessionAsync(Arg.Any<CancellationToken>()).Returns(new Dictionary<Guid, int>());
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+        var row = Assert.Single(model.Sessions);
+        session.Title = "blue moon";
+
+        _changes.Notify(session.Id);
+        await WaitUntilAsync(() => row.Title == "blue moon");
+
+        Assert.Same(row, Assert.Single(model.Sessions));
+    }
+
+    [Fact]
+    public async Task SessionChanged_UnknownSession_InsertsInTimestampOrder()
+    {
+        var first = NewSession("First", DateTimeOffset.UtcNow);
+        var added = NewSession("Added", first.UpdatedAt.AddMinutes(-1));
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([first]);
+        _sessionRepository.GetAsync(added.Id, Arg.Any<CancellationToken>()).Returns(added);
+        _runs.CountRunsBySessionAsync(Arg.Any<CancellationToken>()).Returns(new Dictionary<Guid, int>());
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        _changes.Notify(added.Id);
+        await WaitUntilAsync(() => model.Sessions.Count == 2);
+
+        Assert.Equal([first.Id, added.Id], model.Sessions.Select(item => item.Id));
+    }
+
+    [Fact]
+    public async Task SessionChanged_DeletedSession_RemovesRowFromEveryList()
+    {
+        var session = NewSession("Deleted", DateTimeOffset.UtcNow);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
+        _sessionRepository.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns((Session?)null);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        _changes.Notify(session.Id);
+        await WaitUntilAsync(() => model.Sessions.Count == 0);
+
+        Assert.Empty(model.Today);
+        Assert.Empty(model.Earlier);
+        Assert.Empty(model.SearchResults);
+    }
+
+    [Fact]
+    public async Task SessionChanged_WhileSearching_KeepsQueryAndResultsAndUpdatesTitle()
+    {
+        var session = NewSession("Animals", DateTimeOffset.UtcNow);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
+        _sessionRepository.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        _runs.CountRunsBySessionAsync(Arg.Any<CancellationToken>()).Returns(new Dictionary<Guid, int>());
+        _searchTexts.ListAllAsync(Arg.Any<CancellationToken>()).Returns([new SearchText(session.Id, SearchTextKind.Prompt, "blue moon")]);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+        model.SearchText = "moon";
+        await WaitUntilAsync(() => model.SearchResults.Count == 1);
+        session.Title = "blue moon";
+
+        _changes.Notify(session.Id);
+        await WaitUntilAsync(() => model.Sessions.Single().Title == "blue moon");
+
+        Assert.Equal("moon", model.SearchText);
+        Assert.Same(model.Sessions.Single(), Assert.Single(model.SearchResults));
+    }
+
+    [Fact]
+    public async Task SessionChanged_EarlierUpdatedToday_MovesToTopOfToday()
+    {
+        var now = new DateTimeOffset(2026, 10, 28, 12, 0, 0, TimeSpan.Zero);
+        var clock = new FixedClock(now);
+        var today = NewSession("Today", now.AddMinutes(-5));
+        var earlier = NewSession("Earlier", now.AddDays(-1));
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([today, earlier]);
+        _sessionRepository.GetAsync(earlier.Id, Arg.Any<CancellationToken>()).Returns(earlier);
+        _runs.CountRunsBySessionAsync(Arg.Any<CancellationToken>()).Returns(new Dictionary<Guid, int>());
+        var model = CreateModel(clock);
+        await model.OnAppearingAsync();
+        earlier.UpdatedAt = now;
+
+        _changes.Notify(earlier.Id);
+        await WaitUntilAsync(() => model.Today.FirstOrDefault()?.Id == earlier.Id);
+
+        Assert.DoesNotContain(model.Earlier, item => item.Id == earlier.Id);
+        Assert.Equal(earlier.Id, model.Sessions[0].Id);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_Twice_OnlySubscribesOnceToSessionChanges()
+    {
+        var session = NewSession("One", DateTimeOffset.UtcNow);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
+        _sessionRepository.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        _runs.CountRunsBySessionAsync(Arg.Any<CancellationToken>()).Returns(new Dictionary<Guid, int>());
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+        await model.OnAppearingAsync();
+
+        _changes.Notify(session.Id);
+        await WaitUntilAsync(() => rowGetCalls(session.Id) == 1);
+
+        int rowGetCalls(Guid id) => _sessionRepository.ReceivedCalls()
+            .Count(call => call.GetMethodInfo().Name == nameof(ISessionRepository.GetAsync)
+                && (Guid)call.GetArguments()[0]! == id);
     }
 
     [Fact]
@@ -442,15 +560,14 @@ public class SessionsPageModelTests : IDisposable
         Assert.True(condition());
     }
 
-    private readonly ISearchTextSource _searchTexts = Substitute.For<ISearchTextSource>();
     private readonly CurrentSessionTracker _tracker = new();
 
     private SessionsPageModel CreateModel(TimeProvider? time = null)
     {
         var catalog = new ChatModelCatalogService(ProviderDoubles.Router(), NullLogger<ChatModelCatalogService>.Instance);
-        var sessions = new SessionService(_sessionRepository, Substitute.For<IChatMessageRepository>(), _runs, _files, catalog, TimeProvider.System, Substitute.For<IConversationSummaryRepository>());
+        var sessions = new SessionService(_sessionRepository, Substitute.For<IChatMessageRepository>(), _runs, _files, catalog, TimeProvider.System, Substitute.For<IConversationSummaryRepository>(), _changes);
         var apiKeys = new ApiKeyService(ProviderDoubles.Router(_provider), _secrets, NullLogger<ApiKeyService>.Instance);
-        return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs, time ?? TimeProvider.System, _tracker, new SessionSearchService(_searchTexts));
+        return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs, time ?? TimeProvider.System, _tracker, new SessionSearchService(_searchTexts), _changes, _mainThread);
     }
 
     private static Session NewSession(string title, DateTimeOffset updatedAt) => new()
@@ -474,7 +591,7 @@ public class SessionsPageModelTests : IDisposable
             Substitute.For<ISeedSource>(),
             new AttachmentService(Substitute.For<IChatAttachmentRepository>(), Substitute.For<IImageFileStore>(), TimeProvider.System),
             TimeProvider.System,
-            NullLogger<GenerationService>.Instance);
+            NullLogger<GenerationService>.Instance, new SessionChangeNotifier());
         return new AppInitializer(_database, generation, ProviderDoubles.BuiltInRegistry());
     }
 }

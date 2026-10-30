@@ -53,7 +53,7 @@ public class ModelPickerPageModelTests
         _catalog = new ModelCatalogService(_providers, _modelRepository, NullLogger<ModelCatalogService>.Instance);
         var attachments = new AttachmentService(_chatAttachments, _files, time);
         _generations = new GenerationService(
-            _sessions, _runs, _providers, _files, _catalog, _seeds, attachments, time, NullLogger<GenerationService>.Instance);
+            _sessions, _runs, _providers, _files, _catalog, _seeds, attachments, time, NullLogger<GenerationService>.Instance, new SessionChangeNotifier());
 
         _source = Generation("vendor/alpha", seed: 33);
         _runs.GetGenerationAsync(_source.Id, Arg.Any<CancellationToken>()).Returns(_source);

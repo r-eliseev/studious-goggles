@@ -33,9 +33,237 @@ public class GenerationServiceTests
     private readonly IChatAttachmentRepository _chatAttachments = Substitute.For<IChatAttachmentRepository>();
     private readonly AttachmentService _attachments;
     private readonly GenerationService _service;
+    private readonly SessionChangeNotifier _changes = new();
     private readonly Session _session;
     private IReadOnlyList<Generation> _added = [];
     private readonly ConcurrentDictionary<Guid, Run> _savedRuns = new();
+
+    [Fact]
+    public async Task StopSessionAsync_TombstoneRejectsLaterRunBeforePersistence()
+    {
+        await _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken));
+
+        await _runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
+        _providers.DidNotReceive().GetImageProvider(Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task StartRunAsync_PreparationFailureReleasesStartLease()
+    {
+        _session.Settings.ImageModels = [];
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken));
+
+        await _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken)
+            .WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+        await _runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StopSessionAsync_WaitsForAdmittedStartThenCancelsItsJobs()
+    {
+        var addEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var allowAdd = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _runs.AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>())
+            .Returns(async call =>
+            {
+                addEntered.TrySetResult();
+                await allowAdd.Task.WaitAsync(call.Arg<CancellationToken>());
+            });
+        _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(call => Task.Delay(Timeout.Infinite, call.Arg<CancellationToken>())
+                .ContinueWith<ImageGenerationResult>(_ => new ImageGenerationResult(Image, "image/png", 0.014m), TaskScheduler.Default));
+
+        var start = _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await addEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var stop = _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+        Assert.False(stop.IsCompleted);
+        allowAdd.TrySetResult();
+        await start;
+        await stop.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        var eventCount = _events.Count;
+        await _service.WhenIdleAsync();
+        Assert.Equal(eventCount, _events.Count);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_CallerCancellationAfterReturn_DoesNotCancelJobs()
+    {
+        using var caller = new CancellationTokenSource();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<ImageGenerationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var tokens = new ConcurrentQueue<CancellationToken>();
+        var calls = 0;
+        _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(async call =>
+            {
+                tokens.Enqueue(call.Arg<CancellationToken>());
+                if (Interlocked.Increment(ref calls) == 4)
+                {
+                    entered.TrySetResult();
+                }
+
+                return await release.Task.WaitAsync(call.Arg<CancellationToken>());
+            });
+
+        await _service.StartRunAsync(_session.Id, "fox", caller.Token);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await caller.CancelAsync();
+
+        Assert.All(tokens, token => Assert.False(token.IsCancellationRequested));
+        release.TrySetResult(new ImageGenerationResult(Image, "image/png", 0.014m));
+        await _service.WhenIdleAsync();
+        Assert.Equal(4, _added.Count(g => g.Status == GenerationStatus.Succeeded));
+    }
+
+    [Fact]
+    public async Task StopSessionAsync_CancelledWaiterDoesNotCancelStopOperation()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<ImageGenerationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var calls = 0;
+        _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(async call =>
+            {
+                if (Interlocked.Increment(ref calls) == 4)
+                {
+                    entered.TrySetResult();
+                }
+
+                return await release.Task;
+            });
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        using var waiter = new CancellationTokenSource();
+        var firstWait = _service.StopSessionAsync(_session.Id, waiter.Token);
+        await waiter.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => firstWait);
+        var secondWait = _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+        Assert.False(secondWait.IsCompleted);
+
+        release.TrySetResult(new ImageGenerationResult(Image, "image/png", 0.014m));
+        await secondWait.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _files.DidNotReceive().SaveAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        Assert.DoesNotContain(_logger.Entries, entry => entry.Level >= LogLevel.Error);
+    }
+
+    [Fact]
+    public async Task StopSessionAsync_ObservesJobFailureInsteadOfReportingSuccess()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                entered.TrySetResult();
+                return Task.FromException(new IOException("job cleanup failed"));
+            });
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        var error = await Assert.ThrowsAnyAsync<Exception>(() =>
+            _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken));
+
+        var failures = error is AggregateException aggregate ? aggregate.Flatten().InnerExceptions : [error];
+        Assert.NotEmpty(failures);
+        Assert.All(failures, failure => Assert.Equal("job cleanup failed", failure.Message));
+    }
+
+    [Fact]
+    public async Task StopSessionAsync_OnlyCancelsJobsOfTargetSession()
+    {
+        var otherSession = new Session
+        {
+            Id = Guid.NewGuid(),
+            Title = "Other",
+            CreatedAt = Now,
+            UpdatedAt = Now,
+            Settings = new SessionSettings
+            {
+                ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)],
+                RunsPerModel = 1,
+                AssistantModel = new ModelRef(ProviderIds.OpenRouter, SessionSettings.DefaultAssistantModelId),
+            },
+        };
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _sessions.GetAsync(otherSession.Id, Arg.Any<CancellationToken>()).Returns(otherSession);
+        var allEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<ImageGenerationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var tokens = new ConcurrentQueue<CancellationToken>();
+        var calls = 0;
+        _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(async call =>
+            {
+                tokens.Enqueue(call.Arg<CancellationToken>());
+                if (Interlocked.Increment(ref calls) == 2)
+                {
+                    allEntered.TrySetResult();
+                }
+
+                return await release.Task.WaitAsync(call.Arg<CancellationToken>());
+            });
+
+        await _service.StartRunAsync(_session.Id, "first", TestContext.Current.CancellationToken);
+        await _service.StartRunAsync(otherSession.Id, "second", TestContext.Current.CancellationToken);
+        await allEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        await _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+
+        var observedTokens = tokens.ToArray();
+        Assert.Equal(2, observedTokens.Length);
+        Assert.Single(observedTokens, token => token.IsCancellationRequested);
+        Assert.Single(observedTokens, token => !token.IsCancellationRequested);
+        release.TrySetResult(new ImageGenerationResult(Image, "image/png", 0.014m));
+        await _service.WhenIdleAsync();
+    }
+
+    [Fact]
+    public async Task RecoverInterruptedAsync_TombstonedSession_SkipsPoll()
+    {
+        var generation = ResumableGeneration();
+        var queued = QueuedProviderThatFails(new ProviderException(ErrorKind.InvalidKey, "unused"));
+        _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns([generation]);
+        _providers.GetConnection("fal").Returns((IProviderConnection)queued);
+        await _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+
+        await _service.RecoverInterruptedAsync(TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        await queued.DidNotReceive().PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>());
+        await queued.DidNotReceive().SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RecoverInterruptedAsync_ConcurrentRecovery_RegistersWatcherOnlyOnce()
+    {
+        var generation = ResumableGeneration();
+        var pollEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<JobUpdate>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handle = Handle();
+        generation.JobJson = System.Text.Json.JsonSerializer.Serialize(handle);
+        _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns([generation]);
+        var connection = Substitute.For<IProviderConnection, IQueuedImageProvider>();
+        var queued = (IQueuedImageProvider)connection;
+        queued.PollAsync(handle, Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            pollEntered.TrySetResult();
+            return release.Task;
+        });
+        _providers.GetConnection("fal").Returns(connection);
+
+        await _service.RecoverInterruptedAsync(TestContext.Current.CancellationToken);
+        await pollEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _service.RecoverInterruptedAsync(TestContext.Current.CancellationToken);
+
+        await queued.Received(1).PollAsync(handle, Arg.Any<CancellationToken>());
+        release.TrySetResult(new JobUpdate(JobState.Failed, ErrorKind: ErrorKind.Unknown, ErrorMessage: "done"));
+        await _service.WhenIdleAsync();
+    }
 
     public GenerationServiceTests()
     {
@@ -77,7 +305,7 @@ public class GenerationServiceTests
 
         _attachments = new AttachmentService(_chatAttachments, _files, time);
         _service = new GenerationService(
-            _sessions, _runs, _providers, _files, catalog, _seeds, _attachments, time, _logger);
+            _sessions, _runs, _providers, _files, catalog, _seeds, _attachments, time, _logger, _changes);
         _service.GenerationUpdated += (_, e) => _events.Enqueue(e.Generation);
     }
 
@@ -114,7 +342,7 @@ public class GenerationServiceTests
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
         var traced = new GenerationService(
-            _sessions, _runs, _providers, _files, catalog, _seeds, _attachments, time, _logger, trace);
+            _sessions, _runs, _providers, _files, catalog, _seeds, _attachments, time, _logger, _changes, trace);
 
         await traced.StartRunAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
 

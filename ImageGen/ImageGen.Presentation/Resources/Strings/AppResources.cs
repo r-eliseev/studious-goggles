@@ -214,6 +214,8 @@ public static class AppResources
 
     public static string ModelsTitle => Get(nameof(ModelsTitle));
 
+    public static string ImageModelsTab => Get(nameof(ImageModelsTab));
+
     public static string ModelsSearchPlaceholder => Get(nameof(ModelsSearchPlaceholder));
 
     public static string RunsPerModelFormat => Get(nameof(RunsPerModelFormat));

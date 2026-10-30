@@ -10,6 +10,7 @@ using ImageGen.Core.Storage;
 using ImageGen.Core.Tests.TestDoubles;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute.ExceptionExtensions;
 
 namespace ImageGen.Core.Tests.Services;
 
@@ -78,6 +79,12 @@ public class AssistantServiceTests
                 _stored.Add(ci.Arg<ChatMessage>());
                 return Task.CompletedTask;
             });
+        _messages.AddUserWithAttachmentsAsync(Arg.Any<ChatMessage>(), Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                _stored.Add(ci.Arg<ChatMessage>());
+                return Task.CompletedTask;
+            });
         _messages.ListBySessionAsync(_session.Id, Arg.Any<CancellationToken>())
             .Returns(_ => Task.FromResult<IReadOnlyList<ChatMessage>>(_stored.ToList()));
         _runs.AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>())
@@ -94,10 +101,10 @@ public class AssistantServiceTests
         _files.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns([1, 2, 3]);
 
         var sessionService = new SessionService(
-            _sessions, _messages, _runs, _files, new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance), time, Substitute.For<IConversationSummaryRepository>());
+            _sessions, _messages, _runs, _files, new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance), time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier());
         var attachments = new AttachmentService(_chatAttachments, _files, time);
         _generations = new GenerationService(
-            _sessions, _runs, _providers, _files, catalog, _seeds, attachments, time, NullLogger<GenerationService>.Instance);
+            _sessions, _runs, _providers, _files, catalog, _seeds, attachments, time, NullLogger<GenerationService>.Instance, new SessionChangeNotifier());
         var chatModels = new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance);
         _summaries.GetAsync(_session.Id, Arg.Any<CancellationToken>()).Returns((ConversationSummary?)null);
         var correction = new TokenCorrection();
@@ -182,12 +189,28 @@ public class AssistantServiceTests
 
         var result = await _service.SendUserMessageAsync(_session.Id, "look at this", [attachment.Id], TestContext.Current.CancellationToken);
 
-        await _chatAttachments.Received(1).LinkToMessageAsync(
+        await _messages.Received(1).AddUserWithAttachmentsAsync(
+            Arg.Is<ChatMessage>(message => message.Id == result.UserMessage.Id),
             Arg.Is<IReadOnlyList<Guid>>(ids => ids.SequenceEqual(new[] { attachment.Id })),
-            result.UserMessage.Id,
             Arg.Any<CancellationToken>());
         var user = LastRequest.Messages.Last(m => m.Role == AssistantChatMessage.UserRole);
         Assert.Equal("data:image/png;base64,Bwc=", Assert.Single(user.ImageDataUrls));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_AtomicAcceptFails_DoesNotCallAssistantOrAddAssistantMessage()
+    {
+        var failure = new InvalidOperationException("could not accept message");
+        _messages.AddUserWithAttachmentsAsync(Arg.Any<ChatMessage>(), Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(failure);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _service.SendUserMessageAsync(_session.Id, "question", TestContext.Current.CancellationToken));
+
+        Assert.Same(failure, error);
+        await _chat.DidNotReceive().CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
+        await _sessions.DidNotReceive().UpdateAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>());
+        Assert.Empty(_stored);
     }
 
     [Fact]

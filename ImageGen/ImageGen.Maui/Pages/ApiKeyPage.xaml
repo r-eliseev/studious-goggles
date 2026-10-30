@@ -6,6 +6,7 @@
              xmlns:appearance="clr-namespace:ImageGen.Presentation.Appearance"
              x:Class="ImageGen.Maui.Pages.ApiKeyPage"
              x:DataType="pm:ApiKeyPageModel"
+             SafeAreaEdges="All"
              Title="{x:Static strings:AppResources.ApiKeyTitle}">
     <ScrollView>
         <Border StyleClass="card"

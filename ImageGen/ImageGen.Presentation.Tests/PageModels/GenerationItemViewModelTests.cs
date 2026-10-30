@@ -51,6 +51,62 @@ public class GenerationItemViewModelTests
         Assert.False(card.ShowActionsCommand.CanExecute(null));
     }
 
+    [Theory]
+    [InlineData(GenerationStatus.Succeeded)]
+    [InlineData(GenerationStatus.Failed)]
+    [InlineData(GenerationStatus.Filtered)]
+    [InlineData(GenerationStatus.Cancelled)]
+    public void ShowActions_FinishedStatus_CanExecute(GenerationStatus status)
+    {
+        var generation = BaseGeneration();
+        generation.Status = status;
+
+        Assert.True(CardOf(generation).ShowActionsCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void ShowActions_RunningThenSucceeded_RaisesCanExecuteChanged()
+    {
+        var generation = BaseGeneration();
+        generation.Status = GenerationStatus.Running;
+        var card = CardOf(generation);
+        var changes = 0;
+        card.ShowActionsCommand.CanExecuteChanged += (_, _) => changes++;
+        generation.Status = GenerationStatus.Succeeded;
+
+        card.Update(generation);
+
+        Assert.True(card.ShowActionsCommand.CanExecute(null));
+        Assert.Equal(1, changes);
+    }
+
+    [Fact]
+    public async Task ShowActions_AfterCancel_CanExecuteAgain()
+    {
+        var dialogs = Substitute.For<IDialogService>();
+        dialogs.ChooseAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>())
+            .Returns((string?)null);
+        var card = CardWithActions(dialogs);
+
+        await card.ShowActionsCommand.ExecuteAsync(null);
+
+        Assert.True(card.ShowActionsCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task ShowActions_DialogThrows_CommandNotLeftRunning()
+    {
+        var dialogs = Substitute.For<IDialogService>();
+        dialogs.ChooseAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>())
+            .Returns<Task<string?>>(_ => throw new InvalidOperationException("dialog failure"));
+        var card = CardWithActions(dialogs);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => card.ShowActionsCommand.ExecuteAsync(null));
+
+        Assert.False(card.ShowActionsCommand.IsRunning);
+        Assert.True(card.ShowActionsCommand.CanExecute(null));
+    }
+
     [Fact]
     public void Details_OnlyForFailed()
     {

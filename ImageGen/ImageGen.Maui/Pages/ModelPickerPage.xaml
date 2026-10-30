@@ -6,6 +6,7 @@
              x:Class="ImageGen.Maui.Pages.ModelPickerPage"
              x:Name="Page"
              x:DataType="pm:ModelPickerPageModel"
+             SafeAreaEdges="All"
              Title="{x:Static strings:AppResources.ModelPickerTitle}">
     <Grid RowDefinitions="Auto,*" Padding="16" RowSpacing="8">
         <ActivityIndicator Grid.Row="0"

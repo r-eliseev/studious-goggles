@@ -28,20 +28,19 @@ public class ChatAttachmentRepositoryTests
     }
 
     [Fact]
-    public async Task LinkToMessageAsync_ThenListByMessage_ReturnsLinkedAttachments()
+    public async Task AddUserWithAttachmentsAsync_ThenListByMessage_ReturnsLinkedAttachments()
     {
         var ct = TestContext.Current.CancellationToken;
         await using var test = await TestDatabase.CreateAsync(ct);
         var sessionId = await CreateSessionAsync(test, ct);
         var message = new ChatMessage { Id = Guid.NewGuid(), SessionId = sessionId, Role = ChatRole.User, Text = "x", CreatedAt = Now };
-        await new ChatMessageRepository(test.Database).AddAsync(message, ct);
         var repository = new ChatAttachmentRepository(test.Database);
         var first = Attachment(sessionId, "images/a/1.png");
         var second = Attachment(sessionId, "images/a/2.png");
         await repository.AddAsync(first, ct);
         await repository.AddAsync(second, ct);
 
-        await repository.LinkToMessageAsync([first.Id, second.Id], message.Id, ct);
+        await new ChatMessageRepository(test.Database).AddUserWithAttachmentsAsync(message, [first.Id, second.Id], ct);
 
         var linked = await repository.ListByMessageAsync(message.Id, ct);
         Assert.Equal([first.Id, second.Id], linked.Select(a => a.Id).OrderBy(id => id == first.Id ? 0 : 1));

@@ -1,6 +1,6 @@
 ---
 id: 130
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -47,5 +47,11 @@ bash scripts/check.sh
 После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 130`, затем `bash scripts/check.sh`; отправить PR по `docs/tasks.md`.
 
 ## Отчёт
+
+- Подготовлен предложенный ADR 0020 с общим адаптером и его контрактом: semaphore в GenerationService, ожидание до submit без queue position, разделённая ответственность cancellation, TTL terminal snapshot 10 минут, process-local restart как Interrupted, интервалы polling и атомарное включение production path в 129.
+- ADR 0019 уже занят, поэтому использован следующий свободный номер 0020. Владелец принял ADR 0020 в чате 2026-10-30; статус ADR 0020 изменён на «принято», а ADR 0005 — на «заменено на 0020» с прямой ссылкой. Исторический текст ADR 0005 сохранён.
+- Обновлены `docs/status.md` и ссылка на утверждённый ADR в плане задачи 102.
+- Проверки: `bash scripts/check.sh`.
+- Код не менялся; продолжение задач 102/128/129 идёт по планам, без смены их границ.
 
 ## Комментарии

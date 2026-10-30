@@ -7,6 +7,7 @@
              xmlns:controls="clr-namespace:ImageGen.Maui.Controls"
              x:Class="ImageGen.Maui.Pages.SessionsPage"
              x:DataType="pm:SessionsPageModel"
+             SafeAreaEdges="All"
              Title="{x:Static strings:AppResources.SessionsTitle}">
     <ContentPage.MenuBarItems>
         <MenuBarItem Text="{x:Static strings:AppResources.MenuFile}">

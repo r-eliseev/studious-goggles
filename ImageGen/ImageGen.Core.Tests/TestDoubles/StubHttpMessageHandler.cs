@@ -6,12 +6,14 @@ namespace ImageGen.Core.Tests.TestDoubles;
 /// <summary>Returns a prepared response and records every request with its body.</summary>
 public sealed class StubHttpMessageHandler : HttpMessageHandler
 {
-    private readonly Func<HttpRequestMessage, HttpResponseMessage> _respond;
+    private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _respond;
 
     public StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> respond)
     {
-        _respond = respond;
+        _respond = (request, _) => Task.FromResult(respond(request));
     }
+
+    public StubHttpMessageHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond) => _respond = respond;
 
     public List<HttpRequestMessage> Requests { get; } = [];
 
@@ -29,6 +31,6 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler
     {
         Requests.Add(request);
         RequestBodies.Add(request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken));
-        return _respond(request);
+        return await _respond(request, cancellationToken);
     }
 }

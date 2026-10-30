@@ -71,8 +71,4 @@ public sealed class AttachmentService(IChatAttachmentRepository attachments, IIm
     public async Task<IReadOnlyList<Guid>> ListIdsByMessageAsync(Guid messageId, CancellationToken cancellationToken) =>
         (await attachments.ListByMessageAsync(messageId, cancellationToken)).Select(attachment => attachment.Id).ToList();
 
-    public Task LinkToMessageAsync(IReadOnlyList<Guid> attachmentIds, Guid messageId, CancellationToken cancellationToken) =>
-        attachmentIds.Count == 0
-            ? Task.CompletedTask
-            : attachments.LinkToMessageAsync(attachmentIds, messageId, cancellationToken);
 }

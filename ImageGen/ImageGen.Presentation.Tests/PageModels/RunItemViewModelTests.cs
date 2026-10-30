@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Storage;
 using ImageGen.Presentation.PageModels;
@@ -61,6 +62,52 @@ public class RunItemViewModelTests
         Assert.Equal(
             string.Format(AppResources.RunHeaderFormat, 2, 3, 2, 6, "0.028"),
             item.HeaderText);
+    }
+
+    [Fact]
+    public void HeaderText_UpdatesAndNotifiesWhenCardChanges()
+    {
+        var first = Card("vendor/a", GenerationStatus.Running, null);
+        var second = Card("vendor/a", GenerationStatus.Running, null);
+        var item = new RunItemViewModel(MakeRun(), [first, second], Copy());
+        var notifications = new List<string?>();
+        item.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
+        second.Update(new Generation
+        {
+            Id = second.Id,
+            RunId = Guid.NewGuid(),
+            SessionId = Guid.NewGuid(),
+            ProviderId = "openrouter",
+            ModelId = "vendor/a",
+            Prompt = "red fox",
+            Seed = 1,
+            SeedApplied = true,
+            Status = GenerationStatus.Succeeded,
+            CostUsd = 0.014m,
+            CreatedAt = Now,
+            SortOrder = 0,
+        });
+        var completed = new Generation
+        {
+            Id = first.Id,
+            RunId = Guid.NewGuid(),
+            SessionId = Guid.NewGuid(),
+            ProviderId = "openrouter",
+            ModelId = "vendor/a",
+            Prompt = "red fox",
+            Seed = 1,
+            SeedApplied = true,
+            Status = GenerationStatus.Succeeded,
+            CostUsd = 0.014m,
+            CreatedAt = Now,
+            SortOrder = 0,
+        };
+
+        first.Update(completed);
+
+        Assert.Contains("2 of 2", item.HeaderText);
+        Assert.EndsWith("$0.014", item.HeaderText, StringComparison.Ordinal);
+        Assert.Contains(nameof(RunItemViewModel.HeaderText), notifications);
     }
 
     private static GenerationItemViewModel Card(string modelId, GenerationStatus status, decimal? cost)

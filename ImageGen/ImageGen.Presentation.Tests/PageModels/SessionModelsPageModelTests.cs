@@ -48,7 +48,7 @@ public class SessionModelsPageModelTests
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
         _chatModels = new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance);
-        _sessionService = new SessionService(_sessions, _messages, _runs, _files, _chatModels, time, Substitute.For<IConversationSummaryRepository>());
+        _sessionService = new SessionService(_sessions, _messages, _runs, _files, _chatModels, time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier());
         _catalog = new ModelCatalogService(ProviderDoubles.Router(_provider), _modelRepository, NullLogger<ModelCatalogService>.Instance);
         _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ChatModel>>(
         [
@@ -75,6 +75,96 @@ public class SessionModelsPageModelTests
         _sessions.UpdateAsync(Arg.Do<Session>(saved => _saved = saved), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
         _modelRepository.ListAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns([Alpha, Beta, Gamma]);
         _provider.ListImageModelsAsync(Arg.Any<CancellationToken>()).Returns([Gamma, Alpha, Beta]);
+    }
+
+    [Fact]
+    public void SelectedTab_NewPageModel_IsImageModels()
+    {
+        var model = CreateModel();
+
+        Assert.Equal(SessionModelsTab.ImageModels, model.SelectedTab);
+        Assert.True(model.IsImageModelsTabSelected);
+        Assert.False(model.IsAssistantTabSelected);
+        Assert.Equal(0, model.SelectedTabIndex);
+    }
+
+    [Fact]
+    public void ShowAssistantModelCommand_SwitchesTabAndNotifies()
+    {
+        var model = CreateModel();
+        var changed = new List<string?>();
+        model.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+
+        model.ShowAssistantModelCommand.Execute(null);
+
+        Assert.Equal(SessionModelsTab.AssistantModel, model.SelectedTab);
+        Assert.False(model.IsImageModelsTabSelected);
+        Assert.True(model.IsAssistantTabSelected);
+        Assert.Equal(1, model.SelectedTabIndex);
+        Assert.Contains(nameof(model.IsImageModelsTabSelected), changed);
+        Assert.Contains(nameof(model.IsAssistantTabSelected), changed);
+        Assert.Contains(nameof(model.SelectedTabIndex), changed);
+    }
+
+    [Fact]
+    public void SelectedTabIndex_One_SelectsAssistantTab()
+    {
+        var model = CreateModel();
+
+        model.SelectedTabIndex = 1;
+
+        Assert.Equal(SessionModelsTab.AssistantModel, model.SelectedTab);
+    }
+
+    [Fact]
+    public void SelectedTabIndex_OutOfRange_KeepsTab()
+    {
+        var model = CreateModel();
+
+        model.SelectedTabIndex = 5;
+
+        Assert.Equal(SessionModelsTab.ImageModels, model.SelectedTab);
+    }
+
+    [Fact]
+    public async Task SwitchTabs_KeepsSelectionOfBothTabs()
+    {
+        var model = await OpenAsync();
+        model.Models.Single(row => row.Id == Alpha.Id).IsSelected = true;
+
+        model.ShowAssistantModelCommand.Execute(null);
+        model.AssistantModels.Single(row => row.Reference.ModelId == "vendor/zed").SelectCommand.Execute(null);
+        model.ShowImageModelsCommand.Execute(null);
+        await model.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal([Ref(Alpha.Id), Ref(Beta.Id), Ref(RemovedModel)], _saved!.Settings.ImageModels);
+        Assert.Equal(Ref("vendor/zed"), _saved.Settings.AssistantModel);
+    }
+
+    [Fact]
+    public async Task SearchText_OnAssistantTab_FiltersBothLists()
+    {
+        var model = await OpenAsync();
+        model.ShowAssistantModelCommand.Execute(null);
+
+        model.SearchText = "zed";
+
+        Assert.Empty(model.Models);
+        Assert.Equal(["vendor/zed"], model.AssistantModels.Select(row => row.Reference.ModelId));
+    }
+
+    [Fact]
+    public void TabAutomationNames_MarkOnlySelectedTab()
+    {
+        var model = CreateModel();
+
+        Assert.Contains(AppResources.AssistantSelected, model.ImageModelsTabAutomationName);
+        Assert.DoesNotContain(AppResources.AssistantSelected, model.AssistantTabAutomationName);
+
+        model.ShowAssistantModelCommand.Execute(null);
+
+        Assert.DoesNotContain(AppResources.AssistantSelected, model.ImageModelsTabAutomationName);
+        Assert.Contains(AppResources.AssistantSelected, model.AssistantTabAutomationName);
     }
 
     [Fact]

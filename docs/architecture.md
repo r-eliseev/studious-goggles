@@ -40,7 +40,7 @@ ImageGen/
     OpenRouter/                    OpenRouterClient (картинки и чат)
     OpenAiCompatible/              OpenAiCompatibleClient (картинки и чат), OpenAiChatWire (формат chat/completions)
     AnthropicCompatible/           AnthropicCompatibleClient (только чат, Messages API)
-    Services/                      ApiKeyService, ModelCatalogService, SessionService, TimelineOrdering, GenerationService,
+    Services/                      ApiKeyService, ModelCatalogService, SessionService, SessionChangeNotifier, TimelineOrdering, GenerationService,
                                    AssistantService, AssistantPrompts, ISeedSource, RandomSeedSource,
                                    ConversationSummaryService (сводка старой истории в фоне; одна задача на сессию),
                                    AttachmentService (вложения, ADR 0012), ImageDescriptionService (ADR 0013),
@@ -69,7 +69,7 @@ ImageGen/
                                    Services/Secrets/ (DesktopSecretStore и бэкенды: SecretServiceBackend для Linux,
                                    DpapiSecretBackend для Windows, KeychainSecretBackend для macOS; ADR 0008)
   ImageGen.Avalonia.Tests/         headless (Avalonia.Headless.XUnit), xunit.v3 3.2.2 (ADR 0007)
-  ImageGen.Maui/                   MAUI: Pages/, Controls/ (SessionsListView, StarterExamples, ChatEditor), PageModels/ (только
+  ImageGen.Maui/                   MAUI: Pages/, Controls/ (SessionsListView, StarterExamples, ChatEditor, SessionModelsView — общий экран моделей страницы и панели), PageModels/ (только
                                    ChatItemTemplateSelector), Services/ (MauiSecretStore, MauiAppPaths, MauiMainThread,
                                    Shell-реализации, буфер, выбор файлов, MauiImageSaver, MauiAppearanceApplier), Converters/,
                                    Platforms/
@@ -91,7 +91,7 @@ ImageGen/
 
 **Прогон.** `GenerationService` берёт модели и N из настроек сессии, выбирает N сидов (`ISeedSource`), создаёт генерации «модель × сид» в статусе «в очереди» одной транзакцией и запускает их параллельно (не больше 4 одновременно). Путь генерации зависит от провайдера. OpenRouter и OpenAI-совместимые: «идёт» → `IImageGenerator.GenerateAsync` (`POST /api/v1/images`, синхронно) → файл через `IImageFileStore` → запись в БД → событие `GenerationUpdated`. Провайдер с очередью (`IQueuedImageProvider`, сейчас fal): submit → хэндл задания сохраняется в БД → `ProviderJobPoller` опрашивает до конечного состояния → файл, БД, событие. При старте `RecoverInterruptedAsync` снова следит за заданиями с сохранённым хэндлом (без повторного submit), задания провайдера, которого больше нет в конфигурации, завершает «ModelUnavailable», остальные незавершённые помечает «Interrupted». Ошибка самого опроса завершает генерацию: «Moderated» — «отфильтровано», остальные ошибки провайдера — «ошибка» с его кодом; ошибка обработки результата (файл, сохранение) ошибкой опроса не считается. Отказ модерации (403 с `metadata.reasons`) → «отфильтровано».
 
-**Обновление экрана.** `ChatPageModel` после каждого своего действия перечитывает ленту сессии (`SessionService.GetTimelineAsync`), а событие `GenerationUpdated` обновляет одну карточку в UI-потоке (`IMainThread.BeginInvokeOnMainThread`; реализации `MauiMainThread` и `AvaloniaMainThread`).
+**Обновление экрана.** `ChatPageModel` после каждого своего действия перечитывает ленту сессии (`SessionService.GetTimelineAsync`), а событие `GenerationUpdated` обновляет одну карточку в UI-потоке (`IMainThread.BeginInvokeOnMainThread`; реализации `MauiMainThread` и `AvaloniaMainThread`). `SessionService` и `GenerationService` сообщают об изменении сессии через `SessionChangeNotifier`, и `SessionsPageModel` перечитывает одну сессию и обновляет её строку в UI-потоке.
 
 ## Скелет v0.1: хранение
 SQLite-файл `imagegen.db` в `IAppPaths.DataDirectory`, схема в `ImageGen.Data/Migrations/NNNN_имя.sql` — встроенные ресурсы, применяются по номеру без списка в коде (`Migrations.cs`, ADR 0002). Картинки: `images/<sessionId>/<generationId>.<ext>` в той же папке; в БД хранится относительный путь. Вложения сообщений (картинки, которые пользователь прикрепил в чате, ADR 0012) лежат в `images/<sessionId>/attachments/<attachmentId>.<ext>`, строки в `chat_attachments`. Ключ OpenRouter хранится только за `ISecretStore` и в открытом виде не попадает ни в БД, ни в настройки, ни в файлы: в MAUI — `SecureStorage` (`MauiSecretStore`), в Avalonia — `DesktopSecretStore` (Secret Service на Linux, DPAPI на Windows, Keychain на macOS; без них — только в памяти до выхода, ADR 0008).

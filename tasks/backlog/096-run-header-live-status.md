@@ -1,6 +1,6 @@
 ---
 id: 096
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -72,6 +72,13 @@ bash scripts/check.sh
 Файлы: `ImageGen/ImageGen.Presentation/PageModels/RunItemViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/GenerationItemViewModel.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/RunItemViewModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/GenerationItemViewModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ChatPageModelTests.cs`, `tasks/v0.1/016-skeleton-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`, `tasks/backlog/140-*.md`; при необходимости `docs/specs/chat-sessions.md`.
 
 ## Отчёт
+
+- `RunItemViewModel` стал `ObservableObject`; при изменении `StatusKind`, `CostUsd`, `ModelText` или общем уведомлении карточки пересчитывает `HeaderText`. MAUI и Avalonia уже привязаны к этому свойству и подхватывают `PropertyChanged`.
+- Добавлены unit-тест `RunItemViewModelTests.HeaderText_UpdatesAndNotifiesWhenCardChanges` и интеграционный `ChatPageModelTests.GeneratingCard_Done_UpdatesRunHeader`; тот же объект строки после завершения генераций показывает число готовых и сумму известных цен. Восстановление проверяется существующим тестом конструктора/карточек из сохранённых данных; формула общая.
+- Спецификация S3.9 уточняет поведение сводки. Сценарий живой проверки добавлен в ручные задачи 016, 046 и 140.
+- Проверки: Presentation.Tests 303/303; Avalonia.Tests 125 passed / 2 skipped; Avalonia build; MAUI Android build (target SDK 36); `dotnet format` Presentation и Presentation.Tests; `git diff --check`; `bash scripts/check.sh`.
+- `dotnet test --project` в этой среде выдаёт handshake failure до запуска тестов; тесты запускались собранным xUnit v3 apphost.
+- Android, Windows и Avalonia-окно: живое обновление сводки не проверено вручную, проверить владельцу.
 
 ## Комментарии
 

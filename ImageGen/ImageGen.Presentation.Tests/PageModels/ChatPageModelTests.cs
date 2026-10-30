@@ -78,6 +78,15 @@ public class ChatPageModelTests
 
             return Task.CompletedTask;
         });
+        _messageRepository.AddUserWithAttachmentsAsync(Arg.Any<ChatMessage>(), Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<CancellationToken>()).Returns(ci =>
+        {
+            lock (_gate)
+            {
+                _messages.Add(ci.Arg<ChatMessage>());
+            }
+
+            return Task.CompletedTask;
+        });
         _messageRepository.ListBySessionAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(ci =>
         {
             var sessionId = ci.Arg<Guid>();
@@ -147,7 +156,7 @@ public class ChatPageModelTests
         _sessionService = new SessionService(
             _sessionRepository, _messageRepository, _runRepository, _files,
             new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),
-            time, _summaries);
+            time, _summaries, new SessionChangeNotifier());
         _attachments = new AttachmentService(_chatAttachments, _files, time);
         _descriptions = new ImageDescriptionService(
             _sessionRepository, _runRepository, ProviderDoubles.Router(chat: _chat),
@@ -157,7 +166,7 @@ public class ChatPageModelTests
             .Returns(ci => $"images/s/attachments/{ci.ArgAt<Guid>(1):N}.png");
         _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
         _generationService = new GenerationService(
-            _sessionRepository, _runRepository, ProviderDoubles.Router(_generator), _files, catalog, _seeds, _attachments, time, NullLogger<GenerationService>.Instance);
+            _sessionRepository, _runRepository, ProviderDoubles.Router(_generator), _files, catalog, _seeds, _attachments, time, NullLogger<GenerationService>.Instance, new SessionChangeNotifier());
         _assistant = new AssistantService(
             _sessionService, _messageRepository, _runRepository, ProviderDoubles.Router(chat: _chat), _generationService,
             new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),
@@ -645,9 +654,9 @@ public class ChatPageModelTests
         await _model.SendCommand.ExecuteAsync(null);
 
         Assert.Empty(_model.PendingAttachments);
-        await _chatAttachments.Received(1).LinkToMessageAsync(
+        await _messageRepository.Received(1).AddUserWithAttachmentsAsync(
+            Arg.Any<ChatMessage>(),
             Arg.Is<IReadOnlyList<Guid>>(ids => ids.Contains(attachmentId)),
-            Arg.Any<Guid>(),
             Arg.Any<CancellationToken>());
     }
 
@@ -760,18 +769,23 @@ public class ChatPageModelTests
     }
 
     [Fact]
-    public async Task SendCommand_AssistantFailure_RestoresTextShowsAlertAndStopsBusy()
+    public async Task SendCommand_PreAcceptFailure_RestoresTextAndAttachments()
     {
-        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
-            .ThrowsAsync(new InvalidOperationException("no network"));
+        _messageRepository.AddUserWithAttachmentsAsync(Arg.Any<ChatMessage>(), Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("database unavailable"));
         await _model.OnAppearingAsync();
+        PickNextImage();
+        await _model.AttachImageCommand.ExecuteAsync(null);
+        var attachment = _model.PendingAttachments.Single();
         _model.InputText = "draw a fox";
 
         await _model.SendCommand.ExecuteAsync(null);
 
         Assert.Equal("draw a fox", _model.InputText);
+        Assert.Equal(attachment, Assert.Single(_model.PendingAttachments));
         Assert.False(_model.IsBusy);
-        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, "no network");
+        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, "database unavailable");
+        await _chat.DidNotReceive().CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -828,6 +842,35 @@ public class ChatPageModelTests
             Assert.Equal("/data/images/s/g.png", card.ImageFilePath);
         });
         Assert.Same(item, _model.Items.Last());
+    }
+
+    [Fact]
+    public async Task GeneratingCard_Done_UpdatesRunHeader()
+    {
+        var allEntered = new TaskCompletionSource();
+        var release = new TaskCompletionSource<ImageGenerationResult>();
+        var entered = 0;
+        _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            if (Interlocked.Increment(ref entered) == 2)
+            {
+                allEntered.TrySetResult();
+            }
+
+            return release.Task;
+        });
+        await _model.OnAppearingAsync();
+        await _generationService.StartRunAsync(_session.Id, "red fox", TestContext.Current.CancellationToken);
+        await allEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _model.ReloadAsync();
+        var item = Assert.IsType<RunItemViewModel>(_model.Items.Last());
+
+        release.SetResult(new ImageGenerationResult(Image, "image/png", 0.014m));
+        await _generationService.WhenIdleAsync();
+
+        Assert.Same(item, _model.Items.Last());
+        Assert.Contains("2 of 2", item.HeaderText);
+        Assert.EndsWith("$0.014", item.HeaderText, StringComparison.Ordinal);
     }
 
     [Fact]

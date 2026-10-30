@@ -141,19 +141,11 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
 
     public async Task<CancelOutcome> CancelAsync(ProviderJobHandle handle, CancellationToken cancellationToken)
     {
-        var message = await CreateAuthorizedRequestAsync(HttpMethod.Put, handle.CancelUrl, null, cancellationToken);
-        HttpResponseMessage response;
+        using var message = await CreateAuthorizedRequestAsync(HttpMethod.Put, handle.CancelUrl, null, cancellationToken);
+        using var timeout = CreateTimeout(cancellationToken);
         try
         {
-            response = await _httpClientFactory.CreateClient(Config.Id).SendAsync(message, cancellationToken);
-        }
-        catch (HttpRequestException ex)
-        {
-            throw new ProviderException(ErrorKind.Network, "Could not reach fal.", innerException: ex);
-        }
-
-        using (response)
-        {
+            using var response = await _httpClientFactory.CreateClient(Config.Id).SendAsync(message, timeout.Token);
             return response.StatusCode switch
             {
                 HttpStatusCode.OK => CancelOutcome.Cancelled,
@@ -162,6 +154,14 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
                 HttpStatusCode.NotFound => CancelOutcome.NotFound,
                 _ => throw new ProviderException(ErrorKind.Unknown, $"fal returned HTTP {(int)response.StatusCode} on cancel."),
             };
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new ProviderException(ErrorKind.Network, "Could not reach fal.", innerException: ex);
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new ProviderException(ErrorKind.Timeout, "fal did not respond in time.", innerException: ex);
         }
     }
 
@@ -192,25 +192,28 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
     /// </summary>
     private async Task<JsonNode> SendFalJsonAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        HttpResponseMessage response;
+        using var timeout = CreateTimeout(cancellationToken);
         try
         {
-            response = await _httpClientFactory.CreateClient(Config.Id).SendAsync(request, cancellationToken);
+            using (request)
+            using (var response = await _httpClientFactory.CreateClient(Config.Id).SendAsync(request, timeout.Token))
+            {
+                var text = await response.Content.ReadAsStringAsync(timeout.Token);
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new ProviderException(MapStatus(response.StatusCode), $"fal returned HTTP {(int)response.StatusCode}.");
+                }
+
+                return JsonNode.Parse(text) ?? throw new ProviderException(ErrorKind.EmptyResponse, "fal returned an empty body.");
+            }
         }
         catch (HttpRequestException ex)
         {
             throw new ProviderException(ErrorKind.Network, "Could not reach fal.", innerException: ex);
         }
-
-        using (response)
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            var text = await response.Content.ReadAsStringAsync(cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new ProviderException(MapStatus(response.StatusCode), $"fal returned HTTP {(int)response.StatusCode}.");
-            }
-
-            return JsonNode.Parse(text) ?? throw new ProviderException(ErrorKind.EmptyResponse, "fal returned an empty body.");
+            throw new ProviderException(ErrorKind.Timeout, "fal did not respond in time.", innerException: ex);
         }
     }
 
@@ -227,15 +230,21 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
 
     private async Task<byte[]> DownloadAsync(string url, CancellationToken cancellationToken)
     {
+        using var timeout = CreateTimeout(cancellationToken);
         try
         {
-            using var response = await _httpClientFactory.CreateClient(Config.Id).SendAsync(new HttpRequestMessage(HttpMethod.Get, url), cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            using var response = await _httpClientFactory.CreateClient(Config.Id).SendAsync(request, timeout.Token);
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            return await response.Content.ReadAsByteArrayAsync(timeout.Token);
         }
         catch (HttpRequestException ex)
         {
             throw new ProviderException(ErrorKind.Network, "Could not download the image from fal.", innerException: ex);
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new ProviderException(ErrorKind.Timeout, "fal did not download the image in time.", innerException: ex);
         }
     }
 

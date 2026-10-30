@@ -18,6 +18,7 @@ public class SessionServiceTests
     private readonly IRunRepository _runs = Substitute.For<IRunRepository>();
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
     private readonly IConversationSummaryRepository _summaries = Substitute.For<IConversationSummaryRepository>();
+    private readonly SessionChangeNotifier _changes = new();
     private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
     private readonly SessionService _service;
 
@@ -25,7 +26,7 @@ public class SessionServiceTests
     {
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
-        _service = new SessionService(_sessions, _messages, _runs, _files, Catalog(AssistantWithTools), time, _summaries);
+        _service = new SessionService(_sessions, _messages, _runs, _files, Catalog(AssistantWithTools), time, _summaries, _changes);
     }
 
     private static readonly ChatModel AssistantWithTools = new(
@@ -76,7 +77,7 @@ public class SessionServiceTests
         var service = new SessionService(
             _sessions, _messages, _runs, _files,
             Catalog(new ChatModel("vendor/plain", "Plain", SupportsImageInput: false, ContextLength: 1000)),
-            TimeProvider.System, Substitute.For<IConversationSummaryRepository>());
+            TimeProvider.System, Substitute.For<IConversationSummaryRepository>(), _changes);
         var settings = new SessionSettings
         {
             ImageModels = session.Settings.ImageModels,
@@ -114,7 +115,7 @@ public class SessionServiceTests
         var catalog = Catalog();
         _chat.ListChatModelsAsync(Arg.Any<CancellationToken>())
             .Returns<Task<IReadOnlyList<ChatModel>>>(_ => throw new ProviderException(ErrorKind.Network, "down"));
-        var service = new SessionService(_sessions, _messages, _runs, _files, catalog, TimeProvider.System, Substitute.For<IConversationSummaryRepository>());
+        var service = new SessionService(_sessions, _messages, _runs, _files, catalog, TimeProvider.System, Substitute.For<IConversationSummaryRepository>(), _changes);
         var settings = new SessionSettings
         {
             ImageModels = session.Settings.ImageModels,
@@ -326,6 +327,20 @@ public class SessionServiceTests
         await _service.RenameAsync(session.Id, "New", TestContext.Current.CancellationToken);
 
         Assert.Equal(Now.AddDays(-1), session.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task RenameAsync_AfterSave_NotifiesSessionChanged()
+    {
+        var session = ExistingSession("Old");
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        Guid? notified = null;
+        _changes.SessionChanged += (_, id) => notified = id;
+
+        await _service.RenameAsync(session.Id, "New", TestContext.Current.CancellationToken);
+
+        Assert.Equal(session.Id, notified);
+        await _sessions.Received(1).UpdateAsync(session, Arg.Any<CancellationToken>());
     }
 
     [Fact]

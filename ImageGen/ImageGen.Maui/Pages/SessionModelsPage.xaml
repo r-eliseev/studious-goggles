@@ -1,95 +1,10 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels"
              xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
+             xmlns:controls="clr-namespace:ImageGen.Maui.Controls"
              x:Class="ImageGen.Maui.Pages.SessionModelsPage"
-             x:DataType="pm:SessionModelsPageModel"
+             SafeAreaEdges="All"
              Title="{x:Static strings:AppResources.ModelsTitle}">
-    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" Padding="16" RowSpacing="8">
-        <SearchBar Text="{Binding SearchText, Mode=TwoWay}"
-                   Placeholder="{x:Static strings:AppResources.ModelsSearchPlaceholder}"
-                   SemanticProperties.Description="{x:Static strings:AppResources.ModelsSearchPlaceholder}" />
-
-        <HorizontalStackLayout Grid.Row="1" Spacing="12">
-            <Label StyleClass="muted" Text="{Binding RunsPerModelText}" VerticalOptions="Center" />
-            <Stepper Value="{Binding RunsPerModel, Mode=TwoWay}"
-                     Minimum="{Binding MinRunsPerModel}"
-                     Maximum="{Binding MaxRunsPerModel}"
-                     Increment="1"
-                     SemanticProperties.Description="{Binding RunsPerModelText}" />
-        </HorizontalStackLayout>
-
-        <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
-            <Label StyleClass="section" Text="{Binding SelectedCountText}" VerticalOptions="Center" />
-            <Button Grid.Column="1"
-                    StyleClass="ghost"
-                    FontSize="12"
-                    Text="{x:Static strings:AppResources.Refresh}"
-                    Command="{Binding RefreshCommand}"
-                    SemanticProperties.Description="{x:Static strings:AppResources.Refresh}" />
-        </Grid>
-
-        <ActivityIndicator Grid.Row="3"
-                           IsRunning="{Binding IsBusy}"
-                           IsVisible="{Binding IsBusy}"
-                           VerticalOptions="Start" />
-
-        <ScrollView Grid.Row="4">
-            <VerticalStackLayout Spacing="4">
-                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Models}">
-                    <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="pm:ModelOptionViewModel">
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="0,4">
-                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                          SemanticProperties.Description="{Binding Name}" />
-                                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
-                                    <Label Text="{Binding Name}" />
-                                    <Label StyleClass="meta" Text="{Binding DetailsText}" />
-                                </VerticalStackLayout>
-                            </Grid>
-                        </DataTemplate>
-                    </BindableLayout.ItemTemplate>
-                </VerticalStackLayout>
-
-                <Label StyleClass="section" Text="{x:Static strings:AppResources.AssistantModelTitle}" Margin="0,12,0,0" />
-                <VerticalStackLayout BindableLayout.ItemsSource="{Binding AssistantModels}">
-                    <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="pm:AssistantModelOptionViewModel">
-                            <VerticalStackLayout Spacing="2" Margin="0,4">
-                                <RadioButton GroupName="assistant"
-                                             Content="{Binding Name}"
-                                             IsChecked="{Binding IsSelected}"
-                                             CheckedChanged="OnAssistantCheckedChanged"
-                                             SemanticProperties.Description="{Binding AutomationName}" />
-                                <HorizontalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Tags}">
-                                    <BindableLayout.ItemTemplate>
-                                        <DataTemplate x:DataType="x:String">
-                                            <Border StyleClass="tag">
-                                                <Label StyleClass="meta" Text="{Binding .}" />
-                                            </Border>
-                                        </DataTemplate>
-                                    </BindableLayout.ItemTemplate>
-                                </HorizontalStackLayout>
-                                <Label StyleClass="meta" Text="{Binding DetailsText}" />
-                            </VerticalStackLayout>
-                        </DataTemplate>
-                    </BindableLayout.ItemTemplate>
-                </VerticalStackLayout>
-            </VerticalStackLayout>
-        </ScrollView>
-
-        <Grid x:Name="ButtonRow" Grid.Row="5" ColumnDefinitions="*,*" ColumnSpacing="8">
-            <Button x:Name="SaveButton"
-                    StyleClass="primary"
-                    Text="{x:Static strings:AppResources.Save}"
-                    Command="{Binding SaveCommand}"
-                    SemanticProperties.Description="{x:Static strings:AppResources.Save}" />
-            <Button x:Name="CancelButton"
-                    Grid.Column="1"
-                    Text="{x:Static strings:AppResources.Cancel}"
-                    Command="{Binding CancelCommand}"
-                    SemanticProperties.Description="{x:Static strings:AppResources.Cancel}" />
-        </Grid>
-    </Grid>
+    <controls:SessionModelsView />
 </ContentPage>

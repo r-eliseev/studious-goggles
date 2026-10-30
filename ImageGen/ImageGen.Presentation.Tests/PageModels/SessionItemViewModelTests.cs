@@ -96,6 +96,22 @@ public class SessionItemViewModelTests
     }
 
     [Fact]
+    public void Apply_UpdatesTitleTimeAndRunCount()
+    {
+        var item = new SessionItemViewModel(CreateSession(), _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask);
+        var changed = CreateSession();
+        changed.Id = item.Id;
+        changed.Title = "blue moon";
+        changed.UpdatedAt = UpdatedAt.AddHours(1);
+
+        item.Apply(changed, 2);
+
+        Assert.Equal("blue moon", item.Title);
+        Assert.Equal(changed.UpdatedAt, item.UpdatedAt);
+        Assert.Equal(2, item.RunCount);
+    }
+
+    [Fact]
     public async Task RenameCommand_Executes_CallsRenameWithThisItem()
     {
         SessionItemViewModel? renamed = null;

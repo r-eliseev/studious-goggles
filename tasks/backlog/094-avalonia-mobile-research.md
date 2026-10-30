@@ -1,6 +1,6 @@
 ---
 id: 094
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -161,6 +161,23 @@ bash scripts/check.sh
 
 ## Отчёт
 
+### 2026-10-30, codex-luna
+
+- Создан Android POC на Avalonia 12.1.4 / .NET 10 с `ImageGen.Presentation`, Core и Data. Собираются реальные экраны Sessions, API key, Chat, Model Picker, Session Models, Session Parameters и Settings; файлы `ImageGen/` не менялись. Подключены мобильная навигация, overlay-диалоги, clipboard, file picker, MediaStore Android 10+, Android KeyStore AES-GCM, клавиатурные параметры и `IInputPane`.
+- Шаблон `Avalonia.Templates@12.1.4` установлен. Пример создан командой `dotnet new avalonia.xplat -n Probe -o tmp/094/xplat`; шаблон использует `--mvvm CommunityToolkit` (значение по умолчанию). В iOS голове обнаружены `AppDelegate`, `Main.cs`, `Info.plist`, `Entitlements.plist`.
+- Debug POC: `dotnet build ...ImageGen.Avalonia.Android.csproj -p:AndroidSdkDirectory=/root/android-sdk -m:1`; 0 предупреждений, 0 ошибок. Target POC — `net10.0-android36.0`, соответствующий восстановленной цели Avalonia 12.1.4. Release APK обоих проектов опубликованы с `android-arm64`, `AndroidPackageFormats=apk`, Release и одним SDK:
+
+| Проект | Подписанный APK | Байты | МиБ |
+|---|---|---:|---:|
+| Avalonia POC | `com.eliseev.imagegen.avaloniaprobe-Signed.apk` | 29 152 195 | 27.8 |
+| MAUI | `com.companyname.imagegen.maui-Signed.apk` | 22 183 516 | 21.2 |
+| Разница | Avalonia больше | 6 968 679 | 6.65 |
+
+- Критерий размера выполнен (порог +10 МиБ). `adb devices` не показывает устройство, поэтому POC не запускался. Холодный старт/память, создание сессии и навигация, KeyStore после рестарта, Send и размещение ввода над клавиатурой, clipboard, file picker, MediaStore, overlay, узкий экран и TalkBack не проверены; перенесены в ручную задачу 140. Диагностические extras пробника выводят только булевы `persisted` и `file-exists`; их runtime также не проверен.
+- iOS проверена только по шаблону и официальной документации Avalonia на 2026-10-30: сборка требует Mac с Xcode, с Windows возможен сетевой Mac-хост. iOS workload на Linux не устанавливался.
+- Добавлены `docs/knowledge/avalonia-mobile.md`, ADR 0019 со статусом «предложено», строка среды, индекс и открытый вопрос. Рекомендация ADR — оставить две оболочки до ручных Android-проверок. Вопрос владельцу: принять A, B или C.
+- Отличия/ограничения: вместо `net10.0-android` из примера команды используется `net10.0-android36.0`, необходимый для Avalonia.Android 12.1.4. Запуск, доступность, производительность и безопасность runtime хранения не подтверждены без устройства; POC не является переносом оболочки.
+
 ## Комментарии
 
 ### 2026-10-29, claude-desktop
@@ -178,3 +195,6 @@ bash scripts/check.sh
 
 ### 2026-10-29, codex-review
 Задача нужна как исследование перед сменой оболочки. Уточнены обращения к DI-экземпляру навигации, отрицательный результат и граница пробника; установка iOS workload на Linux и чтение файлов секретов исключены. Ручные замеры без устройства остаются честно непроверенными.
+
+### 2026-10-30, codex-luna
+Исследование завершено в доступной Linux-среде. Рекомендация ADR 0019 — вариант A до проверки на Android-устройстве. Владелец выбирает вариант A, B или C; запуск, клавиатура, KeyStore, галерея, TalkBack и производительность добавлены в ручную задачу 140.

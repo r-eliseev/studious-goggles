@@ -1,6 +1,6 @@
 ---
 id: 107
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -52,5 +52,10 @@ bash scripts/check.sh
 После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 107`, затем `bash scripts/check.sh`; код отправить PR по `docs/tasks.md`.
 
 ## Отчёт
+
+- Все fal HTTP вызовы теперь используют общий `Config.Timeout`: submit/probe базовым helper-ом, catalog/status/result JSON, image download и cancel — per-request timeout CTS. Deadline включает получение и чтение body; каждый этап poll получает отдельный timeout. Caller cancellation остаётся `OperationCanceledException`; timeout probe сохраняет прежний контракт `ApiKeyStatus.NetworkError`.
+- `SendFalJsonAsync`, download и cancel освобождают request/response; добавлены cancellation-aware hanging handler и тесты короткого timeout для submit, probe, catalog, status, result, download, cancel и JSON body-read, а также caller cancellation JSON/download/cancel и при body-read.
+- Проверки: Core.Tests 405/405; `dotnet format` Core и Core.Tests; `git diff --check`; `bash scripts/check.sh`.
+- `dotnet test --project` в этой среде возвращает handshake failure до запуска; собранный xUnit v3 apphost выполняет suite напрямую.
 
 ## Комментарии
