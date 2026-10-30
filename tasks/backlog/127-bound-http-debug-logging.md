@@ -1,6 +1,6 @@
 ---
 id: 127
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -53,5 +53,10 @@ bash scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Http/LoggingHttpHandler.cs`, `ImageGen/ImageGen.Core.Tests/Http/LoggingHttpHandlerTests.cs`, `ImageGen/ImageGen.Core.Tests/Diagnostics/DebugTraceHandlerTests.cs`, `ImageGen/ImageGen.Core/Providers/ProviderResponseLimits.cs` (из112), `docs/conventions.md`, `docs/knowledge/csharp.md`, `docs/decisions/NNNN-safe-operational-logging.md` (новый; следующий свободный номер)
 
 ## Отчёт
+
+- Information больше не читает request/response body ради размера: использует объявленный `Content-Length` либо пишет неизвестный размер. Debug/trace ограничивают request 72 MiB и response общим limit из112; при превышении body не логируется частично, response остаётся читаемым после замены content с сохранёнными headers.
+- Probe/cancel с `SkipResponseBody` и credential check не читают response для логирования. Operational Warning содержит безопасные method/path/duration и не содержит exception; detail записывается отдельно на Debug. Создан ADR 0022 и уточнены conventions и C# knowledge.
+- Проверки: Core tests 563/563; `dotnet format` Core и Core.Tests `--verify-no-changes --no-restore`; `bash scripts/check.sh` — все проверки пройдены.
+- Ограничение: вне области задачи остаётся аудит прежних warning/error в других подсистемах; ADR фиксирует политику для provider HTTP transport.
 
 ## Комментарии

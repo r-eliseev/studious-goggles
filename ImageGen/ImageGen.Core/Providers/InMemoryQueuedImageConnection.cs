@@ -1,41 +1,47 @@
-using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.Domain.Models;
 
 namespace ImageGen.Core.Providers;
 
 /// <summary>Combines one synchronous image/chat client with a prepared in-memory queued adapter.</summary>
-public sealed class InMemoryQueuedImageConnection : IModelProvider, IAssistantChatClient
+public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelProvider, IAssistantChatClient, IQueuedImageProvider
 {
     private readonly IModelProvider _imageProvider;
     private readonly IAssistantChatClient _chatClient;
+    private readonly InMemoryQueuedImageProvider _queuedImages;
 
     public InMemoryQueuedImageConnection(
         IModelProvider imageProvider,
         IAssistantChatClient chatClient,
+        ISynchronousImageTransport transport,
         string providerId,
         TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(imageProvider);
         ArgumentNullException.ThrowIfNull(chatClient);
+        ArgumentNullException.ThrowIfNull(transport);
         ArgumentException.ThrowIfNullOrWhiteSpace(providerId);
         ArgumentNullException.ThrowIfNull(timeProvider);
 
         _imageProvider = imageProvider;
         _chatClient = chatClient;
-        QueuedImages = new InMemoryQueuedImageProvider(imageProvider, providerId, timeProvider);
+        _queuedImages = new InMemoryQueuedImageProvider(transport, providerId, timeProvider);
     }
 
-    internal IQueuedImageProvider QueuedImages { get; }
+    public Task<ProviderJobHandle> SubmitAsync(ImageGenerationRequest request, CancellationToken cancellationToken) =>
+        _queuedImages.SubmitAsync(request, cancellationToken);
+
+    public Task<JobUpdate> PollAsync(ProviderJobHandle handle, CancellationToken cancellationToken) =>
+        _queuedImages.PollAsync(handle, cancellationToken);
+
+    public Task<CancelOutcome> CancelAsync(ProviderJobHandle handle, CancellationToken cancellationToken) =>
+        _queuedImages.CancelAsync(handle, cancellationToken);
 
     public Task<ApiKeyStatus> CheckKeyAsync(string apiKey, CancellationToken cancellationToken) =>
         _imageProvider.CheckKeyAsync(apiKey, cancellationToken);
 
     public Task<IReadOnlyList<ImageModel>> ListImageModelsAsync(CancellationToken cancellationToken) =>
         _imageProvider.ListImageModelsAsync(cancellationToken);
-
-    public Task<ImageGenerationResult> GenerateAsync(ImageGenerationRequest request, CancellationToken cancellationToken) =>
-        _imageProvider.GenerateAsync(request, cancellationToken);
 
     public Task<AssistantChatResult> CompleteChatAsync(AssistantChatRequest request, CancellationToken cancellationToken) =>
         _chatClient.CompleteChatAsync(request, cancellationToken);

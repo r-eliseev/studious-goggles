@@ -7,7 +7,7 @@
              x:Class="ImageGen.Maui.Pages.ApiKeyPage"
              x:DataType="pm:ApiKeyPageModel"
              SafeAreaEdges="All"
-             Title="{x:Static strings:AppResources.ApiKeyTitle}">
+             Title="{Binding ProviderTitle}">
     <ScrollView>
         <Border StyleClass="card"
                 Margin="16"
@@ -15,14 +15,14 @@
                 MaximumWidthRequest="440"
                 HorizontalOptions="Center">
             <VerticalStackLayout Spacing="12">
-                <Label StyleClass="heading" Text="{x:Static strings:AppResources.ApiKeyHeading}" LineBreakMode="WordWrap" />
-                <Label StyleClass="muted" Text="{x:Static strings:AppResources.ApiKeyDescription}" LineBreakMode="WordWrap" />
+                <Label StyleClass="heading" Text="{Binding ProviderTitle}" LineBreakMode="WordWrap" />
+                <Label StyleClass="muted" Text="{Binding ProviderDescription}" LineBreakMode="WordWrap" />
 
                 <Entry Text="{Binding ApiKey}"
-                       Placeholder="{x:Static strings:AppResources.ApiKeyPlaceholder}"
+                       Placeholder="{x:Static strings:AppResources.ProviderKeyPlaceholder}"
                        IsPassword="True"
-                       SemanticProperties.Description="{x:Static strings:AppResources.ApiKeyTitle}"
-                       SemanticProperties.Hint="{x:Static strings:AppResources.ApiKeyDescription}" />
+                       SemanticProperties.Description="{Binding ProviderTitle}"
+                       SemanticProperties.Hint="{Binding ProviderDescription}" />
 
                 <Button StyleClass="primary"
                         Text="{x:Static strings:AppResources.ApiKeySave}"

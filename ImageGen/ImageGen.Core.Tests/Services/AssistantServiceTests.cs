@@ -26,7 +26,7 @@ public class AssistantServiceTests
     private readonly IChatMessageRepository _messages = Substitute.For<IChatMessageRepository>();
     private readonly IRunRepository _runs = Substitute.For<IRunRepository>();
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
-    private readonly IModelProvider _generator = Substitute.For<IModelProvider>();
+    private readonly ISynchronousImageTransport _generator = Substitute.For<ISynchronousImageTransport>();
     private readonly IProviderRouter _providers = Substitute.For<IProviderRouter>();
     private readonly ISeedSource _seeds = Substitute.For<ISeedSource>();
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
@@ -49,12 +49,14 @@ public class AssistantServiceTests
         _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(
             [ModelCatalogServiceTests.Model(ImageModel, "Image")]);
         _providers.ImageProviderIds.Returns([ProviderIds.OpenRouter]);
-        _providers.GetImageProvider(ProviderIds.OpenRouter).Returns(_generator);
+        _providers.GetImageProvider(ProviderIds.OpenRouter).Returns(Substitute.For<IModelProvider>());
         _providers.GetChatClient(ProviderIds.OpenRouter).Returns(_chat);
         var catalog = new ModelCatalogService(_providers, _modelRepository, NullLogger<ModelCatalogService>.Instance);
         _seeds.NextSeed().Returns(7L);
         _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>())
             .Returns(new ImageGenerationResult(Image, "image/png", 0.01m));
+        _providers.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(
+            new InMemoryQueuedImageProvider(_generator, ProviderIds.OpenRouter, time));
         _files.SaveAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns("images/session/generation.png");
 
@@ -577,6 +579,135 @@ public class AssistantServiceTests
     }
 
     [Fact]
+    public async Task SendUserMessageAsync_TitleUpdateFailsAfterAccept_PersistsOneUnknownAssistantError()
+    {
+        var failure = new InvalidOperationException("private storage detail");
+        _sessions.UpdateAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>()).Returns<Task>(_ => throw failure);
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "private question", TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, _stored.Count);
+        Assert.Equal(ChatRole.User, _stored[0].Role);
+        Assert.Equal(ChatRole.Assistant, _stored[1].Role);
+        Assert.True(result.AssistantMessage.IsError);
+        Assert.Equal(ErrorKind.Unknown, result.AssistantMessage.ErrorKind);
+        Assert.DoesNotContain("private storage detail", result.AssistantMessage.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain(_logger.Entries, entry => entry.Level > LogLevel.Debug && entry.Message.Contains("private question", StringComparison.Ordinal));
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && ReferenceEquals(entry.Exception, failure));
+        await _chat.DidNotReceive().CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_HistoryReadFailsAfterAccept_PersistsUnknownAssistantError()
+    {
+        _messages.ListBySessionAsync(_session.Id, Arg.Any<CancellationToken>())
+            .Returns<Task<IReadOnlyList<ChatMessage>>>(_ => throw new IOException("history data detail"));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "question", TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, _stored.Count);
+        Assert.Equal(ErrorKind.Unknown, result.AssistantMessage.ErrorKind);
+        Assert.Equal("The assistant could not complete this turn.", result.AssistantMessage.Text);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Error);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception is IOException);
+        Assert.DoesNotContain(_logger.Entries, entry => entry.Level > LogLevel.Debug && entry.Message.Contains("history data detail", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_UnexpectedProviderOperationCancelled_PersistsUnknownInsteadOfPropagating()
+    {
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<AssistantChatResult>(new OperationCanceledException("transport stopped unexpectedly")));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "question", TestContext.Current.CancellationToken);
+
+        Assert.Equal(ErrorKind.Unknown, result.AssistantMessage.ErrorKind);
+        Assert.Equal("The assistant could not complete this turn.", result.AssistantMessage.Text);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Error
+            && entry.State.ContainsKey("SessionId")
+            && entry.State.ContainsKey("ProviderId")
+            && entry.State.ContainsKey("ModelId")
+            && entry.State.ContainsKey("UserMessageId"));
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception is OperationCanceledException);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_CallerCancellationAfterAccept_PropagatesWithoutAssistantError()
+    {
+        using var cancellation = new CancellationTokenSource();
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            cancellation.Cancel();
+            return Task.FromException<AssistantChatResult>(new OperationCanceledException(cancellation.Token));
+        });
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            _service.SendUserMessageAsync(_session.Id, "question", cancellation.Token));
+
+        Assert.Single(_stored);
+        Assert.Equal(ChatRole.User, _stored[0].Role);
+        await _messages.DidNotReceive().AddAsync(Arg.Any<ChatMessage>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_AttachmentReadFailsAfterAccept_PersistsAttachmentErrorWithoutLoggingData()
+    {
+        var attachment = UserAttachment();
+        const string privatePath = "private/attachment/path.png";
+        _files.ReadAsync(attachment.RelativePath, Arg.Any<CancellationToken>())
+            .Returns<Task<byte[]>>(_ => throw new IOException(privatePath));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "look", [attachment.Id], TestContext.Current.CancellationToken);
+
+        Assert.Equal(ErrorKind.AttachmentUnreadable, result.AssistantMessage.ErrorKind);
+        Assert.Equal("An attached image could not be read.", result.AssistantMessage.Text);
+        Assert.DoesNotContain(_logger.Entries, entry => entry.Level > LogLevel.Debug && entry.Message.Contains(privatePath, StringComparison.Ordinal));
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception is IOException);
+        await _chat.DidNotReceive().CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_RunStorageInvalidOperation_IsUnknownNotModelUnavailable()
+    {
+        _runs.AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(_ => throw new InvalidOperationException("run persistence detail"));
+        ReplyWithToolCall("{\"prompt\":\"a fox\"}");
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "draw", TestContext.Current.CancellationToken);
+
+        Assert.Equal(ErrorKind.Unknown, result.AssistantMessage.ErrorKind);
+        Assert.Equal("The assistant could not complete this turn.", result.AssistantMessage.Text);
+        Assert.DoesNotContain("run persistence detail", result.AssistantMessage.Text, StringComparison.Ordinal);
+        await _runs.Received(1).AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SendUserMessageAsync_TerminalMessageWriteFailsOnceAndPropagates(bool errorOutcome)
+    {
+        if (errorOutcome)
+        {
+            _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromException<AssistantChatResult>(new ProviderException(ErrorKind.RateLimited, "rate limited")));
+        }
+        else
+        {
+            ReplyWith(new AssistantChatResult("done", [], null));
+        }
+
+        var failure = new IOException("assistant message write failed");
+        _messages.AddAsync(Arg.Any<ChatMessage>(), Arg.Any<CancellationToken>()).Returns<Task>(_ => throw failure);
+
+        var thrown = await Assert.ThrowsAsync<IOException>(() =>
+            _service.SendUserMessageAsync(_session.Id, "question", TestContext.Current.CancellationToken));
+
+        Assert.Same(failure, thrown);
+        await _messages.Received(1).AddAsync(Arg.Is<ChatMessage>(message => message.Role == ChatRole.Assistant), Arg.Any<CancellationToken>());
+        Assert.DoesNotContain(_logger.Entries, entry => entry.Message.Contains("finished", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task SendUserMessageAsync_LongSession_RequestFitsContextOfModel()
     {
         _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ChatModel>>(
@@ -876,8 +1007,10 @@ public class AssistantServiceTests
         Assert.Null(result.Run);
         Assert.True(result.AssistantMessage.IsError);
         Assert.Equal($"Session {_session.Id} has no image models.", result.AssistantMessage.Text);
+        Assert.Equal(ErrorKind.ModelUnavailable, result.AssistantMessage.ErrorKind);
         Assert.Equal("a fox", result.UserMessage.Text);
         Assert.Equal(2, _stored.Count);
+        await _runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

@@ -16,6 +16,7 @@
   <ItemGroup>
     <AvaloniaResource Include="Assets\Fonts\**" />
     <AvaloniaResource Include="Assets\Licenses\**" />
+    <InternalsVisibleTo Include="ImageGen.Avalonia.Tests" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../ImageGen.Core/ImageGen.Core.csproj" />

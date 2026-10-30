@@ -61,6 +61,21 @@ public class MauiChatPageMarkupTests
         Assert.Equal("TailTruncation", (string?)label.Attribute("LineBreakMode"));
     }
 
+    [Fact]
+    public void SuccessfulImage_HasAccessibleViewerCommand()
+    {
+        var document = XDocument.Load(Path.Combine(MauiRoot(), "Pages", "ChatPage.xaml"));
+        var button = Assert.Single(Assert.IsType<XElement>(document.Root).Descendants(), element =>
+            element.Name.LocalName == "Button"
+            && (string?)element.Attribute("Command") == "{Binding Source={x:Reference Page}, Path=BindingContext.OpenImageCommand}");
+
+        Assert.Equal("{Binding HasImage}", (string?)button.Attribute("IsVisible"));
+        Assert.Equal("{Binding .}", (string?)button.Attribute("CommandParameter"));
+        Assert.Equal("Fill", (string?)button.Attribute("HorizontalOptions"));
+        Assert.Equal("Fill", (string?)button.Attribute("VerticalOptions"));
+        Assert.Equal("Transparent", (string?)button.Attribute("BackgroundColor"));
+    }
+
     private static string MauiRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

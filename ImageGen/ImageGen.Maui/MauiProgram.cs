@@ -80,6 +80,12 @@ public static class MauiProgram
         builder.Services.AddSingleton<MauiAppearanceApplier>();
         builder.Services.AddSingleton<IClipboardService, MauiClipboardService>();
         builder.Services.AddSingleton<IImageSaver, MauiImageSaver>();
+        builder.Services.AddSingleton<IImageViewerService, MauiImageViewerService>();
+#if ANDROID
+        builder.Services.AddSingleton<IMauiFullScreenController, ImageGen.Maui.Platforms.Android.AndroidFullScreenController>();
+#else
+        builder.Services.AddSingleton<IMauiFullScreenController, NoOpFullScreenController>();
+#endif
         builder.Services.AddSingleton<ICurrentSessionTracker, CurrentSessionTracker>();
 
         // Pages and page models

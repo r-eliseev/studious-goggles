@@ -33,23 +33,23 @@ public class ProviderRouterTests
     }
 
     [Fact]
-    public void GetConnection_KindOpenRouter_ReturnsInMemoryWrapperWithoutQueuedCapability()
+    public void GetConnection_KindOpenRouter_ReturnsInMemoryWrapperWithQueuedCapability()
     {
         var connection = Assert.IsType<InMemoryQueuedImageConnection>(_router.GetConnection("openrouter"));
 
         Assert.Same(connection, _router.GetImageProvider("openrouter"));
         Assert.Same(connection, _router.GetChatClient("openrouter"));
-        Assert.False((IProviderConnection)connection is IQueuedImageProvider);
+        Assert.Same(connection, _router.GetQueuedImageProvider("openrouter"));
     }
 
     [Fact]
-    public void GetConnection_KindOpenAiCompatible_ReturnsInMemoryWrapperWithoutQueuedCapability()
+    public void GetConnection_KindOpenAiCompatible_ReturnsInMemoryWrapperWithQueuedCapability()
     {
         var connection = Assert.IsType<InMemoryQueuedImageConnection>(_router.GetConnection("local"));
 
         Assert.Same(connection, _router.GetImageProvider("local"));
         Assert.Same(connection, _router.GetChatClient("local"));
-        Assert.False((IProviderConnection)connection is IQueuedImageProvider);
+        Assert.Same(connection, _router.GetQueuedImageProvider("local"));
     }
 
     [Fact]
@@ -107,10 +107,10 @@ public class ProviderRouterTests
     }
 
     [Fact]
-    public async Task GetConnection_CompatibleProviders_HaveIsolatedQueuedAdapters()
+    public async Task GetQueuedImageProvider_CompatibleProviders_HaveIsolatedAdapters()
     {
-        var first = Assert.IsType<InMemoryQueuedImageConnection>(_router.GetConnection("local"));
-        var second = Assert.IsType<InMemoryQueuedImageConnection>(_router.GetConnection("local-two"));
+        var first = _router.GetQueuedImageProvider("local");
+        var second = _router.GetQueuedImageProvider("local-two");
         var requestId = Guid.NewGuid().ToString("N");
         var handle = new ProviderJobHandle(
             "local",
@@ -119,9 +119,8 @@ public class ProviderRouterTests
             $"memory://local/{requestId}/result",
             $"memory://local/{requestId}/cancel");
 
-        Assert.NotSame(first.QueuedImages, second.QueuedImages);
-        var interrupted = await first.QueuedImages.PollAsync(handle, TestContext.Current.CancellationToken);
-        var exception = await Assert.ThrowsAsync<ProviderException>(() => second.QueuedImages.PollAsync(handle, TestContext.Current.CancellationToken));
+        var interrupted = await first.PollAsync(handle, TestContext.Current.CancellationToken);
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => second.PollAsync(handle, TestContext.Current.CancellationToken));
 
         Assert.Equal(ErrorKind.Interrupted, interrupted.ErrorKind);
         Assert.Equal(ErrorKind.Unknown, exception.Kind);

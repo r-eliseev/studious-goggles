@@ -25,12 +25,43 @@ public class CompositionTests
         var openRouter = Assert.IsType<InMemoryQueuedImageConnection>(router.GetConnection(ProviderIds.OpenRouter));
         Assert.Same(openRouter, router.GetImageProvider(ProviderIds.OpenRouter));
         Assert.Same(openRouter, router.GetChatClient(ProviderIds.OpenRouter));
+        Assert.Same(openRouter, router.GetQueuedImageProvider(ProviderIds.OpenRouter));
         Assert.NotNull(provider.GetRequiredService<ISeedSource>());
         Assert.NotNull(provider.GetRequiredService<ApiKeyService>());
         Assert.NotNull(provider.GetRequiredService<ModelCatalogService>());
         Assert.NotNull(provider.GetRequiredService<SessionService>());
         Assert.NotNull(provider.GetRequiredService<GenerationService>());
         Assert.NotNull(provider.GetRequiredService<AssistantService>());
+    }
+
+    [Fact]
+    public async Task AddImageGenCoreAndData_BuiltInTogetherResolvesImageCatalogWithoutKey()
+    {
+        using var provider = BuildProvider(NewDirectory());
+        var router = provider.GetRequiredService<IProviderRouter>();
+        var registry = provider.GetRequiredService<ProviderRegistry>();
+
+        Assert.Equal([ProviderIds.OpenRouter, ProviderIds.Fal, ProviderIds.Together], registry.All.Select(item => item.Id));
+        var connection = Assert.IsType<InMemoryQueuedImageConnection>(router.GetConnection(ProviderIds.Together));
+        Assert.Same(connection, router.GetQueuedImageProvider(ProviderIds.Together));
+        Assert.Same(connection, router.GetImageProvider(ProviderIds.Together));
+        var models = await router.GetImageProvider(ProviderIds.Together)
+            .ListImageModelsAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(
+            [
+                "black-forest-labs/FLUX.1.1-pro",
+                "black-forest-labs/FLUX.2-dev",
+                "black-forest-labs/FLUX.2-flex",
+                "black-forest-labs/FLUX.2-pro",
+            ],
+            models.Select(model => model.Id));
+        Assert.All(models, model =>
+        {
+            Assert.Equal(ProviderIds.Together, model.ProviderId);
+            Assert.False(model.SupportsImageInput);
+            Assert.Empty(model.Prices);
+        });
+        Assert.Empty(await router.GetChatClient(ProviderIds.Together).ListChatModelsAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -71,6 +102,7 @@ public class CompositionTests
         var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource<ImageGenerationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         var providerClient = Substitute.For<IModelProvider>();
+        var imageTransport = Substitute.For<ISynchronousImageTransport>();
         providerClient.ListImageModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ImageModel>>(
         [
             new ImageModel
@@ -85,15 +117,16 @@ public class CompositionTests
                 Parameters = [],
             },
         ]));
-        providerClient.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
+        imageTransport.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
         {
             entered.TrySetResult(call.Arg<CancellationToken>());
             return release.Task;
         });
         var router = Substitute.For<IProviderRouter>();
         router.ImageProviderIds.Returns([ProviderIds.OpenRouter]);
-        router.GetConnection(ProviderIds.OpenRouter).Returns(providerClient);
         router.GetImageProvider(ProviderIds.OpenRouter).Returns(providerClient);
+        router.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(
+            new InMemoryQueuedImageProvider(imageTransport, ProviderIds.OpenRouter, TimeProvider.System));
 
         using var provider = BuildProvider(directory, router);
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -156,7 +189,7 @@ public class CompositionTests
 
         var registry = provider.GetRequiredService<ProviderRegistry>();
 
-        Assert.Equal(["openrouter", "fal", "local"], registry.All.Select(p => p.Id));
+        Assert.Equal(["openrouter", "fal", "together", "local"], registry.All.Select(p => p.Id));
     }
 
     [Fact]

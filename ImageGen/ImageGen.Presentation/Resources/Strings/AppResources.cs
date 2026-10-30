@@ -202,6 +202,28 @@ public static class AppResources
 
     public static string ApiKeyHeading => Get(nameof(ApiKeyHeading));
 
+    public static string ProviderKeyTitleFormat => Get(nameof(ProviderKeyTitleFormat));
+
+    public static string ProviderKeyDescriptionFormat => Get(nameof(ProviderKeyDescriptionFormat));
+
+    public static string ProviderKeyPlaceholder => Get(nameof(ProviderKeyPlaceholder));
+
+    public static string ProviderKeyInvalidFormat => Get(nameof(ProviderKeyInvalidFormat));
+
+    public static string ProviderKeyNetworkErrorFormat => Get(nameof(ProviderKeyNetworkErrorFormat));
+
+    public static string ProviderKeyRemoveTitle => Get(nameof(ProviderKeyRemoveTitle));
+
+    public static string ProviderKeyRemoveConfirmFormat => Get(nameof(ProviderKeyRemoveConfirmFormat));
+
+    public static string ProviderKeyRemoveOpenRouterWarning => Get(nameof(ProviderKeyRemoveOpenRouterWarning));
+
+    public static string ProviderKeyRemove => Get(nameof(ProviderKeyRemove));
+
+    public static string ProviderKeyUnknown => Get(nameof(ProviderKeyUnknown));
+
+    public static string SettingsProviders => Get(nameof(SettingsProviders));
+
     public static string NewSeed => Get(nameof(NewSeed));
 
     public static string Edit => Get(nameof(Edit));
@@ -303,6 +325,18 @@ public static class AppResources
     public static string ReferenceFormat => Get(nameof(ReferenceFormat));
 
     public static string ImageDimensionsFormat => Get(nameof(ImageDimensionsFormat));
+
+    public static string ImageViewerOpen => Get(nameof(ImageViewerOpen));
+
+    public static string ImageViewerClose => Get(nameof(ImageViewerClose));
+
+    public static string ImageViewerPrevious => Get(nameof(ImageViewerPrevious));
+
+    public static string ImageViewerNext => Get(nameof(ImageViewerNext));
+
+    public static string ImageViewerPositionFormat => Get(nameof(ImageViewerPositionFormat));
+
+    public static string ImageViewerUnreadable => Get(nameof(ImageViewerUnreadable));
 
     public static string RemoveAttachment => Get(nameof(RemoveAttachment));
 

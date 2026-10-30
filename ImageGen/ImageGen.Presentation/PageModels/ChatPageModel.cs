@@ -33,7 +33,8 @@ public sealed partial class ChatPageModel(
     IImageSaver imageSaver,
     ICurrentSessionTracker currentSession,
     Func<SessionModelsPageModel> modelsPaneFactory,
-    Func<SessionParametersPageModel> parametersPaneFactory) : ObservableObject
+    Func<SessionParametersPageModel> parametersPaneFactory,
+    IImageViewerService imageViewer) : ObservableObject
 {
     private readonly Dictionary<Guid, GenerationItemViewModel> _cards = [];
     private bool _imageConsentGiven;
@@ -80,6 +81,38 @@ public sealed partial class ChatPageModel(
 
     [RelayCommand]
     private void SelectCard(GenerationItemViewModel card) => SelectedCard = card;
+
+    [RelayCommand]
+    private async Task OpenImageAsync(GenerationItemViewModel? card)
+    {
+        if (card is not { HasImage: true })
+        {
+            return;
+        }
+
+        var run = Items.OfType<RunItemViewModel>().FirstOrDefault(item => item.Generations.Contains(card));
+        if (run is null)
+        {
+            return;
+        }
+
+        var images = run.Generations.Where(item => item.HasImage).ToList();
+        var initialIndex = images.IndexOf(card);
+        if (initialIndex < 0)
+        {
+            return;
+        }
+
+        SelectedCard = card;
+        await imageViewer.ShowAsync(
+            images.Select(item => new ImageViewerItem(
+                item.Id,
+                item.ImageFilePath,
+                string.Join(", ", new[] { item.ModelText, item.SeedText, item.ImageDimensionsText, item.SummaryText }
+                    .Where(text => !string.IsNullOrWhiteSpace(text))))).ToList(),
+            initialIndex,
+            CancellationToken.None);
+    }
 
     /// <summary>True on a wide window (≥ 840). The shell sets it on resize; it decides pane versus navigation.</summary>
     [ObservableProperty]

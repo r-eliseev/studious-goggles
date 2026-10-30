@@ -1,6 +1,6 @@
 ---
 id: 112
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -51,5 +51,11 @@ bash scripts/check.sh
 После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 112`, затем `bash scripts/check.sh`; отправить PR по `docs/tasks.md`.
 
 ## Отчёт
+
+- Добавлены общие пределы для JSON (8 MiB), JSON генерации с base64 (72 MiB) и бинарного результата (50 MiB), безопасное исключение размера и bounded reader для байтов/текста. Заголовок выше лимита отклоняется до чтения; неизвестная длина проверяется с чтением максимум limit+1.
+- `ProviderClientBase`, fal JSON/download, OpenRouter и OpenAI-compatible generation используют `ResponseHeadersRead`; timeout остаётся активен до конца чтения. Probe/cancel помечаются для пропуска body. Generation response отдельно ограничивает декодированную картинку.
+- Добавлены reader и provider tests, включая JSON image payload больше 8 MiB, mapping превышения в `Unknown`, charset, лимит чтения и отмену. Исправлен fal `BlockingContent` test double: теперь блокировка происходит при чтении stream после заголовков.
+- Проверки: `dotnet build ImageGen/ImageGen.Core/ImageGen.Core.csproj --no-restore` (успешно, 0 предупреждений); `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj` (558/558); `dotnet format` для Core и Core.Tests с `--verify-no-changes --no-restore`; `bash scripts/check.sh` (успешно).
+- Ограничение по плану: `LoggingHttpHandler` пока предварительно буферизует ответы; полная гарантия production memory cap остаётся задачей 127.
 
 ## Комментарии

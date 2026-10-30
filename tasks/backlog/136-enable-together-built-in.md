@@ -1,6 +1,6 @@
 ---
 id: 136
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -54,6 +54,24 @@ bash scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Providers/builtin-providers.json`, `ImageGen/ImageGen.Core.Tests/Providers/ProviderConfigLoaderTests.cs`, `ImageGen/ImageGen.Core.Tests/Providers/ProviderRouterTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`, `ImageGen/ImageGen.Data.Tests/CompositionTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SettingsPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionModelsPageModelTests.cs`, `ImageGen/ImageGen.Avalonia.Tests/Flows/StartFlowTests.cs`, `docs/knowledge/together-ai.md`, `docs/architecture.md`, `docs/product.md`, `docs/specs/image-client.md`, `docs/status.md`, `AGENTS.md`, `README.md` (только если уже создан задачей118 к моменту реализации)
 
 ## Отчёт
+
+Сделано:
+- Together добавлен в конец встроенного списка providers как OpenAI-compatible image-only provider: base URL, timeout 180 s, base64/PNG и четыре модели `FLUX.1.1-pro`, `FLUX.2-dev`, `FLUX.2-flex`, `FLUX.2-pro` с исходным case-sensitive id, seed и лимитом 1 image/request.
+- Пользовательский entry `id=together` заменяет встроенную конфигурацию целиком; пустой `imageModels` сохраняет сам provider для настроек и ключа. Общая Settings из задачи 135 уже включает Together.
+- Добавлены composition и UI-flow проверки каталога/label, а также end-to-end mocked генерация с фиктивным ключом: один POST, base64 PNG сохранён, `CostUsd=null`. Без ключа генерация получает `InvalidKey` и не делает HTTP-запрос.
+- Обновлены AGENTS.md, product, architecture, спецификация и справка Together. Цены указаны как каталоговый снимок с единицами и `+` для переменных минимальных тарифов; они не записываются в стоимость результата. Together не добавляет модели ассистента.
+
+Модели и seed сверены с [официальным каталогом Together](https://docs.together.ai/docs/serverless/models) и [таблицей совместимости параметров](https://docs.together.ai/docs/inference/images/parameters) 2026-10-30. Все четыре кандидата присутствуют в каталоге; подтверждённых удалений нет. Цены в справке: FLUX.1.1 Pro $0.04/MP, FLUX.2 Dev $0.0154+/image, Flex и Pro $0.03+/image. Живой запрос/платный smoke и фактическое списание не выполнялись; аккаунтная доступность не проверена, `CostUsd` остаётся неизвестным.
+
+Проверки:
+- Core tests: 631/631.
+- Data tests: 96/96.
+- Presentation tests: 384/384.
+- Avalonia headless tests: 143 passed, 2 skipped (DPAPI и Secret Service недоступны на Linux).
+- `dotnet format --verify-no-changes`: Core, Core.Tests, Data.Tests, Presentation.Tests и Avalonia.Tests прошли.
+- `bash scripts/check.sh`: все проверки пройдены.
+
+Отклонений от плана нет; README не создавался, так как README продукта ещё нет.
 
 ## Комментарии
 

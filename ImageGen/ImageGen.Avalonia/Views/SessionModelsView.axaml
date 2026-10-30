@@ -51,9 +51,10 @@
                                                 <DataTemplate DataType="pm:ModelOptionViewModel" x:DataType="pm:ModelOptionViewModel">
                                                     <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                                               Margin="0,2"
-                                                              AutomationProperties.Name="{Binding Name}">
+                                                              AutomationProperties.Name="{Binding AccessibilityName}">
                                                         <StackPanel>
                                                             <TextBlock Text="{Binding Name}" />
+                                                            <TextBlock Classes="meta" Text="{Binding ProviderText}" />
                                                             <TextBlock Classes="meta" Text="{Binding DetailsText}" />
                                                         </StackPanel>
                                                     </CheckBox>

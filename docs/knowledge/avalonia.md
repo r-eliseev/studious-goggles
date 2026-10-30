@@ -18,6 +18,7 @@
 
 ## Чат и карточки (задача 042)
 - `Bitmap(path)` для файла, который не картинка, не бросает исключение: даёт битмап 1×1 (проверено на 12.1.4). Конвертер `FilePathToBitmapConverter` всё равно возвращает `null` для пустого пути и отсутствующего файла.
+- На Windows `Bitmap(path)` может удерживать исходный файл открытым, пока жив bitmap; это мешает удалять PNG из временной папки сразу после закрытия UI. Для карточек декодировать байты из памяти (`Bitmap(Stream)`), чтобы не блокировать файл на диске. Проверено по Windows CI 2026-10-30; Avalonia viewer уже читает байты и передаёт `MemoryStream`.
 - Элементы шаблонов `ControlTemplate` (например, кнопки счётчика `NumericUpDown`) имеют `TemplatedParent`; при проверке имён доступности их пропускаем.
 - Визуальное дерево новой страницы появляется после прохода компоновки: `Layoutable.UpdateLayout()` в тесте.
 - Снимок окна в headless: `UseSkia()` и `UseHeadlessDrawing = false` в `AvaloniaHeadlessPlatformOptions`, затем `AvaloniaHeadlessPlatform.ForceRenderTimerTick()` и `CaptureRenderedFrame()`. В обычных тестах не используется: отрисовка замедляет и не нужна проверкам логики.

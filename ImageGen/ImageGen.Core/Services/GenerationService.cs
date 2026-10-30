@@ -25,9 +25,11 @@ public sealed class GenerationService(
     TimeProvider timeProvider,
     ILogger<GenerationService> logger,
     SessionChangeNotifier changes,
-    IDebugTrace? trace = null) : ISessionGenerationCoordinator
+    IDebugTrace? trace = null,
+    IAsyncDelay? delay = null) : ISessionGenerationCoordinator
 {
     private readonly IDebugTrace _trace = trace ?? NullDebugTrace.Instance;
+    private readonly IAsyncDelay _delay = delay ?? new SystemAsyncDelay(timeProvider);
 
     public const int MaxParallelGenerations = 4;
 
@@ -35,8 +37,10 @@ public sealed class GenerationService(
     private static readonly TimeSpan PollMinInterval = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan PollMaxInterval = TimeSpan.FromSeconds(5);
     private const int MaxPollNetworkFailures = 5;
+    private const int StateSaveMaxAttempts = 3;
+    private static readonly TimeSpan StateSaveRetryDelay = TimeSpan.FromMilliseconds(100);
 
-    private readonly SemaphoreSlim _slots = new(MaxParallelGenerations, MaxParallelGenerations);
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _providerSlots = new(StringComparer.Ordinal);
     private readonly object _lifecycleGate = new();
     private readonly Dictionary<Guid, SessionJobState> _sessionStates = [];
     private readonly ConcurrentDictionary<Guid, RunningJob> _running = new();
@@ -199,10 +203,10 @@ public sealed class GenerationService(
 
             using (lease)
             {
-                IProviderConnection connection;
+                IQueuedImageProvider queued;
                 try
                 {
-                    connection = providers.GetConnection(generation.ProviderId);
+                    queued = providers.GetQueuedImageProvider(generation.ProviderId);
                 }
                 catch (ProviderException ex) when (ex.Kind == ErrorKind.ModelUnavailable)
                 {
@@ -216,10 +220,17 @@ public sealed class GenerationService(
                     continue;
                 }
 
-                if (connection is IQueuedImageProvider queued)
+                ProviderJobHandle? recoveredHandle = null;
+                try
                 {
-                    Launch(generation, lease.State, token => WatchQueuedAsync(generation, queued, token));
+                    recoveredHandle = JsonSerializer.Deserialize<ProviderJobHandle>(generation.JobJson!);
                 }
+                catch (JsonException)
+                {
+                    // WatchQueuedAsync preserves the existing malformed-handle failure behavior.
+                }
+
+                Launch(generation, lease.State, (_, token) => WatchQueuedAsync(generation, queued, token), queued, recoveredHandle, submitAlreadySettled: true);
             }
         }
 
@@ -232,48 +243,17 @@ public sealed class GenerationService(
         while (true)
         {
             Task[] pending;
-            Exception[] unobservedFailures;
             lock (_lifecycleGate)
             {
                 pending = _running.Values.Select(job => job.Task).ToArray();
-                unobservedFailures = _sessionStates.Values.SelectMany(state => state.JobFailures).ToArray();
-                foreach (var state in _sessionStates.Values)
-                {
-                    state.JobFailures.Clear();
-                }
             }
 
             if (pending.Length == 0)
             {
-                if (unobservedFailures.Length > 0)
-                {
-                    throw new AggregateException(unobservedFailures);
-                }
-
                 return;
             }
 
-            try
-            {
-                await Task.WhenAll(pending);
-            }
-            catch
-            {
-                lock (_lifecycleGate)
-                {
-                    foreach (var state in _sessionStates.Values)
-                    {
-                        state.JobFailures.Clear();
-                    }
-                }
-
-                throw;
-            }
-
-            if (unobservedFailures.Length > 0)
-            {
-                throw new AggregateException(unobservedFailures);
-            }
+            await Task.WhenAll(pending);
         }
     }
 
@@ -309,6 +289,12 @@ public sealed class GenerationService(
         try
         {
             await state.StartsDrained.Task.ConfigureAwait(false);
+            RunningJob[] jobs;
+            lock (_lifecycleGate)
+            {
+                jobs = _running.Values.Where(job => job.SessionId == state.SessionId).ToArray();
+            }
+
             try
             {
                 state.StopSource.Cancel();
@@ -318,20 +304,23 @@ public sealed class GenerationService(
                 cancellationFailure = ex;
             }
 
-            RunningJob[] jobs;
-            Exception[] unobservedFailures;
-            lock (_lifecycleGate)
+            foreach (var job in jobs)
             {
-                jobs = _running.Values.Where(job => job.SessionId == state.SessionId).ToArray();
-                unobservedFailures = state.JobFailures.ToArray();
-                state.JobFailures.Clear();
+                await job.SubmitSettled.Task.ConfigureAwait(false);
+                var remoteJob = job.GetRemoteJob();
+                if (remoteJob is null)
+                {
+                    continue;
+                }
+
+                await CancelRemoteJobBestEffortAsync(job, remoteJob.Value.Provider, remoteJob.Value.Handle).ConfigureAwait(false);
+                if (remoteJob.Value.Provider is InMemoryQueuedImageProvider or InMemoryQueuedImageConnection)
+                {
+                    await WaitForLocalJobTerminalAsync(remoteJob.Value.Provider, remoteJob.Value.Handle).ConfigureAwait(false);
+                }
             }
 
             await Task.WhenAll(jobs.Select(job => job.Task)).ConfigureAwait(false);
-            if (unobservedFailures.Length > 0)
-            {
-                throw new AggregateException(unobservedFailures);
-            }
             if (cancellationFailure is not null)
             {
                 throw cancellationFailure;
@@ -341,11 +330,6 @@ public sealed class GenerationService(
         }
         catch (Exception ex)
         {
-            lock (_lifecycleGate)
-            {
-                state.JobFailures.Clear();
-            }
-
             state.StopCompletion!.TrySetException(ex);
         }
         finally
@@ -476,7 +460,7 @@ public sealed class GenerationService(
         foreach (var generation in generations)
         {
             LogStatus(generation);
-            Launch(generation, lease.State, token => ExecuteAsync(generation, token));
+            Launch(generation, lease.State, (job, token) => ExecuteAsync(generation, job, token));
         }
 
         return run;
@@ -495,13 +479,29 @@ public sealed class GenerationService(
         }
     }
 
-    private void Launch(Generation generation, SessionJobState state, Func<CancellationToken, Task> work)
+    private void Launch(
+        Generation generation,
+        SessionJobState state,
+        Func<RunningJob, CancellationToken, Task> work,
+        IQueuedImageProvider? queuedProvider = null,
+        ProviderJobHandle? submittedHandle = null,
+        bool submitAlreadySettled = false)
     {
         lock (_lifecycleGate)
         {
             var source = CancellationTokenSource.CreateLinkedTokenSource(state.StopSource.Token);
             var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var job = new RunningJob(generation.Id, generation.SessionId, source);
+            if (queuedProvider is not null && submittedHandle is not null)
+            {
+                job.PublishHandle(queuedProvider, submittedHandle);
+            }
+
+            if (submitAlreadySettled)
+            {
+                job.CompleteSubmitPhase();
+            }
+
             if (!_running.TryAdd(generation.Id, job))
             {
                 source.Dispose();
@@ -513,7 +513,7 @@ public sealed class GenerationService(
                 await gate.Task.ConfigureAwait(false);
                 try
                 {
-                    await work(source.Token).ConfigureAwait(false);
+                    await RunWithProviderSlotAsync(generation.ProviderId, job, source.Token, work).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (source.IsCancellationRequested)
                 {
@@ -521,15 +521,17 @@ public sealed class GenerationService(
                 }
                 catch (Exception ex)
                 {
-                    lock (_lifecycleGate)
-                    {
-                        state.JobFailures.Add(ex);
-                    }
-
-                    throw;
+                    logger.LogError(
+                        "Generation {GenerationId} in session {SessionId} from provider {ProviderId} failed at status {Status}.",
+                        generation.Id,
+                        generation.SessionId,
+                        generation.ProviderId,
+                        generation.Status);
+                    logger.LogDebug(ex, "Generation failure detail {GenerationId}", generation.Id);
                 }
                 finally
                 {
+                    job.CompleteSubmitPhase();
                     lock (_lifecycleGate)
                     {
                         _running.TryRemove(job.GenerationId, out _);
@@ -543,50 +545,67 @@ public sealed class GenerationService(
         }
     }
 
-    private async Task ExecuteAsync(Generation generation, CancellationToken cancellationToken)
+    private async Task RunWithProviderSlotAsync(
+        string providerId,
+        RunningJob job,
+        CancellationToken cancellationToken,
+        Func<RunningJob, CancellationToken, Task> work)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        if (QueuedProviderOf(generation.ProviderId) is { } queued)
-        {
-            await ExecuteQueuedAsync(generation, queued, cancellationToken).ConfigureAwait(false);
-            return;
-        }
-
-        await _slots.WaitAsync(cancellationToken).ConfigureAwait(false);
+        var slots = _providerSlots.GetOrAdd(providerId, _ => new SemaphoreSlim(MaxParallelGenerations, MaxParallelGenerations));
+        var acquired = false;
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            generation.Status = GenerationStatus.Running;
-            await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
-
-            await GenerateAndStoreAsync(generation, cancellationToken).ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
-            generation.CompletedAt = timeProvider.GetUtcNow();
-            await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
+            await slots.WaitAsync(cancellationToken).ConfigureAwait(false);
+            acquired = true;
+            await work(job, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
-            _slots.Release();
+            if (acquired)
+            {
+                slots.Release();
+            }
         }
     }
 
-    /// <summary>
-    /// A queued provider (fal): the slot is held while the job is submitted; the watch of the job runs after the slot is
-    /// released, because a queue can take minutes.
-    /// </summary>
-    private async Task ExecuteQueuedAsync(Generation generation, IQueuedImageProvider queued, CancellationToken cancellationToken)
+    private async Task ExecuteAsync(Generation generation, RunningJob job, CancellationToken cancellationToken)
     {
-        await _slots.WaitAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        IQueuedImageProvider queued;
+        try
+        {
+            queued = providers.GetQueuedImageProvider(generation.ProviderId);
+        }
+        catch (ProviderException ex) when (ex.Kind == ErrorKind.ModelUnavailable)
+        {
+            generation.Status = GenerationStatus.Failed;
+            generation.ErrorKind = ErrorKind.ModelUnavailable;
+            generation.ErrorMessage = ex.Message;
+            generation.CompletedAt = timeProvider.GetUtcNow();
+            await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        await ExecuteQueuedAsync(generation, queued, job, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Provider execution uses one queued lifecycle: the slot is held while the job is submitted; the watch runs after
+    /// the slot is released, because native queues can take minutes.
+    /// </summary>
+    private async Task ExecuteQueuedAsync(Generation generation, IQueuedImageProvider queued, RunningJob job, CancellationToken cancellationToken)
+    {
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            generation.Status = GenerationStatus.Running;
+            generation.Status = GenerationStatus.Queued;
             await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
-            await SubmitQueuedAsync(generation, queued, cancellationToken).ConfigureAwait(false);
+            await SubmitQueuedAsync(generation, queued, job, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
-            _slots.Release();
+            // Signal submit settlement even when preparation was cancelled; the provider slot belongs to the job wrapper.
+            job.CompleteSubmitPhase();
         }
 
         if (!generation.IsFinished && generation.JobJson is not null)
@@ -595,7 +614,7 @@ public sealed class GenerationService(
         }
     }
 
-    private async Task SubmitQueuedAsync(Generation generation, IQueuedImageProvider queued, CancellationToken cancellationToken)
+    private async Task SubmitQueuedAsync(Generation generation, IQueuedImageProvider queued, RunningJob job, CancellationToken cancellationToken)
     {
         var request = await BuildRequestAsync(generation, cancellationToken).ConfigureAwait(false);
         if (request is null)
@@ -605,11 +624,16 @@ public sealed class GenerationService(
             return;
         }
 
+        ProviderJobHandle? submittedHandle = null;
         try
         {
             var handle = await queued.SubmitAsync(request, cancellationToken).ConfigureAwait(false);
+            submittedHandle = handle;
+            job.PublishHandle(queued, handle);
             generation.JobJson = JsonSerializer.Serialize(handle);
-            generation.Status = GenerationStatus.Queued;
+            generation.Status = queued is InMemoryQueuedImageProvider or InMemoryQueuedImageConnection
+                ? GenerationStatus.Running
+                : GenerationStatus.Queued;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -623,7 +647,60 @@ public sealed class GenerationService(
             generation.CompletedAt = timeProvider.GetUtcNow();
         }
 
-        await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (submittedHandle is not null && generation.Status == GenerationStatus.Running)
+            {
+                await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
+            }
+            else if (submittedHandle is not null)
+            {
+                await PersistStateWithRetryAsync(generation, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch when (submittedHandle is not null)
+        {
+            await CancelRemoteJobBestEffortAsync(job, queued, submittedHandle).ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    private async Task CancelRemoteJobBestEffortAsync(RunningJob job, IQueuedImageProvider provider, ProviderJobHandle handle)
+    {
+        if (!job.TryBeginRemoteCancel())
+        {
+            return;
+        }
+
+        try
+        {
+            var outcome = await provider.CancelAsync(handle, CancellationToken.None).ConfigureAwait(false);
+            logger.LogWarning(
+                "Remote provider job cancellation {GenerationId} for session {SessionId} completed with outcome {Outcome}.",
+                job.GenerationId,
+                job.SessionId,
+                outcome);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                "Remote provider job cancellation {GenerationId} for session {SessionId} failed.",
+                job.GenerationId,
+                job.SessionId);
+            logger.LogDebug(ex, "Remote provider job cancellation detail {GenerationId}", job.GenerationId);
+        }
+    }
+
+    private static async Task WaitForLocalJobTerminalAsync(IQueuedImageProvider provider, ProviderJobHandle handle)
+    {
+        while (!(await provider.PollAsync(handle, CancellationToken.None).ConfigureAwait(false)).IsTerminal)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(50)).ConfigureAwait(false);
+        }
     }
 
     /// <summary>Follows the saved job until it ends; every change is saved and announced.</summary>
@@ -644,8 +721,14 @@ public sealed class GenerationService(
 
         // Only the reading of the next update is a polling failure. The handling of an update — the file store, the
         // persistence — is not: such an error must not be turned into a second terminal status of the generation.
+        var isLocalAdapter = queued is InMemoryQueuedImageProvider or InMemoryQueuedImageConnection;
         var enumerator = ProviderJobPoller.WatchAsync(
-            queued, handle, PollMinInterval, PollMaxInterval, MaxPollNetworkFailures, cancellationToken)
+            queued,
+            handle,
+            isLocalAdapter ? TimeSpan.FromMilliseconds(50) : PollMinInterval,
+            isLocalAdapter ? TimeSpan.FromMilliseconds(250) : PollMaxInterval,
+            MaxPollNetworkFailures,
+            cancellationToken)
             .GetAsyncEnumerator(cancellationToken);
         try
         {
@@ -728,6 +811,13 @@ public sealed class GenerationService(
 
     private async Task ApplyUpdateAsync(Generation generation, JobUpdate update, CancellationToken cancellationToken)
     {
+        if ((update.State == JobState.Queued && generation.Status == GenerationStatus.Queued)
+            || (update.State == JobState.Running && generation.Status == GenerationStatus.Running)
+            || (update.State == JobState.Queued && generation.Status == GenerationStatus.Running))
+        {
+            return;
+        }
+
         switch (update.State)
         {
             case JobState.Queued:
@@ -737,14 +827,8 @@ public sealed class GenerationService(
                 generation.Status = GenerationStatus.Running;
                 break;
             case JobState.Succeeded:
-                generation.ImagePath = await files.SaveAsync(
-                    generation.SessionId, generation.Id, update.Result!.Content, update.Result.MediaType, cancellationToken)
-                    .ConfigureAwait(false);
-                cancellationToken.ThrowIfCancellationRequested();
-                generation.MediaType = update.Result.MediaType;
-                generation.Status = GenerationStatus.Succeeded;
-                generation.CompletedAt = timeProvider.GetUtcNow();
-                break;
+                await SaveResultAndPersistAsync(generation, update.Result!, cancellationToken).ConfigureAwait(false);
+                return;
             case JobState.Filtered:
                 generation.Status = GenerationStatus.Filtered;
                 generation.ErrorKind = ErrorKind.Moderated;
@@ -764,60 +848,6 @@ public sealed class GenerationService(
         }
 
         await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>The client of a provider when it runs queued jobs; null for every other provider.</summary>
-    private IQueuedImageProvider? QueuedProviderOf(string providerId)
-    {
-        try
-        {
-            return providers.GetConnection(providerId) as IQueuedImageProvider;
-        }
-        catch (ProviderException)
-        {
-            return null;
-        }
-    }
-
-    private async Task GenerateAndStoreAsync(Generation generation, CancellationToken cancellationToken)
-    {
-        var request = await BuildRequestAsync(generation, cancellationToken).ConfigureAwait(false);
-        if (request is null)
-        {
-            return;
-        }
-
-        try
-        {
-            var provider = providers.GetImageProvider(generation.ProviderId);
-            var result = await provider.GenerateAsync(request, cancellationToken).ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            generation.ImagePath = await files.SaveAsync(
-                generation.SessionId, generation.Id, result.Content, result.MediaType, cancellationToken)
-                .ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
-            generation.MediaType = result.MediaType;
-            generation.CostUsd = result.CostUsd;
-            generation.Status = GenerationStatus.Succeeded;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (ProviderException ex)
-        {
-            generation.Status = ex.Kind == ErrorKind.Moderated ? GenerationStatus.Filtered : GenerationStatus.Failed;
-            generation.ErrorKind = ex.Kind;
-            generation.ErrorMessage = ex.Message;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Generation {GenerationId} failed unexpectedly.", generation.Id);
-            generation.Status = GenerationStatus.Failed;
-            generation.ErrorKind = ErrorKind.Unknown;
-            generation.ErrorMessage = ex.Message;
-        }
     }
 
     /// <summary>The request of a generation with its references read; null when a reference is missing (the generation is then Failed).</summary>
@@ -885,33 +915,95 @@ public sealed class GenerationService(
         return urls;
     }
 
-    /// <summary>Saves the generation, then raises the event with a copy. A failed save is logged and not reported.</summary>
+    /// <summary>Saves the generation, then logs and raises the event only after the repository confirms the update.</summary>
     private async Task SaveAndNotifyAsync(Generation generation, CancellationToken cancellationToken = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        LogStatus(generation);
+        await PersistStateWithRetryAsync(generation, cancellationToken).ConfigureAwait(false);
+        NotifyConfirmedState(generation);
+    }
+
+    private async Task SaveResultAndPersistAsync(
+        Generation generation,
+        ImageGenerationResult result,
+        CancellationToken cancellationToken)
+    {
+        var relativePath = await files.SaveAsync(
+            generation.SessionId, generation.Id, result.Content, result.MediaType, cancellationToken).ConfigureAwait(false);
+        generation.ImagePath = relativePath;
+        generation.MediaType = result.MediaType;
+        generation.CostUsd = result.CostUsd;
+        generation.Status = GenerationStatus.Succeeded;
+        generation.CompletedAt = timeProvider.GetUtcNow();
+
         try
         {
-            await runs.UpdateGenerationAsync(generation, cancellationToken).ConfigureAwait(false);
+            await PersistStateWithRetryAsync(generation, cancellationToken).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch
         {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Could not save generation {GenerationId} with status {Status}.", generation.Id, generation.Status);
+            try
+            {
+                await files.DeleteFileAsync(relativePath, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception cleanupException)
+            {
+                logger.LogWarning(
+                    "Could not clean up image file for generation {GenerationId} in session {SessionId}.",
+                    generation.Id,
+                    generation.SessionId);
+                logger.LogDebug(
+                    cleanupException,
+                    "Image file cleanup detail for generation {GenerationId}: {RelativePath}",
+                    generation.Id,
+                    relativePath);
+            }
+            finally
+            {
+                generation.ImagePath = null;
+                generation.MediaType = null;
+            }
+
             throw;
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
+        NotifyConfirmedState(generation);
+    }
+
+    private void NotifyConfirmedState(Generation generation)
+    {
+        LogStatus(generation);
         try
         {
             GenerationUpdated?.Invoke(this, new GenerationUpdatedEventArgs(Snapshot(generation)));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "A handler of GenerationUpdated failed for generation {GenerationId}.", generation.Id);
+            logger.LogWarning("A handler of GenerationUpdated failed for generation {GenerationId} with status {Status}.", generation.Id, generation.Status);
+            logger.LogDebug(ex, "GenerationUpdated handler failure detail {GenerationId}", generation.Id);
+        }
+    }
+
+    private async Task PersistStateWithRetryAsync(Generation generation, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await runs.UpdateGenerationAsync(generation, cancellationToken).ConfigureAwait(false);
+                break;
+            }
+            catch (StorageWriteException ex) when (ex.IsTransient && attempt < StateSaveMaxAttempts)
+            {
+                logger.LogWarning(
+                    "Retrying generation state write {GenerationId} in session {SessionId} for provider {ProviderId} after attempt {Attempt}.",
+                    generation.Id,
+                    generation.SessionId,
+                    generation.ProviderId,
+                    attempt);
+                logger.LogDebug(ex, "Transient generation state write detail {GenerationId} attempt {Attempt}", generation.Id, attempt);
+                await _delay.DelayAsync(StateSaveRetryDelay, cancellationToken).ConfigureAwait(false);
+            }
         }
     }
 
@@ -923,8 +1015,6 @@ public sealed class GenerationService(
         public TaskCompletionSource StartsDrained { get; set; } = CompletedSignal();
         public CancellationTokenSource StopSource { get; } = new();
         public TaskCompletionSource? StopCompletion { get; set; }
-        public List<Exception> JobFailures { get; } = [];
-
         private static TaskCompletionSource CompletedSignal()
         {
             var signal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -943,10 +1033,39 @@ public sealed class GenerationService(
 
     private sealed class RunningJob(Guid generationId, Guid sessionId, CancellationTokenSource source)
     {
+        private readonly object _remoteJobGate = new();
+        private IQueuedImageProvider? _queuedProvider;
+        private ProviderJobHandle? _submittedHandle;
+        private int _remoteCancelStarted;
+
         public Guid GenerationId { get; } = generationId;
         public Guid SessionId { get; } = sessionId;
         public CancellationTokenSource Source { get; } = source;
         public Task Task { get; set; } = System.Threading.Tasks.Task.CompletedTask;
+        public TaskCompletionSource SubmitSettled { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public void PublishHandle(IQueuedImageProvider provider, ProviderJobHandle handle)
+        {
+            lock (_remoteJobGate)
+            {
+                _queuedProvider = provider;
+                _submittedHandle = handle;
+            }
+        }
+
+        public (IQueuedImageProvider Provider, ProviderJobHandle Handle)? GetRemoteJob()
+        {
+            lock (_remoteJobGate)
+            {
+                return _queuedProvider is not null && _submittedHandle is not null
+                    ? (_queuedProvider, _submittedHandle)
+                    : null;
+            }
+        }
+
+        public void CompleteSubmitPhase() => SubmitSettled.TrySetResult();
+
+        public bool TryBeginRemoteCancel() => Interlocked.CompareExchange(ref _remoteCancelStarted, 1, 0) == 0;
     }
 
     private static Generation Snapshot(Generation g) => new()

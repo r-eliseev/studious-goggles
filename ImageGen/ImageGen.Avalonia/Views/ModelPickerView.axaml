@@ -24,9 +24,10 @@
                                     Margin="0,2"
                                     Command="{Binding $parent[ItemsControl].((pm:ModelPickerPageModel)DataContext).PickCommand}"
                                     CommandParameter="{Binding}"
-                                    AutomationProperties.Name="{Binding Name}">
+                                    AutomationProperties.Name="{Binding AccessibilityName}">
                                 <StackPanel>
                                     <TextBlock Text="{Binding Name}" />
+                                    <TextBlock Classes="meta" Text="{Binding ProviderText}" />
                                     <TextBlock Classes="meta" Text="{Binding DetailsText}" />
                                 </StackPanel>
                             </Button>
@@ -53,9 +54,10 @@
                                             Margin="0,2"
                                             Command="{Binding $parent[ItemsControl].((pm:ModelPickerPageModel)DataContext).PickCommand}"
                                             CommandParameter="{Binding}"
-                                            AutomationProperties.Name="{Binding Name}">
+                                            AutomationProperties.Name="{Binding AccessibilityName}">
                                         <StackPanel>
                                             <TextBlock Text="{Binding Name}" />
+                                            <TextBlock Classes="meta" Text="{Binding ProviderText}" />
                                             <TextBlock Classes="meta" Text="{Binding DetailsText}" />
                                         </StackPanel>
                                     </Button>

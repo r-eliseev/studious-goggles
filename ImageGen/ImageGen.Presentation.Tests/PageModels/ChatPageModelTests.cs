@@ -27,7 +27,7 @@ public class ChatPageModelTests
     private readonly IChatMessageRepository _messageRepository = Substitute.For<IChatMessageRepository>();
     private readonly IRunRepository _runRepository = Substitute.For<IRunRepository>();
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
-    private readonly IModelProvider _generator = Substitute.For<IModelProvider>();
+    private readonly ISynchronousImageTransport _generator = Substitute.For<ISynchronousImageTransport>();
     private readonly ISeedSource _seeds = Substitute.For<ISeedSource>();
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
     private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
@@ -36,6 +36,7 @@ public class ChatPageModelTests
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly IMainThread _mainThread = Substitute.For<IMainThread>();
     private readonly IClipboardService _clipboard = Substitute.For<IClipboardService>();
+    private readonly IImageViewerService _imageViewer = Substitute.For<IImageViewerService>();
     private readonly IFilePickerService _filePicker = Substitute.For<IFilePickerService>();
     private readonly IChatAttachmentRepository _chatAttachments = Substitute.For<IChatAttachmentRepository>();
     private Action? _onMainThreadCallback;
@@ -182,7 +183,7 @@ public class ChatPageModelTests
             .Returns(ci => $"images/s/attachments/{ci.ArgAt<Guid>(1):N}.png");
         _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
         _generationService = new GenerationService(
-            _sessionRepository, _runRepository, ProviderDoubles.Router(_generator), _files, catalog, _seeds, _attachments, time, NullLogger<GenerationService>.Instance, new SessionChangeNotifier());
+            _sessionRepository, _runRepository, ProviderDoubles.Router(transport: _generator), _files, catalog, _seeds, _attachments, time, NullLogger<GenerationService>.Instance, new SessionChangeNotifier());
         _assistant = new AssistantService(
             _sessionService, _messageRepository, _runRepository, ProviderDoubles.Router(chat: _chat), _generationService,
             new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),
@@ -219,7 +220,7 @@ public class ChatPageModelTests
     private ModelCatalogService Catalog => new(ProviderDoubles.Router(), _modelRepository, NullLogger<ModelCatalogService>.Instance);
 
     private SessionModelsPageModel NewModelsPane() =>
-        new(_sessionService, Catalog, ChatModels, _navigation, _dialogs);
+        new(_sessionService, Catalog, ChatModels, ProviderDoubles.BuiltInRegistry(), _navigation, _dialogs);
 
     private SessionParametersPageModel NewParametersPane() =>
         new(_sessionService, Catalog, _navigation, _dialogs);
@@ -241,7 +242,8 @@ public class ChatPageModelTests
             Substitute.For<IImageSaver>(),
             _tracker,
             NewModelsPane,
-            NewParametersPane);
+            NewParametersPane,
+            _imageViewer);
         model.ApplyQueryAttributes(new Dictionary<string, object>
         {
             [Routes.SessionIdParameter] = sessionId.ToString("D"),
@@ -339,6 +341,62 @@ public class ChatPageModelTests
         Assert.IsType<MessageItemViewModel>(_model.Items[1]);
         var runItem = Assert.IsType<RunItemViewModel>(_model.Items[2]);
         Assert.Equal(2, runItem.Generations.Count);
+    }
+
+    [Fact]
+    public async Task OpenImageCommand_UsesSuccessfulImagesFromContainingRunAndSelectsCard()
+    {
+        var run = NewRun(_session.Id, "red fox");
+        var first = NewGeneration(run, 5);
+        first.ImagePath = "images/s/first.png";
+        first.SortOrder = 0;
+        var failed = NewGeneration(run, 6, GenerationStatus.Failed);
+        failed.SortOrder = 1;
+        var last = NewGeneration(run, 7);
+        last.ImagePath = "images/s/last.png";
+        last.SortOrder = 2;
+        var otherRun = NewRun(_session.Id, "blue bird");
+        var other = NewGeneration(otherRun, 8);
+        other.ImagePath = "images/s/other.png";
+        StoreRun(run, first, failed, last);
+        StoreRun(otherRun, other);
+        await _model.OnAppearingAsync();
+        var runItem = _model.Items.OfType<RunItemViewModel>().Single(item => item.Id == run.Id);
+        var card = runItem.Generations[2];
+        var firstCard = runItem.Generations[0];
+
+        await _model.OpenImageCommand.ExecuteAsync(card);
+
+        Assert.Same(card, _model.SelectedCard);
+        var expected = new[]
+        {
+            new ImageViewerItem(firstCard.Id, "/data/images/s/first.png", ViewerAccessibleLabel(firstCard)),
+            new ImageViewerItem(card.Id, "/data/images/s/last.png", ViewerAccessibleLabel(card)),
+        };
+        await _imageViewer.Received(1).ShowAsync(
+            Arg.Is<IReadOnlyList<ImageViewerItem>>(items => items.SequenceEqual(expected)),
+            1,
+            Arg.Any<CancellationToken>());
+    }
+
+    private static string ViewerAccessibleLabel(GenerationItemViewModel card) =>
+        string.Join(", ", new[] { card.ModelText, card.SeedText, card.ImageDimensionsText, card.SummaryText }
+            .Where(text => !string.IsNullOrWhiteSpace(text)));
+
+    [Fact]
+    public async Task OpenImageCommand_NonImageCard_DoesNothing()
+    {
+        var run = NewRun(_session.Id, "red fox");
+        var failed = NewGeneration(run, 5, GenerationStatus.Failed);
+        StoreRun(run, failed);
+        await _model.OnAppearingAsync();
+        var card = Assert.Single(_model.Items.OfType<RunItemViewModel>()).Generations[0];
+
+        await _model.OpenImageCommand.ExecuteAsync(card);
+
+        Assert.Null(_model.SelectedCard);
+        await _imageViewer.DidNotReceive().ShowAsync(
+            Arg.Any<IReadOnlyList<ImageViewerItem>>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -617,7 +675,7 @@ public class ChatPageModelTests
     public void ApplyQueryAttributes_MissingSessionId_Throws()
     {
         var model = new ChatPageModel(
-            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard, Substitute.For<IImageSaver>(), _tracker, NewModelsPane, NewParametersPane);
+            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard, Substitute.For<IImageSaver>(), _tracker, NewModelsPane, NewParametersPane, _imageViewer);
 
         Assert.Throws<ArgumentException>(() => model.ApplyQueryAttributes(new Dictionary<string, object>()));
     }
@@ -863,6 +921,24 @@ public class ChatPageModelTests
     }
 
     [Fact]
+    public async Task SendCommand_PostAcceptFailure_KeepsEditorClearedAndShowsTerminalError()
+    {
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<AssistantChatResult>(new InvalidOperationException("private provider detail")));
+        await _model.OnAppearingAsync();
+        _model.InputText = "question";
+
+        await _model.SendCommand.ExecuteAsync(null);
+
+        Assert.Equal(string.Empty, _model.InputText);
+        Assert.Empty(_model.PendingAttachments);
+        Assert.False(_model.IsBusy);
+        await _dialogs.DidNotReceive().AlertAsync(Arg.Any<string>(), Arg.Any<string>());
+        Assert.Equal(2, _model.Items.Count);
+        Assert.True(Assert.IsType<MessageItemViewModel>(_model.Items.Last()).IsError);
+    }
+
+    [Fact]
     public async Task SendCommand_WhileSending_IsBusyShowsThinkingAndCannotSendAgain()
     {
         var reply = new TaskCompletionSource<AssistantChatResult>();
@@ -916,6 +992,7 @@ public class ChatPageModelTests
             Assert.Equal("/data/images/s/g.png", card.ImageFilePath);
         });
         Assert.Same(item, _model.Items.Last());
+        Assert.All(_rows, generation => Assert.Equal(0.014m, generation.CostUsd));
     }
 
     [Fact]
@@ -971,8 +1048,9 @@ public class ChatPageModelTests
         await _generationService.WhenIdleAsync();
 
         Assert.Same(item, _model.Items.Last());
+        Assert.All(_rows, generation => Assert.Equal(0.014m, generation.CostUsd));
         Assert.Contains("2 of 2", item.HeaderText);
-        Assert.EndsWith("$0.014", item.HeaderText, StringComparison.Ordinal);
+        Assert.EndsWith("$0.028", item.HeaderText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1012,8 +1090,8 @@ public class ChatPageModelTests
         await _generationService.StartRunAsync(_session.Id, "red fox", TestContext.Current.CancellationToken);
         await _generationService.WhenIdleAsync();
 
-        // Two generations, each reports "Generating" and "Done": four events for one subscription.
-        _mainThread.Received(4).BeginInvokeOnMainThread(Arg.Any<Action>());
+        // Two generations, each reports Queued, Running, and Done for one subscription.
+        _mainThread.Received(6).BeginInvokeOnMainThread(Arg.Any<Action>());
     }
 
     [Fact]

@@ -23,7 +23,7 @@ public class OtherModelFlowTests
         await card.OtherModelCommand.ExecuteAsync(null);
         await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ModelPickerView, "экран выбора модели");
         var picker = (ModelPickerPageModel)((Control)shell.Window.PageArea.Content!).DataContext!;
-        await shell.WaitUntilAsync(() => picker.AllModels.Count == 2, "каталог загружен");
+        await shell.WaitUntilAsync(() => picker.AllModels.Count == 6, "каталог загружен");
 
         var chosen = picker.AllModels.Single(m => m.Id == "vendor/beta");
         await picker.PickCommand.ExecuteAsync(chosen);

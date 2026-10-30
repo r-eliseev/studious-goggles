@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ImageGen.Core.Domain.Models;
+using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
 using ImageGen.Presentation.Resources.Strings;
@@ -19,6 +20,7 @@ public sealed partial class ModelPickerPageModel(
     IRunRepository runs,
     ModelCatalogService catalog,
     GenerationService generations,
+    ProviderRegistry providers,
     INavigationService navigation,
     IDialogService dialogs) : ObservableObject
 {
@@ -85,7 +87,7 @@ public sealed partial class ModelPickerPageModel(
             var models = await catalog.GetAllImageModelsAsync(forceRefresh: false, CancellationToken.None);
             var byReference = models.ToDictionary(m => new ModelRef(m.ProviderId, m.Id));
             _all.Clear();
-            _all.AddRange(models.Select(m => new ModelOptionViewModel(m, isSelected: false)));
+            _all.AddRange(models.Select(m => new ModelOptionViewModel(m, providers.Get(m.ProviderId).DisplayName, isSelected: false)));
 
             var sessionGenerations = await runs.ListGenerationsBySessionAsync(_sessionId, CancellationToken.None);
             // Most recent use last in the list: later entries overwrite the order index, then we reverse.
@@ -100,7 +102,7 @@ public sealed partial class ModelPickerPageModel(
             var used = lastUse
                 .Where(pair => pair.Key != sourceModel && byReference.ContainsKey(pair.Key))
                 .OrderByDescending(pair => pair.Value)
-                .Select(pair => new ModelOptionViewModel(byReference[pair.Key], isSelected: false));
+                .Select(pair => new ModelOptionViewModel(byReference[pair.Key], providers.Get(pair.Key.ProviderId).DisplayName, isSelected: false));
             foreach (var row in used)
             {
                 UsedModels.Add(row);

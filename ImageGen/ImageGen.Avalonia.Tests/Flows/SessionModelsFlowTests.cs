@@ -28,7 +28,7 @@ public class SessionModelsFlowTests
         await chat.OpenModelsCommand.ExecuteAsync(null);
         await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
         var models = (SessionModelsPageModel)((Control)shell.Window.PageArea.Content!).DataContext!;
-        await shell.WaitUntilAsync(() => models.Models.Count == 2, "каталог загружен");
+        await shell.WaitUntilAsync(() => models.Models.Count == 6, "каталог загружен");
 
         models.Models.Single(model => model.Id == "vendor/beta").IsSelected = true;
         models.Models.Single(model => model.Id == SessionSettings.DefaultImageModelId).IsSelected = false;
@@ -68,13 +68,13 @@ public class SessionModelsFlowTests
         await chat.OpenModelsCommand.ExecuteAsync(null);
         await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
         var models = (SessionModelsPageModel)((Control)shell.Window.PageArea.Content!).DataContext!;
-        await shell.WaitUntilAsync(() => models.Models.Count == 2, "каталог загружен");
+        await shell.WaitUntilAsync(() => models.Models.Count == 6, "каталог загружен");
 
         models.SearchText = "beta";
         Assert.Single(models.Models);
 
         models.SearchText = "";
-        Assert.Equal(2, models.Models.Count);
+        Assert.Equal(6, models.Models.Count);
         Assert.True(models.Models.Single(model => model.Id == SessionSettings.DefaultImageModelId).IsSelected);
     }
 
@@ -94,7 +94,7 @@ public class SessionModelsFlowTests
         var expanders = view.GetVisualDescendants().OfType<Expander>().ToArray();
 
         Assert.Equal(2, expanders.Length);
-        Assert.Equal("black-forest-labs (1) · 1 selected", expanders[0].Header);
+        Assert.Equal("black-forest-labs (5) · 1 selected", expanders[0].Header);
         Assert.Equal("vendor (1) · 0 selected", expanders[1].Header);
         Assert.True(expanders[0].IsExpanded);
         Assert.False(expanders[1].IsExpanded);
@@ -109,7 +109,8 @@ public class SessionModelsFlowTests
         await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
         var view = (SessionModelsView)shell.Window.PageArea.Content!;
         var models = (SessionModelsPageModel)view.DataContext!;
-        await shell.WaitUntilAsync(() => models.Models.Count == 2, "каталог загружен");
+        await shell.WaitUntilAsync(() => models.Models.Count == 6, "каталог загружен");
+        Assert.Contains(models.Models, model => model.Reference.ProviderId == "together" && model.ProviderText == "Together AI (together)");
         shell.Window.Show();
         shell.Window.UpdateLayout();
         var vendorGroup = view.GetVisualDescendants().OfType<Expander>().Single(expander =>
@@ -144,7 +145,7 @@ public class SessionModelsFlowTests
         shell.Window.UpdateLayout();
 
         var checkbox = expander.GetVisualDescendants().OfType<CheckBox>().Single();
-        Assert.Equal("Beta Pro", AutomationProperties.GetName(checkbox));
+        Assert.Equal("Beta Pro, OpenRouter (openrouter)", AutomationProperties.GetName(checkbox));
     }
 
     [AvaloniaFact]
@@ -225,7 +226,7 @@ public class SessionModelsFlowTests
         await chat.OpenModelsCommand.ExecuteAsync(null);
         await shell.WaitUntilAsync(
             () => shell.Window.PageArea.Content is SessionModelsView view
-                && ((SessionModelsPageModel)view.DataContext!).Models.Count == 60,
+                && ((SessionModelsPageModel)view.DataContext!).Models.Count == 64,
             "длинный каталог моделей");
         shell.Window.UpdateLayout();
 

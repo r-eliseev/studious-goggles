@@ -1,6 +1,6 @@
 ---
 id: 123
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -57,5 +57,11 @@ bash scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/OpenAiCompatible/OpenAiCompatibleClientTests.cs`, `ImageGen/ImageGen.Core/OpenAiCompatible/OpenAiChatWire.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ChatPageModelTests.cs`
 
 ## Отчёт
+
+Разделил обработку принятого хода на построение terminal outcome и его единственную запись. Ошибки заголовка, контекста, провайдера и запуска генерации теперь сохраняются как безопасная ошибка ассистента; отмена вызывающей стороной проходит наружу. Ошибка terminal `AddAsync` не запускает повторную вставку, запрос summary и журнал завершения выполняются только после успешной записи. Чтение каждого вложения имеет узкую классификацию, повреждённое имя tool call возвращает безопасную `Unknown`, а storage `InvalidOperationException` больше не считается отсутствующей моделью. Добавлены тесты ошибок после accept, отмены, логирования, отсутствия дублей и поведения UI.
+
+При проверке обнаружил и исправил регрессию из 129: стоимость результата была обычным свойством без `PropertyChanged`, поэтому заголовок строки оставался `$0`. Теперь изменение `CostUsd` уведомляет `RunItemViewModel`; тест проверяет сумму двух сохранённых результатов.
+
+Проверки: Core tests 597/597; Presentation tests 367/367; `dotnet format` для Core, Core.Tests, Presentation и Presentation.Tests; `bash scripts/check.sh` — всё прошло. Windows job требует повторной проверки в PR CI.
 
 ## Комментарии

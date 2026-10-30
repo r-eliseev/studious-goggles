@@ -16,7 +16,7 @@ public sealed class OpenRouterClient(
     IHttpClientFactory httpClientFactory,
     ISecretStore secretStore,
     TimeProvider timeProvider)
-    : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient
+    : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient, ISynchronousImageTransport
 {
     private const int PriceRequestParallelism = 4;
 
@@ -160,6 +160,7 @@ public sealed class OpenRouterClient(
         }
 
         using var message = await CreateAuthorizedRequestAsync(HttpMethod.Post, "images", body, cancellationToken);
+        message.Options.Set(ProviderResponseLimits.BodyKind, ProviderResponseBodyKind.GeneratedImageJson);
         var root = await SendJsonAsync(message, cancellationToken);
         var first = (root["data"] as JsonArray)?.FirstOrDefault();
         var base64 = first?["b64_json"]?.GetValue<string>();
@@ -169,10 +170,34 @@ public sealed class OpenRouterClient(
         }
 
         var mediaType = first!["media_type"]?.GetValue<string>();
-        return new ImageGenerationResult(
-            Convert.FromBase64String(base64),
-            string.IsNullOrWhiteSpace(mediaType) ? DefaultMediaType : mediaType,
-            ReadCost(root));
+        try
+        {
+            return new ImageGenerationResult(
+                DecodeImage(base64),
+                string.IsNullOrWhiteSpace(mediaType) ? DefaultMediaType : mediaType,
+                ReadCost(root));
+        }
+        catch (ProviderResponseTooLargeException ex)
+        {
+            throw new ProviderException(ErrorKind.Unknown, "OpenRouter response exceeded the configured size limit.", innerException: ex);
+        }
+    }
+
+    private static byte[] DecodeImage(string base64)
+    {
+        var maximumEncodedLength = ((ProviderResponseLimits.Image + 2) / 3) * 4;
+        if (base64.Length > maximumEncodedLength)
+        {
+            throw new ProviderResponseTooLargeException(ProviderResponseLimits.Image);
+        }
+
+        var bytes = Convert.FromBase64String(base64);
+        if (bytes.LongLength > ProviderResponseLimits.Image)
+        {
+            throw new ProviderResponseTooLargeException(ProviderResponseLimits.Image);
+        }
+
+        return bytes;
     }
 
     /// <summary>Chat models of OpenRouter with their input modalities and context window. Entries without an id are skipped.</summary>

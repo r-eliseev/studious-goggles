@@ -19,7 +19,9 @@ public sealed class FilePathToBitmapConverter : IValueConverter
 
         try
         {
-            return new Bitmap(path);
+            var bytes = File.ReadAllBytes(path);
+            using var stream = new MemoryStream(bytes, writable: false);
+            return new Bitmap(stream);
         }
         catch (Exception)
         {

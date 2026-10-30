@@ -9,7 +9,7 @@ public class ModelGroupViewModelTests
     [Fact]
     public void ImageGroup_ExpandedAtCreation_HasRowsWithoutCallback()
     {
-        var item = new ModelOptionViewModel(TestModels.Model("vendor/alpha", "Alpha"), true);
+        var item = new ModelOptionViewModel(TestModels.Model("vendor/alpha", "Alpha"), "OpenRouter", true);
         var callbackCount = 0;
 
         var group = new ImageModelGroupViewModel("vendor", "vendor", [item], true, _ => callbackCount++);
@@ -21,7 +21,7 @@ public class ModelGroupViewModelTests
     [Fact]
     public void ImageGroup_CollapsedAtCreation_HasNoRowsAndToggleFillsThemOnce()
     {
-        var item = new ModelOptionViewModel(TestModels.Model("vendor/alpha", "Alpha"), true);
+        var item = new ModelOptionViewModel(TestModels.Model("vendor/alpha", "Alpha"), "OpenRouter", true);
         var callbackCount = 0;
         var group = new ImageModelGroupViewModel("vendor", "vendor", [item], false, _ => callbackCount++);
 

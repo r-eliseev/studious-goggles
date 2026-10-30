@@ -1,5 +1,6 @@
 using System.Net;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using ImageGen.Avalonia.Tests.TestDoubles;
 using ImageGen.Avalonia.Views;
 using ImageGen.Core.Services;
@@ -22,7 +23,7 @@ public class StartFlowTests
         await shell.StartAsync();
 
         await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ApiKeyView, "страница ключа");
-        Assert.Equal(Routes.ApiKey, shell.Navigation.CurrentRoute);
+        Assert.Equal(Routes.ApiKeyFor("openrouter"), shell.Navigation.CurrentRoute);
     }
 
     [AvaloniaFact]
@@ -32,10 +33,12 @@ public class StartFlowTests
         using var shell = new ShellHarness(openRouter: StubHttpMessageHandler.Status(HttpStatusCode.OK));
         await shell.StartAsync();
         await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ApiKeyView, "страница ключа");
-        var model = shell.Provider.GetRequiredService<ApiKeyPageModel>();
-        model.ApiKey = "sk-or-test";
-
-        await model.SaveCommand.ExecuteAsync(null);
+        var model = Assert.IsType<ApiKeyPageModel>(Assert.IsType<ApiKeyView>(shell.Window.PageArea.Content).DataContext);
+        await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            model.ApiKey = "sk-or-test";
+            await model.SaveCommand.ExecuteAsync(null);
+        });
 
         await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionsView, "список сессий");
         Assert.Equal("sk-or-test", await shell.Secrets.GetAsync(ImageGen.Core.Domain.Keys.SecretNames.OpenRouterApiKey, cancellationToken));
@@ -49,13 +52,40 @@ public class StartFlowTests
         using var shell = new ShellHarness(openRouter: StubHttpMessageHandler.Status(HttpStatusCode.Unauthorized));
         await shell.StartAsync();
         await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ApiKeyView, "страница ключа");
-        var model = shell.Provider.GetRequiredService<ApiKeyPageModel>();
-        model.ApiKey = "sk-or-bad";
-
-        await model.SaveCommand.ExecuteAsync(null);
+        var model = Assert.IsType<ApiKeyPageModel>(Assert.IsType<ApiKeyView>(shell.Window.PageArea.Content).DataContext);
+        await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            model.ApiKey = "sk-or-bad";
+            await model.SaveCommand.ExecuteAsync(null);
+        });
 
         Assert.IsType<ApiKeyView>(shell.Window.PageArea.Content);
-        Assert.Equal(AppResources.ApiKeyInvalid, model.StatusText);
+        Assert.Equal(string.Format(AppResources.ProviderKeyInvalidFormat, "OpenRouter"), model.StatusText);
+    }
+
+    [AvaloniaFact]
+    public async Task RemoveOpenRouterKey_StaysInSettingsThenSessionsRequestsKeyAgain()
+    {
+        var dialogs = Substitute.For<IDialogService>();
+        dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+        using var shell = new ShellHarness(dialogs: dialogs);
+        await shell.SaveKeyAsync("sk-or-test");
+        await shell.StartAsync();
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionsView, "список сессий");
+        await shell.Navigation.GoToAsync(Routes.Settings);
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SettingsView, "настройки");
+        var settings = Assert.IsType<SettingsPageModel>(Assert.IsType<SettingsView>(shell.Window.PageArea.Content).DataContext);
+        await shell.WaitUntilAsync(() => settings.ProviderKeys.Any(row => row.ProviderId == "openrouter" && row.HasKey), "ключ OpenRouter");
+        var openRouterKey = settings.ProviderKeys.Single(row => row.ProviderId == "openrouter");
+
+        await openRouterKey.RemoveCommand.ExecuteAsync(null);
+
+        Assert.IsType<SettingsView>(shell.Window.PageArea.Content);
+        Assert.False(openRouterKey.HasKey);
+        Assert.Null(await shell.Secrets.GetAsync(ImageGen.Core.Domain.Keys.SecretNames.OpenRouterApiKey, TestContext.Current.CancellationToken));
+        await shell.Navigation.GoBackAsync();
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ApiKeyView, "повторный запрос ключа");
+        Assert.Equal(Routes.ApiKeyFor("openrouter"), shell.Navigation.CurrentRoute);
     }
 
     [AvaloniaFact]

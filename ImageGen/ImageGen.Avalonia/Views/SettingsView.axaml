@@ -18,18 +18,33 @@
             <TextBlock Classes="heading" Text="{markup:Res SettingsTitle}" />
 
             <StackPanel Spacing="8">
-                <TextBlock Classes="section" Text="{markup:Res SettingsOpenRouter}" />
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <StackPanel>
-                        <TextBlock Text="{markup:Res SettingsApiKey}" />
-                        <TextBlock Classes="meta" Text="{Binding KeyText}" />
-                    </StackPanel>
-                    <Button Grid.Column="1"
-                            Classes="ghost"
-                            Content="{markup:Res SettingsChangeKey}"
-                            Command="{Binding ChangeKeyCommand}"
-                            AutomationProperties.Name="{markup:Res SettingsChangeKey}" />
-                </Grid>
+                <TextBlock Classes="section" Text="{markup:Res SettingsProviders}" />
+                <ItemsControl ItemsSource="{Binding ProviderKeys}">
+                    <ItemsControl.DataTemplates>
+                        <DataTemplate DataType="pm:ProviderKeyItemViewModel" x:DataType="pm:ProviderKeyItemViewModel">
+                            <Border Classes="card" Padding="12" Margin="0,0,0,8">
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                                        <TextBlock Text="{Binding DisplayName}" />
+                                        <TextBlock Classes="meta" Text="{Binding KeyText}" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            Classes="ghost"
+                                            Content="{markup:Res SettingsChangeKey}"
+                                            Command="{Binding ChangeCommand}"
+                                            MinHeight="44"
+                                            AutomationProperties.Name="{markup:Res SettingsChangeKey}" />
+                                    <Button Grid.Column="2"
+                                            Classes="ghost"
+                                            Content="{markup:Res ProviderKeyRemove}"
+                                            Command="{Binding RemoveCommand}"
+                                            MinHeight="44"
+                                            AutomationProperties.Name="{markup:Res ProviderKeyRemove}" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.DataTemplates>
+                </ItemsControl>
             </StackPanel>
 
             <StackPanel Spacing="8">

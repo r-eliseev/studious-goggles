@@ -79,9 +79,10 @@
                                             <DataTemplate x:DataType="pm:ModelOptionViewModel">
                                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="0,4">
                                                     <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                                              SemanticProperties.Description="{Binding Name}" />
+                                                              SemanticProperties.Description="{Binding AccessibilityName}" />
                                                     <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
                                                         <Label Text="{Binding Name}" />
+                                                        <Label StyleClass="meta" Text="{Binding ProviderText}" />
                                                         <Label StyleClass="meta" Text="{Binding DetailsText}" />
                                                     </VerticalStackLayout>
                                                 </Grid>

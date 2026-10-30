@@ -200,8 +200,7 @@ public class FalImageProviderTests
 
     private sealed class BlockingContent(TaskCompletionSource entered) : HttpContent
     {
-        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) =>
-            Task.Delay(Timeout.Infinite);
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) => throw new NotSupportedException();
 
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext? context, CancellationToken cancellationToken)
         {
@@ -211,8 +210,36 @@ public class FalImageProviderTests
 
         protected override bool TryComputeLength(out long length)
         {
-            length = 0;
+            length = 1;
             return false;
+        }
+
+        protected override Task<Stream> CreateContentReadStreamAsync() => Task.FromResult<Stream>(new BlockingReadStream(entered));
+
+        protected override Task<Stream> CreateContentReadStreamAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<Stream>(new BlockingReadStream(entered, cancellationToken));
+
+        private sealed class BlockingReadStream(TaskCompletionSource entered, CancellationToken initialToken = default) : Stream
+        {
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Length => throw new NotSupportedException();
+            public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+            public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+            {
+                entered.TrySetResult();
+                using var linked = CancellationTokenSource.CreateLinkedTokenSource(initialToken, cancellationToken);
+                await Task.Delay(Timeout.Infinite, linked.Token);
+                return 0;
+            }
+
+            public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+            public override void Flush() => throw new NotSupportedException();
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+            public override void SetLength(long value) => throw new NotSupportedException();
+            public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
         }
     }
 
@@ -735,7 +762,7 @@ public class FalImageProviderTests
     }
 
     [Fact]
-    public async Task GenerateAsync_SubmitsAndWaitsForTheImage()
+    public async Task PollAsync_CompletedJobReturnsTheImage()
     {
         var handler = new StubHttpMessageHandler(req =>
         {
@@ -759,14 +786,16 @@ public class FalImageProviderTests
         });
         var provider = CreateProvider(handler);
 
-        var result = await provider.GenerateAsync(Request(), TestContext.Current.CancellationToken);
+        var handle = await provider.SubmitAsync(Request(), TestContext.Current.CancellationToken);
+        var result = await provider.PollAsync(handle, TestContext.Current.CancellationToken);
 
-        Assert.Equal(new byte[] { 5, 6 }, result.Content);
-        Assert.Equal("image/png", result.MediaType);
+        Assert.Equal(JobState.Succeeded, result.State);
+        Assert.Equal(new byte[] { 5, 6 }, result.Result!.Content);
+        Assert.Equal("image/png", result.Result.MediaType);
     }
 
     [Fact]
-    public async Task GenerateAsync_Filtered_ThrowsModerated()
+    public async Task PollAsync_CompletedFilteredJobReturnsFilteredState()
     {
         var handler = new StubHttpMessageHandler(req =>
         {
@@ -781,8 +810,10 @@ public class FalImageProviderTests
         });
         var provider = CreateProvider(handler);
 
-        var ex = await Assert.ThrowsAsync<ProviderException>(() => provider.GenerateAsync(Request(), TestContext.Current.CancellationToken));
+        var handle = await provider.SubmitAsync(Request(), TestContext.Current.CancellationToken);
+        var update = await provider.PollAsync(handle, TestContext.Current.CancellationToken);
 
-        Assert.Equal(ErrorKind.Moderated, ex.Kind);
+        Assert.Equal(JobState.Filtered, update.State);
+        Assert.Equal(ErrorKind.Moderated, update.ErrorKind);
     }
 }

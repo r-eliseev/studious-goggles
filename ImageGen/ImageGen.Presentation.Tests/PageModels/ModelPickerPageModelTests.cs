@@ -26,6 +26,7 @@ public class ModelPickerPageModelTests
 
     private readonly IRunRepository _runs = Substitute.For<IRunRepository>();
     private readonly IModelProvider _provider = Substitute.For<IModelProvider>();
+    private readonly ISynchronousImageTransport _transport = Substitute.For<ISynchronousImageTransport>();
     private readonly IProviderRouter _providers;
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
@@ -41,10 +42,10 @@ public class ModelPickerPageModelTests
 
     public ModelPickerPageModelTests()
     {
-        _providers = ProviderDoubles.Router(_provider);
+        _providers = ProviderDoubles.Router(_provider, transport: _transport);
         _modelRepository.ListAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns([Alpha, Beta, Gamma]);
         _provider.ListImageModelsAsync(Arg.Any<CancellationToken>()).Returns([Alpha, Beta, Gamma]);
-        _provider.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>())
+        _transport.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>())
             .Returns(new ImageGenerationResult([1, 2, 3], "image/png", 0.01m));
         _files.SaveAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns("images/x.png");
@@ -86,7 +87,7 @@ public class ModelPickerPageModelTests
 
     private ModelPickerPageModel CreateModel()
     {
-        var model = new ModelPickerPageModel(_runs, _catalog, _generations, _navigation, _dialogs);
+        var model = new ModelPickerPageModel(_runs, _catalog, _generations, ProviderDoubles.BuiltInRegistry(), _navigation, _dialogs);
         model.ApplyQueryAttributes(new Dictionary<string, object>
         {
             [Routes.SessionIdParameter] = SessionId.ToString("D"),

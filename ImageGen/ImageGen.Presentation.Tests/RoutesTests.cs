@@ -5,6 +5,12 @@ namespace ImageGen.Presentation.Tests;
 public class RoutesTests
 {
     [Fact]
+    public void ApiKeyFor_ProviderId_EscapesQueryValue()
+    {
+        Assert.Equal("apikey?providerId=together%20ai%2Fv1", Routes.ApiKeyFor("together ai/v1"));
+    }
+
+    [Fact]
     public void ChatFor_SessionId_ReturnsChatRouteWithSessionIdQuery()
     {
         var sessionId = Guid.Parse("3f2504e0-4f89-41d3-9a0c-0305e82c3301");

@@ -1,6 +1,8 @@
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Sessions;
+using ImageGen.Core.Storage;
 using ImageGen.Data.Repositories;
+using Microsoft.Data.Sqlite;
 
 namespace ImageGen.Data.Tests.Repositories;
 
@@ -91,6 +93,34 @@ public class RunRepositoryTests
         Assert.Equal(ErrorKind.RateLimited, loaded.ErrorKind);
         Assert.Equal("slow down", loaded.ErrorMessage);
         Assert.Equal(TestData.BaseTime.AddSeconds(7), loaded.CompletedAt);
+    }
+
+    [Fact]
+    public async Task UpdateGenerationAsync_MissingGeneration_ThrowsNonTransientStorageWriteException()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var session = TestData.Session();
+        var run = TestData.Run(session.Id, TestData.BaseTime);
+        var generation = TestData.Generation(run, 0);
+
+        var exception = await Assert.ThrowsAsync<StorageWriteException>(() =>
+            new RunRepository(test.Database).UpdateGenerationAsync(generation, ct));
+
+        Assert.False(exception.IsTransient);
+        Assert.Contains(generation.Id.ToString("N"), exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(5, 5, true)]
+    [InlineData(5, 517, true)]
+    [InlineData(6, 6, true)]
+    [InlineData(19, 19, false)]
+    public void IsTransientWriteError_BusyAndLockedOnly(int errorCode, int extendedErrorCode, bool expected)
+    {
+        var exception = new SqliteException("sqlite detail", errorCode, extendedErrorCode);
+
+        Assert.Equal(expected, RunRepository.IsTransientWriteError(exception));
     }
 
     [Fact]

@@ -69,12 +69,7 @@ public sealed class AssistantService(
         logger.LogDebug("User message in session {SessionId}: {Text}", sessionId, trimmed);
         var userMessage = NewMessage(sessionId, ChatRole.User, trimmed);
         await messages.AddUserWithAttachmentsAsync(userMessage, attachmentIds, cancellationToken);
-        if (trimmed.Length > 0)
-        {
-            await sessions.SetTitleFromFirstMessageAsync(sessionId, trimmed, cancellationToken);
-        }
-
-        return await CompleteTurnAsync(session, userMessage, attachmentIds, cancellationToken);
+        return await CompleteTurnAsync(session, userMessage, attachmentIds, trimmed.Length > 0, cancellationToken);
     }
 
     /// <summary>
@@ -89,7 +84,7 @@ public sealed class AssistantService(
         var userMessage = history.LastOrDefault(m => m.Role == ChatRole.User)
             ?? throw new InvalidOperationException($"Session {sessionId} has no user message to send again.");
         var attachmentIds = await attachments.ListIdsByMessageAsync(userMessage.Id, cancellationToken);
-        return await CompleteTurnAsync(session, userMessage, attachmentIds, cancellationToken);
+        return await CompleteTurnAsync(session, userMessage, attachmentIds, updateTitle: false, cancellationToken);
     }
 
     /// <summary>Builds the request, calls the assistant, starts a run if it asks for one, and saves its reply.</summary>
@@ -97,46 +92,74 @@ public sealed class AssistantService(
         Session session,
         ChatMessage userMessage,
         IReadOnlyList<Guid> attachmentIds,
+        bool updateTitle,
+        CancellationToken cancellationToken)
+    {
+        var outcome = await BuildAcceptedTurnOutcomeAsync(session, userMessage, attachmentIds, updateTitle, cancellationToken);
+        return await PersistAssistantOutcomeAsync(session, userMessage, outcome, cancellationToken);
+    }
+
+    private async Task<AcceptedTurnOutcome> BuildAcceptedTurnOutcomeAsync(
+        Session session,
+        ChatMessage userMessage,
+        IReadOnlyList<Guid> attachmentIds,
+        bool updateTitle,
         CancellationToken cancellationToken)
     {
         var sessionId = session.Id;
-        if (trace.IsEnabled)
-        {
-            // The user's words and the attachment ids; the pictures themselves are already in the data folder (task 085).
-            trace.Record(new TraceRecord(
-                "user-input",
-                new Dictionary<string, string?>
-                {
-                    ["session"] = sessionId.ToString("N"),
-                    ["text"] = userMessage.Text,
-                    ["attachments"] = string.Join(",", attachmentIds.Select(id => id.ToString("N"))),
-                },
-                []));
-        }
-
-        Run? run = null;
-        string replyText;
-        ErrorKind? errorKind = null;
         var messageCount = 0;
         var toolCallCount = 0;
         try
         {
+            if (updateTitle && userMessage.Text.Length > 0)
+            {
+                await sessions.SetTitleFromFirstMessageAsync(sessionId, userMessage.Text, cancellationToken);
+            }
+
+            if (trace.IsEnabled)
+            {
+                trace.Record(new TraceRecord(
+                    "user-input",
+                    new Dictionary<string, string?>
+                    {
+                        ["session"] = sessionId.ToString("N"),
+                        ["text"] = userMessage.Text,
+                        ["attachments"] = string.Join(",", attachmentIds.Select(id => id.ToString("N"))),
+                    },
+                    []));
+            }
+
             var chatClient = providers.GetChatClient(session.Settings.AssistantModel.ProviderId);
             var userImages = new List<string>(attachmentIds.Count);
             foreach (var attachmentId in attachmentIds)
             {
-                userImages.Add(await attachments.ReadDataUrlAsync(attachmentId, cancellationToken));
+                try
+                {
+                    userImages.Add(await attachments.ReadDataUrlAsync(attachmentId, cancellationToken));
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex) when (ex is IOException or InvalidOperationException)
+                {
+                    logger.LogWarning(
+                        "Attached image for user message {UserMessageId} in session {SessionId} could not be read.",
+                        userMessage.Id,
+                        sessionId);
+                    logger.LogDebug(ex, "Attached image read failure for user message {UserMessageId} in session {SessionId}.", userMessage.Id, sessionId);
+                    return new AcceptedTurnOutcome(null, "An attached image could not be read.", ErrorKind.AttachmentUnreadable, messageCount, toolCallCount);
+                }
             }
 
             var built = await BuildRequestAsync(session, userImages, cancellationToken);
-            var request = built.Request;
-            messageCount = request.Messages.Count;
-            var reply = await chatClient.CompleteChatAsync(request, cancellationToken);
+            messageCount = built.Request.Messages.Count;
+            var reply = await chatClient.CompleteChatAsync(built.Request, cancellationToken);
             if (reply.PromptTokens is { } promptTokens)
             {
-                // C2.1: the next request of this model is estimated with the factor this reply gives.
                 correction.Record(session.Settings.AssistantModel, built.EstimatedTokens, promptTokens);
             }
+
             toolCallCount = reply.ToolCalls.Count;
             logger.LogDebug("Assistant reply in session {SessionId}: {Text}", sessionId, reply.Text);
             var call = reply.ToolCalls.FirstOrDefault(c => c.Name == AssistantPrompts.GenerateImagesToolName);
@@ -145,53 +168,76 @@ public sealed class AssistantService(
                 var prompt = ReadPrompt(call.ArgumentsJson);
                 if (prompt is null)
                 {
-                    replyText = string.Empty;
-                    errorKind = ErrorKind.InvalidToolCall;
+                    return new AcceptedTurnOutcome(null, string.Empty, ErrorKind.InvalidToolCall, messageCount, toolCallCount);
                 }
-                else
-                {
-                    (run, replyText, errorKind) = await StartRunReplyAsync(sessionId, reply.Text, prompt, attachmentIds, cancellationToken);
-                }
+
+                var runReply = await StartRunReplyAsync(session, reply.Text, prompt, attachmentIds, cancellationToken);
+                return new AcceptedTurnOutcome(runReply.Run, runReply.Text, runReply.Error, messageCount, toolCallCount);
             }
-            else if (string.IsNullOrWhiteSpace(reply.Text))
-            {
-                replyText = string.Empty;
-                errorKind = ErrorKind.EmptyResponse;
-            }
-            else
-            {
-                replyText = reply.Text.Trim();
-            }
+
+            return string.IsNullOrWhiteSpace(reply.Text)
+                ? new AcceptedTurnOutcome(null, string.Empty, ErrorKind.EmptyResponse, messageCount, toolCallCount)
+                : new AcceptedTurnOutcome(null, reply.Text.Trim(), null, messageCount, toolCallCount);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (ProviderException ex)
         {
-            logger.LogWarning("Assistant request failed with error kind {ErrorKind}.", ex.Kind);
-            // The provider's own text is kept as a technical detail; the interface shows the text for the code.
-            replyText = ex.Message;
-            errorKind = ex.Kind;
+            logger.LogWarning(
+                "Assistant request for user message {UserMessageId} in session {SessionId} with model {ProviderId}/{ModelId} failed with {ErrorKind}.",
+                userMessage.Id,
+                sessionId,
+                session.Settings.AssistantModel.ProviderId,
+                session.Settings.AssistantModel.ModelId,
+                ex.Kind);
+            logger.LogDebug(ex, "Assistant provider failure for user message {UserMessageId} in session {SessionId}.", userMessage.Id, sessionId);
+            return new AcceptedTurnOutcome(null, ex.Message, ex.Kind, messageCount, toolCallCount);
         }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException && attachmentIds.Count > 0)
+        catch (Exception ex)
         {
-            logger.LogWarning(ex, "An attached image of session {SessionId} could not be read.", sessionId);
-            replyText = ex.Message;
-            errorKind = ErrorKind.AttachmentUnreadable;
+            logger.LogError(
+                "Assistant turn failed after accepting user message {UserMessageId} in session {SessionId} with model {ProviderId}/{ModelId}.",
+                userMessage.Id,
+                sessionId,
+                session.Settings.AssistantModel.ProviderId,
+                session.Settings.AssistantModel.ModelId);
+            logger.LogDebug(ex, "Assistant turn failure detail for user message {UserMessageId} in session {SessionId}.", userMessage.Id, sessionId);
+            return new AcceptedTurnOutcome(null, "The assistant could not complete this turn.", ErrorKind.Unknown, messageCount, toolCallCount);
+        }
+    }
+
+    private async Task<AssistantTurnResult> PersistAssistantOutcomeAsync(
+        Session session,
+        ChatMessage userMessage,
+        AcceptedTurnOutcome outcome,
+        CancellationToken cancellationToken)
+    {
+        var assistantMessage = NewMessage(session.Id, ChatRole.Assistant, outcome.Text);
+        assistantMessage.RunId = outcome.Run?.Id;
+        assistantMessage.IsError = outcome.ErrorKind is not null;
+        assistantMessage.ErrorKind = outcome.ErrorKind;
+        await messages.AddAsync(assistantMessage, cancellationToken);
+
+        try
+        {
+            summaryService.Request(session.Id);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("Summary request for session {SessionId} failed after the assistant reply was saved.", session.Id);
+            logger.LogDebug(ex, "Summary request failure detail for session {SessionId}.", session.Id);
         }
 
-        var assistantMessage = NewMessage(sessionId, ChatRole.Assistant, replyText);
-        assistantMessage.RunId = run?.Id;
-        assistantMessage.IsError = errorKind is not null;
-        assistantMessage.ErrorKind = errorKind;
-        await messages.AddAsync(assistantMessage, cancellationToken);
-        // C3.1: the summary is written in the background; the reply above does not wait for it.
-        summaryService.Request(sessionId);
         logger.LogInformation(
             "Assistant turn in session {SessionId} finished: {MessageCount} messages sent, {ToolCallCount} tool calls, run {RunId}, error {IsError}.",
-            sessionId,
-            messageCount,
-            toolCallCount,
-            run?.Id,
-            errorKind is not null);
-        return new AssistantTurnResult(userMessage, assistantMessage, run);
+            session.Id,
+            outcome.MessageCount,
+            outcome.ToolCallCount,
+            outcome.Run?.Id,
+            outcome.ErrorKind is not null);
+        return new AssistantTurnResult(userMessage, assistantMessage, outcome.Run);
     }
 
     /// <summary>Reads the <c>prompt</c> string from the tool arguments. Returns null for any invalid or empty value.</summary>
@@ -223,41 +269,36 @@ public sealed class AssistantService(
     }
 
     private async Task<(Run? Run, string Text, ErrorKind? Error)> StartRunReplyAsync(
-        Guid sessionId,
+        Session session,
         string? assistantText,
         string prompt,
         IReadOnlyList<Guid> attachmentIds,
         CancellationToken cancellationToken)
     {
-        try
+        if (session.Settings.ImageModels.Count == 0)
         {
-            var result = await generations.StartRunWithAttachmentsAsync(sessionId, prompt, attachmentIds, cancellationToken);
-            if (result.Run is null)
-            {
-                return (null, string.Empty, ErrorKind.ModelWithoutReferences);
-            }
-
-            // Notes about skipped models and references are shown next to a started run. They are not errors and are
-            // still written in English (task 043 covers error texts only).
-            var notes = new List<string>();
-            if (result.SkippedModels.Count > 0)
-            {
-                notes.Add(SkippedText(result.SkippedModels));
-            }
-
-            if (result.ReferencesNotSent > 0)
-            {
-                notes.Add($"{result.ReferencesNotSent} attached image(s) were not sent: over the model's reference limit.");
-            }
-
-            var text = AssistantPrompts.RunMessage(assistantText);
-            return (result.Run, string.Join(" ", [text, .. notes]).Trim(), null);
+            return (null, $"Session {session.Id} has no image models.", ErrorKind.ModelUnavailable);
         }
-        catch (InvalidOperationException ex)
+
+        var result = await generations.StartRunWithAttachmentsAsync(session.Id, prompt, attachmentIds, cancellationToken);
+        if (result.Run is null)
         {
-            // For example, the session has no image models: the code is shown, the core's message is kept as a detail.
-            return (null, ex.Message, ErrorKind.ModelUnavailable);
+            return (null, string.Empty, ErrorKind.ModelWithoutReferences);
         }
+
+        var notes = new List<string>();
+        if (result.SkippedModels.Count > 0)
+        {
+            notes.Add(SkippedText(result.SkippedModels));
+        }
+
+        if (result.ReferencesNotSent > 0)
+        {
+            notes.Add($"{result.ReferencesNotSent} attached image(s) were not sent: over the model's reference limit.");
+        }
+
+        var text = AssistantPrompts.RunMessage(assistantText);
+        return (result.Run, string.Join(" ", [text, .. notes]).Trim(), null);
     }
 
     private static string SkippedText(IReadOnlyList<SkippedModel> skipped) =>
@@ -266,6 +307,8 @@ public sealed class AssistantService(
 
     /// <summary>The request and its estimated size before the correction (for <see cref="TokenCorrection"/>).</summary>
     private sealed record BuiltRequest(AssistantChatRequest Request, int EstimatedTokens);
+
+    private sealed record AcceptedTurnOutcome(Run? Run, string Text, ErrorKind? ErrorKind, int MessageCount, int ToolCallCount);
 
     private async Task<BuiltRequest> BuildRequestAsync(Session session, IReadOnlyList<string> userImages, CancellationToken cancellationToken)
     {
@@ -425,7 +468,8 @@ public sealed class AssistantService(
             }
             catch (IOException ex)
             {
-                logger.LogWarning(ex, "Image {ImagePath} of run {RunId} could not be read; the assistant does not get it.", generation.ImagePath, lastRun.Id);
+                logger.LogWarning("Image of generation {GenerationId} in run {RunId} could not be read; the assistant does not get it.", generation.Id, lastRun.Id);
+                logger.LogDebug(ex, "Run image read failure for generation {GenerationId} at {ImagePath}.", generation.Id, generation.ImagePath);
             }
         }
 

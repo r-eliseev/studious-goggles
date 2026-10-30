@@ -61,7 +61,7 @@ public class SessionsPageModelTests : IDisposable
 
         await model.OnAppearingAsync();
 
-        await _navigation.Received(1).GoToAsync(Routes.ApiKey);
+        await _navigation.Received(1).GoToAsync(Routes.ApiKeyFor(ProviderIds.OpenRouter));
         await _sessionRepository.DidNotReceive().ListAsync(Arg.Any<CancellationToken>());
         Assert.Empty(model.Sessions);
         Assert.False(model.IsBusy);

@@ -188,6 +188,13 @@
                                                                        IsVisible="{Binding HasImage}"
                                                                        Stretch="UniformToFill"
                                                                        AutomationProperties.Name="{Binding SummaryText}" />
+                                                                <Button Content=""
+                                                                        IsVisible="{Binding HasImage}"
+                                                                        Command="{Binding #Layout.DataContext.OpenImageCommand}"
+                                                                        CommandParameter="{Binding .}"
+                                                                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                                                        Background="Transparent" BorderBrush="Transparent"
+                                                                        AutomationProperties.Name="{markup:Res ImageViewerOpen}" />
 
                                                                 <!-- Running: an indeterminate indicator at the bottom. -->
                                                                 <Border IsVisible="{Binding IsActive}" Background="{DynamicResource IgSunkenBrush}">

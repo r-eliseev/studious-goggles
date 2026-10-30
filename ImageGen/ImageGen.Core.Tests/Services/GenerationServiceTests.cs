@@ -25,13 +25,14 @@ public class GenerationServiceTests
 
     private readonly ISessionRepository _sessions = Substitute.For<ISessionRepository>();
     private readonly IRunRepository _runs = Substitute.For<IRunRepository>();
-    private readonly IModelProvider _generator = Substitute.For<IModelProvider>();
+    private readonly ISynchronousImageTransport _generator = Substitute.For<ISynchronousImageTransport>();
     private readonly IProviderRouter _providers = Substitute.For<IProviderRouter>();
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
     private readonly ISeedSource _seeds = Substitute.For<ISeedSource>();
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
     private readonly ConcurrentQueue<Generation> _events = new();
     private readonly CapturingLogger<GenerationService> _logger = new();
+    private readonly RecordingAsyncDelay _delay = new();
     private readonly IChatAttachmentRepository _chatAttachments = Substitute.For<IChatAttachmentRepository>();
     private readonly AttachmentService _attachments;
     private readonly GenerationService _service;
@@ -50,6 +51,664 @@ public class GenerationServiceTests
 
         await _runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
         _providers.DidNotReceive().GetImageProvider(Arg.Any<string>());
+    }
+
+    [Theory]
+    [InlineData(CancelOutcome.Cancelled)]
+    [InlineData(CancelOutcome.CancellationRequested)]
+    [InlineData(CancelOutcome.AlreadyCompleted)]
+    [InlineData(CancelOutcome.NotFound)]
+    public async Task StopSessionAsync_SubmitReturnsHandleAfterCancellation_RemotelyCancelsBeforeStopCompletes(CancelOutcome cancelOutcome)
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseSubmit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handle = Handle();
+        var connection = Substitute.For<IProviderConnection, IModelProvider, IQueuedImageProvider>();
+        var imageProvider = (IModelProvider)connection;
+        var queued = (IQueuedImageProvider)connection;
+        _session.Settings.ImageModels = [new ModelRef("fal", "flux")];
+        _session.Settings.RunsPerModel = 1;
+        _modelRepository.ListAsync("fal", Arg.Any<CancellationToken>()).Returns([ModelCatalogServiceTests.Model("flux", "Flux", providerId: "fal")]);
+        _providers.GetImageProvider("fal").Returns(imageProvider);
+        _providers.GetQueuedImageProvider("fal").Returns(queued);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+        {
+            entered.TrySetResult();
+            await releaseSubmit.Task;
+            return handle;
+        });
+        queued.CancelAsync(handle, Arg.Any<CancellationToken>()).Returns(cancelOutcome);
+        queued.ClearReceivedCalls();
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var stop = _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+        releaseSubmit.TrySetResult();
+        await stop.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        await queued.Received(1).CancelAsync(handle, Arg.Is<CancellationToken>(token => !token.IsCancellationRequested));
+        await queued.DidNotReceive().PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StopSessionAsync_RemoteCancelFailure_DoesNotBlockLocalCleanup()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseSubmit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handle = Handle();
+        var connection = Substitute.For<IProviderConnection, IModelProvider, IQueuedImageProvider>();
+        var imageProvider = (IModelProvider)connection;
+        var queued = (IQueuedImageProvider)connection;
+        _session.Settings.ImageModels = [new ModelRef("fal", "flux")];
+        _session.Settings.RunsPerModel = 1;
+        _modelRepository.ListAsync("fal", Arg.Any<CancellationToken>()).Returns([ModelCatalogServiceTests.Model("flux", "Flux", providerId: "fal")]);
+        _providers.GetImageProvider("fal").Returns(imageProvider);
+        _providers.GetQueuedImageProvider("fal").Returns((IQueuedImageProvider)connection);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+        {
+            entered.TrySetResult();
+            await releaseSubmit.Task;
+            return handle;
+        });
+        queued.CancelAsync(handle, Arg.Any<CancellationToken>()).Returns<Task<CancelOutcome>>(_ =>
+            throw new ProviderException(ErrorKind.Network, "sensitive provider detail"));
+        queued.ClearReceivedCalls();
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var stop = _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+        releaseSubmit.TrySetResult();
+
+        await stop.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        await queued.Received(1).CancelAsync(handle, Arg.Any<CancellationToken>());
+        var warning = Assert.Single(_logger.Entries, entry => entry.Level == LogLevel.Warning);
+        Assert.Null(warning.Exception);
+        Assert.DoesNotContain("sensitive provider detail", warning.Message, StringComparison.Ordinal);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception is ProviderException);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_FourJobsForOneProvider_DoNotBlockAnotherProvider()
+    {
+        var otherSession = new Session
+        {
+            Id = Guid.NewGuid(),
+            Title = "Other",
+            CreatedAt = Now,
+            UpdatedAt = Now,
+            Settings = new SessionSettings
+            {
+                ImageModels = [new ModelRef("fal", "flux")],
+                RunsPerModel = 1,
+                AssistantModel = new ModelRef(ProviderIds.OpenRouter, SessionSettings.DefaultAssistantModelId),
+            },
+        };
+        _sessions.GetAsync(otherSession.Id, Arg.Any<CancellationToken>()).Returns(otherSession);
+        _modelRepository.ListAsync("fal", Arg.Any<CancellationToken>()).Returns([ModelCatalogServiceTests.Model("flux", "Flux", providerId: "fal")]);
+        var providerB = Substitute.For<ISynchronousImageTransport>();
+        _providers.GetImageProvider("fal").Returns(Substitute.For<IModelProvider>());
+        _providers.GetQueuedImageProvider("fal").Returns(new InMemoryQueuedImageProvider(providerB, "fal", TimeProvider.System));
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 4;
+        var providerAEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var providerBEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseA = new TaskCompletionSource<ImageGenerationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseB = new TaskCompletionSource<ImageGenerationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var providerACount = 0;
+        _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+        {
+            if (Interlocked.Increment(ref providerACount) == 4)
+            {
+                providerAEntered.TrySetResult();
+            }
+
+            return await releaseA.Task;
+        });
+        providerB.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+        {
+            providerBEntered.TrySetResult();
+            return await releaseB.Task;
+        });
+
+        await _service.StartRunAsync(_session.Id, "first", TestContext.Current.CancellationToken);
+        await providerAEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _service.StartRunAsync(otherSession.Id, "second", TestContext.Current.CancellationToken);
+        await providerBEntered.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+
+        releaseA.TrySetResult(new ImageGenerationResult(Image, "image/png", null));
+        releaseB.TrySetResult(new ImageGenerationResult(Image, "image/png", null));
+        await _service.WhenIdleAsync();
+    }
+
+    [Fact]
+    public async Task StartRunAsync_QueuedJobs_HoldProviderSlotsUntilTerminal()
+    {
+        _session.Settings.ImageModels = [new ModelRef("fal", "flux")];
+        _session.Settings.RunsPerModel = 5;
+        _modelRepository.ListAsync("fal", Arg.Any<CancellationToken>()).Returns([ModelCatalogServiceTests.Model("flux", "Flux", providerId: "fal")]);
+        var connection = Substitute.For<IProviderConnection, IModelProvider, IQueuedImageProvider>();
+        var queued = (IQueuedImageProvider)connection;
+        _providers.GetImageProvider("fal").Returns((IModelProvider)connection);
+        _providers.GetQueuedImageProvider("fal").Returns((IQueuedImageProvider)connection);
+        var submitCount = 0;
+        var pollCount = 0;
+        var fourPollsEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var fifthSubmitEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var finishFirst = new TaskCompletionSource<JobUpdate>(TaskCreationOptions.RunContinuationsAsynchronously);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            var index = Interlocked.Increment(ref submitCount);
+            if (index == 5)
+            {
+                fifthSubmitEntered.TrySetResult();
+            }
+
+            return Task.FromResult(new ProviderJobHandle("fal", $"req-{index}", $"https://q/{index}/s", $"https://q/{index}/r", $"https://q/{index}/c"));
+        });
+        queued.PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            var handle = call.Arg<ProviderJobHandle>();
+            if (Interlocked.Increment(ref pollCount) == 4)
+            {
+                fourPollsEntered.TrySetResult();
+            }
+
+            return handle.RequestId == "req-1" ? finishFirst.Task : Task.FromResult(new JobUpdate(JobState.Queued));
+        });
+        queued.CancelAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>()).Returns(CancelOutcome.Cancelled);
+        queued.ClearReceivedCalls();
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await fourPollsEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        Assert.Equal(4, Volatile.Read(ref submitCount));
+        Assert.False(fifthSubmitEntered.Task.IsCompleted);
+
+        finishFirst.TrySetResult(new JobUpdate(JobState.Failed, ErrorKind: ErrorKind.Unknown));
+        await fifthSubmitEntered.Task.WaitAsync(TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
+        await _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+        Assert.Equal(5, Volatile.Read(ref submitCount));
+    }
+
+    [Fact]
+    public async Task StopSessionAsync_QueuedJobWaitingForProviderSlot_DoesNotSubmitOrReleaseUnacquiredSlot()
+    {
+        _session.Settings.ImageModels = [new ModelRef("fal", "flux")];
+        _session.Settings.RunsPerModel = 5;
+        _modelRepository.ListAsync("fal", Arg.Any<CancellationToken>()).Returns([ModelCatalogServiceTests.Model("flux", "Flux", providerId: "fal")]);
+        var connection = Substitute.For<IProviderConnection, IModelProvider, IQueuedImageProvider>();
+        var queued = (IQueuedImageProvider)connection;
+        _providers.GetImageProvider("fal").Returns((IModelProvider)connection);
+        _providers.GetQueuedImageProvider("fal").Returns((IQueuedImageProvider)connection);
+        var submitCount = 0;
+        var pollCount = 0;
+        var fourPollsEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            var index = Interlocked.Increment(ref submitCount);
+            return Task.FromResult(new ProviderJobHandle("fal", $"req-{index}", $"https://q/{index}/s", $"https://q/{index}/r", $"https://q/{index}/c"));
+        });
+        queued.PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            if (Interlocked.Increment(ref pollCount) == 4)
+            {
+                fourPollsEntered.TrySetResult();
+            }
+
+            return Task.FromResult(new JobUpdate(JobState.Queued));
+        });
+        queued.CancelAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>()).Returns(CancelOutcome.Cancelled);
+        queued.ClearReceivedCalls();
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await fourPollsEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        Assert.Equal(4, Volatile.Read(ref submitCount));
+
+        await _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+
+        Assert.Equal(4, Volatile.Read(ref submitCount));
+        await queued.Received(4).SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+        await queued.Received(4).CancelAsync(Arg.Any<ProviderJobHandle>(), CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task RecoverInterruptedAsync_FourWatchers_HoldSlotsAgainstFreshSubmit()
+    {
+        _session.Settings.ImageModels = [new ModelRef("fal", "flux")];
+        _session.Settings.RunsPerModel = 1;
+        _modelRepository.ListAsync("fal", Arg.Any<CancellationToken>()).Returns([ModelCatalogServiceTests.Model("flux", "Flux", providerId: "fal")]);
+        var generations = Enumerable.Range(0, 4).Select(_ => ResumableGeneration()).ToArray();
+        var handle = Handle();
+        foreach (var generation in generations)
+        {
+            generation.JobJson = System.Text.Json.JsonSerializer.Serialize(handle);
+        }
+
+        _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns(generations);
+        var connection = Substitute.For<IProviderConnection, IModelProvider, IQueuedImageProvider>();
+        var queued = (IQueuedImageProvider)connection;
+        _providers.GetQueuedImageProvider("fal").Returns((IQueuedImageProvider)connection);
+        _providers.GetImageProvider("fal").Returns((IModelProvider)connection);
+        var pollCount = 0;
+        var fourPollsEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseWatchers = new TaskCompletionSource<JobUpdate>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var freshSubmitEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        queued.PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            if (Interlocked.Increment(ref pollCount) == 4)
+            {
+                fourPollsEntered.TrySetResult();
+            }
+
+            return await releaseWatchers.Task.WaitAsync(call.Arg<CancellationToken>());
+        });
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            freshSubmitEntered.TrySetResult();
+            return Task.FromResult(handle);
+        });
+        queued.ClearReceivedCalls();
+
+        await _service.RecoverInterruptedAsync(TestContext.Current.CancellationToken);
+        await fourPollsEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _service.StartRunAsync(_session.Id, "fresh", TestContext.Current.CancellationToken);
+        Assert.False(freshSubmitEntered.Task.IsCompleted);
+
+        releaseWatchers.TrySetResult(new JobUpdate(JobState.Failed, ErrorKind: ErrorKind.Unknown));
+        await freshSubmitEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+    }
+
+    [Fact]
+    public async Task StartRunAsync_RunningStateWriteFails_SupervisorLogsSafelyAndSkipsProvider()
+    {
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        var sentinel = new InvalidOperationException("private prompt and key detail");
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromException(sentinel));
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        var generationId = Assert.Single(_added).Id;
+        await _service.WhenIdleAsync();
+
+        await _generator.DidNotReceive().GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+        Assert.DoesNotContain(_events, generation => generation.Status == GenerationStatus.Running);
+        Assert.Empty(_delay.Delays);
+        var error = Assert.Single(_logger.Entries, entry => entry.Level == LogLevel.Error);
+        Assert.Null(error.Exception);
+        Assert.DoesNotContain("private prompt", error.Message, StringComparison.Ordinal);
+        Assert.Equal(generationId, error.State["GenerationId"]);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception == sentinel);
+    }
+
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(2, 2)]
+    public async Task StartRunAsync_TransientStateWriteRetriesThenSucceeds_LogsAndPublishesOnce(int transientFailures, int expectedDelays)
+    {
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        var runningUpdates = 0;
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            var generation = call.Arg<Generation>();
+            if (generation.Status == GenerationStatus.Running && Interlocked.Increment(ref runningUpdates) <= transientFailures)
+            {
+                throw new StorageWriteException("temporary storage failure", true, new IOException("sqlite detail"));
+            }
+
+            return Task.CompletedTask;
+        });
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal(transientFailures + 1, runningUpdates);
+        Assert.Equal(Enumerable.Repeat(TimeSpan.FromMilliseconds(100), expectedDelays), _delay.Delays);
+        Assert.Single(_events, generation => generation.Status == GenerationStatus.Running);
+        Assert.Single(_logger.Entries, entry => entry.Message.Contains("is Running", StringComparison.Ordinal));
+        await _generator.Received(1).GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+        await _files.Received(1).SaveAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StartRunAsync_TransientStateWriteExhausted_UsesThreeAttemptsAndTwoDelays()
+    {
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(_ => throw new StorageWriteException("temporary storage failure", true));
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        await _runs.Received(3).UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>());
+        Assert.Equal([TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100)], _delay.Delays);
+        Assert.Empty(_events);
+        await _generator.DidNotReceive().GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+        var error = Assert.Single(_logger.Entries, entry => entry.Level == LogLevel.Error);
+        Assert.Null(error.Exception);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception is StorageWriteException);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_HandlePersistenceFailure_CancelsSubmittedJobOnce()
+    {
+        var handle = Handle();
+        var queued = Substitute.For<IQueuedImageProvider>();
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _providers.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(queued);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(handle);
+        queued.CancelAsync(handle, Arg.Any<CancellationToken>()).Returns(CancelOutcome.CancellationRequested);
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            if (call.Arg<Generation>().JobJson is not null)
+            {
+                throw new StorageWriteException("temporary handle write failure", true);
+            }
+
+            return Task.CompletedTask;
+        });
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        await queued.Received(1).CancelAsync(handle, Arg.Any<CancellationToken>());
+        await queued.DidNotReceive().PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>());
+        Assert.DoesNotContain(_events, generation => generation.Status == GenerationStatus.Succeeded);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_HandlePersistenceFailureRacingSessionStop_CancelsRemoteJobOnce()
+    {
+        var handle = Handle();
+        var queued = Substitute.For<IQueuedImageProvider>();
+        var handleWriteEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseHandleWrite = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var firstHandleWrite = 0;
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _providers.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(queued);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(handle);
+        queued.CancelAsync(handle, Arg.Any<CancellationToken>()).Returns(CancelOutcome.CancellationRequested);
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            if (call.Arg<Generation>().JobJson is not null && Interlocked.Exchange(ref firstHandleWrite, 1) == 0)
+            {
+                handleWriteEntered.TrySetResult();
+                await releaseHandleWrite.Task;
+                throw new StorageWriteException("temporary handle write failure", true);
+            }
+
+            if (call.Arg<Generation>().JobJson is not null)
+            {
+                throw new StorageWriteException("temporary handle write failure", true);
+            }
+
+            await Task.CompletedTask;
+        });
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await handleWriteEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var stop = _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+        releaseHandleWrite.TrySetResult();
+        await stop.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        await queued.Received(1).CancelAsync(handle, Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task StartRunAsync_TerminalSuccessPersistenceFailure_DeletesOnlyNewFileWithoutSuccessEvent(bool localAdapter)
+    {
+        const string path = "images/session/new-result.png";
+        var succeededWrites = 0;
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _files.SaveAsync(_session.Id, Arg.Any<Guid>(), Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>())
+            .Returns(path);
+        if (localAdapter)
+        {
+            _files.DeleteFileAsync(path, CancellationToken.None)
+                .Returns(Task.FromException(new IOException("cleanup detail")));
+        }
+        if (localAdapter)
+        {
+            _providers.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(
+                new InMemoryQueuedImageProvider(_generator, ProviderIds.OpenRouter, TimeProvider.System));
+        }
+        else
+        {
+            var queued = Substitute.For<IQueuedImageProvider>();
+            var handle = new ProviderJobHandle(ProviderIds.OpenRouter, "req-1", "https://q/s", "https://q/r", "https://q/c");
+            queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(handle);
+            queued.PollAsync(handle, Arg.Any<CancellationToken>()).Returns(new JobUpdate(
+                JobState.Succeeded, Result: new ImageGenerationResult(Image, "image/png", 0.014m)));
+            _providers.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(queued);
+        }
+
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            if (call.Arg<Generation>().Status == GenerationStatus.Succeeded)
+            {
+                succeededWrites++;
+                throw new StorageWriteException("terminal write failed", false);
+            }
+
+            return Task.CompletedTask;
+        });
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal(1, succeededWrites);
+        await _files.Received(1).DeleteFileAsync(path, CancellationToken.None);
+        Assert.Null(Assert.Single(_added).ImagePath);
+        Assert.Null(Assert.Single(_added).MediaType);
+        Assert.DoesNotContain(_events, generation => generation.Status == GenerationStatus.Succeeded);
+        await _files.DidNotReceive().DeleteSessionFilesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception is StorageWriteException);
+        if (localAdapter)
+        {
+            Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Warning && entry.Message.Contains("Could not clean up image file", StringComparison.Ordinal));
+            Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception is IOException);
+        }
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public async Task StartRunAsync_TerminalSuccessTransientWriteFailures_RetriesBeforeCompensation(int transientFailures)
+    {
+        const string path = "images/session/retry-result.png";
+        var succeededWrites = 0;
+        var queued = Substitute.For<IQueuedImageProvider>();
+        var handle = new ProviderJobHandle(ProviderIds.OpenRouter, "req-1", "https://q/s", "https://q/r", "https://q/c");
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _providers.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(queued);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(handle);
+        queued.PollAsync(handle, Arg.Any<CancellationToken>()).Returns(new JobUpdate(
+            JobState.Succeeded, Result: new ImageGenerationResult(Image, "image/png", 0.014m)));
+        _files.SaveAsync(_session.Id, Arg.Any<Guid>(), Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>()).Returns(path);
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            if (call.Arg<Generation>().Status == GenerationStatus.Succeeded && ++succeededWrites <= transientFailures)
+            {
+                throw new StorageWriteException("terminal write temporarily failed", true);
+            }
+
+            return Task.CompletedTask;
+        });
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        var maxRetries = Math.Min(transientFailures, 2);
+        Assert.Equal(maxRetries + 1, succeededWrites);
+        Assert.Equal(Enumerable.Repeat(TimeSpan.FromMilliseconds(100), maxRetries), _delay.Delays);
+        await queued.Received(1).SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+        await _files.Received(1).SaveAsync(_session.Id, Arg.Any<Guid>(), Image, "image/png", Arg.Any<CancellationToken>());
+        if (transientFailures < 3)
+        {
+            await _files.DidNotReceive().DeleteFileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+            Assert.Single(_events, generation => generation.Status == GenerationStatus.Succeeded);
+        }
+        else
+        {
+            await _files.Received(1).DeleteFileAsync(path, CancellationToken.None);
+            Assert.DoesNotContain(_events, generation => generation.Status == GenerationStatus.Succeeded);
+            Assert.Null(Assert.Single(_added).ImagePath);
+        }
+    }
+
+    [Fact]
+    public async Task StopSessionAsync_CancellationDuringTerminalPersistence_WaitsForFileCompensation()
+    {
+        const string path = "images/session/cancelled-result.png";
+        var queued = Substitute.For<IQueuedImageProvider>();
+        var handle = new ProviderJobHandle(ProviderIds.OpenRouter, "req-1", "https://q/s", "https://q/r", "https://q/c");
+        var terminalWriteEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseTerminalWrite = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cleanupEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseCleanup = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _providers.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(queued);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(handle);
+        queued.PollAsync(handle, Arg.Any<CancellationToken>()).Returns(new JobUpdate(
+            JobState.Succeeded, Result: new ImageGenerationResult(Image, "image/png", 0.014m)));
+        queued.CancelAsync(handle, Arg.Any<CancellationToken>()).Returns(CancelOutcome.CancellationRequested);
+        _files.SaveAsync(_session.Id, Arg.Any<Guid>(), Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>()).Returns(path);
+        _files.DeleteFileAsync(path, CancellationToken.None).Returns(async _ =>
+        {
+            cleanupEntered.TrySetResult();
+            await releaseCleanup.Task;
+        });
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            if (call.Arg<Generation>().Status == GenerationStatus.Succeeded)
+            {
+                terminalWriteEntered.TrySetResult();
+                await releaseTerminalWrite.Task;
+                call.Arg<CancellationToken>().ThrowIfCancellationRequested();
+            }
+        });
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await terminalWriteEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var stopping = _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+        releaseTerminalWrite.TrySetResult();
+        await cleanupEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        Assert.False(stopping.IsCompleted);
+        await _files.Received(1).DeleteFileAsync(path, CancellationToken.None);
+        releaseCleanup.TrySetResult();
+        await stopping.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+        Assert.DoesNotContain(_events, generation => generation.Status == GenerationStatus.Succeeded);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_SuccessEventHandlerThrows_LeavesPersistedImageFile()
+    {
+        const string path = "images/session/confirmed-result.png";
+        var queued = Substitute.For<IQueuedImageProvider>();
+        var handle = new ProviderJobHandle(ProviderIds.OpenRouter, "req-1", "https://q/s", "https://q/r", "https://q/c");
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _providers.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(queued);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(handle);
+        queued.PollAsync(handle, Arg.Any<CancellationToken>()).Returns(new JobUpdate(
+            JobState.Succeeded, Result: new ImageGenerationResult(Image, "image/png", 0.014m)));
+        _files.SaveAsync(_session.Id, Arg.Any<Guid>(), Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>()).Returns(path);
+        var succeededWrites = 0;
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            if (call.Arg<Generation>().Status == GenerationStatus.Succeeded)
+            {
+                succeededWrites++;
+            }
+
+            return Task.CompletedTask;
+        });
+        _service.GenerationUpdated += (_, eventArgs) =>
+        {
+            if (eventArgs.Generation.Status == GenerationStatus.Succeeded)
+            {
+                throw new InvalidOperationException("subscriber failed");
+            }
+        };
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal(1, succeededWrites);
+        await _files.DidNotReceive().DeleteFileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        Assert.Single(_events, generation => generation.Status == GenerationStatus.Succeeded);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Warning && entry.Message.Contains("handler", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task StartRunAsync_ImageSaveThrows_DoesNotInventCleanupPath()
+    {
+        var queued = Substitute.For<IQueuedImageProvider>();
+        var handle = new ProviderJobHandle(ProviderIds.OpenRouter, "req-1", "https://q/s", "https://q/r", "https://q/c");
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _providers.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(queued);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(handle);
+        queued.PollAsync(handle, Arg.Any<CancellationToken>()).Returns(new JobUpdate(
+            JobState.Succeeded, Result: new ImageGenerationResult(Image, "image/png", 0.014m)));
+        _files.SaveAsync(_session.Id, Arg.Any<Guid>(), Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>())
+            .Returns<Task<string>>(_ => throw new IOException("save failed before path was returned"));
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        await _files.DidNotReceive().DeleteFileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _files.DidNotReceive().DeleteSessionFilesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        Assert.DoesNotContain(_events, generation => generation.Status == GenerationStatus.Succeeded);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_PermanentStateWriteFailure_IsNotRetried()
+    {
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(_ => throw new StorageWriteException("missing generation", false));
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        await _runs.Received(1).UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>());
+        Assert.Empty(_delay.Delays);
+        await _generator.DidNotReceive().GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StartRunAsync_CancelDuringStateRetryDelay_DoesNotRetryAgain()
+    {
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        var delayEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _delay.WaitForCancellation(delayEntered);
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(_ => throw new StorageWriteException("temporary storage failure", true));
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await delayEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+
+        await _runs.Received(1).UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>());
+        Assert.Single(_delay.Delays);
+        Assert.DoesNotContain(_logger.Entries, entry => entry.Level == LogLevel.Error);
     }
 
     [Fact]
@@ -155,7 +814,7 @@ public class GenerationServiceTests
     }
 
     [Fact]
-    public async Task StopSessionAsync_ObservesJobFailureInsteadOfReportingSuccess()
+    public async Task StopSessionAsync_SupervisedPersistenceFailureDoesNotFaultBackgroundTasks()
     {
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>())
@@ -167,12 +826,11 @@ public class GenerationServiceTests
         await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
-        var error = await Assert.ThrowsAnyAsync<Exception>(() =>
-            _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken));
+        await _service.WhenIdleAsync();
+        await _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
 
-        var failures = error is AggregateException aggregate ? aggregate.Flatten().InnerExceptions : [error];
-        Assert.NotEmpty(failures);
-        Assert.All(failures, failure => Assert.Equal("job cleanup failed", failure.Message));
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is null);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception is IOException);
     }
 
     [Fact]
@@ -230,7 +888,7 @@ public class GenerationServiceTests
         var generation = ResumableGeneration();
         var queued = QueuedProviderThatFails(new ProviderException(ErrorKind.InvalidKey, "unused"));
         _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns([generation]);
-        _providers.GetConnection("fal").Returns((IProviderConnection)queued);
+        _providers.GetQueuedImageProvider("fal").Returns(queued);
         await _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
 
         await _service.RecoverInterruptedAsync(TestContext.Current.CancellationToken);
@@ -256,7 +914,7 @@ public class GenerationServiceTests
             pollEntered.TrySetResult();
             return release.Task;
         });
-        _providers.GetConnection("fal").Returns(connection);
+        _providers.GetQueuedImageProvider("fal").Returns((IQueuedImageProvider)connection);
 
         await _service.RecoverInterruptedAsync(TestContext.Current.CancellationToken);
         await pollEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
@@ -269,7 +927,7 @@ public class GenerationServiceTests
 
     public GenerationServiceTests()
     {
-        _providers.GetImageProvider(ProviderIds.OpenRouter).Returns(_generator);
+        _providers.GetImageProvider(ProviderIds.OpenRouter).Returns(Substitute.For<IModelProvider>());
         _providers.ImageProviderIds.Returns([ProviderIds.OpenRouter]);
         _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(
             [
@@ -283,6 +941,7 @@ public class GenerationServiceTests
         _seeds.NextSeed().Returns(11L, 22L, 33L);
         _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>())
             .Returns(new ImageGenerationResult(Image, "image/png", 0.014m));
+        _providers.GetQueuedImageProvider(ProviderIds.OpenRouter).Returns(new InMemoryQueuedImageProvider(_generator, ProviderIds.OpenRouter, time));
         _files.SaveAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns("images/session/generation.png");
         _runs.AddRunAsync(Arg.Do<Run>(r => _savedRuns[r.Id] = r), Arg.Do<IReadOnlyList<Generation>>(g => _added = g), Arg.Any<CancellationToken>())
@@ -307,7 +966,7 @@ public class GenerationServiceTests
 
         _attachments = new AttachmentService(_chatAttachments, _files, time);
         _service = new GenerationService(
-            _sessions, _runs, _providers, _files, catalog, _seeds, _attachments, time, _logger, _changes);
+            _sessions, _runs, _providers, _files, catalog, _seeds, _attachments, time, _logger, _changes, delay: _delay);
         _service.GenerationUpdated += (_, e) => _events.Enqueue(e.Generation);
     }
 
@@ -412,7 +1071,7 @@ public class GenerationServiceTests
         var router = new ProviderRouter(registry, httpClientFactory, secrets, TimeProvider.System);
         var connection = router.GetConnection(ProviderIds.OpenRouter);
         Assert.IsType<InMemoryQueuedImageConnection>(connection);
-        Assert.False(connection is IQueuedImageProvider);
+        Assert.IsAssignableFrom<IQueuedImageProvider>(connection);
         var catalog = new ModelCatalogService(router, _modelRepository, NullLogger<ModelCatalogService>.Instance);
         var service = new GenerationService(
             _sessions, _runs, router, _files, catalog, _seeds, _attachments, TimeProvider.System, _logger, _changes);
@@ -420,9 +1079,89 @@ public class GenerationServiceTests
         await service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
         await service.WhenIdleAsync();
 
-        Assert.Null(Assert.Single(_added).JobJson);
+        Assert.NotNull(Assert.Single(_added).JobJson);
         Assert.Single(handler.Requests);
         Assert.Equal("https://openrouter.ai/api/v1/images", handler.Requests.Single().RequestUri!.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_BuiltInTogether_UsesConfiguredImageContractAndKeepsCostUnknown()
+    {
+        const string togetherId = "together";
+        const string modelId = "black-forest-labs/FLUX.2-dev";
+        const string imageBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
+        var image = Convert.FromBase64String(imageBase64);
+        var handler = StubHttpMessageHandler.Json(
+            System.Net.HttpStatusCode.OK,
+            $$"""{"data":[{"b64_json":"{{imageBase64}}"}]}""");
+        using var httpClient = new HttpClient(handler);
+        var httpClientFactory = Substitute.For<IHttpClientFactory>();
+        httpClientFactory.CreateClient(togetherId).Returns(httpClient);
+        var secrets = Substitute.For<ISecretStore>();
+        secrets.GetAsync(SecretNames.ForProvider(togetherId), Arg.Any<CancellationToken>()).Returns("test-key");
+        var router = new ProviderRouter(
+            ProviderConfigLoader.Build(ProviderConfigLoader.ReadBuiltInJson(), null),
+            httpClientFactory,
+            secrets,
+            TimeProvider.System);
+        _session.Settings.ImageModels = [new ModelRef(togetherId, modelId)];
+        _session.Settings.RunsPerModel = 1;
+        var catalog = new ModelCatalogService(router, _modelRepository, NullLogger<ModelCatalogService>.Instance);
+        var service = new GenerationService(
+            _sessions, _runs, router, _files, catalog, _seeds, _attachments, TimeProvider.System, _logger, _changes);
+
+        await service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await service.WhenIdleAsync();
+
+        var generation = Assert.Single(_added);
+        Assert.Equal(GenerationStatus.Succeeded, generation.Status);
+        Assert.Null(generation.CostUsd);
+        Assert.Equal("image/png", generation.MediaType);
+        await _files.Received(1).SaveAsync(
+            _session.Id, generation.Id, Arg.Is<byte[]>(bytes => bytes.SequenceEqual(image)), "image/png", Arg.Any<CancellationToken>());
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.Equal("https://api.together.ai/v1/images/generations", request.RequestUri!.AbsoluteUri);
+        Assert.StartsWith("Bearer ", request.Headers.Authorization!.ToString(), StringComparison.Ordinal);
+        using var body = System.Text.Json.JsonDocument.Parse(Assert.Single(handler.RequestBodies));
+        var root = body.RootElement;
+        Assert.Equal(modelId, root.GetProperty("model").GetString());
+        Assert.Equal("fox", root.GetProperty("prompt").GetString());
+        Assert.Equal(1, root.GetProperty("n").GetInt32());
+        Assert.Equal("base64", root.GetProperty("response_format").GetString());
+        Assert.Equal("png", root.GetProperty("output_format").GetString());
+        Assert.Equal(11, root.GetProperty("seed").GetInt64());
+    }
+
+    [Fact]
+    public async Task StartRunAsync_BuiltInTogetherWithoutKey_FailsInvalidKeyWithoutHttpCall()
+    {
+        const string togetherId = "together";
+        const string modelId = "black-forest-labs/FLUX.2-dev";
+        var handler = StubHttpMessageHandler.Json(System.Net.HttpStatusCode.OK, "{}");
+        using var httpClient = new HttpClient(handler);
+        var httpClientFactory = Substitute.For<IHttpClientFactory>();
+        httpClientFactory.CreateClient(togetherId).Returns(httpClient);
+        var secrets = Substitute.For<ISecretStore>();
+        secrets.GetAsync(SecretNames.ForProvider(togetherId), Arg.Any<CancellationToken>()).Returns((string?)null);
+        var router = new ProviderRouter(
+            ProviderConfigLoader.Build(ProviderConfigLoader.ReadBuiltInJson(), null),
+            httpClientFactory,
+            secrets,
+            TimeProvider.System);
+        _session.Settings.ImageModels = [new ModelRef(togetherId, modelId)];
+        _session.Settings.RunsPerModel = 1;
+        var catalog = new ModelCatalogService(router, _modelRepository, NullLogger<ModelCatalogService>.Instance);
+        var service = new GenerationService(
+            _sessions, _runs, router, _files, catalog, _seeds, _attachments, TimeProvider.System, _logger, _changes);
+
+        await service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await service.WhenIdleAsync();
+
+        var generation = Assert.Single(_added);
+        Assert.Equal(GenerationStatus.Failed, generation.Status);
+        Assert.Equal(ErrorKind.InvalidKey, generation.ErrorKind);
+        Assert.Empty(handler.Requests);
     }
 
     [Fact]
@@ -438,10 +1177,9 @@ public class GenerationServiceTests
             .Where(e => e.Message.Contains(first.Id.ToString(), StringComparison.Ordinal))
             .Select(e => e.Message)
             .ToList();
-        Assert.Contains("is Queued", messages[0], StringComparison.Ordinal);
-        Assert.Contains("is Running", messages[1], StringComparison.Ordinal);
-        Assert.Contains("is Succeeded", messages[2], StringComparison.Ordinal);
-        Assert.Equal(3, messages.Count);
+        Assert.Contains(messages, message => message.Contains("is Queued", StringComparison.Ordinal));
+        Assert.Contains(messages, message => message.Contains("is Running", StringComparison.Ordinal));
+        Assert.Contains(messages, message => message.Contains("is Succeeded", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -709,7 +1447,7 @@ public class GenerationServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         _session.Settings.ImageModels = [new ModelRef("fal", "fal-ai/flux/dev")];
-        _providers.GetImageProvider("fal").Returns<IModelProvider>(_ => throw new ProviderException(ErrorKind.ModelUnavailable, "Provider 'fal' is not configured."));
+        _providers.GetQueuedImageProvider("fal").Returns<IQueuedImageProvider>(_ => throw new ProviderException(ErrorKind.ModelUnavailable, "Provider 'fal' is not configured."));
 
         await _service.StartRunAsync(_session.Id, "a fox", ct);
         await _service.WhenIdleAsync();
@@ -905,7 +1643,7 @@ public class GenerationServiceTests
         var queued = (IQueuedImageProvider)connection;
         queued.PollAsync(handle, Arg.Any<CancellationToken>()).Returns(
             new JobUpdate(JobState.Succeeded, Result: new ImageGenerationResult([1, 2], "image/png", null)));
-        _providers.GetConnection("fal").Returns(connection);
+        _providers.GetQueuedImageProvider("fal").Returns((IQueuedImageProvider)connection);
         _files.SaveAsync(_session.Id, generation.Id, Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>())
             .Returns("images/fox.png");
 
@@ -971,7 +1709,7 @@ public class GenerationServiceTests
         var queued = (IQueuedImageProvider)connection;
         queued.PollAsync(handle, Arg.Any<CancellationToken>()).Returns(
             new JobUpdate(JobState.Succeeded, Result: new ImageGenerationResult([1, 2], "image/png", null)));
-        _providers.GetConnection("fal").Returns(connection);
+        _providers.GetQueuedImageProvider("fal").Returns((IQueuedImageProvider)connection);
 
         // The file store fails only after the test has taken the running task, so the failure is seen for sure.
         var gate = new TaskCompletionSource();
@@ -987,12 +1725,13 @@ public class GenerationServiceTests
         var idle = _service.WhenIdleAsync();
         gate.SetResult();
 
-        // The failure of the file store is not a polling failure: it is not turned into a second terminal status of
-        // the generation and is not reported as a failure of the polling.
-        await Assert.ThrowsAnyAsync<IOException>(() => idle);
+        // The supervisor observes the file-store failure without turning it into a terminal persistence/event.
+        await idle;
         Assert.NotEqual(GenerationStatus.Failed, generation.Status);
         Assert.DoesNotContain(_events, e => e.Status == GenerationStatus.Failed);
         Assert.DoesNotContain(_logger.Entries, entry => entry.Message.Contains("Polling of generation", StringComparison.Ordinal));
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is null);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception is IOException);
     }
 
     [Fact]
@@ -1020,7 +1759,7 @@ public class GenerationServiceTests
         var ct = TestContext.Current.CancellationToken;
         var generation = ResumableGeneration();
         _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns([generation]);
-        _providers.GetConnection("fal").Returns(_ => throw new ProviderException(ErrorKind.ModelUnavailable, "no provider configured"));
+        _providers.GetQueuedImageProvider("fal").Returns(_ => throw new ProviderException(ErrorKind.ModelUnavailable, "no provider configured"));
 
         await _service.RecoverInterruptedAsync(ct);
         await _service.WhenIdleAsync();
@@ -1038,12 +1777,12 @@ public class GenerationServiceTests
         var missing = ResumableGeneration();
         var resumed = ResumableGeneration("fal2");
         _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns([missing, resumed]);
-        _providers.GetConnection("fal").Returns(_ => throw new ProviderException(ErrorKind.ModelUnavailable, "no provider configured"));
+        _providers.GetQueuedImageProvider("fal").Returns(_ => throw new ProviderException(ErrorKind.ModelUnavailable, "no provider configured"));
         var connection = Substitute.For<IProviderConnection, IQueuedImageProvider>();
         var queued = (IQueuedImageProvider)connection;
         queued.PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>()).Returns(
             new JobUpdate(JobState.Succeeded, Result: new ImageGenerationResult([1, 2], "image/png", null)));
-        _providers.GetConnection("fal2").Returns(connection);
+        _providers.GetQueuedImageProvider("fal2").Returns((IQueuedImageProvider)connection);
         _files.SaveAsync(_session.Id, resumed.Id, Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>())
             .Returns("images/fox.png");
         _runs.MarkUnfinishedAsInterruptedAsync(Now, Arg.Any<CancellationToken>()).Returns(2);
@@ -1079,7 +1818,28 @@ public class GenerationServiceTests
         var queued = (IQueuedImageProvider)connection;
         queued.PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>())
             .Returns<Task<JobUpdate>>(_ => throw failure);
-        _providers.GetConnection("fal").Returns(connection);
+        _providers.GetQueuedImageProvider("fal").Returns((IQueuedImageProvider)connection);
         return queued;
+    }
+
+    private sealed class RecordingAsyncDelay : IAsyncDelay
+    {
+        private readonly ConcurrentQueue<TimeSpan> _delays = new();
+        private TaskCompletionSource? _waitForCancellation;
+
+        public IReadOnlyList<TimeSpan> Delays => _delays.ToArray();
+
+        public void WaitForCancellation(TaskCompletionSource entered) => _waitForCancellation = entered;
+
+        public async Task DelayAsync(TimeSpan delay, CancellationToken cancellationToken)
+        {
+            _delays.Enqueue(delay);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_waitForCancellation is not null)
+            {
+                _waitForCancellation.TrySetResult();
+                await Task.Delay(Timeout.Infinite, cancellationToken);
+            }
+        }
     }
 }

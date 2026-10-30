@@ -106,7 +106,7 @@ public class RunItemViewModelTests
         first.Update(completed);
 
         Assert.Contains("2 of 2", item.HeaderText);
-        Assert.EndsWith("$0.014", item.HeaderText, StringComparison.Ordinal);
+        Assert.EndsWith("$0.028", item.HeaderText, StringComparison.Ordinal);
         Assert.Contains(nameof(RunItemViewModel.HeaderText), notifications);
     }
 

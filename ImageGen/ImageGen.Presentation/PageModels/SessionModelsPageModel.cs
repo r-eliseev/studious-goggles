@@ -21,6 +21,7 @@ public sealed partial class SessionModelsPageModel(
     SessionService sessionService,
     ModelCatalogService catalog,
     ChatModelCatalogService chatModels,
+    ProviderRegistry providers,
     INavigationService navigation,
     IDialogService dialogs) : ObservableObject
 {
@@ -202,7 +203,10 @@ public sealed partial class SessionModelsPageModel(
 
             var models = await catalog.GetAllImageModelsAsync(forceRefresh, CancellationToken.None);
             _all.Clear();
-            _all.AddRange(models.Select(m => new ModelOptionViewModel(m, selected.Contains(new ModelRef(m.ProviderId, m.Id)))));
+            _all.AddRange(models.Select(m => new ModelOptionViewModel(
+                m,
+                providers.Get(m.ProviderId).DisplayName,
+                selected.Contains(new ModelRef(m.ProviderId, m.Id)))));
             foreach (var row in _all)
             {
                 row.PropertyChanged += (_, e) =>

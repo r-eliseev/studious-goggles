@@ -38,6 +38,18 @@ public class FilePathToBitmapConverterTests
     }
 
     [AvaloniaFact]
+    public void Convert_PngFile_DoesNotKeepTheSourceFileOpen()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "imagegen-converter-" + Guid.NewGuid().ToString("N") + ".png");
+        File.WriteAllBytes(path, Convert.FromBase64String(OpenRouterFakes.OnePixelPngBase64));
+        using var bitmap = Assert.IsType<Bitmap>(ConvertPath(path));
+
+        File.Delete(path);
+
+        Assert.False(File.Exists(path));
+    }
+
+    [AvaloniaFact]
     public void Convert_NotAnImage_DoesNotThrow()
     {
         var path = Path.Combine(Path.GetTempPath(), "imagegen-converter-" + Guid.NewGuid().ToString("N") + ".png");

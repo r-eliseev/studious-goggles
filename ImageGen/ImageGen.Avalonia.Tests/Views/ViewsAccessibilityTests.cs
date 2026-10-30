@@ -27,7 +27,7 @@ public class ViewsAccessibilityTests
         await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
         AssertNamed(shell, "модели");
 
-        await shell.Navigation.GoToAsync(Routes.ApiKey);
+        await shell.Navigation.GoToAsync(Routes.ApiKeyFor("openrouter"));
         AssertNamed(shell, "ключ");
 
         await shell.Navigation.GoToAsync(Routes.Sessions);

@@ -1,6 +1,6 @@
 ---
 id: 118
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -46,5 +46,25 @@ bash scripts/check.sh
 Файлы: `README.md`
 
 ## Отчёт
+
+Создан корневой README на русском: отдельно описаны текущая реализация исходников и roadmap, загрузки v0.1.4, первый запуск, локальные данные/приватность, команды разработки, документация и лицензия. Код приложения, scripts и workflow не менялись.
+
+Evidence table (утверждение → источник):
+
+| Утверждение в README | Проверенный источник |
+|---|---|
+| OpenRouter, fal.ai, Together AI встроены; вместе с тем Together остаётся image-only, живой ответ не проверен | `ImageGen/ImageGen.Core/Providers/builtin-providers.json`, `docs/knowledge/together-ai.md`, `ImageGen/ImageGen.Core.Tests/Providers/ProviderConfigLoaderTests.cs` |
+| OpenRouter требуется для первого запуска ассистента; fal/Together необязательны, дополнительные провайдеры задаются конфигом | `ImageGen/ImageGen.Presentation/PageModels/SessionsPageModel.cs`, `SettingsPageModel.cs`, `docs/architecture.md` |
+| Набор моделей Together и неизвестная фактическая стоимость | built-in JSON, `docs/knowledge/together-ai.md`, `GenerationServiceTests.StartRunAsync_BuiltInTogether_UsesConfiguredImageContractAndKeepsCostUnknown` |
+| Матрица пакетов и форматы | `.github/workflows/release.yml`; реальные 9 asset names/URLs проверены `gh release view v0.1.4 --json assets` |
+| MAUI Windows arm64 asset v0.1.4 фактически содержит x64 PE | отчёт `tasks/backlog/100-release-maui-windows-arm64.md`, `docs/knowledge/maui.md`; прямой asset присутствует в Release |
+| Runtime/ручные проверки не приравнены к CI build | `docs/knowledge/dev-environment.md`, статусы задач 016/046/140; отдельная проверка Windows PE описана задачей 100 |
+| Данные локальны, Android backup отключён, OEM transfer не проверен | `docs/architecture.md`, `docs/knowledge/maui.md` (задача 115) |
+| Debug log и trace могут включать пользовательский/provider content | `docs/architecture.md`, `docs/specs/debug-trace.md` |
+| Лицензия MIT | `LICENSE` |
+
+Проверки: `bash scripts/check.sh` прошёл, включая проверку относительных Markdown-ссылок. Внешняя страница Releases и все прямые asset URL сверены с GitHub Release v0.1.4; несуществующих артефактов в таблице нет. `git diff --check` прошёл.
+
+Отдельно указано, что source code из PR #51 новее опубликованного v0.1.4; Android APK debug-signed; интерактивный запуск многих платформ и OEM device-transfer не проверены. README не обещает работу arm64-артефакта MAUI v0.1.4 и не называет Web, Docker, галерею, сравнение или учёт расходов готовыми.
 
 ## Комментарии
