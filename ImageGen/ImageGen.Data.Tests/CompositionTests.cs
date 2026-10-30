@@ -22,8 +22,9 @@ public class CompositionTests
         using var provider = BuildProvider(NewDirectory());
         var router = provider.GetRequiredService<IProviderRouter>();
 
-        Assert.IsType<OpenRouterClient>(router.GetImageProvider(ProviderIds.OpenRouter));
-        Assert.IsType<OpenRouterClient>(router.GetChatClient(ProviderIds.OpenRouter));
+        var openRouter = Assert.IsType<InMemoryQueuedImageConnection>(router.GetConnection(ProviderIds.OpenRouter));
+        Assert.Same(openRouter, router.GetImageProvider(ProviderIds.OpenRouter));
+        Assert.Same(openRouter, router.GetChatClient(ProviderIds.OpenRouter));
         Assert.NotNull(provider.GetRequiredService<ISeedSource>());
         Assert.NotNull(provider.GetRequiredService<ApiKeyService>());
         Assert.NotNull(provider.GetRequiredService<ModelCatalogService>());

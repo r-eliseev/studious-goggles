@@ -1,6 +1,6 @@
 ---
 id: 128
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -50,5 +50,13 @@ bash scripts/check.sh
 После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 128`, затем `bash scripts/check.sh`; отправить PR по `docs/tasks.md`.
 
 ## Отчёт
+
+Добавлен `InMemoryQueuedImageConnection`, который делегирует текущие image/chat/key интерфейсы внутренним OpenRouter/OpenAI-compatible client и один раз создаёт отдельный `InMemoryQueuedImageProvider`. Wrapper сам не реализует `IQueuedImageProvider`; временный `GenerateAsync` делегируется исходному image client. ProviderRouter кэширует wrapper в прежнем словаре по provider id; OpenAI-compatible ids получают отдельные adapter instances. fal остаётся прямым queued provider, Anthropic — chat-only.
+
+Обновлены router и DI composition проверки. Добавлены тесты делегирования, обычного GenerateAsync, submit/poll/cancel через общий adapter, раздельных provider handle dictionaries и concurrent cache retrieval. Интеграционная проверка `GenerationService` с реальным ProviderRouter/OpenRouter client и stub HTTP подтверждает обычный `/images` путь до задачи 129 и отсутствие `JobJson`.
+
+Проверки: Core 514/514; Data 78/78; `dotnet format --verify-no-changes` для Core, Core.Tests и Data.Tests; `bash scripts/check.sh`.
+
+Живые запросы и ключи не использовались. Тест использует подменённый `HttpMessageHandler`.
 
 ## Комментарии
