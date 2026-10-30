@@ -1,6 +1,6 @@
 ---
 id: 126
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -55,5 +55,12 @@ bash scripts/check.sh
 После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 126`, затем `bash scripts/check.sh`; отправить PR по `docs/tasks.md`.
 
 ## Отчёт
+
+- Зарегистрирован `ISessionGenerationCoordinator` как alias того же `GenerationService` singleton; composition test проверяет `ReferenceEquals`.
+- `SessionService.DeleteAsync` проверяет caller cancellation до начала, затем с одним `CancellationToken.None` выполняет stop → удаление строк → удаление файлов. Уведомление отправляется только после полного успеха. Все constructor call sites обновлены; remote cancel не менялся.
+- Добавлены unit-тесты порядка операций, отмены до/после начала stop, ошибки stop/БД/файлов и повторной очистки. Интеграционный SQLite/file-store тест удерживает генератор после отмены, проверяет, что удаление ждёт его завершения, затем проверяет отсутствие session/run/generation rows, файловой папки и поздних generation events.
+- Обновлена `docs/architecture.md` с alias singleton и порядком удаления.
+- Проверки: Core 420/420; Data 78/78; Presentation 310/310; Avalonia 123 passed, 2 platform skips; формат Core, Core.Tests, Presentation.Tests и Data.Tests; `scripts/check.sh`.
+- Отклонений от плана нет.
 
 ## Комментарии

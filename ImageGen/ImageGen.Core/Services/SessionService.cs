@@ -14,7 +14,8 @@ public sealed class SessionService(
     ChatModelCatalogService chatModels,
     TimeProvider timeProvider,
     IConversationSummaryRepository summaries,
-    SessionChangeNotifier changes)
+    SessionChangeNotifier changes,
+    ISessionGenerationCoordinator generationCoordinator)
 {
     public async Task<Session> CreateAsync(CancellationToken cancellationToken)
     {
@@ -47,8 +48,10 @@ public sealed class SessionService(
     /// <summary>Deletes the session, its records and its image files.</summary>
     public async Task DeleteAsync(Guid sessionId, CancellationToken cancellationToken)
     {
-        await sessions.DeleteAsync(sessionId, cancellationToken);
-        await files.DeleteSessionFilesAsync(sessionId, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        await generationCoordinator.StopSessionAsync(sessionId, CancellationToken.None);
+        await sessions.DeleteAsync(sessionId, CancellationToken.None);
+        await files.DeleteSessionFilesAsync(sessionId, CancellationToken.None);
         changes.Notify(sessionId);
     }
 

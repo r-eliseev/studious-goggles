@@ -18,6 +18,7 @@ public class SessionServiceTests
     private readonly IRunRepository _runs = Substitute.For<IRunRepository>();
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
     private readonly IConversationSummaryRepository _summaries = Substitute.For<IConversationSummaryRepository>();
+    private readonly ISessionGenerationCoordinator _generationCoordinator = Substitute.For<ISessionGenerationCoordinator>();
     private readonly SessionChangeNotifier _changes = new();
     private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
     private readonly SessionService _service;
@@ -26,7 +27,7 @@ public class SessionServiceTests
     {
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
-        _service = new SessionService(_sessions, _messages, _runs, _files, Catalog(AssistantWithTools), time, _summaries, _changes);
+        _service = new SessionService(_sessions, _messages, _runs, _files, Catalog(AssistantWithTools), time, _summaries, _changes, _generationCoordinator);
     }
 
     private static readonly ChatModel AssistantWithTools = new(
@@ -77,7 +78,7 @@ public class SessionServiceTests
         var service = new SessionService(
             _sessions, _messages, _runs, _files,
             Catalog(new ChatModel("vendor/plain", "Plain", SupportsImageInput: false, ContextLength: 1000)),
-            TimeProvider.System, Substitute.For<IConversationSummaryRepository>(), _changes);
+            TimeProvider.System, Substitute.For<IConversationSummaryRepository>(), _changes, _generationCoordinator);
         var settings = new SessionSettings
         {
             ImageModels = session.Settings.ImageModels,
@@ -115,7 +116,7 @@ public class SessionServiceTests
         var catalog = Catalog();
         _chat.ListChatModelsAsync(Arg.Any<CancellationToken>())
             .Returns<Task<IReadOnlyList<ChatModel>>>(_ => throw new ProviderException(ErrorKind.Network, "down"));
-        var service = new SessionService(_sessions, _messages, _runs, _files, catalog, TimeProvider.System, Substitute.For<IConversationSummaryRepository>(), _changes);
+        var service = new SessionService(_sessions, _messages, _runs, _files, catalog, TimeProvider.System, Substitute.For<IConversationSummaryRepository>(), _changes, _generationCoordinator);
         var settings = new SessionSettings
         {
             ImageModels = session.Settings.ImageModels,
@@ -132,11 +133,133 @@ public class SessionServiceTests
     public async Task DeleteAsync_DeletesRecordsAndFiles()
     {
         var id = Guid.NewGuid();
+        var calls = new List<string>();
+        _generationCoordinator.StopSessionAsync(id, Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            calls.Add("stop");
+            return Task.CompletedTask;
+        });
+        _sessions.DeleteAsync(id, Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            calls.Add("database");
+            return Task.CompletedTask;
+        });
+        _files.DeleteSessionFilesAsync(id, Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            calls.Add("files");
+            return Task.CompletedTask;
+        });
+        _changes.SessionChanged += (_, _) => calls.Add("notify");
 
         await _service.DeleteAsync(id, TestContext.Current.CancellationToken);
 
+        Assert.Equal(["stop", "database", "files", "notify"], calls);
+        await _generationCoordinator.Received(1).StopSessionAsync(id, CancellationToken.None);
         await _sessions.Received(1).DeleteAsync(id, Arg.Any<CancellationToken>());
         await _files.Received(1).DeleteSessionFilesAsync(id, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DeleteAsync_PreCancelledCaller_DoesNotStopOrDelete()
+    {
+        using var caller = new CancellationTokenSource();
+        caller.Cancel();
+        var id = Guid.NewGuid();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _service.DeleteAsync(id, caller.Token));
+
+        await _generationCoordinator.DidNotReceive().StopSessionAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await _sessions.DidNotReceive().DeleteAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await _files.DidNotReceive().DeleteSessionFilesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DeleteAsync_LateCallerCancellation_DoesNotInterruptCleanup()
+    {
+        var id = Guid.NewGuid();
+        using var caller = new CancellationTokenSource();
+        var stopEntered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseStop = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _generationCoordinator.StopSessionAsync(id, Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            stopEntered.TrySetResult(call.Arg<CancellationToken>());
+            return releaseStop.Task;
+        });
+
+        var deletion = _service.DeleteAsync(id, caller.Token);
+        var cleanupToken = await stopEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        caller.Cancel();
+        releaseStop.SetResult();
+        await deletion;
+
+        Assert.Equal(CancellationToken.None, cleanupToken);
+        await _sessions.Received(1).DeleteAsync(id, cleanupToken);
+        await _files.Received(1).DeleteSessionFilesAsync(id, cleanupToken);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_StopFails_DoesNotDeleteOrNotify()
+    {
+        var id = Guid.NewGuid();
+        var notified = false;
+        _changes.SessionChanged += (_, _) => notified = true;
+        _generationCoordinator.StopSessionAsync(id, Arg.Any<CancellationToken>())
+            .Returns<Task>(_ => throw new IOException("stop failed"));
+
+        await Assert.ThrowsAsync<IOException>(() => _service.DeleteAsync(id, TestContext.Current.CancellationToken));
+
+        await _sessions.DidNotReceive().DeleteAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await _files.DidNotReceive().DeleteSessionFilesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        Assert.False(notified);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_DatabaseDeleteFails_RetryDeletesFiles()
+    {
+        var id = Guid.NewGuid();
+        var calls = 0;
+        _sessions.DeleteAsync(id, Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            if (Interlocked.Increment(ref calls) == 1)
+            {
+                throw new IOException("database failed");
+            }
+
+            return Task.CompletedTask;
+        });
+
+        await Assert.ThrowsAsync<IOException>(() => _service.DeleteAsync(id, TestContext.Current.CancellationToken));
+        await _files.DidNotReceive().DeleteSessionFilesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await _service.DeleteAsync(id, TestContext.Current.CancellationToken);
+
+        await _sessions.Received(2).DeleteAsync(id, CancellationToken.None);
+        await _files.Received(1).DeleteSessionFilesAsync(id, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_FileDeleteFails_RetryCompletesAndNotifiesOnlyAfterCleanup()
+    {
+        var id = Guid.NewGuid();
+        var calls = 0;
+        var notifications = 0;
+        _files.DeleteSessionFilesAsync(id, Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            if (Interlocked.Increment(ref calls) == 1)
+            {
+                throw new IOException("file cleanup failed");
+            }
+
+            return Task.CompletedTask;
+        });
+        _changes.SessionChanged += (_, _) => notifications++;
+
+        await Assert.ThrowsAsync<IOException>(() => _service.DeleteAsync(id, TestContext.Current.CancellationToken));
+        Assert.Equal(0, notifications);
+        await _service.DeleteAsync(id, TestContext.Current.CancellationToken);
+
+        await _sessions.Received(2).DeleteAsync(id, CancellationToken.None);
+        await _files.Received(2).DeleteSessionFilesAsync(id, CancellationToken.None);
+        Assert.Equal(1, notifications);
     }
 
     [Fact]

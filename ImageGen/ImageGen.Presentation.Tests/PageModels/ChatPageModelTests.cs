@@ -156,7 +156,7 @@ public class ChatPageModelTests
         _sessionService = new SessionService(
             _sessionRepository, _messageRepository, _runRepository, _files,
             new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance),
-            time, _summaries, new SessionChangeNotifier());
+            time, _summaries, new SessionChangeNotifier(), Substitute.For<ISessionGenerationCoordinator>());
         _attachments = new AttachmentService(_chatAttachments, _files, time);
         _descriptions = new ImageDescriptionService(
             _sessionRepository, _runRepository, ProviderDoubles.Router(chat: _chat),
