@@ -1,8 +1,8 @@
 ---
 id: 097
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-10-30T11:18:51Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -124,6 +124,13 @@ MAUI под Windows — те же пункты 1–4 дописать в `tasks/
 Файлы: `ImageGen/ImageGen.Presentation/Utilities/TranscriptFollower.cs` (новый), `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Presentation.Tests/Utilities/TranscriptFollowerTests.cs` (новый), `ImageGen/ImageGen.Presentation.Tests/PageModels/ChatPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/Design/MauiChatPageMarkupTests.cs` (новый), `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml.cs`, `ImageGen/ImageGen.Avalonia.Tests/Views/TranscriptScrollTests.cs` (новый), `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml.cs`, `docs/specs/chat-sessions.md`, `docs/knowledge/maui.md`, `tasks/backlog/140-*.md`, `tasks/v0.1/016-skeleton-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`.
 
 ## Отчёт
+
+- Добавлен общий `TranscriptFollower`: новые строки возвращают ленту к концу, обновления карточек и изменение viewport прокручивают только пока пользователь следует за концом. При ручной прокрутке вверх follow приостанавливается и возобновляется у последней строки.
+- `ChatPageModel.CardUpdated` сообщает оболочкам об изменениях генераций. MAUI подписывает ленту на строки, карточки, прокрутку и layout строк; Avalonia использует то же правило и снимает подписки при уходе со страницы. Отложенные прокрутки объединяются и не затрагивают уже закрытый экран.
+- Добавлены unit/headless-тесты для состояния follower, обновления карточек, длинной ленты, изменения размера и lifecycle. В ручные списки добавлены проверки MAUI Windows (016), Avalonia (046) и Android (140).
+- Проверки: Presentation — 343/343; Avalonia headless — 133/135, 2 пропуска для недоступных DPAPI/Secret Service; MAUI Android build — 0 предупреждений и ошибок; Release Presentation — 343/343; форматирование Presentation, Presentation.Tests, Avalonia, Avalonia.Tests и MAUI прошло; `scripts/check.sh` проходит.
+- Ручной запуск MAUI на Android/Windows и Avalonia на рабочем столе не выполнялся; сценарии переданы в 016/046/140. Проверка PR #49 также показала один неповторившийся локально сбой старого теста `GeneratingCard_Done_UpdatesRunHeader` из 096; остальные CI jobs завершились успешно.
+- Отклонений от плана нет.
 
 ## Комментарии
 ### 2026-10-29, claude-plan

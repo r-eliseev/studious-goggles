@@ -26,6 +26,7 @@
                                 StrokeThickness="0"
                                 HorizontalOptions="{DynamicResource IgUserMessageAlignment}"
                                 Margin="0,4"
+                                SizeChanged="OnTranscriptRowSizeChanged"
                                 SemanticProperties.Description="{Binding Text}">
                             <Border.StrokeShape>
                                 <RoundRectangle CornerRadius="{DynamicResource IgUserMessageCornerRadius}" />
@@ -89,6 +90,7 @@
                                 Stroke="{DynamicResource IgLineColor}"
                                 Padding="{DynamicResource IgRunPadding}"
                                 Margin="0,4"
+                                SizeChanged="OnTranscriptRowSizeChanged"
                                 SemanticProperties.Description="{Binding PromptText}">
                             <Border.StrokeShape>
                                 <RoundRectangle CornerRadius="{DynamicResource IgRadiusMd}" />
@@ -341,7 +343,8 @@
                     SemanticProperties.Description="{x:Static strings:AppResources.ChatParametersButton}" />
         </HorizontalStackLayout>
 
-        <CollectionView Grid.Row="1"
+        <CollectionView x:Name="Transcript"
+                        Grid.Row="1"
                         ItemsSource="{Binding Items}"
                         ItemTemplate="{StaticResource ChatItemSelector}"
                         SelectionMode="None" />

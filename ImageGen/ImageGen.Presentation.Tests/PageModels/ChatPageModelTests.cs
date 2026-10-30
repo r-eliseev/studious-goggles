@@ -845,6 +845,34 @@ public class ChatPageModelTests
     }
 
     [Fact]
+    public async Task CardUpdated_GenerationOfThisSession_Raised()
+    {
+        var allEntered = new TaskCompletionSource();
+        var release = new TaskCompletionSource<ImageGenerationResult>();
+        var entered = 0;
+        _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            if (Interlocked.Increment(ref entered) == 2)
+            {
+                allEntered.TrySetResult();
+            }
+
+            return release.Task;
+        });
+        await _model.OnAppearingAsync();
+        await _generationService.StartRunAsync(_session.Id, "red fox", TestContext.Current.CancellationToken);
+        await allEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _model.ReloadAsync();
+        var updates = 0;
+        _model.CardUpdated += (_, _) => updates++;
+
+        release.SetResult(new ImageGenerationResult(Image, "image/png", 0.014m));
+        await _generationService.WhenIdleAsync();
+
+        Assert.True(updates >= 1);
+    }
+
+    [Fact]
     public async Task GeneratingCard_Done_UpdatesRunHeader()
     {
         var allEntered = new TaskCompletionSource();
@@ -886,6 +914,20 @@ public class ChatPageModelTests
     }
 
     [Fact]
+    public async Task CardUpdated_AfterDisappearing_NotRaised()
+    {
+        var updates = 0;
+        await _model.OnAppearingAsync();
+        _model.CardUpdated += (_, _) => updates++;
+        _model.OnDisappearing();
+
+        await _generationService.StartRunAsync(_session.Id, "red fox", TestContext.Current.CancellationToken);
+        await _generationService.WhenIdleAsync();
+
+        Assert.Equal(0, updates);
+    }
+
+    [Fact]
     public async Task OnAppearingAsync_CalledTwice_SubscribesOnlyOnce()
     {
         await _model.OnAppearingAsync();
@@ -901,12 +943,15 @@ public class ChatPageModelTests
     [Fact]
     public async Task GenerationUpdated_OtherSession_IsIgnored()
     {
+        var updates = 0;
         await _model.OnAppearingAsync();
+        _model.CardUpdated += (_, _) => updates++;
 
         await _generationService.StartRunAsync(_otherSession.Id, "other fox", TestContext.Current.CancellationToken);
         await _generationService.WhenIdleAsync();
 
         _mainThread.DidNotReceive().BeginInvokeOnMainThread(Arg.Any<Action>());
+        Assert.Equal(0, updates);
         Assert.Empty(_model.Items);
     }
 
