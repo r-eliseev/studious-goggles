@@ -25,9 +25,11 @@ public sealed class GenerationService(
     TimeProvider timeProvider,
     ILogger<GenerationService> logger,
     SessionChangeNotifier changes,
-    IDebugTrace? trace = null) : ISessionGenerationCoordinator
+    IDebugTrace? trace = null,
+    IAsyncDelay? delay = null) : ISessionGenerationCoordinator
 {
     private readonly IDebugTrace _trace = trace ?? NullDebugTrace.Instance;
+    private readonly IAsyncDelay _delay = delay ?? new SystemAsyncDelay(timeProvider);
 
     public const int MaxParallelGenerations = 4;
 
@@ -35,6 +37,8 @@ public sealed class GenerationService(
     private static readonly TimeSpan PollMinInterval = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan PollMaxInterval = TimeSpan.FromSeconds(5);
     private const int MaxPollNetworkFailures = 5;
+    private const int StateSaveMaxAttempts = 3;
+    private static readonly TimeSpan StateSaveRetryDelay = TimeSpan.FromMilliseconds(100);
 
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _providerSlots = new(StringComparer.Ordinal);
     private readonly object _lifecycleGate = new();
@@ -911,7 +915,25 @@ public sealed class GenerationService(
     private async Task SaveAndNotifyAsync(Generation generation, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        await runs.UpdateGenerationAsync(generation, cancellationToken).ConfigureAwait(false);
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await runs.UpdateGenerationAsync(generation, cancellationToken).ConfigureAwait(false);
+                break;
+            }
+            catch (StorageWriteException ex) when (ex.IsTransient && attempt < StateSaveMaxAttempts)
+            {
+                logger.LogWarning(
+                    "Retrying generation state write {GenerationId} in session {SessionId} for provider {ProviderId} after attempt {Attempt}.",
+                    generation.Id,
+                    generation.SessionId,
+                    generation.ProviderId,
+                    attempt);
+                logger.LogDebug(ex, "Transient generation state write detail {GenerationId} attempt {Attempt}", generation.Id, attempt);
+                await _delay.DelayAsync(StateSaveRetryDelay, cancellationToken).ConfigureAwait(false);
+            }
+        }
 
         cancellationToken.ThrowIfCancellationRequested();
         LogStatus(generation);

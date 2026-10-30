@@ -49,6 +49,7 @@ public static class CoreServiceCollectionExtensions
         services.AddSingleton<IProviderRouter, ProviderRouter>();
 
         services.AddSingleton<ISeedSource, RandomSeedSource>();
+        services.TryAddSingleton<IAsyncDelay, SystemAsyncDelay>();
         services.AddSingleton<ApiKeyService>();
         services.AddSingleton<ModelCatalogService>();
         services.AddSingleton<SessionService>();
