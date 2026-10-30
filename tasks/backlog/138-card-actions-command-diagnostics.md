@@ -1,8 +1,8 @@
 ---
 id: 138
-status: in-progress
-assignee: codex-luna
-claimed: 2026-10-30T09:12:56Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -36,6 +36,11 @@ created: 2026-10-29
 Проверка: `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj`; `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android`; `dotnet format` каждого изменённого проекта с `--verify-no-changes`; `bash scripts/check.sh`.
 
 ## Отчёт
+
+- Подтверждён контракт `ShowActionsCommand`: succeeded/failed/filtered/cancelled доступны, running недоступна; переход Running→Succeeded уведомляет `CanExecuteChanged`; отмена диалога позволяет повторный вызов; исключение пробрасывается и команда после него не остаётся running. Дефект поведения команды не выявлен, правки команды не потребовались.
+- `ShellDialogService.ChooseAsync` теперь логирует начало/конец с количеством вариантов и признаком отмены. При ошибке пишет Warning только с именем операции, исключение — на Debug; заголовок, варианты, выбранный текст и exception message в Warning не попадают.
+- Проверки: Presentation.Tests для ShowActions 10/10, MAUI Android build без предупреждений/ошибок, `dotnet format` для MAUI и Presentation.Tests, `git diff --check`, `bash scripts/check.sh`.
+- Причину клика Windows продолжает исследовать задача 088; на Linux/Android тесты подтверждают общий контракт команды.
 
 ## Комментарии
 

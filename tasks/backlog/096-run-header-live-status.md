@@ -1,6 +1,6 @@
 ---
 id: 096
-status: in-progress
+status: done
 assignee:
 claimed:
 created: 2026-10-29
