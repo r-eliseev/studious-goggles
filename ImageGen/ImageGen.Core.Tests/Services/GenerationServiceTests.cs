@@ -318,6 +318,28 @@ public class GenerationServiceTests
     }
 
     [Fact]
+    public async Task StartRunAsync_RunningStateWriteFails_SupervisorLogsSafelyAndSkipsProvider()
+    {
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        var sentinel = new InvalidOperationException("private prompt and key detail");
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromException(sentinel));
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        var generationId = Assert.Single(_added).Id;
+        await _service.WhenIdleAsync();
+
+        await _generator.DidNotReceive().GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+        Assert.DoesNotContain(_events, generation => generation.Status == GenerationStatus.Running);
+        var error = Assert.Single(_logger.Entries, entry => entry.Level == LogLevel.Error);
+        Assert.Null(error.Exception);
+        Assert.DoesNotContain("private prompt", error.Message, StringComparison.Ordinal);
+        Assert.Equal(generationId, error.State["GenerationId"]);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception == sentinel);
+    }
+
+    [Fact]
     public async Task StartRunAsync_PreparationFailureReleasesStartLease()
     {
         _session.Settings.ImageModels = [];
@@ -420,7 +442,7 @@ public class GenerationServiceTests
     }
 
     [Fact]
-    public async Task StopSessionAsync_ObservesJobFailureInsteadOfReportingSuccess()
+    public async Task StopSessionAsync_SupervisedPersistenceFailureDoesNotFaultBackgroundTasks()
     {
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>())
@@ -432,12 +454,11 @@ public class GenerationServiceTests
         await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
-        var error = await Assert.ThrowsAnyAsync<Exception>(() =>
-            _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken));
+        await _service.WhenIdleAsync();
+        await _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
 
-        var failures = error is AggregateException aggregate ? aggregate.Flatten().InnerExceptions : [error];
-        Assert.NotEmpty(failures);
-        Assert.All(failures, failure => Assert.Equal("job cleanup failed", failure.Message));
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is null);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception is IOException);
     }
 
     [Fact]
@@ -1252,12 +1273,13 @@ public class GenerationServiceTests
         var idle = _service.WhenIdleAsync();
         gate.SetResult();
 
-        // The failure of the file store is not a polling failure: it is not turned into a second terminal status of
-        // the generation and is not reported as a failure of the polling.
-        await Assert.ThrowsAnyAsync<IOException>(() => idle);
+        // The supervisor observes the file-store failure without turning it into a terminal persistence/event.
+        await idle;
         Assert.NotEqual(GenerationStatus.Failed, generation.Status);
         Assert.DoesNotContain(_events, e => e.Status == GenerationStatus.Failed);
         Assert.DoesNotContain(_logger.Entries, entry => entry.Message.Contains("Polling of generation", StringComparison.Ordinal));
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is null);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception is IOException);
     }
 
     [Fact]
