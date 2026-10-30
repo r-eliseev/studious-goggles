@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Keys;
@@ -29,7 +30,7 @@ public class FalImageProviderTests
         "https://queue.fal.run/fal-ai/flux/dev/requests/req-1",
         "https://queue.fal.run/fal-ai/flux/dev/requests/req-1/cancel");
 
-    private static FalImageProvider CreateProvider(StubHttpMessageHandler handler, string? storedKey = Key)
+    private static FalImageProvider CreateProvider(StubHttpMessageHandler handler, string? storedKey = Key, TimeSpan? timeout = null)
     {
         var secrets = Substitute.For<ISecretStore>();
         secrets.GetAsync(SecretNames.ForProvider(ProviderIds.Fal), Arg.Any<CancellationToken>()).Returns(storedKey);
@@ -37,15 +38,40 @@ public class FalImageProviderTests
         time.GetUtcNow().Returns(Now);
         var factory = Substitute.For<IHttpClientFactory>();
         factory.CreateClient(ProviderIds.Fal).Returns(new HttpClient(handler));
-        var config = new ProviderConfig(ProviderIds.Fal, ProviderKind.Fal, "fal.ai", FalAddress, TimeSpan.FromSeconds(60), []);
+        var config = new ProviderConfig(ProviderIds.Fal, ProviderKind.Fal, "fal.ai", FalAddress, timeout ?? TimeSpan.FromSeconds(60), []);
         return new FalImageProvider(config, factory, secrets, time);
     }
+
+    private static StubHttpMessageHandler HangingHandler(TaskCompletionSource entered) => new(async (_, token) =>
+    {
+        entered.TrySetResult();
+        await Task.Delay(Timeout.Infinite, token);
+        return Json(HttpStatusCode.OK, "{}");
+    });
 
     private static HttpResponseMessage Json(HttpStatusCode status, string json) =>
         new(status) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
 
     private static ImageGenerationRequest Request(long? seed = null) =>
         new(Endpoint, "a red fox", seed, null, null, null, null, []);
+
+    private sealed class BlockingContent(TaskCompletionSource entered) : HttpContent
+    {
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) =>
+            Task.Delay(Timeout.Infinite);
+
+        protected override async Task SerializeToStreamAsync(Stream stream, TransportContext? context, CancellationToken cancellationToken)
+        {
+            entered.TrySetResult();
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+        }
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
+    }
 
     [Fact]
     public async Task Submit_PostsPromptToEndpointWithKey()
@@ -61,6 +87,204 @@ public class FalImageProviderTests
         Assert.Equal("Key " + Key, sent.Headers.GetValues("Authorization").Single());
         Assert.Contains("\"prompt\":\"a red fox\"", handler.RequestBodies.Single());
         Assert.Contains("\"seed\":7", handler.RequestBodies.Single());
+    }
+
+    [Fact]
+    public async Task Submit_ConfigTimeout_ThrowsTimeout()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var provider = CreateProvider(HangingHandler(entered), timeout: TimeSpan.FromMilliseconds(40));
+
+        var operation = provider.SubmitAsync(Request(), TestContext.Current.CancellationToken);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+        var error = await Assert.ThrowsAsync<ProviderException>(() => operation);
+
+        Assert.Equal(ErrorKind.Timeout, error.Kind);
+    }
+
+    [Fact]
+    public async Task CheckKey_ConfigTimeout_ReturnsNetworkError()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var provider = CreateProvider(HangingHandler(entered), timeout: TimeSpan.FromMilliseconds(40));
+
+        var operation = provider.CheckKeyAsync(Key, TestContext.Current.CancellationToken);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+
+        Assert.Equal(ApiKeyStatus.NetworkError, await operation);
+    }
+
+    [Fact]
+    public async Task ListImageModels_ConfigTimeout_ThrowsTimeout()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var provider = CreateProvider(HangingHandler(entered), timeout: TimeSpan.FromMilliseconds(40));
+
+        var operation = provider.ListImageModelsAsync(TestContext.Current.CancellationToken);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+        var error = await Assert.ThrowsAsync<ProviderException>(() => operation);
+
+        Assert.Equal(ErrorKind.Timeout, error.Kind);
+    }
+
+    [Fact]
+    public async Task Poll_StatusConfigTimeout_ThrowsTimeout()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var provider = CreateProvider(HangingHandler(entered), timeout: TimeSpan.FromMilliseconds(40));
+
+        var operation = provider.PollAsync(Handle, TestContext.Current.CancellationToken);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+        var error = await Assert.ThrowsAsync<ProviderException>(() => operation);
+
+        Assert.Equal(ErrorKind.Timeout, error.Kind);
+    }
+
+    [Fact]
+    public async Task Poll_ResultConfigTimeout_ThrowsTimeout()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handler = new StubHttpMessageHandler(async (request, token) =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/status", StringComparison.Ordinal))
+            {
+                return Json(HttpStatusCode.OK, "{\"status\":\"COMPLETED\"}");
+            }
+
+            entered.TrySetResult();
+            await Task.Delay(Timeout.Infinite, token);
+            return Json(HttpStatusCode.OK, "{}");
+        });
+        var provider = CreateProvider(handler, timeout: TimeSpan.FromMilliseconds(40));
+
+        var operation = provider.PollAsync(Handle, TestContext.Current.CancellationToken);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+        var error = await Assert.ThrowsAsync<ProviderException>(() => operation);
+
+        Assert.Equal(ErrorKind.Timeout, error.Kind);
+    }
+
+    [Theory]
+    [InlineData("download")]
+    [InlineData("cancel")]
+    public async Task DirectRequest_ConfigTimeout_ThrowsTimeout(string phase)
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handler = new StubHttpMessageHandler(async (request, token) =>
+        {
+            var matches = phase == "cancel"
+                ? request.Method == HttpMethod.Put
+                : request.RequestUri!.Host == "cdn";
+            if (matches)
+            {
+                entered.TrySetResult();
+                await Task.Delay(Timeout.Infinite, token);
+            }
+
+            if (phase == "download" && request.RequestUri!.AbsolutePath.EndsWith("/status", StringComparison.Ordinal))
+            {
+                return Json(HttpStatusCode.OK, "{\"status\":\"COMPLETED\"}");
+            }
+
+            if (phase == "download" && request.RequestUri!.Host != "cdn")
+            {
+                return Json(HttpStatusCode.OK, "{\"images\":[{\"url\":\"https://cdn/x.png\"}],\"has_nsfw_concepts\":[false]}");
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var provider = CreateProvider(handler, timeout: TimeSpan.FromMilliseconds(40));
+        Task operation = phase == "cancel"
+            ? provider.CancelAsync(Handle, TestContext.Current.CancellationToken)
+            : provider.PollAsync(Handle, TestContext.Current.CancellationToken);
+
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+        var error = await Assert.ThrowsAsync<ProviderException>(() => operation);
+
+        Assert.Equal(ErrorKind.Timeout, error.Kind);
+    }
+
+    [Theory]
+    [InlineData("json")]
+    [InlineData("download")]
+    [InlineData("cancel")]
+    public async Task DirectRequest_CallerCancellation_RemainsOperationCanceled(string phase)
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handler = new StubHttpMessageHandler(async (request, token) =>
+        {
+            var matches = phase switch
+            {
+                "cancel" => request.Method == HttpMethod.Put,
+                "download" => request.RequestUri!.Host == "cdn",
+                _ => request.RequestUri!.AbsolutePath.EndsWith("/status", StringComparison.Ordinal),
+            };
+            if (matches)
+            {
+                entered.TrySetResult();
+                await Task.Delay(Timeout.Infinite, token);
+            }
+
+            if (phase != "cancel" && request.RequestUri!.AbsolutePath.EndsWith("/status", StringComparison.Ordinal))
+            {
+                return Json(HttpStatusCode.OK, "{\"status\":\"COMPLETED\"}");
+            }
+
+            if (phase != "cancel" && request.RequestUri!.Host != "cdn")
+            {
+                return Json(HttpStatusCode.OK, "{\"images\":[{\"url\":\"https://cdn/x.png\"}],\"has_nsfw_concepts\":[false]}");
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var provider = CreateProvider(handler, timeout: TimeSpan.FromSeconds(5));
+        using var cancellation = new CancellationTokenSource();
+        Task operation = phase switch
+        {
+            "cancel" => provider.CancelAsync(Handle, cancellation.Token),
+            "download" or "json" => provider.PollAsync(Handle, cancellation.Token),
+            _ => throw new ArgumentOutOfRangeException(nameof(phase)),
+        };
+
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => operation);
+    }
+
+    [Fact]
+    public async Task JsonBodyRead_ConfigTimeout_ThrowsTimeout()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new BlockingContent(entered),
+        });
+        var provider = CreateProvider(handler, timeout: TimeSpan.FromMilliseconds(40));
+
+        var operation = provider.ListImageModelsAsync(TestContext.Current.CancellationToken);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+        var error = await Assert.ThrowsAsync<ProviderException>(() => operation);
+
+        Assert.Equal(ErrorKind.Timeout, error.Kind);
+    }
+
+    [Fact]
+    public async Task JsonBodyRead_CallerCancellation_RemainsOperationCanceled()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new BlockingContent(entered),
+        });
+        var provider = CreateProvider(handler, timeout: TimeSpan.FromSeconds(5));
+        using var cancellation = new CancellationTokenSource();
+
+        var operation = provider.ListImageModelsAsync(cancellation.Token);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => operation);
     }
 
     [Fact]

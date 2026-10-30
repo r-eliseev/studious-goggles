@@ -126,7 +126,7 @@ public abstract class ProviderClientBase(
         _ => ErrorKind.Unknown,
     };
 
-    private CancellationTokenSource CreateTimeout(CancellationToken cancellationToken)
+    protected CancellationTokenSource CreateTimeout(CancellationToken cancellationToken)
     {
         var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         source.CancelAfter(Config.Timeout);
