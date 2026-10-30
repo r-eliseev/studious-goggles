@@ -1,9 +1,14 @@
 using ImageGen.Core;
+using ImageGen.Core.Domain.Models;
+using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.OpenRouter;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
+using ImageGen.Core.Storage;
+using ImageGen.Data;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace ImageGen.Data.Tests;
@@ -32,8 +37,90 @@ public class CompositionTests
         using var provider = BuildProvider(NewDirectory());
 
         Assert.Same(provider.GetRequiredService<GenerationService>(), provider.GetRequiredService<GenerationService>());
+        Assert.Same(provider.GetRequiredService<GenerationService>(), provider.GetRequiredService<ISessionGenerationCoordinator>());
         Assert.Same(provider.GetRequiredService<AssistantService>(), provider.GetRequiredService<AssistantService>());
         Assert.Same(provider.GetRequiredService<SessionService>(), provider.GetRequiredService<SessionService>());
+    }
+
+    [Fact]
+    public async Task DeleteSessionAsync_WaitsForStoppedGenerationBeforeDeletingRowsAndFiles()
+    {
+        var directory = NewDirectory();
+        var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<ImageGenerationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var providerClient = Substitute.For<IModelProvider>();
+        providerClient.ListImageModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ImageModel>>(
+        [
+            new ImageModel
+            {
+                ProviderId = ProviderIds.OpenRouter,
+                Id = SessionSettings.DefaultImageModelId,
+                Name = "Test model",
+                SupportsSeed = true,
+                SupportsImageInput = false,
+                MaxImagesPerRequest = 0,
+                FetchedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                Parameters = [],
+            },
+        ]));
+        providerClient.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            entered.TrySetResult(call.Arg<CancellationToken>());
+            return release.Task;
+        });
+        var router = Substitute.For<IProviderRouter>();
+        router.ImageProviderIds.Returns([ProviderIds.OpenRouter]);
+        router.GetConnection(ProviderIds.OpenRouter).Returns(providerClient);
+        router.GetImageProvider(ProviderIds.OpenRouter).Returns(providerClient);
+
+        using var provider = BuildProvider(directory, router);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await provider.GetRequiredService<SqliteDatabase>().InitializeAsync(cancellationToken);
+        var sessionService = provider.GetRequiredService<SessionService>();
+        var generationService = provider.GetRequiredService<GenerationService>();
+        var sessions = provider.GetRequiredService<ISessionRepository>();
+        var runs = provider.GetRequiredService<IRunRepository>();
+        var files = provider.GetRequiredService<IImageFileStore>();
+        var changes = provider.GetRequiredService<SessionChangeNotifier>();
+        var session = await sessionService.CreateAsync(cancellationToken);
+        await files.SaveAsync(session.Id, Guid.NewGuid(), [9, 8, 7], "image/png", cancellationToken);
+        var folder = Path.Combine(directory, FileImageStore.ImagesFolder, session.Id.ToString("N"));
+        var generationEvents = 0;
+        generationService.GenerationUpdated += (_, _) => Interlocked.Increment(ref generationEvents);
+        var sessionChanges = 0;
+        changes.SessionChanged += (_, changedId) =>
+        {
+            if (changedId == session.Id)
+            {
+                Interlocked.Increment(ref sessionChanges);
+            }
+        };
+
+        await generationService.StartRunAsync(session.Id, "wait for deletion", cancellationToken);
+        var transportToken = await entered.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+        var cancellationObserved = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cancellationRegistration = transportToken.Register(() => cancellationObserved.TrySetResult());
+        var deleting = sessionService.DeleteAsync(session.Id, cancellationToken);
+        await cancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+
+        Assert.False(deleting.IsCompleted);
+        Assert.NotNull(await sessions.GetAsync(session.Id, cancellationToken));
+        Assert.Single(await runs.ListRunsBySessionAsync(session.Id, cancellationToken));
+        Assert.Single(await runs.ListGenerationsBySessionAsync(session.Id, cancellationToken));
+        Assert.True(Directory.Exists(folder));
+        Assert.Equal(1, sessionChanges);
+
+        release.SetResult(new ImageGenerationResult([1, 2, 3], "image/png", 0.014m));
+        await deleting.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+        await generationService.WhenIdleAsync();
+        var eventsAfterDelete = Volatile.Read(ref generationEvents);
+
+        Assert.Null(await sessions.GetAsync(session.Id, cancellationToken));
+        Assert.Empty(await runs.ListRunsBySessionAsync(session.Id, cancellationToken));
+        Assert.Empty(await runs.ListGenerationsBySessionAsync(session.Id, cancellationToken));
+        Assert.False(Directory.Exists(folder));
+        Assert.Equal(2, sessionChanges);
+        Assert.Equal(eventsAfterDelete, Volatile.Read(ref generationEvents));
     }
 
     [Fact]
@@ -69,7 +156,7 @@ public class CompositionTests
         return directory;
     }
 
-    private static ServiceProvider BuildProvider(string dataDirectory)
+    private static ServiceProvider BuildProvider(string dataDirectory, IProviderRouter? router = null)
     {
         var paths = Substitute.For<IAppPaths>();
         paths.DataDirectory.Returns(dataDirectory);
@@ -80,6 +167,11 @@ public class CompositionTests
         services.AddSingleton(paths);
         services.AddSingleton(secrets);
         services.AddImageGenCore();
+        if (router is not null)
+        {
+            services.RemoveAll<IProviderRouter>();
+            services.AddSingleton(router);
+        }
         services.AddImageGenData();
 
         return services.BuildServiceProvider(new ServiceProviderOptions
