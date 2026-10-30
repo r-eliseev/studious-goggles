@@ -78,12 +78,12 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - run: dotnet workload install maui-windows
-      # RuntimeIdentifierOverride, not -r: with -r restore applies the RID to every target framework and asks for Mono.win-x64 for Android.
+      # Global TargetFrameworks narrows restore and publish to Windows, so -r does not reach Android (NU1102 Mono.win-x64). RuntimeIdentifierOverride was ignored: win-arm64 got x64 binaries.
       - name: Publish MAUI Windows (unpackaged, self-contained)
         shell: bash
         run: >-
           dotnet publish ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -c Release
-          -f net10.0-windows10.0.19041.0 -p:RuntimeIdentifierOverride=${{ matrix.rid }} -p:SelfContained=true
+          -f net10.0-windows10.0.19041.0 -p:TargetFrameworks=net10.0-windows10.0.19041.0 -r ${{ matrix.rid }} -p:SelfContained=true
           -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true
           -p:ApplicationDisplayVersion=${{ needs.version.outputs.version }} -p:ApplicationVersion=${{ github.run_number }}
           -o publish/${{ matrix.rid }}
