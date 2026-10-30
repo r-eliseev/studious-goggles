@@ -1,8 +1,8 @@
 ---
 id: 122
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-10-30T13:59:44Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -52,5 +52,11 @@ bash scripts/check.sh
 После проверок заполнить «Отчёт» (изменения, проверки, ограничения), выполнить `scripts/release-task.sh 122`, затем `bash scripts/check.sh`; отправить PR по `docs/tasks.md`.
 
 ## Отчёт
+
+- После успешного `SaveAsync` terminal Succeeded state теперь сохраняется с retries 125; при исчерпании retries или отмене до подтверждённой записи удаляется только возвращённый файл. Cleanup выполняется с `CancellationToken.None`, ожидается до завершения job; in-memory `ImagePath` и `MediaType` очищаются даже при ошибке удаления.
+- Выделены `PersistStateWithRetryAsync` и `NotifyConfirmedState`; событие и лог подтверждённого состояния выполняются только после успешной записи и вне compensation catch. Cleanup failure логируется отдельно, исходная persistence exception сохраняется для supervisor.
+- Добавлены Core-тесты для native Fal-like queued provider и in-memory adapter: permanent/transient failure границы, retries без повторной генерации и сохранения файла, отсутствие ложного Succeeded event, stop/cancellation во время terminal write с ожиданием cleanup, exception обработчика события, SaveAsync failure до возврата пути и cleanup failure.
+- Проверки: Core 587/587; Data 95/95; `dotnet format --verify-no-changes --no-restore` для Core и Core.Tests. Harness запускается после снятия занятости.
+- Граница: если `SaveAsync` сам выбрасывает до возврата относительного пути, компенсация не может определить частично созданный файл; это остаётся ограничением FileImageStore и отдельной задачи 141.
 
 ## Комментарии

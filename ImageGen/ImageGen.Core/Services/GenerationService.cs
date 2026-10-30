@@ -655,7 +655,7 @@ public sealed class GenerationService(
             }
             else if (submittedHandle is not null)
             {
-                await PersistGenerationAsync(generation, cancellationToken).ConfigureAwait(false);
+                await PersistStateWithRetryAsync(generation, cancellationToken).ConfigureAwait(false);
             }
             else
             {
@@ -827,15 +827,8 @@ public sealed class GenerationService(
                 generation.Status = GenerationStatus.Running;
                 break;
             case JobState.Succeeded:
-                generation.ImagePath = await files.SaveAsync(
-                    generation.SessionId, generation.Id, update.Result!.Content, update.Result.MediaType, cancellationToken)
-                    .ConfigureAwait(false);
-                cancellationToken.ThrowIfCancellationRequested();
-                generation.MediaType = update.Result.MediaType;
-                generation.CostUsd = update.Result.CostUsd;
-                generation.Status = GenerationStatus.Succeeded;
-                generation.CompletedAt = timeProvider.GetUtcNow();
-                break;
+                await SaveResultAndPersistAsync(generation, update.Result!, cancellationToken).ConfigureAwait(false);
+                return;
             case JobState.Filtered:
                 generation.Status = GenerationStatus.Filtered;
                 generation.ErrorKind = ErrorKind.Moderated;
@@ -925,8 +918,59 @@ public sealed class GenerationService(
     /// <summary>Saves the generation, then logs and raises the event only after the repository confirms the update.</summary>
     private async Task SaveAndNotifyAsync(Generation generation, CancellationToken cancellationToken = default)
     {
-        await PersistGenerationAsync(generation, cancellationToken).ConfigureAwait(false);
-        cancellationToken.ThrowIfCancellationRequested();
+        await PersistStateWithRetryAsync(generation, cancellationToken).ConfigureAwait(false);
+        NotifyConfirmedState(generation);
+    }
+
+    private async Task SaveResultAndPersistAsync(
+        Generation generation,
+        ImageGenerationResult result,
+        CancellationToken cancellationToken)
+    {
+        var relativePath = await files.SaveAsync(
+            generation.SessionId, generation.Id, result.Content, result.MediaType, cancellationToken).ConfigureAwait(false);
+        generation.ImagePath = relativePath;
+        generation.MediaType = result.MediaType;
+        generation.CostUsd = result.CostUsd;
+        generation.Status = GenerationStatus.Succeeded;
+        generation.CompletedAt = timeProvider.GetUtcNow();
+
+        try
+        {
+            await PersistStateWithRetryAsync(generation, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            try
+            {
+                await files.DeleteFileAsync(relativePath, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception cleanupException)
+            {
+                logger.LogWarning(
+                    "Could not clean up image file for generation {GenerationId} in session {SessionId}.",
+                    generation.Id,
+                    generation.SessionId);
+                logger.LogDebug(
+                    cleanupException,
+                    "Image file cleanup detail for generation {GenerationId}: {RelativePath}",
+                    generation.Id,
+                    relativePath);
+            }
+            finally
+            {
+                generation.ImagePath = null;
+                generation.MediaType = null;
+            }
+
+            throw;
+        }
+
+        NotifyConfirmedState(generation);
+    }
+
+    private void NotifyConfirmedState(Generation generation)
+    {
         LogStatus(generation);
         try
         {
@@ -939,7 +983,7 @@ public sealed class GenerationService(
         }
     }
 
-    private async Task PersistGenerationAsync(Generation generation, CancellationToken cancellationToken)
+    private async Task PersistStateWithRetryAsync(Generation generation, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         for (var attempt = 1; ; attempt++)
@@ -961,8 +1005,6 @@ public sealed class GenerationService(
                 await _delay.DelayAsync(StateSaveRetryDelay, cancellationToken).ConfigureAwait(false);
             }
         }
-
-        cancellationToken.ThrowIfCancellationRequested();
     }
 
     private sealed class SessionJobState(Guid sessionId)
