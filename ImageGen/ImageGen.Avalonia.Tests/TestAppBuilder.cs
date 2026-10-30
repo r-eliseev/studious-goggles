@@ -30,6 +30,8 @@ public static class TestAppBuilder
             }
         };
         ImageGen.Avalonia.App.HostOverrides = new AppHostOverrides(paths, new DesktopSecretStore(backend: null));
-        return AppBuilder.Configure<ImageGen.Avalonia.App>().UseHeadless(new AvaloniaHeadlessPlatformOptions());
+        return AppBuilder.Configure<ImageGen.Avalonia.App>()
+            .UseSkia()
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
     }
 }

@@ -370,8 +370,8 @@ public class ChatPageModelTests
         Assert.Same(card, _model.SelectedCard);
         var expected = new[]
         {
-            new ImageViewerItem(firstCard.Id, "/data/images/s/first.png", ViewerAccessibleLabel(firstCard)),
-            new ImageViewerItem(card.Id, "/data/images/s/last.png", ViewerAccessibleLabel(card)),
+            new ImageViewerItem(firstCard.Id, "/data/images/s/first.png", ViewerAccessibleLabel(firstCard), "images/s/first.png"),
+            new ImageViewerItem(card.Id, "/data/images/s/last.png", ViewerAccessibleLabel(card), "images/s/last.png"),
         };
         await _imageViewer.Received(1).ShowAsync(
             Arg.Is<IReadOnlyList<ImageViewerItem>>(items => items.SequenceEqual(expected)),

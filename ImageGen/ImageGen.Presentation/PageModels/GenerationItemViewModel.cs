@@ -68,6 +68,9 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     /// <summary>Exact prompt sent to the model.</summary>
     public string Prompt { get; }
 
+    /// <summary>Relative path used by the image store, or empty when the generation has no image.</summary>
+    public string RelativeImagePath => _generationImagePath;
+
     [ObservableProperty]
     public partial string StatusText { get; set; } = "";
 
