@@ -31,6 +31,17 @@ created: 2026-10-29
 6. Save to gallery: Android10+ Pictures/ImageGen; Android9- разрешение/отказ, только при наличии такого устройства. После сохранения Saved. Проверить ключ после перезапуска и отсутствие ключа в обычных логах; секретные файлы не выводить.
 7. Записать результаты в комментарии; агент оформляет отчёт/новые задачи, обновляет docs/knowledge/maui.md только подтверждёнными фактами; bash scripts/check.sh. Не выставлять done при неполученных человеческих результатах обязательных доступных сценариев.
 
+### Avalonia Android probe (задача 094, не проверено)
+
+Проверить на том же устройстве, что и MAUI, приложение `com.eliseev.imagegen.avaloniaprobe` из `poc/backlog/094-avalonia-mobile-research/ImageGen/ImageGen.Avalonia.Android/`. Перед запуском зафиксировать commit, Android/API и модель устройства. Установить APK Release `android-arm64`, собранный командой из отчёта 094. Для установки/запуска использовать `adb install -r <apk>` и `adb shell monkey -p com.eliseev.imagegen.avaloniaprobe 1`; cold start — три раза через `am force-stop` и `am start -W`.
+
+1. Запустить приложение и открыть список сессий и чат; создать сессию, вернуться системной кнопкой Back, проверить, что Back на списке сворачивает приложение.
+2. Через диагностические extras Activity сохранить фиктивный маркер в Android KeyStore: `adb shell am start -n <package>/<activity> --ez probe-secret-write true`; затем выполнить `adb shell am force-stop <package>` и `adb shell am start -n <package>/<activity> --ez probe-secret-read true`. В обезличенном logcat проверить `persisted=true` и `file-exists=true`; не печатать содержимое файла. Настоящий ключ вводит только владелец.
+3. В чате проверить клавишу экранной клавиатуры Send, отправку и то, что поле и кнопка остаются видны над клавиатурой. Проверить Back при открытой клавиатуре и при overlay-диалоге.
+4. Проверить копирование текста сообщения, системный выбор изображения, сохранение готовой картинки в `Pictures/ImageGen`, удаление с подтверждением и узкую раскладку.
+5. Пройти список, поле ввода, Send и карточку изображения с TalkBack; прокрутить ленту с 10 и более картинками и оценить плавность.
+6. После открытия чата записать `dumpsys meminfo` и холодный старт; повторить измерения MAUI в сопоставимых условиях. Указать размер APK: отчёт 094 фиксирует 29 472 625 байт Avalonia против 22 183 516 байт MAUI для arm64.
+
 
 Файлы: `tasks/backlog/140-android-manual-check.md`, `docs/knowledge/maui.md`, `docs/status.md` (только подтверждённые новые вопросы), новые задачи на найденные дефекты.
 
