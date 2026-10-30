@@ -78,6 +78,15 @@ public class ChatPageModelTests
 
             return Task.CompletedTask;
         });
+        _messageRepository.AddUserWithAttachmentsAsync(Arg.Any<ChatMessage>(), Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<CancellationToken>()).Returns(ci =>
+        {
+            lock (_gate)
+            {
+                _messages.Add(ci.Arg<ChatMessage>());
+            }
+
+            return Task.CompletedTask;
+        });
         _messageRepository.ListBySessionAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(ci =>
         {
             var sessionId = ci.Arg<Guid>();
@@ -645,9 +654,9 @@ public class ChatPageModelTests
         await _model.SendCommand.ExecuteAsync(null);
 
         Assert.Empty(_model.PendingAttachments);
-        await _chatAttachments.Received(1).LinkToMessageAsync(
+        await _messageRepository.Received(1).AddUserWithAttachmentsAsync(
+            Arg.Any<ChatMessage>(),
             Arg.Is<IReadOnlyList<Guid>>(ids => ids.Contains(attachmentId)),
-            Arg.Any<Guid>(),
             Arg.Any<CancellationToken>());
     }
 
@@ -760,18 +769,23 @@ public class ChatPageModelTests
     }
 
     [Fact]
-    public async Task SendCommand_AssistantFailure_RestoresTextShowsAlertAndStopsBusy()
+    public async Task SendCommand_PreAcceptFailure_RestoresTextAndAttachments()
     {
-        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
-            .ThrowsAsync(new InvalidOperationException("no network"));
+        _messageRepository.AddUserWithAttachmentsAsync(Arg.Any<ChatMessage>(), Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("database unavailable"));
         await _model.OnAppearingAsync();
+        PickNextImage();
+        await _model.AttachImageCommand.ExecuteAsync(null);
+        var attachment = _model.PendingAttachments.Single();
         _model.InputText = "draw a fox";
 
         await _model.SendCommand.ExecuteAsync(null);
 
         Assert.Equal("draw a fox", _model.InputText);
+        Assert.Equal(attachment, Assert.Single(_model.PendingAttachments));
         Assert.False(_model.IsBusy);
-        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, "no network");
+        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, "database unavailable");
+        await _chat.DidNotReceive().CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

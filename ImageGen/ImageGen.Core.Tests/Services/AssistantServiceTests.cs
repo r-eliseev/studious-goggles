@@ -10,6 +10,7 @@ using ImageGen.Core.Storage;
 using ImageGen.Core.Tests.TestDoubles;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute.ExceptionExtensions;
 
 namespace ImageGen.Core.Tests.Services;
 
@@ -73,6 +74,12 @@ public class AssistantServiceTests
         _sessions.GetAsync(_session.Id, Arg.Any<CancellationToken>()).Returns(_session);
 
         _messages.AddAsync(Arg.Any<ChatMessage>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                _stored.Add(ci.Arg<ChatMessage>());
+                return Task.CompletedTask;
+            });
+        _messages.AddUserWithAttachmentsAsync(Arg.Any<ChatMessage>(), Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(ci =>
             {
                 _stored.Add(ci.Arg<ChatMessage>());
@@ -182,12 +189,28 @@ public class AssistantServiceTests
 
         var result = await _service.SendUserMessageAsync(_session.Id, "look at this", [attachment.Id], TestContext.Current.CancellationToken);
 
-        await _chatAttachments.Received(1).LinkToMessageAsync(
+        await _messages.Received(1).AddUserWithAttachmentsAsync(
+            Arg.Is<ChatMessage>(message => message.Id == result.UserMessage.Id),
             Arg.Is<IReadOnlyList<Guid>>(ids => ids.SequenceEqual(new[] { attachment.Id })),
-            result.UserMessage.Id,
             Arg.Any<CancellationToken>());
         var user = LastRequest.Messages.Last(m => m.Role == AssistantChatMessage.UserRole);
         Assert.Equal("data:image/png;base64,Bwc=", Assert.Single(user.ImageDataUrls));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_AtomicAcceptFails_DoesNotCallAssistantOrAddAssistantMessage()
+    {
+        var failure = new InvalidOperationException("could not accept message");
+        _messages.AddUserWithAttachmentsAsync(Arg.Any<ChatMessage>(), Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(failure);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _service.SendUserMessageAsync(_session.Id, "question", TestContext.Current.CancellationToken));
+
+        Assert.Same(failure, error);
+        await _chat.DidNotReceive().CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
+        await _sessions.DidNotReceive().UpdateAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>());
+        Assert.Empty(_stored);
     }
 
     [Fact]

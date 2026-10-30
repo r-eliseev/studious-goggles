@@ -1,8 +1,8 @@
 ---
 id: 114
-status: in-progress
-assignee: codex-luna
-claimed: 2026-10-30T09:38:02Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -52,5 +52,12 @@ bash scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Storage/IChatMessageRepository.cs`, `ImageGen/ImageGen.Core/Storage/IChatAttachmentRepository.cs`, `ImageGen/ImageGen.Core/Services/AttachmentService.cs`, `ImageGen/ImageGen.Data/Repositories/ChatMessageRepository.cs`, `ImageGen/ImageGen.Data/Repositories/ChatAttachmentRepository.cs`, `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/ChatMessageRepositoryTests.cs`, `ImageGen/ImageGen.Data.Tests/ChatAttachmentRepositoryTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/AssistantServiceTests.cs`, `ImageGen/ImageGen.Core.Tests/Services/AttachmentServiceTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ChatPageModelTests.cs`
 
 ## Отчёт
+
+- `IChatMessageRepository.AddUserWithAttachmentsAsync` в одной SQLite-транзакции вставляет user message и связывает вложения, проверяя session и что вложение ещё не использовано. Ошибки и отмена откатывают всю операцию; старый `LinkToMessageAsync` удалён из репозитория и сервиса вложений.
+- `AssistantService` принимает сообщение атомарным вызовом до обновления заголовка и обращения к assistant. До границы принятия исключение выходит наружу; UI восстанавливает редактор и pending attachments.
+- Data тесты покрывают пустой и полный список вложений, rollback при отсутствующем, чужом и уже связанном вложении, повторные ids, неверную роль и заранее отменённый token. Core тест проверяет отсутствие обращения к assistant/title update при сбое принятия; Presentation тест проверяет восстановление текста и вложения. Сценарии provider failure после принятия оставлены без изменений для задачи 123.
+- Проверено: сборки и полные наборы `ImageGen.Data.Tests`, `ImageGen.Core.Tests`, `ImageGen.Presentation.Tests` прошли; `dotnet format --verify-no-changes --no-restore` для Core, Data и этих трёх тестовых проектов прошёл; `git diff --check` и `bash scripts/check.sh` прошли.
+- Отклонений от плана нет.
+
 
 ## Комментарии

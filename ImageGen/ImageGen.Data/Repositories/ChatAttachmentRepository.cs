@@ -36,24 +36,6 @@ public sealed class ChatAttachmentRepository(SqliteDatabase database) : IChatAtt
         return await reader.ReadAsync(cancellationToken) ? Read(reader) : null;
     }
 
-    public async Task LinkToMessageAsync(IReadOnlyList<Guid> attachmentIds, Guid messageId, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(attachmentIds);
-        await using var connection = await database.OpenAsync(cancellationToken);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
-        foreach (var attachmentId in attachmentIds)
-        {
-            await using var command = connection.CreateCommand();
-            command.Transaction = transaction;
-            command.CommandText = "UPDATE chat_attachments SET message_id = @message_id WHERE id = @id;";
-            command.Parameters.AddWithValue("@message_id", SqliteValues.FromGuid(messageId));
-            command.Parameters.AddWithValue("@id", SqliteValues.FromGuid(attachmentId));
-            await command.ExecuteNonQueryAsync(cancellationToken);
-        }
-
-        await transaction.CommitAsync(cancellationToken);
-    }
-
     public async Task<IReadOnlyList<ChatAttachment>> ListByMessageAsync(Guid messageId, CancellationToken cancellationToken)
     {
         await using var connection = await database.OpenAsync(cancellationToken);

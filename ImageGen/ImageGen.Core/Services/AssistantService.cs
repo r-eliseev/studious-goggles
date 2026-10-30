@@ -68,8 +68,7 @@ public sealed class AssistantService(
             session.Settings.AssistantModel.ModelId);
         logger.LogDebug("User message in session {SessionId}: {Text}", sessionId, trimmed);
         var userMessage = NewMessage(sessionId, ChatRole.User, trimmed);
-        await messages.AddAsync(userMessage, cancellationToken);
-        await attachments.LinkToMessageAsync(attachmentIds, userMessage.Id, cancellationToken);
+        await messages.AddUserWithAttachmentsAsync(userMessage, attachmentIds, cancellationToken);
         if (trimmed.Length > 0)
         {
             await sessions.SetTitleFromFirstMessageAsync(sessionId, trimmed, cancellationToken);
