@@ -87,6 +87,50 @@ jobs:
           -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true
           -p:ApplicationDisplayVersion=${{ needs.version.outputs.version }} -p:ApplicationVersion=${{ github.run_number }}
           -o publish/${{ matrix.rid }}
+      # Fail if the published binaries are not built for the matrix RID (v0.1.4 shipped x64 binaries as win-arm64).
+      - name: Check PE machine
+        shell: pwsh
+        env:
+          RID: ${{ matrix.rid }}
+        run: |
+          $expectedMachine = switch ($env:RID) {
+            'win-x64' { 0x8664; break }
+            'win-arm64' { 0xAA64; break }
+            default { Write-Output "Unsupported RID: $env:RID"; exit 1 }
+          }
+          $failed = $false
+          $files = @('ImageGen.Maui.exe', 'coreclr.dll', 'Microsoft.WindowsAppRuntime.Bootstrap.dll')
+          foreach ($file in $files) {
+            $path = Join-Path "publish/$env:RID" $file
+            try {
+              if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+                throw 'file is missing'
+              }
+              $bytes = [System.IO.File]::ReadAllBytes($path)
+              if ($bytes.Length -lt 0x40 -or $bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A) {
+                throw 'file is too short or has no MZ signature'
+              }
+              $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
+              if ($peOffset -lt 0x40 -or $peOffset -gt ($bytes.Length - 6)) {
+                throw 'PE header offset is out of bounds'
+              }
+              if ($bytes[$peOffset] -ne 0x50 -or $bytes[$peOffset + 1] -ne 0x45 -or
+                  $bytes[$peOffset + 2] -ne 0 -or $bytes[$peOffset + 3] -ne 0) {
+                throw 'PE signature is invalid'
+              }
+              $machine = [BitConverter]::ToUInt16($bytes, $peOffset + 4)
+              Write-Output ("{0}: 0x{1:X4}" -f $file, $machine)
+              if ($machine -ne $expectedMachine) {
+                Write-Output ("{0}: machine 0x{1:X4}, expected 0x{2:X4} for {3}" -f $file, $machine, $expectedMachine, $env:RID)
+                $failed = $true
+              }
+            }
+            catch {
+              Write-Output ("{0}: PE check failed: {1}" -f $file, $_.Exception.Message)
+              $failed = $true
+            }
+          }
+          if ($failed) { exit 1 }
       - name: Pack
         shell: bash
         run: cd publish/${{ matrix.rid }} && 7z a -tzip "../../$ASSET.zip" .
