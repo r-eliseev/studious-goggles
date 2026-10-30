@@ -1,8 +1,8 @@
 ---
 id: 098
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-10-30T12:28:53Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -95,6 +95,14 @@ MAUI под Windows — дописать в `tasks/v0.1/016-skeleton-manual-chec
 Файлы: `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml.cs`, `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`, `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml.cs`, `ImageGen/ImageGen.Avalonia.Tests/Views/ChatLayoutTests.cs`, `ImageGen/ImageGen.Presentation.Tests/Design/MauiChatPageMarkupTests.cs`, `docs/design/implementation.md`, `docs/knowledge/maui.md`, `tasks/backlog/140-*.md`, `tasks/v0.1/016-skeleton-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`.
 
 ## Отчёт
+
+Шапки чата переведены на переносимые `WrapPanel` (Avalonia) и `FlexLayout` (MAUI). Заголовок и подпись ассистента однострочные и обрезаются; на узком MAUI заголовок скрывается, оставаясь в панели навигации. В Avalonia доступная ширина подписи ассистента рассчитывается из остатка после заголовка и кнопок, чтобы короткий заголовок с чипами оставался в одну строку на широком окне. Отступы реализованы полями элементов и отрицательным нижним полем контейнера.
+
+Добавлены headless layout проверки для длинного заголовка/подписи ассистента при 360 dp и однострочной шапки при 1100 dp, а также XAML-контрактные тесты MAUI. Обновлены `docs/design/implementation.md`, `docs/knowledge/maui.md`; ручные проверки добавлены в 016, 046 и 140.
+
+Проверки: Avalonia 139 total (137 passed, 2 platform skips); Presentation 346/346; MAUI Android build — 0 предупреждений/ошибок; `dotnet format --verify-no-changes` для Avalonia, Avalonia.Tests, Presentation.Tests и MAUI; `bash scripts/check.sh`.
+
+Телефон/эмулятор не был доступен, поэтому поведение реальной FlexLayout на Android не проверено; сценарий передан владельцу в задачу 140. Ручные MAUI Windows и Avalonia desktop проверки добавлены в 016/046.
 
 ## Комментарии
 ### 2026-10-29, claude-plan

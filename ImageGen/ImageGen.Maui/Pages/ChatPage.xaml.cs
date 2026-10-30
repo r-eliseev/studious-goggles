@@ -22,7 +22,19 @@ public partial class ChatPage : ContentPage, IQueryAttributable
         BindingContext = _model = model;
         _sessions = sessions;
         SessionList.BindingContext = sessions;
+        ChatHeader.SizeChanged += OnHeaderSizeChanged;
         SizeChanged += (_, _) => ApplyWidth(Width);
+    }
+
+    private void OnHeaderSizeChanged(object? sender, EventArgs e)
+    {
+        if (ChatHeader.Width <= 0)
+        {
+            return;
+        }
+
+        ChatTitle.MaximumWidthRequest = Math.Max(0, ChatHeader.Width - 8);
+        AssistantChipText.MaximumWidthRequest = Math.Max(0, ChatHeader.Width - 40);
     }
 
     private void ApplyWidth(double width)

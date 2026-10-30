@@ -329,19 +329,23 @@
 
         <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12">
         <!-- Header: title and the three chips. -->
-        <HorizontalStackLayout Spacing="8" HorizontalOptions="Start">
-            <Label StyleClass="title" Text="{Binding Title}" VerticalOptions="Center" />
+        <FlexLayout x:Name="ChatHeader" Wrap="Wrap" Direction="Row" AlignItems="Center"
+                    JustifyContent="Start" AlignContent="Start" Margin="0,0,0,-8">
+            <Label x:Name="ChatTitle" StyleClass="title" Text="{Binding Title}" VerticalOptions="Center"
+                   IsVisible="{Binding IsWide}" MaxLines="1" LineBreakMode="TailTruncation" Margin="0,0,8,8" />
             <Button StyleClass="chip" Text="{Binding ModelsButtonText}"
                     Command="{Binding OpenModelsCommand}"
-                    SemanticProperties.Description="{Binding ModelsButtonText}" />
-            <Border StyleClass="chip" VerticalOptions="Center">
-                <Label StyleClass="meta" Text="{Binding AssistantText}" VerticalOptions="Center"
+                    SemanticProperties.Description="{Binding ModelsButtonText}" Margin="0,0,8,8" />
+            <Border StyleClass="chip" VerticalOptions="Center" Margin="0,0,8,8">
+                <Label x:Name="AssistantChipText" StyleClass="meta" Text="{Binding AssistantText}" VerticalOptions="Center"
+                       MaxLines="1" LineBreakMode="TailTruncation"
                        SemanticProperties.Description="{Binding AssistantText}" />
             </Border>
             <Button StyleClass="chip" Text="{x:Static strings:AppResources.ChatParametersButton}"
                     Command="{Binding OpenParametersCommand}"
-                    SemanticProperties.Description="{x:Static strings:AppResources.ChatParametersButton}" />
-        </HorizontalStackLayout>
+                    SemanticProperties.Description="{x:Static strings:AppResources.ChatParametersButton}"
+                    Margin="0,0,8,8" />
+        </FlexLayout>
 
         <CollectionView x:Name="Transcript"
                         Grid.Row="1"
