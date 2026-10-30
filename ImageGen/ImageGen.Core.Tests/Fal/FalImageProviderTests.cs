@@ -12,6 +12,7 @@ namespace ImageGen.Core.Tests.Fal;
 
 public class FalImageProviderTests
 {
+    private const string FalTransportName = "ImageGen.Internal.FalTransport";
     private const string Key = "fal-test-key";
     private const string Endpoint = "fal-ai/flux/dev";
     private static readonly Uri FalAddress = new("https://queue.fal.run/");
@@ -37,7 +38,7 @@ public class FalImageProviderTests
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
         var factory = Substitute.For<IHttpClientFactory>();
-        factory.CreateClient(ProviderIds.Fal).Returns(new HttpClient(handler));
+        factory.CreateClient(FalTransportName).Returns(new HttpClient(handler));
         var config = new ProviderConfig(ProviderIds.Fal, ProviderKind.Fal, "fal.ai", FalAddress, timeout ?? TimeSpan.FromSeconds(60), []);
         return new FalImageProvider(config, factory, secrets, time);
     }
@@ -54,6 +55,148 @@ public class FalImageProviderTests
 
     private static ImageGenerationRequest Request(long? seed = null) =>
         new(Endpoint, "a red fox", seed, null, null, null, null, []);
+
+    [Theory]
+    [InlineData(HttpStatusCode.MovedPermanently)]
+    [InlineData(HttpStatusCode.Redirect)]
+    [InlineData(HttpStatusCode.TemporaryRedirect)]
+    [InlineData(HttpStatusCode.PermanentRedirect)]
+    public async Task Poll_StatusRedirect_FailsWithoutFollowingOrExposingResponse(HttpStatusCode status)
+    {
+        var handler = new StubHttpMessageHandler(_ => Redirect(status));
+        var provider = CreateProvider(handler);
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => provider.PollAsync(Handle, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+        Assert.DoesNotContain("redirect-secret", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("evil.example", exception.Message, StringComparison.Ordinal);
+        Assert.Single(handler.Requests);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.MovedPermanently)]
+    [InlineData(HttpStatusCode.Redirect)]
+    [InlineData(HttpStatusCode.TemporaryRedirect)]
+    [InlineData(HttpStatusCode.PermanentRedirect)]
+    public async Task Poll_ImageRedirect_FailsWithoutFollowingOrExposingResponse(HttpStatusCode status)
+    {
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/status", StringComparison.Ordinal))
+            {
+                return Json(HttpStatusCode.OK, "{\"status\":\"COMPLETED\"}");
+            }
+
+            return request.RequestUri.Host == "cdn"
+                ? Redirect(status)
+                : Json(HttpStatusCode.OK, "{\"images\":[{\"url\":\"https://cdn/image.png\"}],\"has_nsfw_concepts\":[false]}");
+        });
+        var provider = CreateProvider(handler);
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => provider.PollAsync(Handle, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+        Assert.DoesNotContain("redirect-secret", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("evil.example", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(3, handler.Requests.Count);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.MovedPermanently)]
+    [InlineData(HttpStatusCode.Redirect)]
+    [InlineData(HttpStatusCode.TemporaryRedirect)]
+    [InlineData(HttpStatusCode.PermanentRedirect)]
+    public async Task Poll_ResultRedirect_FailsWithoutFollowingOrExposingResponse(HttpStatusCode status)
+    {
+        var handler = new StubHttpMessageHandler(request => request.RequestUri!.AbsolutePath.EndsWith("/status", StringComparison.Ordinal)
+            ? Json(HttpStatusCode.OK, "{\"status\":\"COMPLETED\"}")
+            : Redirect(status));
+        var provider = CreateProvider(handler);
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => provider.PollAsync(Handle, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+        Assert.DoesNotContain("redirect-secret", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("evil.example", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(2, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Submit_Redirect_IsUnknownAndDoesNotExposeLocationOrBody()
+    {
+        var handler = new StubHttpMessageHandler(_ => Redirect(HttpStatusCode.Redirect));
+        var provider = CreateProvider(handler);
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => provider.SubmitAsync(Request(), TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+        Assert.DoesNotContain("redirect-secret", exception.Message, StringComparison.Ordinal);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task ListImageModels_Redirect_IsUnknownAndDoesNotExposeLocationOrBody()
+    {
+        var handler = new StubHttpMessageHandler(_ => Redirect(HttpStatusCode.Redirect));
+        var provider = CreateProvider(handler);
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => provider.ListImageModelsAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+        Assert.DoesNotContain("redirect-secret", exception.Message, StringComparison.Ordinal);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task Cancel_Redirect_IsUnknownAndDoesNotExposeLocationOrBody()
+    {
+        var handler = new StubHttpMessageHandler(_ => Redirect(HttpStatusCode.Redirect));
+        var provider = CreateProvider(handler);
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => provider.CancelAsync(Handle, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+        Assert.DoesNotContain("redirect-secret", exception.Message, StringComparison.Ordinal);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task CheckKey_Redirect_ReturnsNetworkError()
+    {
+        var provider = CreateProvider(new StubHttpMessageHandler(_ => Redirect(HttpStatusCode.Redirect)));
+
+        var status = await provider.CheckKeyAsync(Key, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ApiKeyStatus.NetworkError, status);
+    }
+
+    [Fact]
+    public async Task CustomProviderId_UsesFalTransportAndItsOwnSecret()
+    {
+        const string providerId = "custom-fal";
+        const string apiKey = "custom-fal-key";
+        var secrets = Substitute.For<ISecretStore>();
+        secrets.GetAsync(SecretNames.ForProvider(providerId), Arg.Any<CancellationToken>()).Returns(apiKey);
+        var handler = new StubHttpMessageHandler(_ => Json(HttpStatusCode.OK, "{\"models\":[]}"));
+        var factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient(FalTransportName).Returns(new HttpClient(handler));
+        var config = new ProviderConfig(providerId, ProviderKind.Fal, "Custom fal", FalAddress, TimeSpan.FromSeconds(60), []);
+        var provider = new FalImageProvider(config, factory, secrets, TimeProvider.System);
+
+        await provider.ListImageModelsAsync(TestContext.Current.CancellationToken);
+
+        factory.Received(1).CreateClient(FalTransportName);
+        factory.DidNotReceive().CreateClient(providerId);
+        await secrets.Received(1).GetAsync(SecretNames.ForProvider(providerId), Arg.Any<CancellationToken>());
+        Assert.Equal("Key " + apiKey, handler.Requests.Single().Headers.GetValues("Authorization").Single());
+    }
+
+    private static HttpResponseMessage Redirect(HttpStatusCode status) => new(status)
+    {
+        Headers = { Location = new Uri("https://evil.example/redirect-secret") },
+        Content = new StringContent("redirect-secret"),
+    };
 
     private sealed class BlockingContent(TaskCompletionSource entered) : HttpContent
     {
@@ -329,7 +472,7 @@ public class FalImageProviderTests
         var secrets = Substitute.For<ISecretStore>();
         var handler = new StubHttpMessageHandler(_ => Json(HttpStatusCode.OK, SubmitJson));
         var factory = Substitute.For<IHttpClientFactory>();
-        factory.CreateClient(ProviderIds.Fal).Returns(new HttpClient(handler));
+        factory.CreateClient(FalTransportName).Returns(new HttpClient(handler));
         var provider = new FalImageProvider(
             new ProviderConfig(ProviderIds.Fal, ProviderKind.Fal, "fal.ai", FalAddress, TimeSpan.FromSeconds(60), []),
             factory,
@@ -379,7 +522,7 @@ public class FalImageProviderTests
         var secrets = Substitute.For<ISecretStore>();
         var handler = new StubHttpMessageHandler(_ => Json(HttpStatusCode.OK, "{}"));
         var factory = Substitute.For<IHttpClientFactory>();
-        factory.CreateClient(ProviderIds.Fal).Returns(new HttpClient(handler));
+        factory.CreateClient(FalTransportName).Returns(new HttpClient(handler));
         var provider = new FalImageProvider(
             new ProviderConfig(ProviderIds.Fal, ProviderKind.Fal, "fal.ai", FalAddress, TimeSpan.FromSeconds(60), []),
             factory,
@@ -430,7 +573,7 @@ public class FalImageProviderTests
         var secrets = Substitute.For<ISecretStore>();
         var handler = new StubHttpMessageHandler(_ => Json(HttpStatusCode.OK, "{}"));
         var factory = Substitute.For<IHttpClientFactory>();
-        factory.CreateClient(ProviderIds.Fal).Returns(new HttpClient(handler));
+        factory.CreateClient(FalTransportName).Returns(new HttpClient(handler));
         var provider = new FalImageProvider(
             new ProviderConfig(ProviderIds.Fal, ProviderKind.Fal, "fal.ai", FalAddress, TimeSpan.FromSeconds(60), []),
             factory,

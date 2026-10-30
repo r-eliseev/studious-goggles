@@ -17,7 +17,7 @@ namespace ImageGen.Core.Fal;
 /// </summary>
 public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider, IModelProvider
 {
-    private readonly IHttpClientFactory _httpClientFactory;
+    internal const string TransportName = "ImageGen.Internal.FalTransport";
 
     public FalImageProvider(
         ProviderConfig config,
@@ -26,7 +26,16 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
         TimeProvider timeProvider)
         : base(config, httpClientFactory, secretStore, timeProvider)
     {
-        _httpClientFactory = httpClientFactory;
+    }
+
+    protected override string TransportClientName => TransportName;
+
+    protected override void ValidateTransportResponse(HttpResponseMessage response)
+    {
+        if ((int)response.StatusCode is >= 300 and < 400)
+        {
+            throw new ProviderException(ErrorKind.Unknown, "fal returned a redirect response.");
+        }
     }
 
     /// <summary>
@@ -148,7 +157,8 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
         using var timeout = CreateTimeout(cancellationToken);
         try
         {
-            using var response = await _httpClientFactory.CreateClient(Config.Id).SendAsync(message, timeout.Token);
+            using var response = await CreateHttpClient().SendAsync(message, timeout.Token);
+            ValidateTransportResponse(response);
             return response.StatusCode switch
             {
                 HttpStatusCode.OK => CancelOutcome.Cancelled,
@@ -199,8 +209,9 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
         try
         {
             using (request)
-            using (var response = await _httpClientFactory.CreateClient(Config.Id).SendAsync(request, timeout.Token))
+            using (var response = await CreateHttpClient().SendAsync(request, timeout.Token))
             {
+                ValidateTransportResponse(response);
                 var text = await response.Content.ReadAsStringAsync(timeout.Token);
                 if (!response.IsSuccessStatusCode)
                 {
@@ -237,7 +248,8 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            using var response = await _httpClientFactory.CreateClient(Config.Id).SendAsync(request, timeout.Token);
+            using var response = await CreateHttpClient().SendAsync(request, timeout.Token);
+            ValidateTransportResponse(response);
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsByteArrayAsync(timeout.Token);
         }

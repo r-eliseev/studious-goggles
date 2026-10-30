@@ -1,8 +1,8 @@
 ---
 id: 124
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-10-30T12:39:28Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -57,5 +57,13 @@ bash scripts/check.sh
 После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 124`, затем `bash scripts/check.sh`; код отправить PR по `docs/tasks.md`.
 
 ## Отчёт
+
+Зарегистрирован стабильный fal transport `ImageGen.Internal.FalTransport` с `HttpClientHandler.AllowAutoRedirect=false`; все запросы `ProviderKind.Fal`, включая custom provider ids, выбирают этот клиент, сохраняя Config.Id для ключей и конфигурации. Общий `ProviderClientBase` получил выбор имени клиента и hook проверки ответа до чтения тела. Fal отклоняет любой 3xx безопасным `ProviderException(ErrorKind.Unknown)`. Probe не вызывает hook и переводит 3xx в `ApiKeyStatus.NetworkError`. Submit/catalog/status/result/cancel/image download покрыты путями с запретом редиректа.
+
+Добавлены тесты последовательных 301/302/307/308 для status/result/image, проверки submit/catalog/cancel и key probe, проверки transport/secret id для custom Fal id и DI composition тест фактического `AllowAutoRedirect=false` с ровно одним `LoggingHttpHandler`.
+
+Проверки: Core 524/524; Data 79/79; `dotnet format --verify-no-changes` для Core, Core.Tests и Data.Tests; `bash scripts/check.sh`.
+
+Живые запросы к fal не выполнялись; redirect-поведение проверено тестовым handler и DI-конфигурацией. Ручной проверки UI задача не требует.
 
 ## Комментарии
