@@ -20,7 +20,7 @@ Manifest разрешает backup без rules; app-private SQLite, images, log
 - Source manifest: `allowBackup=false`, legacy `fullBackupContent` указывает deny-all rules, Android 12+ `dataExtractionRules` указывает deny-all cloud/device-transfer rules.
 - Rules исключают все поддержанные app data domains, включая credential/device protected storage; ни одного include.
 - Release Android build и final merged manifest содержат эти references/false.
-- Source XML tests проверяют manifest, оба modes и полный expected domain set.
+- Source XML tests проверяют manifest, оба modes и полный expected domain set документированной схемы установленного SDK; адаптация имени domain сохраняет deny-all и фиксируется в отчёте.
 - `docs/knowledge/maui.md` фиксирует privacy policy; F7.6 остаётся будущим явным зашифрованным export/backup.
 
 ## Анализ
@@ -29,7 +29,7 @@ Manifest разрешает backup без rules; app-private SQLite, images, log
 `docs/knowledge/maui.md` также меняют 088, 095, 098, 100: перед стартом rebase, при конфликте сохранить независимые добавления; это не функциональные зависимости.
 
 ## План
-Для Haiku/Luna: точная deny-all policy, без UI/iOS. Рутинные ошибки resource path/build исправлять по Android SDK без ослабления deny-all. Если конкретный domain не поддерживается документированной схемой выбранного API, записать ссылку/ошибку и согласовать изменение политики; не удалять rule молча. Отсутствие Android SDK — неподходящая среда, задачу не занимать.
+Для Haiku/Luna: точная deny-all policy, без UI/iOS. Рутинные ошибки resource path/build исправлять по Android SDK без ослабления deny-all. Набор domains сверять с официальной схемой для legacy и Android12+ ресурсов отдельно. Если SDK отклоняет имя из плана, исправить resource/schema/API-адаптацию и ожидаемый набор теста по документации, сохранив deny-all для всех поддержанных app-data domains; не исключать режим cloud/device-transfer, не добавлять include и не разрешать backup. В отчёте дать ссылку, фактические supported domains и результат merged-manifest проверки. Это техническая адаптация внутри уже принятой privacy-политики, нового решения владельца не требует. Ошибку сборки исправлять, не объявлять такой режим защищённым без проверки. Отсутствие Android SDK — неподходящая среда, задачу не занимать.
 
 Прочитай: полный путь `ImageGen/ImageGen.Maui/ImageGen.Maui.csproj`, AndroidManifest, Android official page выше, `MauiStylesTests.MauiRoot`, `docs/knowledge/maui.md`.
 
