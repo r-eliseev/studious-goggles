@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using System.Text.Json.Nodes;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Keys;
@@ -16,6 +17,18 @@ public class OpenRouterClientTests
     private static readonly DateTimeOffset Now = new(2026, 10, 27, 12, 0, 0, TimeSpan.Zero);
 
     private static readonly Uri OpenRouterAddress = new("https://openrouter.ai/api/v1/");
+    private const string FluxModelId = "black-forest-labs/flux.2-klein-4b";
+    private const string QwenModelId = "qwen/qwen-image-2.1-turbo";
+    private const string FluxPriceJson = """
+        {"endpoints":[{"pricing":[{"billable":"output_image","unit":"megapixel","cost_usd":0.014}]}]}
+        """;
+    private const string QwenPriceJson = """
+        {"endpoints":[{"pricing":[
+          {"billable":"input_image","unit":"image","cost_usd":0},
+          {"billable":"output_image","unit":"image","cost_usd":0.0184,"variant":"1k"},
+          {"billable":"output_image","unit":"image","cost_usd":0.0184,"variant":"2k"}
+        ]}]}
+        """;
 
     private static OpenRouterClient CreateClient(StubHttpMessageHandler handler, string? storedKey = ApiKey)
     {
@@ -28,6 +41,35 @@ public class OpenRouterClientTests
         var config = ProviderConfigLoader.Build(ProviderConfigLoader.ReadBuiltInJson(), null).Get(ProviderIds.OpenRouter);
         return new OpenRouterClient(config, factory, secrets, time);
     }
+
+    private static StubHttpMessageHandler PriceCatalogHandler() => new(request => request.RequestUri!.AbsolutePath switch
+    {
+        "/api/v1/images/models" => JsonResponse(HttpStatusCode.OK, ModelsJson(FluxModelId, QwenModelId)),
+        "/api/v1/images/models/black-forest-labs/flux.2-klein-4b/endpoints" => JsonResponse(HttpStatusCode.OK, FluxPriceJson),
+        "/api/v1/images/models/qwen/qwen-image-2.1-turbo/endpoints" => JsonResponse(HttpStatusCode.OK, QwenPriceJson),
+        _ => JsonResponse(HttpStatusCode.NotFound, "{}"),
+    });
+
+    private static StubHttpMessageHandler SingleModelPriceHandler(string modelId, string endpointsJson) =>
+        new(request => request.RequestUri!.AbsolutePath == "/api/v1/images/models"
+            ? JsonResponse(HttpStatusCode.OK, ModelsJson(modelId))
+            : JsonResponse(HttpStatusCode.OK, endpointsJson));
+
+    private static string ModelsJson(params string[] ids)
+    {
+        var data = new JsonArray();
+        foreach (var id in ids)
+        {
+            data.Add(new JsonObject { ["id"] = id, ["name"] = id });
+        }
+
+        return new JsonObject { ["data"] = data }.ToJsonString();
+    }
+
+    private static HttpResponseMessage JsonResponse(HttpStatusCode status, string json) => new(status)
+    {
+        Content = new StringContent(json, Encoding.UTF8, "application/json"),
+    };
 
     [Theory]
     [InlineData(HttpStatusCode.OK, ApiKeyStatus.Valid)]
@@ -85,6 +127,125 @@ public class OpenRouterClientTests
         Assert.False(models[1].SupportsSeed);
         Assert.False(models[1].SupportsImageInput);
         Assert.Equal(4, models[1].MaxImagesPerRequest);
+    }
+
+    [Fact]
+    public async Task ListImageModelsAsync_Endpoints_ParsesPrices()
+    {
+        var handler = PriceCatalogHandler();
+        var client = CreateClient(handler);
+
+        var models = await client.ListImageModelsAsync(TestContext.Current.CancellationToken);
+
+        var fluxPrice = Assert.Single(models[0].Prices);
+        Assert.Equal(new ImageModelPrice("output_image", ImagePriceUnit.Megapixel, 0.014m, null), fluxPrice);
+        Assert.Collection(models[1].Prices,
+            price => Assert.Equal(new ImageModelPrice("input_image", ImagePriceUnit.Image, 0m, null), price),
+            price => Assert.Equal(new ImageModelPrice("output_image", ImagePriceUnit.Image, 0.0184m, "1k"), price),
+            price => Assert.Equal(new ImageModelPrice("output_image", ImagePriceUnit.Image, 0.0184m, "2k"), price));
+    }
+
+    [Fact]
+    public async Task ListImageModelsAsync_EndpointsAddress_KeepsSlashInId()
+    {
+        var handler = PriceCatalogHandler();
+        var client = CreateClient(handler);
+
+        await client.ListImageModelsAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("https://openrouter.ai/api/v1/images/models", handler.Requests[0].RequestUri!.ToString());
+        Assert.Contains(handler.Requests, request => request.RequestUri!.ToString()
+            == "https://openrouter.ai/api/v1/images/models/black-forest-labs/flux.2-klein-4b/endpoints");
+    }
+
+    [Fact]
+    public async Task ListImageModelsAsync_TokenUnit_ParsesPerToken()
+    {
+        const string endpoints = """{"endpoints":[{"pricing":[{"billable":"output_image","unit":"token","cost_usd":0.00004}]}]}""";
+        var handler = SingleModelPriceHandler("openai/gpt-image-1", endpoints);
+        var client = CreateClient(handler);
+
+        var model = Assert.Single(await client.ListImageModelsAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(new ImageModelPrice("output_image", ImagePriceUnit.Token, 0.00004m, null), Assert.Single(model.Prices));
+    }
+
+    [Fact]
+    public async Task ListImageModelsAsync_NoEndpoints_EmptyPrices()
+    {
+        var handler = SingleModelPriceHandler("meta/muse-image", """{"endpoints":[]}""");
+        var client = CreateClient(handler);
+
+        var model = Assert.Single(await client.ListImageModelsAsync(TestContext.Current.CancellationToken));
+
+        Assert.Empty(model.Prices);
+    }
+
+    [Fact]
+    public async Task ListImageModelsAsync_EndpointsFail_OtherModelsKeepPrices()
+    {
+        const string goodId = "vendor/good";
+        var handler = new StubHttpMessageHandler(request => request.RequestUri!.AbsolutePath switch
+        {
+            "/api/v1/images/models" => JsonResponse(HttpStatusCode.OK, ModelsJson("vendor/failing", goodId)),
+            "/api/v1/images/models/vendor/failing/endpoints" => JsonResponse(HttpStatusCode.InternalServerError, "{}"),
+            "/api/v1/images/models/vendor/good/endpoints" => JsonResponse(HttpStatusCode.OK, FluxPriceJson),
+            _ => JsonResponse(HttpStatusCode.NotFound, "{}"),
+        });
+        var client = CreateClient(handler);
+
+        var models = await client.ListImageModelsAsync(TestContext.Current.CancellationToken);
+
+        Assert.Empty(models[0].Prices);
+        Assert.NotEmpty(models[1].Prices);
+    }
+
+    [Fact]
+    public async Task ListImageModelsAsync_UnknownUnit_SkipsEntry()
+    {
+        const string endpoints = """{"endpoints":[{"pricing":[{"billable":"output_image","unit":"image","cost_usd":0.02},{"billable":"output_image","unit":"second","cost_usd":1}]}]}""";
+        var handler = SingleModelPriceHandler("vendor/model", endpoints);
+        var client = CreateClient(handler);
+
+        var model = Assert.Single(await client.ListImageModelsAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(new ImageModelPrice("output_image", ImagePriceUnit.Image, 0.02m, null), Assert.Single(model.Prices));
+    }
+
+    [Fact]
+    public async Task ListImageModelsAsync_InvalidEndpointAndPricingTypes_SkipsInvalidEntries()
+    {
+        const string endpoints = """{"endpoints":[null,{"pricing":"bad"},{"pricing":[{"billable":1,"unit":"image","cost_usd":2},{"billable":"output_image","unit":"image","cost_usd":-1},{"billable":"output_image","unit":"image","cost_usd":0.03}]}]}""";
+        var handler = SingleModelPriceHandler("vendor/model", endpoints);
+        var client = CreateClient(handler);
+
+        var model = Assert.Single(await client.ListImageModelsAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(new ImageModelPrice("output_image", ImagePriceUnit.Image, 0.03m, null), Assert.Single(model.Prices));
+    }
+
+    [Fact]
+    public async Task ListImageModelsAsync_InvalidEndpointsRoot_ReturnsEmptyPrices()
+    {
+        var handler = SingleModelPriceHandler("vendor/model", """{"endpoints":"bad"}""");
+        var client = CreateClient(handler);
+
+        var model = Assert.Single(await client.ListImageModelsAsync(TestContext.Current.CancellationToken));
+
+        Assert.Empty(model.Prices);
+    }
+
+    [Fact]
+    public async Task ListImageModelsAsync_Cancelled_Throws()
+    {
+        var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, "{}");
+        var client = CreateClient(handler);
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => client.ListImageModelsAsync(cancellation.Token));
+        Assert.Empty(handler.Requests);
     }
 
     [Fact]

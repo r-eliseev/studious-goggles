@@ -7,6 +7,7 @@ namespace ImageGen.Core.Tests.TestDoubles;
 public sealed class StubHttpMessageHandler : HttpMessageHandler
 {
     private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _respond;
+    private readonly object _recordGate = new();
 
     public StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> respond)
     {
@@ -29,8 +30,13 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        Requests.Add(request);
-        RequestBodies.Add(request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken));
+        var body = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken);
+        lock (_recordGate)
+        {
+            Requests.Add(request);
+            RequestBodies.Add(body);
+        }
+
         return await _respond(request, cancellationToken);
     }
 }

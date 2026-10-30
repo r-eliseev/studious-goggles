@@ -18,6 +18,8 @@ public sealed class OpenRouterClient(
     TimeProvider timeProvider)
     : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient
 {
+    private const int PriceRequestParallelism = 4;
+
     protected override void Authenticate(HttpRequestMessage request, string apiKey) => AuthenticateBearer(request, apiKey);
 
     public override Task<ApiKeyStatus> CheckKeyAsync(string apiKey, CancellationToken cancellationToken)
@@ -28,6 +30,7 @@ public sealed class OpenRouterClient(
 
     public async Task<IReadOnlyList<ImageModel>> ListImageModelsAsync(CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         using var request = await CreateAuthorizedRequestAsync(HttpMethod.Get, "images/models", null, cancellationToken);
         var root = await SendJsonAsync(request, cancellationToken);
         var fetchedAt = TimeProvider.GetUtcNow();
@@ -60,8 +63,77 @@ public sealed class OpenRouterClient(
             });
         }
 
+        await Parallel.ForEachAsync(
+            result,
+            new ParallelOptions { MaxDegreeOfParallelism = PriceRequestParallelism, CancellationToken = cancellationToken },
+            async (model, token) => model.Prices = await ReadPricesAsync(model.Id, token));
+
         return result;
     }
+
+    private async Task<IReadOnlyList<ImageModelPrice>> ReadPricesAsync(string modelId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var request = await CreateAuthorizedRequestAsync(
+                HttpMethod.Get, "images/models/" + modelId + "/endpoints", null, cancellationToken);
+            var root = await SendJsonAsync(request, cancellationToken);
+            if (root["endpoints"] is not JsonArray endpoints)
+            {
+                return [];
+            }
+
+            var prices = new List<ImageModelPrice>();
+            foreach (var endpoint in endpoints.OfType<JsonObject>())
+            {
+                if (endpoint["pricing"] is not JsonArray pricing)
+                {
+                    continue;
+                }
+
+                foreach (var entry in pricing.OfType<JsonObject>())
+                {
+                    var billable = ReadString(entry["billable"]);
+                    var unit = ReadImagePriceUnit(ReadString(entry["unit"]));
+                    if (string.IsNullOrWhiteSpace(billable)
+                        || unit is null
+                        || entry["cost_usd"] is not JsonValue costValue
+                        || !costValue.TryGetValue<decimal>(out var cost)
+                        || cost < 0)
+                    {
+                        continue;
+                    }
+
+                    string? variant = null;
+                    if (entry.TryGetPropertyValue("variant", out var variantNode) && variantNode is not null)
+                    {
+                        variant = ReadString(variantNode);
+                        if (variant is null)
+                        {
+                            continue;
+                        }
+                    }
+
+                    prices.Add(new ImageModelPrice(billable, unit.Value, cost, variant));
+                }
+            }
+
+            return prices;
+        }
+        catch (ProviderException)
+        {
+            return [];
+        }
+    }
+
+    private static ImagePriceUnit? ReadImagePriceUnit(string? unit) => unit switch
+    {
+        "image" => ImagePriceUnit.Image,
+        "megapixel" => ImagePriceUnit.Megapixel,
+        "token" => ImagePriceUnit.Token,
+        "request" => ImagePriceUnit.Request,
+        _ => null,
+    };
 
     public async Task<ImageGenerationResult> GenerateAsync(ImageGenerationRequest request, CancellationToken cancellationToken)
     {

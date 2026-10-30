@@ -41,6 +41,13 @@ public static class OpenRouterFakes
                 return Json(HttpStatusCode.OK, "{}");
             }
 
+            if (path.EndsWith("/endpoints", StringComparison.Ordinal))
+            {
+                return path.Contains("/black-forest-labs/flux.2-klein-4b/endpoints", StringComparison.Ordinal)
+                    ? Json(HttpStatusCode.OK, """{"endpoints":[{"pricing":[{"billable":"output_image","unit":"megapixel","cost_usd":0.014}]}]}""")
+                    : Json(HttpStatusCode.OK, """{"endpoints":[]}""");
+            }
+
             if (path.EndsWith("/images/models", StringComparison.Ordinal))
             {
                 return Json(HttpStatusCode.OK, CatalogJson);

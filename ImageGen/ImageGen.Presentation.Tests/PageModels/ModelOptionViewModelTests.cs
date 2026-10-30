@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Tests.TestDoubles;
 
@@ -20,7 +21,7 @@ public class ModelOptionViewModelTests
     {
         var model = new ModelOptionViewModel(TestModels.Model("vendor/alpha", "Alpha", supportsSeed: true), false);
 
-        Assert.Equal("vendor/alpha · seed", model.DetailsText);
+        Assert.Equal("vendor/alpha · seed · price unknown", model.DetailsText);
     }
 
     [Fact]
@@ -28,7 +29,18 @@ public class ModelOptionViewModelTests
     {
         var model = new ModelOptionViewModel(TestModels.Model("vendor/beta", "Beta", supportsSeed: false), false);
 
-        Assert.Equal("vendor/beta · no seed", model.DetailsText);
+        Assert.Equal("vendor/beta · no seed · price unknown", model.DetailsText);
+    }
+
+    [Fact]
+    public void DetailsText_WithPrice_ShowsPrice()
+    {
+        var imageModel = TestModels.Model("black-forest-labs/flux.2-klein-4b", "FLUX.2 Klein 4B");
+        imageModel.Prices = [new ImageModelPrice("output_image", ImagePriceUnit.Megapixel, 0.014m, null)];
+        var model = new ModelOptionViewModel(imageModel, isSelected: false);
+
+        Assert.Equal("black-forest-labs/flux.2-klein-4b · seed · $0.014 / MP", model.DetailsText);
+        Assert.Equal("$0.014 / MP", model.PriceText);
     }
 
     [Fact]

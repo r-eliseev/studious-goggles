@@ -1,6 +1,6 @@
 ---
 id: 093
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -154,6 +154,14 @@ bash scripts/check.sh
 Файлы: `ImageGen/ImageGen.Core/Domain/Models/ImagePriceUnit.cs`, `ImageGen/ImageGen.Core/Domain/Models/ImageModelPrice.cs` (новые), `ImageGen/ImageGen.Core/Domain/Models/ImageModel.cs`, `ImageGen/ImageGen.Core/Serialization/CoreJsonContext.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Data/Migrations/NNNN_image_model_prices.sql` (новый), `ImageGen/ImageGen.Data/ParameterJson.cs`, `ImageGen/ImageGen.Data/Repositories/ImageModelRepository.cs`, `ImageGen/ImageGen.Presentation/PageModels/ImagePriceText.cs` (новый), `ImageGen/ImageGen.Presentation/PageModels/ModelOptionViewModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`; тесты: `ImageGen/ImageGen.Core.Tests/TestDoubles/StubHttpMessageHandler.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `ImageGen/ImageGen.Core.Tests/Fal/FalImageProviderTests.cs`, `ImageGen/ImageGen.Core.Tests/OpenAiCompatible/OpenAiCompatibleClientTests.cs`, `ImageGen/ImageGen.Data.Tests/MigrationsTests.cs`, `ImageGen/ImageGen.Data.Tests/Repositories/ImageModelRepositoryTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ImagePriceTextTests.cs` (новый), `ImageGen/ImageGen.Presentation.Tests/PageModels/ModelOptionViewModelTests.cs`, `ImageGen/ImageGen.Avalonia.Tests/TestDoubles/StubHttpMessageHandler.cs`, `ImageGen/ImageGen.Avalonia.Tests/TestDoubles/OpenRouterFakes.cs`, `ImageGen/ImageGen.Avalonia.Tests/Flows/SessionModelsFlowTests.cs`; `docs/specs/chat-sessions.md`, `docs/specs/image-client.md`, `docs/architecture.md`, `docs/status.md`, `tasks/v0.1/016-*.md`, `tasks/backlog/046-*.md`.
 
 ## Отчёт
+
+Реализовано получение цен OpenRouter через `/images/models/{id}/endpoints` с максимум четырьмя параллельными запросами и безопасным пропуском некорректных/недоступных endpoint-ов конкретной модели. Добавлены доменные типы, сохранение `prices_json` и миграция 0009, которая очищает только кэш моделей. Цены вывода форматируются с приоритетом единиц image → megapixel → token → request, диапазонами и инвариантной культурой; цена и «price unknown» показаны в строке моделей. Для fal и моделей из конфига список цен пуст. Stub HTTP handler сделан безопасным при конкурентных запросах.
+
+Обновлены `docs/specs/chat-sessions.md`, `docs/specs/image-client.md`, `docs/architecture.md`, открытый вопрос fal в `docs/status.md`; ручные проверки добавлены в задачи 016 и 046. Исправлены два теста миграций, которые теперь проверяют версии схемы до миграции 0009, очищающей каталог.
+
+Проверки: Core 519/519; Data 81/81; Presentation 353/353; Avalonia Debug и Release 134 успешных, 2 платформенных пропуска; MAUI Android build — 0 предупреждений/ошибок; `dotnet format --verify-no-changes` всех семи изменённых проектов; `git diff --check`. Живой OpenRouter probe без ключа вернул `output_image`, `megapixel`, `cost_usd: 0.014` для FLUX.2 Klein 4B.
+
+Ручная проверка на телефоне (время Refresh на Android) не выполнялась; передана владельцу через этот отчёт. MAUI Windows и Avalonia Linux desktop/Windows добавлены в задачи 016 и 046. CI PR #50 при последней проверке имел красный `windows-tests`: существующий `LoggingFlowTests.ChatWithAssistantAndGeneration_LogFileShowsTheChainAndNoKey` не смог удалить PNG из временной папки, так как файл был открыт. Полный Avalonia Release набор локально прошёл; требуется повторная проверка CI после push.
 
 ## Комментарии
 ### 2026-10-29, claude-plan
