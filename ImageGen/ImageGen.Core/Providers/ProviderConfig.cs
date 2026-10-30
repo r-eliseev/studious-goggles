@@ -13,4 +13,6 @@ public sealed record ProviderConfig(
     string DisplayName,
     Uri BaseAddress,
     TimeSpan Timeout,
-    IReadOnlyList<ConfiguredImageModel> ImageModels);
+    IReadOnlyList<ConfiguredImageModel> ImageModels,
+    string? ImageResponseFormat = null,
+    string? ImageOutputFormat = null);

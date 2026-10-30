@@ -59,6 +59,23 @@ public class OpenAiCompatibleClientTests
     }
 
     [Fact]
+    public async Task CheckKeyAsync_Together_ProbesModelsWithBearerKey()
+    {
+        const string json = """{"providers":[{"id":"together","kind":"openAiCompatible","displayName":"Together AI","baseAddress":"https://api.together.ai/v1"}]}""";
+        var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, "{}");
+        var secrets = Substitute.For<ISecretStore>();
+        var factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient("together").Returns(new HttpClient(handler));
+        var client = new OpenAiCompatibleClient(ProviderConfigLoader.Build(Json, json).Get("together"), factory, secrets, TimeProvider.System);
+
+        var status = await client.CheckKeyAsync(Key, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ApiKeyStatus.Valid, status);
+        Assert.Equal("https://api.together.ai/v1/models", handler.Requests[0].RequestUri!.ToString());
+        Assert.Equal($"Bearer {Key}", handler.Requests[0].Headers.Authorization!.ToString());
+    }
+
+    [Fact]
     public async Task GenerateAsync_WithSeed_PostsToImagesGenerationsWithBearerKey()
     {
         var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"data":[{"b64_json":"AQID"}]}""");
@@ -74,9 +91,51 @@ public class OpenAiCompatibleClientTests
         Assert.Equal("sd-xl", body["model"]!.GetValue<string>());
         Assert.Equal("a fox", body["prompt"]!.GetValue<string>());
         Assert.Equal(42, body["seed"]!.GetValue<long>());
+        Assert.False(body.AsObject().ContainsKey("response_format"));
+        Assert.False(body.AsObject().ContainsKey("output_format"));
         Assert.Equal([1, 2, 3], result.Content);
         Assert.Equal("image/png", result.MediaType);
         Assert.Null(result.CostUsd);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_TogetherConfiguration_UsesBase64PngAndDecodesImage()
+    {
+        const string json = """{"providers":[{"id":"together","kind":"openAiCompatible","displayName":"Together AI","baseAddress":"https://api.together.ai/v1","timeoutSeconds":180,"imageResponseFormat":"base64","imageOutputFormat":"png","imageModels":[{"id":"black-forest-labs/FLUX.1-schnell","supportsSeed":true}]}]}""";
+        var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"data":[{"b64_json":"AQID"}]}""");
+        var secrets = Substitute.For<ISecretStore>();
+        secrets.GetAsync("provider.together.api_key", Arg.Any<CancellationToken>()).Returns(Key);
+        var factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient("together").Returns(new HttpClient(handler));
+        var client = new OpenAiCompatibleClient(ProviderConfigLoader.Build(Json, json).Get("together"), factory, secrets, TimeProvider.System);
+
+        var result = await client.GenerateAsync(new ImageGenerationRequest("black-forest-labs/FLUX.1-schnell", "fox", 7), TestContext.Current.CancellationToken);
+
+        Assert.Equal("https://api.together.ai/v1/images/generations", handler.Requests[0].RequestUri!.ToString());
+        var body = JsonNode.Parse(handler.RequestBodies[0])!;
+        Assert.Equal("base64", body["response_format"]!.GetValue<string>());
+        Assert.Equal("png", body["output_format"]!.GetValue<string>());
+        Assert.Equal(7, body["seed"]!.GetValue<int>());
+        Assert.Equal([1, 2, 3], result.Content);
+        Assert.Equal("image/png", result.MediaType);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_TogetherWithoutSeed_OmitsSeedAndKeepsDefaultBehavior()
+    {
+        const string json = """{"providers":[{"id":"together","kind":"openAiCompatible","displayName":"Together AI","baseAddress":"https://api.together.ai/v1","imageResponseFormat":"base64","imageOutputFormat":"jpeg","imageModels":[{"id":"model"}]}]}""";
+        var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"data":[{"b64_json":"AQID"}]}""");
+        var secrets = Substitute.For<ISecretStore>();
+        secrets.GetAsync("provider.together.api_key", Arg.Any<CancellationToken>()).Returns(Key);
+        var factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient("together").Returns(new HttpClient(handler));
+        var client = new OpenAiCompatibleClient(ProviderConfigLoader.Build(Json, json).Get("together"), factory, secrets, TimeProvider.System);
+
+        var result = await client.GenerateAsync(new ImageGenerationRequest("model", "fox", null), TestContext.Current.CancellationToken);
+
+        var body = JsonNode.Parse(handler.RequestBodies[0])!;
+        Assert.False(body.AsObject().ContainsKey("seed"));
+        Assert.Equal("image/jpeg", result.MediaType);
     }
 
     [Fact]

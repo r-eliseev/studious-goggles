@@ -19,7 +19,7 @@ public static class ProviderConfigLoader
     private static readonly Regex SecretLikeName = new("key|secret|token|password", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly HashSet<string> KnownFields = new(StringComparer.Ordinal)
     {
-        "id", "kind", "displayName", "baseAddress", "timeoutSeconds", "imageModels",
+        "id", "kind", "displayName", "baseAddress", "timeoutSeconds", "imageModels", "imageResponseFormat", "imageOutputFormat",
     };
 
     /// <summary>Reads the user config from the data folder; null when the file does not exist.</summary>
@@ -132,6 +132,12 @@ public static class ProviderConfigLoader
         var displayName = ReadString(entry, "displayName", label);
         var address = ReadString(entry, "baseAddress", label);
         var timeoutSeconds = ReadOptionalInt(entry, "timeoutSeconds", DefaultTimeoutSeconds, label);
+        var imageResponseFormat = ReadOptionalFormat(entry, "imageResponseFormat", ["base64", "b64_json"], label);
+        var imageOutputFormat = ReadOptionalFormat(entry, "imageOutputFormat", ["png", "jpeg"], label);
+        if ((imageResponseFormat is not null || imageOutputFormat is not null) && kind != ProviderKind.OpenAiCompatible)
+        {
+            throw new ProviderConfigException($"Provider {label}: imageResponseFormat and imageOutputFormat are allowed only for kind openAiCompatible.");
+        }
 
         if (!Uri.TryCreate(address.EndsWith('/') ? address : address + "/", UriKind.Absolute, out var baseAddress))
         {
@@ -144,7 +150,9 @@ public static class ProviderConfigLoader
             displayName,
             baseAddress,
             TimeSpan.FromSeconds(timeoutSeconds),
-            ParseImageModels(entry, label));
+            ParseImageModels(entry, label),
+            imageResponseFormat,
+            imageOutputFormat);
     }
 
     private static IReadOnlyList<ConfiguredImageModel> ParseImageModels(JsonElement entry, string label)
@@ -199,6 +207,27 @@ public static class ProviderConfigLoader
         }
 
         return text.Trim();
+    }
+
+    private static string? ReadOptionalFormat(JsonElement element, string name, IReadOnlyCollection<string> allowed, string label)
+    {
+        if (!element.TryGetProperty(name, out var value) || value.ValueKind == JsonValueKind.Null)
+        {
+            return null;
+        }
+
+        if (value.ValueKind != JsonValueKind.String)
+        {
+            throw new ProviderConfigException($"Provider {label}: '{name}' must be a string.");
+        }
+
+        var text = value.GetString();
+        if (string.IsNullOrEmpty(text) || !allowed.Contains(text))
+        {
+            throw new ProviderConfigException($"Provider {label}: '{name}' has an unsupported value.");
+        }
+
+        return text;
     }
 
     private static int ReadOptionalInt(JsonElement element, string name, int defaultValue, string label)

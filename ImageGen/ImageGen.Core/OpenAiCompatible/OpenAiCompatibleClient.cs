@@ -55,6 +55,16 @@ public sealed class OpenAiCompatibleClient(
             ["prompt"] = request.Prompt,
             ["n"] = 1,
         };
+        if (Config.ImageResponseFormat is { } responseFormat)
+        {
+            body["response_format"] = responseFormat;
+        }
+
+        if (Config.ImageOutputFormat is { } outputFormat)
+        {
+            body["output_format"] = outputFormat;
+        }
+
         if (request.Seed.HasValue)
         {
             body["seed"] = request.Seed.Value;
@@ -73,7 +83,13 @@ public sealed class OpenAiCompatibleClient(
 
         try
         {
-            return new ImageGenerationResult(DecodeImage(base64), DefaultMediaType, null);
+            var mediaType = Config.ImageOutputFormat switch
+            {
+                "png" => "image/png",
+                "jpeg" => "image/jpeg",
+                _ => DefaultMediaType,
+            };
+            return new ImageGenerationResult(DecodeImage(base64), mediaType, null);
         }
         catch (ProviderResponseTooLargeException ex)
         {
