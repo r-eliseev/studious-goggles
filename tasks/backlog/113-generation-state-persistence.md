@@ -1,8 +1,8 @@
 ---
 id: 113
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-10-30T13:28:13Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -56,5 +56,11 @@ bash scripts/check.sh
 После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 113`, затем `bash scripts/check.sh`; отправить PR по `docs/tasks.md`.
 
 ## Отчёт
+
+- В Core добавлен `StorageWriteException` с `IsTransient`; Data repository требует ровно одну изменённую строку и безопасно отклоняет отсутствующую generation.
+- `SaveAndNotifyAsync` публикует status log/event только после подтверждённого update. Supervisor перехватывает unexpected background faults, пишет безопасный Error и отдельный Debug с exception; `WhenIdleAsync` не завершается с fault. File-store failure не создаёт ложный terminal state/event.
+- Обновлены тесты Core/Data, в том числе проверка supervisor и SQLite update отсутствующей строки.
+- Проверки: Core tests 558/558; Data tests 91/91; `dotnet format` Core, Data и оба test projects `--verify-no-changes --no-restore`; `bash scripts/check.sh` — все проверки пройдены.
+- Отличие от плана: нет.
 
 ## Комментарии

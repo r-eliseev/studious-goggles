@@ -242,48 +242,17 @@ public sealed class GenerationService(
         while (true)
         {
             Task[] pending;
-            Exception[] unobservedFailures;
             lock (_lifecycleGate)
             {
                 pending = _running.Values.Select(job => job.Task).ToArray();
-                unobservedFailures = _sessionStates.Values.SelectMany(state => state.JobFailures).ToArray();
-                foreach (var state in _sessionStates.Values)
-                {
-                    state.JobFailures.Clear();
-                }
             }
 
             if (pending.Length == 0)
             {
-                if (unobservedFailures.Length > 0)
-                {
-                    throw new AggregateException(unobservedFailures);
-                }
-
                 return;
             }
 
-            try
-            {
-                await Task.WhenAll(pending);
-            }
-            catch
-            {
-                lock (_lifecycleGate)
-                {
-                    foreach (var state in _sessionStates.Values)
-                    {
-                        state.JobFailures.Clear();
-                    }
-                }
-
-                throw;
-            }
-
-            if (unobservedFailures.Length > 0)
-            {
-                throw new AggregateException(unobservedFailures);
-            }
+            await Task.WhenAll(pending);
         }
     }
 
@@ -320,12 +289,9 @@ public sealed class GenerationService(
         {
             await state.StartsDrained.Task.ConfigureAwait(false);
             RunningJob[] jobs;
-            Exception[] unobservedFailures;
             lock (_lifecycleGate)
             {
                 jobs = _running.Values.Where(job => job.SessionId == state.SessionId).ToArray();
-                unobservedFailures = state.JobFailures.ToArray();
-                state.JobFailures.Clear();
             }
 
             try
@@ -366,10 +332,6 @@ public sealed class GenerationService(
             }
 
             await Task.WhenAll(jobs.Select(job => job.Task)).ConfigureAwait(false);
-            if (unobservedFailures.Length > 0)
-            {
-                throw new AggregateException(unobservedFailures);
-            }
             if (cancellationFailure is not null)
             {
                 throw cancellationFailure;
@@ -379,11 +341,6 @@ public sealed class GenerationService(
         }
         catch (Exception ex)
         {
-            lock (_lifecycleGate)
-            {
-                state.JobFailures.Clear();
-            }
-
             state.StopCompletion!.TrySetException(ex);
         }
         finally
@@ -575,12 +532,13 @@ public sealed class GenerationService(
                 }
                 catch (Exception ex)
                 {
-                    lock (_lifecycleGate)
-                    {
-                        state.JobFailures.Add(ex);
-                    }
-
-                    throw;
+                    logger.LogError(
+                        "Generation {GenerationId} in session {SessionId} from provider {ProviderId} failed at status {Status}.",
+                        generation.Id,
+                        generation.SessionId,
+                        generation.ProviderId,
+                        generation.Status);
+                    logger.LogDebug(ex, "Generation failure detail {GenerationId}", generation.Id);
                 }
                 finally
                 {
@@ -882,13 +840,6 @@ public sealed class GenerationService(
             generation.ErrorKind = ex.Kind;
             generation.ErrorMessage = ex.Message;
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Generation {GenerationId} failed unexpectedly.", generation.Id);
-            generation.Status = GenerationStatus.Failed;
-            generation.ErrorKind = ErrorKind.Unknown;
-            generation.ErrorMessage = ex.Message;
-        }
     }
 
     /// <summary>The request of a generation with its references read; null when a reference is missing (the generation is then Failed).</summary>
@@ -956,33 +907,22 @@ public sealed class GenerationService(
         return urls;
     }
 
-    /// <summary>Saves the generation, then raises the event with a copy. A failed save is logged and not reported.</summary>
+    /// <summary>Saves the generation, then logs and raises the event only after the repository confirms the update.</summary>
     private async Task SaveAndNotifyAsync(Generation generation, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        LogStatus(generation);
-        try
-        {
-            await runs.UpdateGenerationAsync(generation, cancellationToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Could not save generation {GenerationId} with status {Status}.", generation.Id, generation.Status);
-            throw;
-        }
+        await runs.UpdateGenerationAsync(generation, cancellationToken).ConfigureAwait(false);
 
         cancellationToken.ThrowIfCancellationRequested();
+        LogStatus(generation);
         try
         {
             GenerationUpdated?.Invoke(this, new GenerationUpdatedEventArgs(Snapshot(generation)));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "A handler of GenerationUpdated failed for generation {GenerationId}.", generation.Id);
+            logger.LogWarning("A handler of GenerationUpdated failed for generation {GenerationId} with status {Status}.", generation.Id, generation.Status);
+            logger.LogDebug(ex, "GenerationUpdated handler failure detail {GenerationId}", generation.Id);
         }
     }
 
@@ -994,8 +934,6 @@ public sealed class GenerationService(
         public TaskCompletionSource StartsDrained { get; set; } = CompletedSignal();
         public CancellationTokenSource StopSource { get; } = new();
         public TaskCompletionSource? StopCompletion { get; set; }
-        public List<Exception> JobFailures { get; } = [];
-
         private static TaskCompletionSource CompletedSignal()
         {
             var signal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

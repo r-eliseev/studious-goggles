@@ -147,7 +147,13 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
             WHERE id = @id;
             """;
         AddGenerationParameters(command, generation);
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        var affectedRows = await command.ExecuteNonQueryAsync(cancellationToken);
+        if (affectedRows != 1)
+        {
+            throw new StorageWriteException(
+                $"Could not update generation {generation.Id:N}: exactly one row was expected.",
+                isTransient: false);
+        }
     }
 
     /// <summary>Generations that were queued at a provider and not finished: their jobs are followed again after a restart.</summary>
