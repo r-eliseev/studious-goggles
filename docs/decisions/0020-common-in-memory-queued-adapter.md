@@ -1,6 +1,6 @@
 # 0020. Общий in-memory adapter для синхронных image transports
 
-Статус: предложено
+Статус: принято
 Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
 Дата: 2026-10-30
 
@@ -8,7 +8,7 @@
 ADR 0005 описывает отдельный `OpenRouterJobRunner` с собственным semaphore и локальной очередью. Задачи 111/102/128/129 требуют общего пути для синхронных image transports OpenRouter и OpenAI-compatible, а semaphore провайдера должен принадлежать `GenerationService`. Одновременное владение semaphore и разные очереди создадут конфликт; queue position до фактического submit также нельзя достоверно обещать.
 
 ## Решение
-Предлагается заменить ADR 0005 следующим контрактом:
+Этот контракт заменяет ADR 0005:
 
 1. Один `InMemoryQueuedImageProvider` адаптирует синхронные image transports OpenRouter и OpenAI-compatible к queued-контракту. Adapter не владеет semaphore и не обещает queue position.
 2. Единственный per-provider semaphore принадлежит `GenerationService`. Задание ждёт slot до submit и держит его от submit до terminal state или локальной отмены. До submit database generation может иметь статус Queued; adapter handle появляется только после submit.
