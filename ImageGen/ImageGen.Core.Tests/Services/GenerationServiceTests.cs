@@ -32,6 +32,7 @@ public class GenerationServiceTests
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
     private readonly ConcurrentQueue<Generation> _events = new();
     private readonly CapturingLogger<GenerationService> _logger = new();
+    private readonly RecordingAsyncDelay _delay = new();
     private readonly IChatAttachmentRepository _chatAttachments = Substitute.For<IChatAttachmentRepository>();
     private readonly AttachmentService _attachments;
     private readonly GenerationService _service;
@@ -332,11 +333,97 @@ public class GenerationServiceTests
 
         await _generator.DidNotReceive().GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
         Assert.DoesNotContain(_events, generation => generation.Status == GenerationStatus.Running);
+        Assert.Empty(_delay.Delays);
         var error = Assert.Single(_logger.Entries, entry => entry.Level == LogLevel.Error);
         Assert.Null(error.Exception);
         Assert.DoesNotContain("private prompt", error.Message, StringComparison.Ordinal);
         Assert.Equal(generationId, error.State["GenerationId"]);
         Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception == sentinel);
+    }
+
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(2, 2)]
+    public async Task StartRunAsync_TransientStateWriteRetriesThenSucceeds_LogsAndPublishesOnce(int transientFailures, int expectedDelays)
+    {
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        var runningUpdates = 0;
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            var generation = call.Arg<Generation>();
+            if (generation.Status == GenerationStatus.Running && Interlocked.Increment(ref runningUpdates) <= transientFailures)
+            {
+                throw new StorageWriteException("temporary storage failure", true, new IOException("sqlite detail"));
+            }
+
+            return Task.CompletedTask;
+        });
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal(transientFailures + 1, runningUpdates);
+        Assert.Equal(Enumerable.Repeat(TimeSpan.FromMilliseconds(100), expectedDelays), _delay.Delays);
+        Assert.Single(_events, generation => generation.Status == GenerationStatus.Running);
+        Assert.Single(_logger.Entries, entry => entry.Message.Contains("is Running", StringComparison.Ordinal));
+        await _generator.Received(1).GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+        await _files.Received(1).SaveAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StartRunAsync_TransientStateWriteExhausted_UsesThreeAttemptsAndTwoDelays()
+    {
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(_ => throw new StorageWriteException("temporary storage failure", true));
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        await _runs.Received(3).UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>());
+        Assert.Equal([TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100)], _delay.Delays);
+        Assert.Empty(_events);
+        await _generator.DidNotReceive().GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+        var error = Assert.Single(_logger.Entries, entry => entry.Level == LogLevel.Error);
+        Assert.Null(error.Exception);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception is StorageWriteException);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_PermanentStateWriteFailure_IsNotRetried()
+    {
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(_ => throw new StorageWriteException("missing generation", false));
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        await _runs.Received(1).UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>());
+        Assert.Empty(_delay.Delays);
+        await _generator.DidNotReceive().GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StartRunAsync_CancelDuringStateRetryDelay_DoesNotRetryAgain()
+    {
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        var delayEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _delay.WaitForCancellation(delayEntered);
+        _runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(_ => throw new StorageWriteException("temporary storage failure", true));
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await delayEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+
+        await _runs.Received(1).UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>());
+        Assert.Single(_delay.Delays);
+        Assert.DoesNotContain(_logger.Entries, entry => entry.Level == LogLevel.Error);
     }
 
     [Fact]
@@ -593,7 +680,7 @@ public class GenerationServiceTests
 
         _attachments = new AttachmentService(_chatAttachments, _files, time);
         _service = new GenerationService(
-            _sessions, _runs, _providers, _files, catalog, _seeds, _attachments, time, _logger, _changes);
+            _sessions, _runs, _providers, _files, catalog, _seeds, _attachments, time, _logger, _changes, delay: _delay);
         _service.GenerationUpdated += (_, e) => _events.Enqueue(e.Generation);
     }
 
@@ -1368,5 +1455,26 @@ public class GenerationServiceTests
             .Returns<Task<JobUpdate>>(_ => throw failure);
         _providers.GetConnection("fal").Returns(connection);
         return queued;
+    }
+
+    private sealed class RecordingAsyncDelay : IAsyncDelay
+    {
+        private readonly ConcurrentQueue<TimeSpan> _delays = new();
+        private TaskCompletionSource? _waitForCancellation;
+
+        public IReadOnlyList<TimeSpan> Delays => _delays.ToArray();
+
+        public void WaitForCancellation(TaskCompletionSource entered) => _waitForCancellation = entered;
+
+        public async Task DelayAsync(TimeSpan delay, CancellationToken cancellationToken)
+        {
+            _delays.Enqueue(delay);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_waitForCancellation is not null)
+            {
+                _waitForCancellation.TrySetResult();
+                await Task.Delay(Timeout.Infinite, cancellationToken);
+            }
+        }
     }
 }

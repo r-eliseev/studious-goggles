@@ -1,8 +1,8 @@
 ---
 id: 125
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-10-30T13:33:54Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -52,5 +52,11 @@ bash scripts/check.sh
 После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 125`, затем `bash scripts/check.sh`; отправить PR по `docs/tasks.md`.
 
 ## Отчёт
+
+- Добавлены `IAsyncDelay`/`SystemAsyncDelay`, singleton DI registration и injectable delay для `GenerationService`. State UPDATE повторяется максимум трижды только при `StorageWriteException.IsTransient`, с двумя 100 ms backoff максимум; status log/event остаются после подтверждённого update и выполняются один раз.
+- Data repository оборачивает SQLite write errors в `StorageWriteException`; только primary SQLITE_BUSY/LOCKED (5/6, включая extended code) transient. Zero-row остаётся permanent.
+- Тесты проверяют retry после одной/двух ошибок, исчерпание, permanent failure, отмену во время delay и SQLite-коды.
+- Проверки: Core tests 563/563; Data tests 95/95; `dotnet format` Core, Data и обоих test projects `--verify-no-changes --no-restore`; `bash scripts/check.sh` — все проверки пройдены.
+- Отличие от плана: нет.
 
 ## Комментарии

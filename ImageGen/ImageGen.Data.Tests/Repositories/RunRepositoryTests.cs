@@ -2,6 +2,7 @@ using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Storage;
 using ImageGen.Data.Repositories;
+using Microsoft.Data.Sqlite;
 
 namespace ImageGen.Data.Tests.Repositories;
 
@@ -108,6 +109,18 @@ public class RunRepositoryTests
 
         Assert.False(exception.IsTransient);
         Assert.Contains(generation.Id.ToString("N"), exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(5, 5, true)]
+    [InlineData(5, 517, true)]
+    [InlineData(6, 6, true)]
+    [InlineData(19, 19, false)]
+    public void IsTransientWriteError_BusyAndLockedOnly(int errorCode, int extendedErrorCode, bool expected)
+    {
+        var exception = new SqliteException("sqlite detail", errorCode, extendedErrorCode);
+
+        Assert.Equal(expected, RunRepository.IsTransientWriteError(exception));
     }
 
     [Fact]
