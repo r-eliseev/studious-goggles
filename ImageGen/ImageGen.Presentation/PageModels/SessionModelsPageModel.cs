@@ -43,6 +43,44 @@ public sealed partial class SessionModelsPageModel(
     public ObservableCollection<AssistantModelOptionViewModel> AssistantModels { get; } = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsImageModelsTabSelected))]
+    [NotifyPropertyChangedFor(nameof(IsAssistantTabSelected))]
+    [NotifyPropertyChangedFor(nameof(SelectedTabIndex))]
+    [NotifyPropertyChangedFor(nameof(ImageModelsTabAutomationName))]
+    [NotifyPropertyChangedFor(nameof(AssistantTabAutomationName))]
+    public partial SessionModelsTab SelectedTab { get; set; } = SessionModelsTab.ImageModels;
+
+    public bool IsImageModelsTabSelected => SelectedTab == SessionModelsTab.ImageModels;
+
+    public bool IsAssistantTabSelected => SelectedTab == SessionModelsTab.AssistantModel;
+
+    public int SelectedTabIndex
+    {
+        get => (int)SelectedTab;
+        set
+        {
+            if (Enum.IsDefined(typeof(SessionModelsTab), value))
+            {
+                SelectedTab = (SessionModelsTab)value;
+            }
+        }
+    }
+
+    public string ImageModelsTabAutomationName => IsImageModelsTabSelected
+        ? $"{AppResources.ImageModelsTab}, {AppResources.AssistantSelected}"
+        : AppResources.ImageModelsTab;
+
+    public string AssistantTabAutomationName => IsAssistantTabSelected
+        ? $"{AppResources.AssistantModelTitle}, {AppResources.AssistantSelected}"
+        : AppResources.AssistantModelTitle;
+
+    [RelayCommand]
+    private void ShowImageModels() => SelectedTab = SessionModelsTab.ImageModels;
+
+    [RelayCommand]
+    private void ShowAssistantModel() => SelectedTab = SessionModelsTab.AssistantModel;
+
+    [ObservableProperty]
     public partial string SearchText { get; set; } = "";
 
     /// <summary>

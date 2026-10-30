@@ -231,6 +231,9 @@
   <data name="ModelsTitle" xml:space="preserve">
     <value>Session models</value>
   </data>
+  <data name="ImageModelsTab" xml:space="preserve">
+    <value>Image models</value>
+  </data>
   <data name="ModelsSearchPlaceholder" xml:space="preserve">
     <value>Search models</value>
   </data>

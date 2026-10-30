@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels"
+             xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
+             x:Class="ImageGen.Maui.Controls.SessionModelsView"
+             x:DataType="pm:SessionModelsPageModel">
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Padding="16" RowSpacing="8">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <SearchBar Text="{Binding SearchText, Mode=TwoWay}"
+                       Placeholder="{x:Static strings:AppResources.ModelsSearchPlaceholder}"
+                       SemanticProperties.Description="{x:Static strings:AppResources.ModelsSearchPlaceholder}" />
+            <Button Grid.Column="1"
+                    StyleClass="ghost"
+                    FontSize="12"
+                    Text="{x:Static strings:AppResources.Refresh}"
+                    Command="{Binding RefreshCommand}"
+                    SemanticProperties.Description="{x:Static strings:AppResources.Refresh}" />
+        </Grid>
+
+        <ActivityIndicator Grid.Row="1"
+                           IsRunning="{Binding IsBusy}"
+                           IsVisible="{Binding IsBusy}"
+                           VerticalOptions="Start" />
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,*" RowDefinitions="Auto,2">
+            <Button Grid.Column="0"
+                    StyleClass="ghost"
+                    Text="{x:Static strings:AppResources.ImageModelsTab}"
+                    Command="{Binding ShowImageModelsCommand}"
+                    SemanticProperties.Description="{Binding ImageModelsTabAutomationName}" />
+            <Button Grid.Column="1"
+                    StyleClass="ghost"
+                    Text="{x:Static strings:AppResources.AssistantModelTitle}"
+                    Command="{Binding ShowAssistantModelCommand}"
+                    SemanticProperties.Description="{Binding AssistantTabAutomationName}" />
+            <BoxView Grid.Row="1"
+                     Grid.Column="0"
+                     Color="{DynamicResource IgAccentColor}"
+                     IsVisible="{Binding IsImageModelsTabSelected}" />
+            <BoxView Grid.Row="1"
+                     Grid.Column="1"
+                     Color="{DynamicResource IgAccentColor}"
+                     IsVisible="{Binding IsAssistantTabSelected}" />
+        </Grid>
+
+        <Grid Grid.Row="3">
+            <Grid RowDefinitions="Auto,Auto,*" IsVisible="{Binding IsImageModelsTabSelected}">
+                <HorizontalStackLayout Spacing="12">
+                    <Label StyleClass="muted" Text="{Binding RunsPerModelText}" VerticalOptions="Center" />
+                    <Stepper Value="{Binding RunsPerModel, Mode=TwoWay}"
+                             Minimum="{Binding MinRunsPerModel}"
+                             Maximum="{Binding MaxRunsPerModel}"
+                             Increment="1"
+                             SemanticProperties.Description="{Binding RunsPerModelText}" />
+                </HorizontalStackLayout>
+                <Label Grid.Row="1" StyleClass="section" Text="{Binding SelectedCountText}" VerticalOptions="Center" />
+                <ScrollView Grid.Row="2">
+                    <VerticalStackLayout Spacing="4" BindableLayout.ItemsSource="{Binding Models}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="pm:ModelOptionViewModel">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="0,4">
+                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                              SemanticProperties.Description="{Binding Name}" />
+                                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                        <Label Text="{Binding Name}" />
+                                        <Label StyleClass="meta" Text="{Binding DetailsText}" />
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </ScrollView>
+            </Grid>
+
+            <ScrollView IsVisible="{Binding IsAssistantTabSelected}">
+                <VerticalStackLayout Spacing="4" RadioButtonGroup.GroupName="sessionAssistant" BindableLayout.ItemsSource="{Binding AssistantModels}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="pm:AssistantModelOptionViewModel">
+                            <VerticalStackLayout Spacing="2" Margin="0,4">
+                                <RadioButton Content="{Binding Name}"
+                                             IsChecked="{Binding IsSelected}"
+                                             CheckedChanged="OnAssistantCheckedChanged"
+                                             SemanticProperties.Description="{Binding AutomationName}" />
+                                <HorizontalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Tags}">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <Border StyleClass="tag">
+                                                <Label StyleClass="meta" Text="{Binding .}" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </HorizontalStackLayout>
+                                <Label StyleClass="meta" Text="{Binding DetailsText}" />
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </ScrollView>
+        </Grid>
+
+        <Grid x:Name="ButtonRow" Grid.Row="4" ColumnDefinitions="*,*" ColumnSpacing="8">
+            <Button x:Name="SaveButton"
+                    StyleClass="primary"
+                    Text="{x:Static strings:AppResources.Save}"
+                    Command="{Binding SaveCommand}"
+                    SemanticProperties.Description="{x:Static strings:AppResources.Save}" />
+            <Button x:Name="CancelButton"
+                    Grid.Column="1"
+                    Text="{x:Static strings:AppResources.Cancel}"
+                    Command="{Binding CancelCommand}"
+                    SemanticProperties.Description="{x:Static strings:AppResources.Cancel}" />
+        </Grid>
+    </Grid>
+</ContentView>

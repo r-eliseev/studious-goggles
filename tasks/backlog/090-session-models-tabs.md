@@ -1,8 +1,8 @@
 ---
 id: 090
-status: in-progress
-assignee: codex-luna
-claimed: 2026-10-30T08:36:25Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -142,7 +142,20 @@ Windows-цель MAUI собирает CI.
 
 ## Отчёт
 
+### 2026-10-30, codex-luna
+
+- В `SessionModelsPageModel` добавлено состояние вкладки, уведомления вычисляемых свойств, automation labels и команды переключения. Поиск продолжает фильтровать оба списка; исходные коллекции хранят оба выбора до общего Save.
+- MAUI: разметка вынесена в `Controls/SessionModelsView`, теперь её используют экран и панель чата. Добавлены доступные кнопки вкладок, активная полоска, отдельные прокрутки, общий нижний ряд Save/Cancel и счётчик выбранных изображений во вкладке Image models. `RadioButtonGroup.GroupName` на контейнере списка собирается без запасного `GroupName` на RadioButton.
+- Avalonia: добавлен `TabControl` с двумя заголовками и самостоятельными ScrollViewer; поиск и Refresh находятся над ним, Save/Cancel — в строке под вкладками.
+- Проверки: Presentation.Tests 300/300; Avalonia.Tests 125 passed, 2 skipped (платформенные хранилища); сборка MAUI Android прошла без предупреждений; форматирование Presentation, обоих test-проектов, Avalonia и MAUI прошло; `scripts/check.sh` пройден.
+- `dotnet test --project` в этой среде завершался `Handshake failures` / `Zero tests ran`; собранные xUnit v3 in-process executable test runners запускались напрямую и завершились с кодом 0 с указанными выше итогами.
+- Проверка Windows, Android и экранного диктора требует человека у устройства. MAUI сценарии переданы в `tasks/v0.1/016-skeleton-manual-check.md`, Avalonia — в `tasks/backlog/046-desktop-manual-check.md`; Android остаётся частью задачи 140. Ручные проверки не блокируют завершение.
+- Отличия от плана: нет. Исправление `RadioButtonGroup.GroupName` не понадобилось.
+
 ## Комментарии
+
+### 2026-10-30, codex-luna
+Вкладки и закреплённые действия готовы. Сохранение обоих выборов проверено тестом модели; размеры в узком окне с каталогом из 60 моделей проверены headless. Ручные клавиатурные и screen-reader сценарии ждут владельца в задачах 016 и 046.
 
 ### 2026-10-29, владелец (в чате, записал claude-plan)
 План одобрен; допущения из комментариев claude-plan приняты как решения. План переписан под небольшую модель.
