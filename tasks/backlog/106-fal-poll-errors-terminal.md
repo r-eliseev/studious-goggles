@@ -1,8 +1,8 @@
 ---
 id: 106
-status: in-progress
-assignee: opencode-vps
-claimed: 2026-10-30T02:40:29Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -56,5 +56,41 @@ bash scripts/check.sh
 После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 106`, затем `bash scripts/check.sh`; код отправить PR по `docs/tasks.md`.
 
 ## Отчёт
+Ошибка polling больше не оставляет задание висеть: генерация доходит до конечного состояния.
+
+Изменения:
+- `ImageGen/ImageGen.Core/Services/GenerationService.cs`:
+  - `WatchQueuedAsync` переписан на явный async-enumerator (`GetAsyncEnumerator`/`MoveNextAsync`). Ловится **только** получение следующего обновления: `catch` вокруг `MoveNextAsync`. Обработка обновления (`ApplyUpdateAsync`, файловое хранилище, сохранение) вне этого catch — её ошибка не превращается в второй конечный статус генерации.
+  - `ApplyPollingFailureAsync`: `ProviderException` с `Moderated` → «отфильтровано», остальные коды провайдера → «ошибка» с его кодом; неожиданное исключение → «ошибка»/`Unknown`. Сохраняются исходный код и текст ошибки, `CompletedAt`, конечное обновление и событие публикуются ровно один раз.
+  - `LogPollingFailure`: операционная запись (Warning) содержит только GenerationId, ProviderId, ErrorKind и статус — текст провайдера туда не попадает; подробности (сообщение и само исключение) идут отдельной записью Debug.
+  - `FailGenerationAsync` — единая точка для «закончить с кодом и текстом» (битый сохранённый хэндл → `Unknown`).
+  - `RecoverInterruptedAsync`: провайдер ищется прямым вызовом `providers.GetConnection`. Только `ProviderException` с `ModelUnavailable` означает отсутствующую конфигурацию — тогда генерация завершается «ошибка»/`ModelUnavailable` с `CompletedAt`, обновлением и событием, без submit и без poll, и её строка входит в число восстановленных. Остальные `ProviderException` не выдаются за отсутствие конфигурации. Существующий провайдер без `IQueuedImageProvider` ведёт себя как раньше: задание не запускается, конечный статус не выдумывается.
+  - Число возвращается суммой: завершённые из-за отсутствующего провайдера + помеченные «Interrupted». Возобновлённые задания в счёт не входят.
+- `ImageGen/ImageGen.Core.Tests/Services/GenerationServiceTests.cs`: шесть новых тестов плюс вспомогательные `ResumableGeneration`, `QueuedProviderThatFails`, `Handle`.
+- `docs/specs/chat-sessions.md` (S3.8) и `docs/architecture.md` («Первый запуск», «Прогон») — как требует план.
+
+Проверка тестов не пустая: до реализации падали шесть из семи новых тестов (ошибка провайдера, неожиданное исключение, ошибка файлового хранилища, отсутствующий провайдер, смешанный список, оба кода провайдера). Седьмой — битый сохранённый хэндл — проходил и раньше: `JsonException` ловился прежним catch.
+
+Тесты и что они фиксируют:
+- `WatchQueuedAsync_ProviderError_PersistsTerminalOnce` (InvalidKey → «ошибка», Moderated → «отфильтровано»): исходный код и текст ошибки, `CompletedAt`, ровно одно конечное событие, submit не вызывался. Заодно проверяется журнал: в записи уровня Warning и выше нет текста провайдера, а в Debug — есть.
+- `WatchQueuedAsync_UnexpectedPollError_PersistsFailedUnknown` — обычное исключение → «ошибка»/`Unknown`, `WhenIdleAsync` не падает.
+- `WatchQueuedAsync_FileStoreError_IsNotAPollingFailure` — опрос вернул Succeeded, `IImageFileStore.SaveAsync` бросил: статус не становится «ошибка», второго конечного события нет, записи об ошибке опроса нет. Файловое хранилище падает по гейту после того, как тест забрал выполняющуюся задачу, поэтому проверка не гоняется.
+- `WatchQueuedAsync_MalformedHandle_PersistsFailedUnknown` — битый `JobJson` → «ошибка»/`Unknown`, одно событие, poll не вызывался.
+- `RecoverInterruptedAsync_MissingProvider_PersistsModelUnavailable` — провайдера нет: «ошибка»/`ModelUnavailable`, `CompletedAt`, одно событие, без submit и poll.
+- `RecoverInterruptedAsync_MissingProviderAndInterrupted_CountsBoth` — одна строка из-за отсутствующего провайдера, одна возобновлённая (в счёт не входит) и две помеченные «Interrupted» → 3.
+
+Ограничение: до задачи 113 (supervisor поверх фоновых задач) упавшая фоновая задача снимается с учёта, и её исключение наблюдаемо только если тест успел взять задачу до завершения — поэтому в тесте файлового хранилища падение задано гейтом, а не гонкой. Само наблюдение исключения через `WhenIdleAsync` остаётся на 113.
+
+Проверено:
+```
+dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj        → 391 тест, 0 упавших
+dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj        → 70 тестов, 0 упавших
+dotnet test --project ImageGen/ImageGen.Presentation.Tests/…                         → 281 тест, 0 упавших
+dotnet test --project ImageGen/ImageGen.Avalonia.Tests/…                             → 120 тестов, 0 упавших (2 пропущены)
+dotnet format ImageGen/ImageGen.Core/… --verify-no-changes                          → без изменений
+dotnet format ImageGen/ImageGen.Core.Tests/… --verify-no-changes                    → без изменений
+bash scripts/check.sh                                                                 → все проверки пройдены
+```
+Тесты прогонялись трижды подряд — результат устойчив.
 
 ## Комментарии

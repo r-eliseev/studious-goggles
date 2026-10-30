@@ -167,22 +167,42 @@ public sealed class GenerationService(
     }
 
     /// <summary>Marks generations left unfinished by a previous app session as Failed with <see cref="ErrorKind.Interrupted"/>.</summary>
-    /// <returns>Number of updated generations.</returns>
+    /// <returns>Number of updated generations: the ones whose provider is gone plus the ones marked as interrupted.</returns>
     /// <remarks>
     /// Generations that have a queued job (a saved handle) are not interrupted: their jobs are followed again with the
-    /// saved handle, without a new submit. The job of a provider that is no longer configured is left as it is.
+    /// saved handle, without a new submit. A job of a provider that is no longer configured cannot be continued at all:
+    /// such a generation ends with <see cref="ErrorKind.ModelUnavailable"/>. A provider that exists but does not run
+    /// queued jobs is left as it is.
     /// </remarks>
     public async Task<int> RecoverInterruptedAsync(CancellationToken cancellationToken)
     {
+        var recovered = 0;
         foreach (var generation in await runs.ListResumableJobsAsync(cancellationToken))
         {
-            if (QueuedProviderOf(generation.ProviderId) is { } queued)
+            IProviderConnection connection;
+            try
+            {
+                connection = providers.GetConnection(generation.ProviderId);
+            }
+            catch (ProviderException ex) when (ex.Kind == ErrorKind.ModelUnavailable)
+            {
+                // The provider of the saved job is not configured: the job cannot be continued and must not hang.
+                generation.Status = GenerationStatus.Failed;
+                generation.ErrorKind = ErrorKind.ModelUnavailable;
+                generation.ErrorMessage = ex.Message;
+                generation.CompletedAt = timeProvider.GetUtcNow();
+                await SaveAndNotifyAsync(generation).ConfigureAwait(false);
+                recovered++;
+                continue;
+            }
+
+            if (connection is IQueuedImageProvider queued)
             {
                 Launch(generation, () => WatchQueuedAsync(generation, queued));
             }
         }
 
-        return await runs.MarkUnfinishedAsInterruptedAsync(timeProvider.GetUtcNow(), cancellationToken);
+        return recovered + await runs.MarkUnfinishedAsInterruptedAsync(timeProvider.GetUtcNow(), cancellationToken);
     }
 
     /// <summary>Waits until no background generation is running. Used by tests.</summary>
@@ -400,25 +420,95 @@ public sealed class GenerationService(
     /// <summary>Follows the saved job until it ends; every change is saved and announced.</summary>
     private async Task WatchQueuedAsync(Generation generation, IQueuedImageProvider queued)
     {
+        ProviderJobHandle handle;
         try
         {
-            var handle = JsonSerializer.Deserialize<ProviderJobHandle>(generation.JobJson!)
+            handle = JsonSerializer.Deserialize<ProviderJobHandle>(generation.JobJson!)
                 ?? throw new InvalidOperationException("The saved job handle is empty.");
-            await foreach (var update in ProviderJobPoller.WatchAsync(
-                queued, handle, PollMinInterval, PollMaxInterval, MaxPollNetworkFailures, CancellationToken.None).ConfigureAwait(false))
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+        {
+            await FailGenerationAsync(generation, ErrorKind.Unknown, ex.Message).ConfigureAwait(false);
+            return;
+        }
+
+        // Only the reading of the next update is a polling failure. The handling of an update — the file store, the
+        // persistence — is not: such an error must not be turned into a second terminal status of the generation.
+        var enumerator = ProviderJobPoller.WatchAsync(
+            queued, handle, PollMinInterval, PollMaxInterval, MaxPollNetworkFailures, CancellationToken.None)
+            .GetAsyncEnumerator(CancellationToken.None);
+        try
+        {
+            while (true)
             {
+                JobUpdate update;
+                try
+                {
+                    if (!await enumerator.MoveNextAsync().ConfigureAwait(false))
+                    {
+                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await ApplyPollingFailureAsync(generation, ex).ConfigureAwait(false);
+                    return;
+                }
+
+                update = enumerator.Current;
                 await ApplyUpdateAsync(generation, update).ConfigureAwait(false);
             }
         }
-        catch (Exception ex) when (ex is JsonException or InvalidOperationException or IOException)
+        finally
         {
-            logger.LogError(ex, "Queued job of generation {GenerationId} could not be followed.", generation.Id);
-            generation.Status = GenerationStatus.Failed;
-            generation.ErrorKind = ErrorKind.Unknown;
-            generation.ErrorMessage = ex.Message;
-            generation.CompletedAt = timeProvider.GetUtcNow();
-            await SaveAndNotifyAsync(generation).ConfigureAwait(false);
+            await enumerator.DisposeAsync().ConfigureAwait(false);
         }
+    }
+
+    /// <summary>Ends the generation after a failure of the polling itself (C1.6, S3.8).</summary>
+    private async Task ApplyPollingFailureAsync(Generation generation, Exception failure)
+    {
+        var kind = failure is ProviderException provider ? provider.Kind : ErrorKind.Unknown;
+        if (kind == ErrorKind.Moderated)
+        {
+            generation.Status = GenerationStatus.Filtered;
+        }
+        else
+        {
+            generation.Status = GenerationStatus.Failed;
+        }
+
+        generation.ErrorKind = kind;
+        generation.ErrorMessage = failure.Message;
+        generation.CompletedAt = timeProvider.GetUtcNow();
+        LogPollingFailure(generation, kind, failure);
+        await SaveAndNotifyAsync(generation).ConfigureAwait(false);
+    }
+
+    /// <summary>The operational entry carries the kind, not the text of the provider; the detail goes to Debug only.</summary>
+    private void LogPollingFailure(Generation generation, ErrorKind kind, Exception failure)
+    {
+        logger.LogWarning(
+            "Polling of generation {GenerationId} of provider {ProviderId} failed with {ErrorKind} in status {Status}.",
+            generation.Id,
+            generation.ProviderId,
+            kind,
+            generation.Status);
+        logger.LogDebug(
+            failure,
+            "Details of the polling failure of generation {GenerationId}: {Failure}",
+            generation.Id,
+            failure.Message);
+    }
+
+    /// <summary>Ends the generation with the given kind and message.</summary>
+    private async Task FailGenerationAsync(Generation generation, ErrorKind kind, string message)
+    {
+        generation.Status = GenerationStatus.Failed;
+        generation.ErrorKind = kind;
+        generation.ErrorMessage = message;
+        generation.CompletedAt = timeProvider.GetUtcNow();
+        await SaveAndNotifyAsync(generation).ConfigureAwait(false);
     }
 
     private async Task ApplyUpdateAsync(Generation generation, JobUpdate update)

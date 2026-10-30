@@ -654,4 +654,170 @@ public class GenerationServiceTests
         Assert.Equal("images/fox.png", generation.ImagePath);
         await queued.DidNotReceive().SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
     }
+
+    [Theory]
+    [InlineData(ErrorKind.InvalidKey, GenerationStatus.Failed)]
+    [InlineData(ErrorKind.Moderated, GenerationStatus.Filtered)]
+    public async Task WatchQueuedAsync_ProviderError_PersistsTerminalOnce(ErrorKind kind, GenerationStatus expected)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var generation = ResumableGeneration();
+        var queued = QueuedProviderThatFails(new ProviderException(kind, "provider says no"));
+        _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns([generation]);
+
+        await _service.RecoverInterruptedAsync(ct);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal(expected, generation.Status);
+        Assert.Equal(kind, generation.ErrorKind);
+        Assert.Equal("provider says no", generation.ErrorMessage);
+        Assert.Equal(Now, generation.CompletedAt);
+        Assert.Equal(1, _events.Count(e => e.Status == expected));
+        await queued.DidNotReceive().SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+
+        // The operational entry carries the kind, not the text of the provider; the detail goes to Debug only.
+        var operational = _logger.Entries.Where(entry => entry.Level >= LogLevel.Warning).ToList();
+        Assert.NotEmpty(operational);
+        Assert.All(operational, entry => Assert.DoesNotContain("provider says no", entry.Message, StringComparison.Ordinal));
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Message.Contains("provider says no", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task WatchQueuedAsync_UnexpectedPollError_PersistsFailedUnknown()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var generation = ResumableGeneration();
+        var queued = QueuedProviderThatFails(new InvalidTimeZoneException("something odd"));
+        _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns([generation]);
+
+        await _service.RecoverInterruptedAsync(ct);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal(GenerationStatus.Failed, generation.Status);
+        Assert.Equal(ErrorKind.Unknown, generation.ErrorKind);
+        Assert.Equal(Now, generation.CompletedAt);
+        Assert.Equal(1, _events.Count(e => e.Status == GenerationStatus.Failed));
+    }
+
+    [Fact]
+    public async Task WatchQueuedAsync_FileStoreError_IsNotAPollingFailure()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var generation = ResumableGeneration();
+        var handle = Handle();
+        var connection = Substitute.For<IProviderConnection, IQueuedImageProvider>();
+        var queued = (IQueuedImageProvider)connection;
+        queued.PollAsync(handle, Arg.Any<CancellationToken>()).Returns(
+            new JobUpdate(JobState.Succeeded, Result: new ImageGenerationResult([1, 2], "image/png", null)));
+        _providers.GetConnection("fal").Returns(connection);
+
+        // The file store fails only after the test has taken the running task, so the failure is seen for sure.
+        var gate = new TaskCompletionSource();
+        _files.SaveAsync(_session.Id, generation.Id, Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>())
+            .Returns(async _ =>
+            {
+                await gate.Task;
+                return await Task.FromException<string>(new IOException("disk is full"));
+            });
+        _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns([generation]);
+
+        await _service.RecoverInterruptedAsync(ct);
+        var idle = _service.WhenIdleAsync();
+        gate.SetResult();
+
+        // The failure of the file store is not a polling failure: it is not turned into a second terminal status of
+        // the generation and is not reported as a failure of the polling.
+        await Assert.ThrowsAnyAsync<IOException>(() => idle);
+        Assert.NotEqual(GenerationStatus.Failed, generation.Status);
+        Assert.DoesNotContain(_events, e => e.Status == GenerationStatus.Failed);
+        Assert.DoesNotContain(_logger.Entries, entry => entry.Message.Contains("Polling of generation", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task WatchQueuedAsync_MalformedHandle_PersistsFailedUnknown()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var generation = ResumableGeneration();
+        generation.JobJson = "{not json";
+        var queued = QueuedProviderThatFails(new ProviderException(ErrorKind.InvalidKey, "unused"));
+        _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns([generation]);
+
+        await _service.RecoverInterruptedAsync(ct);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal(GenerationStatus.Failed, generation.Status);
+        Assert.Equal(ErrorKind.Unknown, generation.ErrorKind);
+        Assert.Equal(Now, generation.CompletedAt);
+        Assert.Equal(1, _events.Count(e => e.Status == GenerationStatus.Failed));
+        await queued.DidNotReceive().PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RecoverInterruptedAsync_MissingProvider_PersistsModelUnavailable()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var generation = ResumableGeneration();
+        _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns([generation]);
+        _providers.GetConnection("fal").Returns(_ => throw new ProviderException(ErrorKind.ModelUnavailable, "no provider configured"));
+
+        await _service.RecoverInterruptedAsync(ct);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal(GenerationStatus.Failed, generation.Status);
+        Assert.Equal(ErrorKind.ModelUnavailable, generation.ErrorKind);
+        Assert.Equal(Now, generation.CompletedAt);
+        Assert.Equal(1, _events.Count(e => e.Status == GenerationStatus.Failed));
+    }
+
+    [Fact]
+    public async Task RecoverInterruptedAsync_MissingProviderAndInterrupted_CountsBoth()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var missing = ResumableGeneration();
+        var resumed = ResumableGeneration("fal2");
+        _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns([missing, resumed]);
+        _providers.GetConnection("fal").Returns(_ => throw new ProviderException(ErrorKind.ModelUnavailable, "no provider configured"));
+        var connection = Substitute.For<IProviderConnection, IQueuedImageProvider>();
+        var queued = (IQueuedImageProvider)connection;
+        queued.PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>()).Returns(
+            new JobUpdate(JobState.Succeeded, Result: new ImageGenerationResult([1, 2], "image/png", null)));
+        _providers.GetConnection("fal2").Returns(connection);
+        _files.SaveAsync(_session.Id, resumed.Id, Arg.Any<byte[]>(), "image/png", Arg.Any<CancellationToken>())
+            .Returns("images/fox.png");
+        _runs.MarkUnfinishedAsInterruptedAsync(Now, Arg.Any<CancellationToken>()).Returns(2);
+
+        var count = await _service.RecoverInterruptedAsync(ct);
+        await _service.WhenIdleAsync();
+
+        // One row finished by the missing provider, two by the bulk update; the resumed job counts as neither.
+        Assert.Equal(3, count);
+    }
+
+    private ProviderJobHandle Handle() => new("fal", "req-1", "https://q/s", "https://q/r", "https://q/c");
+
+    private Generation ResumableGeneration(string providerId = "fal") => new()
+    {
+        Id = Guid.NewGuid(),
+        RunId = Guid.NewGuid(),
+        SessionId = _session.Id,
+        ProviderId = providerId,
+        ModelId = "fal-ai/flux/dev",
+        Prompt = "fox",
+        Seed = 1,
+        SeedApplied = true,
+        Status = GenerationStatus.Running,
+        CreatedAt = Now,
+        SortOrder = 0,
+        JobJson = System.Text.Json.JsonSerializer.Serialize(Handle()),
+    };
+
+    private IQueuedImageProvider QueuedProviderThatFails(Exception failure)
+    {
+        var connection = Substitute.For<IProviderConnection, IQueuedImageProvider>();
+        var queued = (IQueuedImageProvider)connection;
+        queued.PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>())
+            .Returns<Task<JobUpdate>>(_ => throw failure);
+        _providers.GetConnection("fal").Returns(connection);
+        return queued;
+    }
 }
