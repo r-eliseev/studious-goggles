@@ -1,8 +1,10 @@
 # Together AI: конфигурация и контракт изображений
 
-Проверено по официальной документации 2026-10-30. API использует Bearer key и OpenAI-совместимый base URL `https://api.together.ai/v1`; ключ хранится в зашифрованном хранилище приложения и не указывается в JSON.
+Сверено с официальной документацией 2026-10-30. Together AI встроен в приложение как image-only OpenAI-compatible provider с base URL `https://api.together.ai/v1`; живой ответ и фактическое списание не проверялись. API использует Bearer key; ключ хранится в зашифрованном хранилище приложения и не указывается в конфиге.
 
 ## Конфигурация
+
+Пользовательский `providers.json` не нужен для включения Together. Встроенный каталог содержит четыре модели ниже; пользовательская запись с `id: together` заменяет встроенную целиком по общим правилам config override.
 
 ```json
 {
@@ -41,11 +43,14 @@
 |---|---|---:|---|
 | FLUX.1 Kontext Pro | `black-forest-labs/FLUX.1-kontext-pro` | $0.04/MP | цена за мегапиксель |
 | FLUX.1.1 Pro | `black-forest-labs/FLUX.1.1-pro` | $0.04/MP | цена за мегапиксель |
-| FLUX.2 Dev | `black-forest-labs/FLUX.2-dev` | от $0.0154/изображение | зависит от параметров; выбрана для примера |
-| FLUX.2 Flex | `black-forest-labs/FLUX.2-flex` | от $0.03/изображение | зависит от параметров |
+| FLUX.2 Dev | `black-forest-labs/FLUX.2-dev` | $0.0154+/изображение | цена зависит от параметров; начинается с указанной суммы |
+| FLUX.2 Flex | `black-forest-labs/FLUX.2-flex` | $0.03+/изображение | цена зависит от параметров; начинается с указанной суммы |
+| FLUX.2 Pro | `black-forest-labs/FLUX.2-pro` | $0.03+/изображение | цена зависит от параметров; начинается с указанной суммы |
 | FLUX.2 Max | `black-forest-labs/FLUX.2-max` | $0.07/MP при 50 шагах | зависит от разрешения и шагов |
 
-В документированном формате ответа image generation фактическая стоимость отсутствует. Клиент оставляет `CostUsd = null`; цена каталога не выдаётся за цену результата.
+Встроенные модели: FLUX.1.1 Pro, FLUX.2 Dev, FLUX.2 Flex и FLUX.2 Pro. Для каждой включён seed; стартовое подключение ограничено text-to-image и одной картинкой на запрос. Каталог Together требует положительный баланс. Все тарифы выше — снимок официального каталога на дату проверки, не гарантированная текущая цена.
+
+В документированном формате ответа image generation фактическая стоимость отсутствует. Клиент оставляет `CostUsd = null`; тариф каталога с `+` — минимальная/переменная цена, не стоимость результата. UI не показывает её как фактическую цену.
 
 ## Ограничения начальной интеграции
 
@@ -59,4 +64,5 @@
 - [OpenAI compatibility: base URL, models и совместимость](https://docs.together.ai/docs/inference/openai-compatibility)
 - [Image generation parameters: response/output formats, seed и safety checker](https://docs.together.ai/docs/inference/images/parameters)
 - [Serverless model catalog: модели и цены](https://docs.together.ai/docs/serverless/models)
+- [Text-to-image API](https://docs.together.ai/docs/inference/images/text-to-image)
 - [Error codes](https://docs.together.ai/docs/error-codes)

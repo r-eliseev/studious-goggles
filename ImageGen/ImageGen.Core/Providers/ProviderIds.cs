@@ -6,4 +6,6 @@ public static class ProviderIds
     public const string OpenRouter = "openrouter";
 
     public const string Fal = "fal";
+
+    public const string Together = "together";
 }

@@ -27,6 +27,34 @@ public class ProviderConfigLoaderTests
     }
 
     [Fact]
+    public void BuiltIn_RegistersTogetherAsLastImageOnlyProvider()
+    {
+        var registry = ProviderConfigLoader.Build(ProviderConfigLoader.ReadBuiltInJson(), null);
+
+        Assert.Equal(["openrouter", "fal", "together"], registry.All.Select(p => p.Id));
+        var together = registry.Get("together");
+        Assert.Equal(ProviderKind.OpenAiCompatible, together.Kind);
+        Assert.Equal("Together AI", together.DisplayName);
+        Assert.Equal(new Uri("https://api.together.ai/v1/"), together.BaseAddress);
+        Assert.Equal(TimeSpan.FromSeconds(180), together.Timeout);
+        Assert.Equal("base64", together.ImageResponseFormat);
+        Assert.Equal("png", together.ImageOutputFormat);
+        Assert.Equal(
+            [
+                "black-forest-labs/FLUX.1.1-pro",
+                "black-forest-labs/FLUX.2-dev",
+                "black-forest-labs/FLUX.2-flex",
+                "black-forest-labs/FLUX.2-pro",
+            ],
+            together.ImageModels.Select(model => model.Id));
+        Assert.All(together.ImageModels, model =>
+        {
+            Assert.True(model.SupportsSeed);
+            Assert.Equal(1, model.MaxImagesPerRequest);
+        });
+    }
+
+    [Fact]
     public void Parse_ValidFile_ReturnsProviders()
     {
         var providers = ProviderConfigLoader.Parse(BuiltIn);
@@ -155,6 +183,21 @@ public class ProviderConfigLoaderTests
         Assert.Equal("Proxy", provider.DisplayName);
         Assert.Equal(new Uri("https://proxy.test/api/v1/"), provider.BaseAddress);
         Assert.Single(registry.All);
+    }
+
+    [Fact]
+    public void Build_UserTogetherEntry_ReplacesBuiltInModelsWithoutRemovingProvider()
+    {
+        const string user = """{"providers":[{"id":"together","kind":"openAiCompatible","displayName":"Together Proxy","baseAddress":"https://proxy.test/v1/","timeoutSeconds":90,"imageModels":[]}]}""";
+
+        var registry = ProviderConfigLoader.Build(ProviderConfigLoader.ReadBuiltInJson(), user);
+
+        Assert.Equal(["openrouter", "fal", "together"], registry.All.Select(provider => provider.Id));
+        var together = registry.Get("together");
+        Assert.Equal("Together Proxy", together.DisplayName);
+        Assert.Empty(together.ImageModels);
+        Assert.Null(together.ImageResponseFormat);
+        Assert.Null(together.ImageOutputFormat);
     }
 
     [Fact]

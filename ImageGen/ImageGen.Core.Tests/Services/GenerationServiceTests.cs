@@ -1085,6 +1085,86 @@ public class GenerationServiceTests
     }
 
     [Fact]
+    public async Task StartRunAsync_BuiltInTogether_UsesConfiguredImageContractAndKeepsCostUnknown()
+    {
+        const string togetherId = "together";
+        const string modelId = "black-forest-labs/FLUX.2-dev";
+        const string imageBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
+        var image = Convert.FromBase64String(imageBase64);
+        var handler = StubHttpMessageHandler.Json(
+            System.Net.HttpStatusCode.OK,
+            $$"""{"data":[{"b64_json":"{{imageBase64}}"}]}""");
+        using var httpClient = new HttpClient(handler);
+        var httpClientFactory = Substitute.For<IHttpClientFactory>();
+        httpClientFactory.CreateClient(togetherId).Returns(httpClient);
+        var secrets = Substitute.For<ISecretStore>();
+        secrets.GetAsync(SecretNames.ForProvider(togetherId), Arg.Any<CancellationToken>()).Returns("test-key");
+        var router = new ProviderRouter(
+            ProviderConfigLoader.Build(ProviderConfigLoader.ReadBuiltInJson(), null),
+            httpClientFactory,
+            secrets,
+            TimeProvider.System);
+        _session.Settings.ImageModels = [new ModelRef(togetherId, modelId)];
+        _session.Settings.RunsPerModel = 1;
+        var catalog = new ModelCatalogService(router, _modelRepository, NullLogger<ModelCatalogService>.Instance);
+        var service = new GenerationService(
+            _sessions, _runs, router, _files, catalog, _seeds, _attachments, TimeProvider.System, _logger, _changes);
+
+        await service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await service.WhenIdleAsync();
+
+        var generation = Assert.Single(_added);
+        Assert.Equal(GenerationStatus.Succeeded, generation.Status);
+        Assert.Null(generation.CostUsd);
+        Assert.Equal("image/png", generation.MediaType);
+        await _files.Received(1).SaveAsync(
+            _session.Id, generation.Id, Arg.Is<byte[]>(bytes => bytes.SequenceEqual(image)), "image/png", Arg.Any<CancellationToken>());
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.Equal("https://api.together.ai/v1/images/generations", request.RequestUri!.AbsoluteUri);
+        Assert.StartsWith("Bearer ", request.Headers.Authorization!.ToString(), StringComparison.Ordinal);
+        using var body = System.Text.Json.JsonDocument.Parse(Assert.Single(handler.RequestBodies));
+        var root = body.RootElement;
+        Assert.Equal(modelId, root.GetProperty("model").GetString());
+        Assert.Equal("fox", root.GetProperty("prompt").GetString());
+        Assert.Equal(1, root.GetProperty("n").GetInt32());
+        Assert.Equal("base64", root.GetProperty("response_format").GetString());
+        Assert.Equal("png", root.GetProperty("output_format").GetString());
+        Assert.Equal(11, root.GetProperty("seed").GetInt64());
+    }
+
+    [Fact]
+    public async Task StartRunAsync_BuiltInTogetherWithoutKey_FailsInvalidKeyWithoutHttpCall()
+    {
+        const string togetherId = "together";
+        const string modelId = "black-forest-labs/FLUX.2-dev";
+        var handler = StubHttpMessageHandler.Json(System.Net.HttpStatusCode.OK, "{}");
+        using var httpClient = new HttpClient(handler);
+        var httpClientFactory = Substitute.For<IHttpClientFactory>();
+        httpClientFactory.CreateClient(togetherId).Returns(httpClient);
+        var secrets = Substitute.For<ISecretStore>();
+        secrets.GetAsync(SecretNames.ForProvider(togetherId), Arg.Any<CancellationToken>()).Returns((string?)null);
+        var router = new ProviderRouter(
+            ProviderConfigLoader.Build(ProviderConfigLoader.ReadBuiltInJson(), null),
+            httpClientFactory,
+            secrets,
+            TimeProvider.System);
+        _session.Settings.ImageModels = [new ModelRef(togetherId, modelId)];
+        _session.Settings.RunsPerModel = 1;
+        var catalog = new ModelCatalogService(router, _modelRepository, NullLogger<ModelCatalogService>.Instance);
+        var service = new GenerationService(
+            _sessions, _runs, router, _files, catalog, _seeds, _attachments, TimeProvider.System, _logger, _changes);
+
+        await service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await service.WhenIdleAsync();
+
+        var generation = Assert.Single(_added);
+        Assert.Equal(GenerationStatus.Failed, generation.Status);
+        Assert.Equal(ErrorKind.InvalidKey, generation.ErrorKind);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
     public async Task StartRunAsync_Succeeds_LogsQueuedRunningSucceededForEachGeneration()
     {
         var ct = TestContext.Current.CancellationToken;

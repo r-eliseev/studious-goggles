@@ -1,6 +1,6 @@
 # Архитектура
 
-Основной сценарий — сессии с ассистентом (`docs/specs/chat-sessions.md`, ADR 0004). Первый релиз v0.1 — ходячий скелет: только OpenRouter, только MAUI. Поверх скелета вынесен общий слой представления и добавлена оболочка Avalonia (ADR 0006): они входят в раздел «Текущая раскладка». Целевая раскладка с fal, Together AI и Web строится поверх этого (раздел «Целевая раскладка»).
+Основной сценарий — сессии с ассистентом (`docs/specs/chat-sessions.md`, ADR 0004). Первый релиз v0.1 — ходячий скелет: только OpenRouter, только MAUI. Поверх скелета вынесен общий слой представления и добавлена оболочка Avalonia (ADR 0006): они входят в раздел «Текущая раскладка». Вместе с fal и OpenRouter встроен Together AI для генерации изображений; Web остаётся целевой раскладкой (раздел «Целевая раскладка»). Together не предлагается как модель ассистента.
 
 Документ описывает задуманное устройство, а не ход работ: что уже сделано, видно по статусам задач. Правится, только когда код разошёлся с описанием (`AGENTS.md`, «Когда что обновлять»).
 
@@ -105,7 +105,7 @@ SQLite-файл `imagegen.db` в `IAppPaths.DataDirectory`, схема в `Image
 
 ## Целевая раскладка (после скелета)
 ```
-ImageGen.Core       + Providers/Fal за контрактом ADR 0003, общий queued lifecycle с in-memory adapter для synchronous transports (ADR 0020), Together AI как OpenAI-совместимый провайдер (ADR 0017); Catalog с фильтрами; расходы
+ImageGen.Core       + Providers/Fal за контрактом ADR 0003, общий queued lifecycle с in-memory adapter для synchronous transports (ADR 0020), встроенный Together AI как image-only OpenAI-совместимый провайдер (ADR 0017); Catalog с фильтрами; расходы
 ImageGen.Data       + таблица расходов, теги, коллекции
 ImageGen.Presentation, ImageGen.Avalonia   + модели и экраны новых фич (раскладка — «Текущая раскладка»)
 ImageGen.Maui       + Галерея, Сравнение, Расходы, Настройки; сохранение в галерею Android и iOS; ru-локализация
@@ -128,7 +128,7 @@ Dockerfile, docker-compose.yml   том /data
 - Страницы MAUI и view Avalonia знают только свой `PageModel`; `PageModel` знает сервисы ядра.
 
 ## Внешние системы
-OpenRouter (HTTP API: `/api/v1/key`, `/api/v1/models` (чат-модели: входные модальности и окно контекста), `/api/v1/images/models`, `/api/v1/images`, `/api/v1/chat/completions`). Подключаемые через конфиг (`providers.json`): API в формате OpenAI (`images/generations`, `chat/completions`) и Anthropic Messages API (чат). Провайдер с очередью — fal.ai (ADR 0003); Together AI — через OpenAI-совместимый конфиг (ADR 0017).
+Встроенные providers: OpenRouter (HTTP API: `/api/v1/key`, `/api/v1/models`, `/api/v1/images/models`, `/api/v1/images`, `/api/v1/chat/completions`), fal.ai (queued API, ADR 0003) и Together AI (OpenAI-compatible `images/generations`, только изображения). Другие OpenAI-compatible API (`images/generations`, `chat/completions`) и Anthropic Messages API (чат) подключаются через `providers.json`. У Together встроенный каталог FLUX; пользовательский entry с `id=together` заменяет его по общим правилам config override. Список Together не добавляет чат-модели.
 
 ## Ограничения
 - Платформы: у MAUI нет цели Linux; Linux-десктоп обслуживает Avalonia-оболочка (ADR 0006), браузер и Docker — Web-оболочка. Цель Windows у MAUI собирается только на Windows (`docs/knowledge/dev-environment.md`).

@@ -35,6 +35,36 @@ public class CompositionTests
     }
 
     [Fact]
+    public async Task AddImageGenCoreAndData_BuiltInTogetherResolvesImageCatalogWithoutKey()
+    {
+        using var provider = BuildProvider(NewDirectory());
+        var router = provider.GetRequiredService<IProviderRouter>();
+        var registry = provider.GetRequiredService<ProviderRegistry>();
+
+        Assert.Equal([ProviderIds.OpenRouter, ProviderIds.Fal, ProviderIds.Together], registry.All.Select(item => item.Id));
+        var connection = Assert.IsType<InMemoryQueuedImageConnection>(router.GetConnection(ProviderIds.Together));
+        Assert.Same(connection, router.GetQueuedImageProvider(ProviderIds.Together));
+        Assert.Same(connection, router.GetImageProvider(ProviderIds.Together));
+        var models = await router.GetImageProvider(ProviderIds.Together)
+            .ListImageModelsAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(
+            [
+                "black-forest-labs/FLUX.1.1-pro",
+                "black-forest-labs/FLUX.2-dev",
+                "black-forest-labs/FLUX.2-flex",
+                "black-forest-labs/FLUX.2-pro",
+            ],
+            models.Select(model => model.Id));
+        Assert.All(models, model =>
+        {
+            Assert.Equal(ProviderIds.Together, model.ProviderId);
+            Assert.False(model.SupportsImageInput);
+            Assert.Empty(model.Prices);
+        });
+        Assert.Empty(await router.GetChatClient(ProviderIds.Together).ListChatModelsAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public void AddImageGenCore_ServicesAreSingletons()
     {
         using var provider = BuildProvider(NewDirectory());
@@ -159,7 +189,7 @@ public class CompositionTests
 
         var registry = provider.GetRequiredService<ProviderRegistry>();
 
-        Assert.Equal(["openrouter", "fal", "local"], registry.All.Select(p => p.Id));
+        Assert.Equal(["openrouter", "fal", "together", "local"], registry.All.Select(p => p.Id));
     }
 
     [Fact]
