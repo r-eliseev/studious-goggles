@@ -61,6 +61,7 @@ public sealed class OpenAiCompatibleClient(
         }
 
         using var message = await CreateAuthorizedRequestAsync(HttpMethod.Post, "images/generations", body, cancellationToken);
+        message.Options.Set(ProviderResponseLimits.BodyKind, ProviderResponseBodyKind.GeneratedImageJson);
         var root = await SendJsonAsync(message, cancellationToken);
         var first = (root["data"] as JsonArray)?.FirstOrDefault();
         var base64 = first?["b64_json"]?.GetValue<string>();
@@ -70,7 +71,31 @@ public sealed class OpenAiCompatibleClient(
             throw new ProviderException(ErrorKind.EmptyResponse, $"{Config.DisplayName} returned no base64 image.");
         }
 
-        return new ImageGenerationResult(Convert.FromBase64String(base64), DefaultMediaType, null);
+        try
+        {
+            return new ImageGenerationResult(DecodeImage(base64), DefaultMediaType, null);
+        }
+        catch (ProviderResponseTooLargeException ex)
+        {
+            throw new ProviderException(ErrorKind.Unknown, "Provider response exceeded the configured size limit.", innerException: ex);
+        }
+    }
+
+    private static byte[] DecodeImage(string base64)
+    {
+        var maximumEncodedLength = ((ProviderResponseLimits.Image + 2) / 3) * 4;
+        if (base64.Length > maximumEncodedLength)
+        {
+            throw new ProviderResponseTooLargeException(ProviderResponseLimits.Image);
+        }
+
+        var bytes = Convert.FromBase64String(base64);
+        if (bytes.LongLength > ProviderResponseLimits.Image)
+        {
+            throw new ProviderResponseTooLargeException(ProviderResponseLimits.Image);
+        }
+
+        return bytes;
     }
 
     /// <summary>These APIs do not list input modalities, so no model is known to take images.</summary>

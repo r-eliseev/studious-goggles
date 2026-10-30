@@ -200,8 +200,7 @@ public class FalImageProviderTests
 
     private sealed class BlockingContent(TaskCompletionSource entered) : HttpContent
     {
-        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) =>
-            Task.Delay(Timeout.Infinite);
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) => throw new NotSupportedException();
 
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext? context, CancellationToken cancellationToken)
         {
@@ -211,8 +210,36 @@ public class FalImageProviderTests
 
         protected override bool TryComputeLength(out long length)
         {
-            length = 0;
+            length = 1;
             return false;
+        }
+
+        protected override Task<Stream> CreateContentReadStreamAsync() => Task.FromResult<Stream>(new BlockingReadStream(entered));
+
+        protected override Task<Stream> CreateContentReadStreamAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<Stream>(new BlockingReadStream(entered, cancellationToken));
+
+        private sealed class BlockingReadStream(TaskCompletionSource entered, CancellationToken initialToken = default) : Stream
+        {
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Length => throw new NotSupportedException();
+            public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+            public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+            {
+                entered.TrySetResult();
+                using var linked = CancellationTokenSource.CreateLinkedTokenSource(initialToken, cancellationToken);
+                await Task.Delay(Timeout.Infinite, linked.Token);
+                return 0;
+            }
+
+            public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+            public override void Flush() => throw new NotSupportedException();
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+            public override void SetLength(long value) => throw new NotSupportedException();
+            public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
         }
     }
 

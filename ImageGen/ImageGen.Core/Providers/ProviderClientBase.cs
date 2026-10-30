@@ -80,7 +80,8 @@ public abstract class ProviderClientBase(
         try
         {
             using var timeout = CreateTimeout(cancellationToken);
-            using var response = await CreateHttpClient().SendAsync(request, timeout.Token);
+            request.Options.Set(ProviderResponseLimits.SkipResponseBody, true);
+            using var response = await CreateHttpClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             return response.StatusCode switch
             {
                 HttpStatusCode.OK => ApiKeyStatus.Valid,
@@ -106,17 +107,21 @@ public abstract class ProviderClientBase(
         string text;
         try
         {
-            response = await CreateHttpClient().SendAsync(request, timeout.Token);
+            response = await CreateHttpClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             using (response)
             {
                 ValidateTransportResponse(response);
-                text = await response.Content.ReadAsStringAsync(timeout.Token);
+                text = await BoundedHttpContentReader.ReadTextAsync(response.Content, ProviderResponseLimits.GetLimit(request), timeout.Token);
                 return ParseResponse(response, text);
             }
         }
         catch (HttpRequestException ex)
         {
             throw new ProviderException(ErrorKind.Network, $"Could not reach {Config.DisplayName}.", innerException: ex);
+        }
+        catch (ProviderResponseTooLargeException ex)
+        {
+            throw new ProviderException(ErrorKind.Unknown, "Provider response exceeded the configured size limit.", innerException: ex);
         }
         catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {

@@ -154,10 +154,11 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
     {
         handle = ValidateHandle(handle);
         using var message = await CreateAuthorizedRequestAsync(HttpMethod.Put, handle.CancelUrl, null, cancellationToken);
+        message.Options.Set(ProviderResponseLimits.SkipResponseBody, true);
         using var timeout = CreateTimeout(cancellationToken);
         try
         {
-            using var response = await CreateHttpClient().SendAsync(message, timeout.Token);
+            using var response = await CreateHttpClient().SendAsync(message, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             ValidateTransportResponse(response);
             return response.StatusCode switch
             {
@@ -209,10 +210,10 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
         try
         {
             using (request)
-            using (var response = await CreateHttpClient().SendAsync(request, timeout.Token))
+            using (var response = await CreateHttpClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token))
             {
                 ValidateTransportResponse(response);
-                var text = await response.Content.ReadAsStringAsync(timeout.Token);
+                var text = await BoundedHttpContentReader.ReadTextAsync(response.Content, ProviderResponseLimits.GetLimit(request), timeout.Token);
                 if (!response.IsSuccessStatusCode)
                 {
                     throw new ProviderException(MapStatus(response.StatusCode), $"fal returned HTTP {(int)response.StatusCode}.");
@@ -224,6 +225,10 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
         catch (HttpRequestException ex)
         {
             throw new ProviderException(ErrorKind.Network, "Could not reach fal.", innerException: ex);
+        }
+        catch (ProviderResponseTooLargeException ex)
+        {
+            throw new ProviderException(ErrorKind.Unknown, "fal response exceeded the configured size limit.", innerException: ex);
         }
         catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
@@ -248,14 +253,19 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            using var response = await CreateHttpClient().SendAsync(request, timeout.Token);
+            request.Options.Set(ProviderResponseLimits.BodyKind, ProviderResponseBodyKind.Image);
+            using var response = await CreateHttpClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             ValidateTransportResponse(response);
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsByteArrayAsync(timeout.Token);
+            return await BoundedHttpContentReader.ReadBytesAsync(response.Content, ProviderResponseLimits.GetLimit(request), timeout.Token);
         }
         catch (HttpRequestException ex)
         {
             throw new ProviderException(ErrorKind.Network, "Could not download the image from fal.", innerException: ex);
+        }
+        catch (ProviderResponseTooLargeException ex)
+        {
+            throw new ProviderException(ErrorKind.Unknown, "fal response exceeded the configured size limit.", innerException: ex);
         }
         catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
