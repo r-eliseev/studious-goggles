@@ -1,6 +1,6 @@
 ---
 id: 102
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -51,5 +51,12 @@ bash scripts/check.sh
 После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 102`, затем `bash scripts/check.sh`; отправить PR по `docs/tasks.md`.
 
 ## Отчёт
+
+- Добавлен `InMemoryQueuedImageProvider` с локальными `memory://` handles, немедленной регистрацией jobs, отдельным CTS транспорта, атомарными snapshot-ами и наблюдаемой фоновой работой. Роутер и `GenerationService` не менялись.
+- Реализованы переходы Queued/Running/terminal, маппинг `ProviderException` и неожиданных ошибок, безопасная отмена с идемпотентным `CancellationRequested`, `Interrupted` для неизвестного process-local handle и строгая проверка provider id/RequestId/local URL fields.
+- Terminal snapshots удерживаются 10 минут по `TimeProvider` и удаляются при Submit/Poll/Cancel; активные jobs не удаляются. Semaphore и queue position не добавлялись.
+- Добавлены 23 теста: submit/registration, result/cost, error mapping, caller и transport cancellation, неизвестные/подменённые handles, restart, TTL boundary/sweep и пять параллельных transport jobs.
+- Проверки: Core tests — 438/438; формат Core и Core.Tests; `scripts/check.sh`.
+- Отклонений от плана нет.
 
 ## Комментарии

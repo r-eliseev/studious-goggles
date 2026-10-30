@@ -320,6 +320,82 @@ public class FalImageProviderTests
         Assert.Empty(handler.Requests);
     }
 
+    [Theory]
+    [InlineData("https://evil.example/model")]
+    [InlineData("//evil.example/model")]
+    [InlineData("fal-ai/../secret")]
+    public async Task Submit_InvalidModelEndpoint_IsRejectedBeforeReadingKeyOrSending(string modelId)
+    {
+        var secrets = Substitute.For<ISecretStore>();
+        var handler = new StubHttpMessageHandler(_ => Json(HttpStatusCode.OK, SubmitJson));
+        var factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient(ProviderIds.Fal).Returns(new HttpClient(handler));
+        var provider = new FalImageProvider(
+            new ProviderConfig(ProviderIds.Fal, ProviderKind.Fal, "fal.ai", FalAddress, TimeSpan.FromSeconds(60), []),
+            factory,
+            secrets,
+            TimeProvider.System);
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => provider.SubmitAsync(Request() with { ModelId = modelId }, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+        Assert.DoesNotContain(modelId, exception.Message, StringComparison.Ordinal);
+        Assert.Empty(handler.Requests);
+        await secrets.DidNotReceive().GetAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("status_url", "https://evil.example/status")]
+    [InlineData("response_url", "https://evil.example/result")]
+    [InlineData("cancel_url", "https://evil.example/cancel")]
+    [InlineData("status_url", "")]
+    public async Task Submit_RejectsCallbackAddressOutsideConfiguredOrigin(string field, string value)
+    {
+        var response = field switch
+        {
+            "status_url" => $$"""{"request_id":"req-1","status_url":"{{value}}","response_url":"https://queue.fal.run/result","cancel_url":"https://queue.fal.run/cancel"}""",
+            "response_url" => $$"""{"request_id":"req-1","status_url":"https://queue.fal.run/status","response_url":"{{value}}","cancel_url":"https://queue.fal.run/cancel"}""",
+            "cancel_url" => $$"""{"request_id":"req-1","status_url":"https://queue.fal.run/status","response_url":"https://queue.fal.run/result","cancel_url":"{{value}}"}""",
+            _ => throw new ArgumentOutOfRangeException(nameof(field)),
+        };
+        var handler = new StubHttpMessageHandler(_ => Json(HttpStatusCode.OK, response));
+        var provider = CreateProvider(handler);
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => provider.SubmitAsync(Request(), TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+        if (value.Length > 0)
+        {
+            Assert.DoesNotContain(value, exception.Message, StringComparison.Ordinal);
+        }
+        Assert.Single(handler.Requests);
+    }
+
+    [Theory]
+    [InlineData("poll")]
+    [InlineData("cancel")]
+    public async Task HandleWithDifferentProvider_IsRejectedBeforeReadingKeyOrSending(string operation)
+    {
+        var secrets = Substitute.For<ISecretStore>();
+        var handler = new StubHttpMessageHandler(_ => Json(HttpStatusCode.OK, "{}"));
+        var factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient(ProviderIds.Fal).Returns(new HttpClient(handler));
+        var provider = new FalImageProvider(
+            new ProviderConfig(ProviderIds.Fal, ProviderKind.Fal, "fal.ai", FalAddress, TimeSpan.FromSeconds(60), []),
+            factory,
+            secrets,
+            TimeProvider.System);
+        var invalidHandle = Handle with { ProviderId = "other-provider" };
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => operation == "poll"
+            ? provider.PollAsync(invalidHandle, TestContext.Current.CancellationToken)
+            : provider.CancelAsync(invalidHandle, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+        Assert.Empty(handler.Requests);
+        await secrets.DidNotReceive().GetAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public async Task Poll_InQueue_ReportsPosition()
     {
@@ -331,6 +407,43 @@ public class FalImageProviderTests
         Assert.Equal(JobState.Queued, update.State);
         Assert.Equal(3, update.QueuePosition);
         Assert.Equal(Handle.StatusUrl + "?logs=1", handler.Requests.Single().RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task Poll_AddsLogsParameterWithoutDiscardingExistingQuery()
+    {
+        var handler = new StubHttpMessageHandler(_ => Json(HttpStatusCode.OK, """{"status":"IN_QUEUE"}"""));
+        var provider = CreateProvider(handler);
+        var handle = Handle with { StatusUrl = Handle.StatusUrl + "?trace=1&logs=0" };
+
+        await provider.PollAsync(handle, TestContext.Current.CancellationToken);
+
+        var query = handler.Requests.Single().RequestUri!.Query;
+        Assert.Contains("trace=1", query, StringComparison.Ordinal);
+        Assert.Contains("logs=1", query, StringComparison.Ordinal);
+        Assert.DoesNotContain("logs=0", query, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Poll_RejectsPersistedCrossOriginHandleBeforeReadingKeyOrSending()
+    {
+        var secrets = Substitute.For<ISecretStore>();
+        var handler = new StubHttpMessageHandler(_ => Json(HttpStatusCode.OK, "{}"));
+        var factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient(ProviderIds.Fal).Returns(new HttpClient(handler));
+        var provider = new FalImageProvider(
+            new ProviderConfig(ProviderIds.Fal, ProviderKind.Fal, "fal.ai", FalAddress, TimeSpan.FromSeconds(60), []),
+            factory,
+            secrets,
+            TimeProvider.System);
+        var invalidHandle = Handle with { ResponseUrl = "https://evil.example/result" };
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => provider.PollAsync(invalidHandle, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+        Assert.DoesNotContain("evil.example", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(handler.Requests);
+        await secrets.DidNotReceive().GetAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -396,6 +509,25 @@ public class FalImageProviderTests
         Assert.Equal(JobState.Succeeded, update.State);
         Assert.Equal(new byte[] { 9, 8, 7 }, update.Result!.Content);
         Assert.Equal("image/png", update.Result.MediaType);
+    }
+
+    [Theory]
+    [InlineData("https://127.1/x.png")]
+    [InlineData("https://[::ffff:127.0.0.1]/x.png")]
+    [InlineData("https://localhost./x.png")]
+    public async Task Poll_CompletedWithNonPublicImageUrl_IsRejectedWithoutDownload(string imageUrl)
+    {
+        var handler = new StubHttpMessageHandler(request => request.RequestUri!.AbsolutePath.EndsWith("/status", StringComparison.Ordinal)
+            ? Json(HttpStatusCode.OK, """{"status":"COMPLETED"}""")
+            : Json(HttpStatusCode.OK, $$"""{"images":[{"url":"{{imageUrl}}"}],"has_nsfw_concepts":[false]}"""));
+        var provider = CreateProvider(handler);
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => provider.PollAsync(Handle, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+        Assert.DoesNotContain(imageUrl, exception.Message, StringComparison.Ordinal);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.All(handler.Requests, request => Assert.Equal("queue.fal.run", request.RequestUri!.Host));
     }
 
     [Theory]

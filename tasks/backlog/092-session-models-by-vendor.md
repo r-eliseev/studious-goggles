@@ -1,6 +1,6 @@
 ---
 id: 092
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -167,6 +167,12 @@ bash scripts/check.sh
 Файлы: `ImageGen/ImageGen.Presentation/PageModels/ModelVendors.cs`, `ImageGen/ImageGen.Presentation/PageModels/ModelGroupViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ImageModelGroupViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/AssistantModelGroupViewModel.cs` (новые), `ImageGen/ImageGen.Presentation/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml`, `ImageGen/ImageGen.Avalonia/Views/SessionModelsView.axaml`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ModelVendorsTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ModelGroupViewModelTests.cs` (новые), `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionModelsPageModelTests.cs`, `ImageGen/ImageGen.Avalonia.Tests/Flows/SessionModelsFlowTests.cs`, `docs/specs/chat-sessions.md`, `tasks/v0.1/016-*.md`, `tasks/backlog/046-*.md`.
 
 ## Отчёт
+
+- Модели на обеих вкладках сгруппированы по производителю по id и подписям каталога; «Other» остаётся последней группой. Выбранные модели раскрыты при открытии, поиск раскрывает совпавшие группы и восстанавливает сохранённое раскрытие после очистки; Refresh сохраняет состояние.
+- Добавлены заголовки с числом совпадений и выбранных картинок, доступные раскрывающие кнопки MAUI и `Expander` Avalonia. Строки создаются только для раскрытых групп. Поведение описано в `docs/specs/chat-sessions.md` S5.5; ручные сценарии добавлены в задачи 016 и 046.
+- Проверено: Presentation tests (333 passed), Avalonia headless tests (125 passed, 2 skipped из-за недоступных платформенных secret backends), MAUI Android build (0 warnings/errors), форматирование Presentation, Presentation.Tests, Avalonia и Avalonia.Tests, `bash scripts/check.sh`.
+- Отложено для ручной проверки владельцем: MAUI Windows — задача 016; Avalonia desktop — задача 046; MAUI Android — проверить на устройстве и скорость раскрытия больших групп.
+- Отличие от плана: нет.
 
 ## Комментарии
 ### 2026-10-29, claude-plan

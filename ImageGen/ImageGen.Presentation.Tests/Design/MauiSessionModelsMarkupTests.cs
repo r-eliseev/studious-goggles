@@ -55,13 +55,17 @@ public class MauiSessionModelsMarkupTests
         var document = XDocument.Load(Path.Combine(MauiRoot(), "Controls", "SessionModelsView.xaml"));
         var buttons = Assert.IsType<XElement>(document.Root).Descendants()
             .Where(element => element.Name.LocalName == "Button")
-            .ToDictionary(element => (string?)element.Attribute("Command")
-                ?? throw new InvalidOperationException("Every button in the session models view needs a command."));
+            .ToList();
+        var imageTab = buttons.Single(element => (string?)element.Attribute("Command") == "{Binding ShowImageModelsCommand}");
+        var assistantTab = buttons.Single(element => (string?)element.Attribute("Command") == "{Binding ShowAssistantModelCommand}");
+        var groupToggles = buttons.Where(element => (string?)element.Attribute("Command") == "{Binding ToggleCommand}").ToArray();
 
-        Assert.Equal("{x:Static strings:AppResources.ImageModelsTab}", (string?)buttons["{Binding ShowImageModelsCommand}"].Attribute("Text"));
-        Assert.Equal("{Binding ImageModelsTabAutomationName}", (string?)buttons["{Binding ShowImageModelsCommand}"].Attribute("SemanticProperties.Description"));
-        Assert.Equal("{x:Static strings:AppResources.AssistantModelTitle}", (string?)buttons["{Binding ShowAssistantModelCommand}"].Attribute("Text"));
-        Assert.Equal("{Binding AssistantTabAutomationName}", (string?)buttons["{Binding ShowAssistantModelCommand}"].Attribute("SemanticProperties.Description"));
+        Assert.Equal("{x:Static strings:AppResources.ImageModelsTab}", (string?)imageTab.Attribute("Text"));
+        Assert.Equal("{Binding ImageModelsTabAutomationName}", (string?)imageTab.Attribute("SemanticProperties.Description"));
+        Assert.Equal("{x:Static strings:AppResources.AssistantModelTitle}", (string?)assistantTab.Attribute("Text"));
+        Assert.Equal("{Binding AssistantTabAutomationName}", (string?)assistantTab.Attribute("SemanticProperties.Description"));
+        Assert.Equal(2, groupToggles.Length);
+        Assert.All(groupToggles, button => Assert.Equal("{Binding AutomationName}", (string?)button.Attribute("SemanticProperties.Description")));
     }
 
     private static string MauiRoot()

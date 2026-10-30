@@ -43,6 +43,9 @@ public sealed partial class ChatPageModel(
     /// <summary>Rows of the chat: <see cref="MessageItemViewModel"/> or <see cref="RunItemViewModel"/>.</summary>
     public ObservableCollection<object> Items { get; } = [];
 
+    /// <summary>Raised after an in-place generation card update, so views can follow row content changes.</summary>
+    public event EventHandler? CardUpdated;
+
     [ObservableProperty]
     public partial string Title { get; set; } = "";
 
@@ -556,6 +559,7 @@ public sealed partial class ChatPageModel(
             if (_cards.TryGetValue(generation.Id, out var card))
             {
                 card.Update(generation);
+                CardUpdated?.Invoke(this, EventArgs.Empty);
             }
         });
     }

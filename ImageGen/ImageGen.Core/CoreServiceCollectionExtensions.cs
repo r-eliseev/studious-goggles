@@ -53,6 +53,7 @@ public static class CoreServiceCollectionExtensions
         services.AddSingleton<AttachmentService>();
         services.AddSingleton<ImageDescriptionService>();
         services.AddSingleton<GenerationService>();
+        services.AddSingleton<ISessionGenerationCoordinator>(sp => sp.GetRequiredService<GenerationService>());
         services.AddSingleton<ChatModelCatalogService>();
         services.AddSingleton<ConversationSummaryService>();
         services.AddSingleton<AssistantService>();

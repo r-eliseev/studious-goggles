@@ -110,25 +110,27 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
 
     public async Task<ProviderJobHandle> SubmitAsync(ImageGenerationRequest request, CancellationToken cancellationToken)
     {
+        var modelEndpoint = FalUrlValidator.ValidateModelEndpoint(request.ModelId);
         var body = new JsonObject { ["prompt"] = request.Prompt };
         if (request.Seed is { } seed)
         {
             body["seed"] = seed;
         }
 
-        var message = await CreateAuthorizedRequestAsync(HttpMethod.Post, request.ModelId, body, cancellationToken);
+        var message = await CreateAuthorizedRequestAsync(HttpMethod.Post, modelEndpoint, body, cancellationToken);
         var json = await SendJsonAsync(message, cancellationToken);
         return new ProviderJobHandle(
             Config.Id,
             Text(json, "request_id"),
-            Text(json, "status_url"),
-            Text(json, "response_url"),
-            Text(json, "cancel_url"));
+            CallbackAddress(json, "status_url"),
+            CallbackAddress(json, "response_url"),
+            CallbackAddress(json, "cancel_url"));
     }
 
     public async Task<JobUpdate> PollAsync(ProviderJobHandle handle, CancellationToken cancellationToken)
     {
-        var message = await CreateAuthorizedRequestAsync(HttpMethod.Get, handle.StatusUrl + "?logs=1", null, cancellationToken);
+        handle = ValidateHandle(handle);
+        var message = await CreateAuthorizedRequestAsync(HttpMethod.Get, AddLogsQuery(handle.StatusUrl), null, cancellationToken);
         var status = await SendFalJsonAsync(message, cancellationToken);
         return status["status"]?.GetValue<string>() switch
         {
@@ -141,6 +143,7 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
 
     public async Task<CancelOutcome> CancelAsync(ProviderJobHandle handle, CancellationToken cancellationToken)
     {
+        handle = ValidateHandle(handle);
         using var message = await CreateAuthorizedRequestAsync(HttpMethod.Put, handle.CancelUrl, null, cancellationToken);
         using var timeout = CreateTimeout(cancellationToken);
         try
@@ -181,7 +184,7 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
         }
 
         var image = result["images"]?[0] ?? throw new ProviderException(ErrorKind.EmptyResponse, "fal returned no image.");
-        var url = Text(image, "url");
+        var url = ImageAddress(image);
         var mediaType = image["content_type"]?.GetValue<string>() ?? DefaultMediaType;
         return new JobUpdate(JobState.Succeeded, Result: new ImageGenerationResult(await DownloadAsync(url, cancellationToken), mediaType, null));
     }
@@ -258,6 +261,46 @@ public sealed class FalImageProvider : ProviderClientBase, IQueuedImageProvider,
 
     private static string JoinLogs(JsonNode status) =>
         string.Join('\n', (status["logs"] as JsonArray)?.Select(log => log?["message"]?.GetValue<string>()).OfType<string>() ?? []);
+
+    private ProviderJobHandle ValidateHandle(ProviderJobHandle handle)
+    {
+        if (!string.Equals(handle.ProviderId, Config.Id, StringComparison.Ordinal))
+        {
+            throw new ProviderException(ErrorKind.Unknown, "fal returned an invalid job handle.");
+        }
+
+        return handle with
+        {
+            StatusUrl = FalUrlValidator.ValidateCallback(handle.StatusUrl, Config.BaseAddress).AbsoluteUri,
+            ResponseUrl = FalUrlValidator.ValidateCallback(handle.ResponseUrl, Config.BaseAddress).AbsoluteUri,
+            CancelUrl = FalUrlValidator.ValidateCallback(handle.CancelUrl, Config.BaseAddress).AbsoluteUri,
+        };
+    }
+
+    private static string AddLogsQuery(string value)
+    {
+        var uri = new Uri(value, UriKind.Absolute);
+        var builder = new UriBuilder(uri);
+        var parameters = builder.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Where(parameter => !string.Equals(Uri.UnescapeDataString(parameter.Split('=', 2)[0]), "logs", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        parameters.Add("logs=1");
+        builder.Query = string.Join('&', parameters);
+        return builder.Uri.AbsoluteUri;
+    }
+
+    private string CallbackAddress(JsonNode node, string name)
+    {
+        var value = ReadUrl(node, name);
+        return FalUrlValidator.ValidateCallback(value, Config.BaseAddress).AbsoluteUri;
+    }
+
+    private static string ImageAddress(JsonNode node) => FalUrlValidator.ValidateImage(ReadUrl(node, "url")).AbsoluteUri;
+
+    private static string ReadUrl(JsonNode node, string name) =>
+        node[name] is JsonValue value && value.TryGetValue<string>(out var address) && !string.IsNullOrWhiteSpace(address)
+            ? address
+            : throw new ProviderException(ErrorKind.Unknown, "fal returned an invalid URL or model endpoint.");
 
     private static int? Integer(JsonNode node, string name) => node[name] is JsonValue value && value.TryGetValue<int>(out var number) ? number : null;
 

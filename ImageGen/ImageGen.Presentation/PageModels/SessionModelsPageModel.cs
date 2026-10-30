@@ -26,6 +26,8 @@ public sealed partial class SessionModelsPageModel(
 {
     private readonly List<ModelOptionViewModel> _all = [];
     private readonly List<AssistantModelOptionViewModel> _assistants = [];
+    private readonly Dictionary<string, bool> _imageGroupExpanded = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, bool> _assistantGroupExpanded = new(StringComparer.Ordinal);
     private Guid _sessionId;
     private Session? _session;
     private bool _loaded;
@@ -41,6 +43,10 @@ public sealed partial class SessionModelsPageModel(
 
     /// <summary>Assistant model rows shown now: the models with tools filtered by <see cref="SearchText"/>.</summary>
     public ObservableCollection<AssistantModelOptionViewModel> AssistantModels { get; } = [];
+
+    public ObservableCollection<ImageModelGroupViewModel> ImageModelGroups { get; } = [];
+
+    public ObservableCollection<AssistantModelGroupViewModel> AssistantModelGroups { get; } = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsImageModelsTabSelected))]
@@ -204,6 +210,10 @@ public sealed partial class SessionModelsPageModel(
                     if (e.PropertyName == nameof(ModelOptionViewModel.IsSelected))
                     {
                         OnPropertyChanged(nameof(SelectedCountText));
+                        foreach (var group in ImageModelGroups)
+                        {
+                            group.NotifySelectionChanged();
+                        }
                     }
                 };
             }
@@ -252,6 +262,69 @@ public sealed partial class SessionModelsPageModel(
         foreach (var model in _assistants.Where(m => Matches(search, m.Name, m.Reference.ModelId)))
         {
             AssistantModels.Add(model);
+        }
+
+        RebuildImageModelGroups(search);
+        RebuildAssistantModelGroups(search);
+    }
+
+    private void RebuildImageModelGroups(string search)
+    {
+        ImageModelGroups.Clear();
+        foreach (var group in ModelVendors.Group(Models, model => model.Reference.ProviderId, model => model.Reference.ModelId, model => model.Name))
+        {
+            if (!_imageGroupExpanded.TryGetValue(group.Key, out var isExpanded))
+            {
+                isExpanded = group.Items.Any(model => model.IsSelected);
+                _imageGroupExpanded[group.Key] = isExpanded;
+            }
+
+            if (search.Length > 0)
+            {
+                isExpanded = true;
+            }
+
+            ImageModelGroups.Add(new ImageModelGroupViewModel(group.Key, group.Label, group.Items, isExpanded, SaveImageGroupExpansion));
+        }
+    }
+
+    private void RebuildAssistantModelGroups(string search)
+    {
+        AssistantModelGroups.Clear();
+        foreach (var group in ModelVendors.Group(
+                     AssistantModels,
+                     model => model.Reference.ProviderId,
+                     model => model.Reference.ModelId,
+                     model => model.Name))
+        {
+            if (!_assistantGroupExpanded.TryGetValue(group.Key, out var isExpanded))
+            {
+                isExpanded = group.Items.Any(model => model.IsSelected);
+                _assistantGroupExpanded[group.Key] = isExpanded;
+            }
+
+            if (search.Length > 0)
+            {
+                isExpanded = true;
+            }
+
+            AssistantModelGroups.Add(new AssistantModelGroupViewModel(group.Key, group.Label, group.Items, isExpanded, SaveAssistantGroupExpansion));
+        }
+    }
+
+    private void SaveImageGroupExpansion(ModelGroupViewModel group)
+    {
+        if (SearchText.Trim().Length == 0)
+        {
+            _imageGroupExpanded[group.Key] = group.IsExpanded;
+        }
+    }
+
+    private void SaveAssistantGroupExpansion(ModelGroupViewModel group)
+    {
+        if (SearchText.Trim().Length == 0)
+        {
+            _assistantGroupExpanded[group.Key] = group.IsExpanded;
         }
     }
 

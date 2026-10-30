@@ -224,6 +224,16 @@ public static class AppResources
 
     public static string ModelNoSeed => Get(nameof(ModelNoSeed));
 
+    public static string ModelGroupOther => Get(nameof(ModelGroupOther));
+
+    public static string ModelGroupImageHeaderFormat => Get(nameof(ModelGroupImageHeaderFormat));
+
+    public static string ModelGroupAssistantHeaderFormat => Get(nameof(ModelGroupAssistantHeaderFormat));
+
+    public static string ModelGroupExpanded => Get(nameof(ModelGroupExpanded));
+
+    public static string ModelGroupCollapsed => Get(nameof(ModelGroupCollapsed));
+
     public static string Save => Get(nameof(Save));
 
     public static string Refresh => Get(nameof(Refresh));
