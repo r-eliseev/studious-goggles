@@ -1,8 +1,8 @@
 ---
 id: 109
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-10-30T11:03:54Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -57,5 +57,11 @@ bash scripts/check.sh
 После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 109`, затем `bash scripts/check.sh`; код отправить PR по `docs/tasks.md`.
 
 ## Отчёт
+
+- Добавлен внутренний `FalUrlValidator`: fal model endpoint остаётся относительным и не содержит traversal или кодированных разделителей; callback URLs ограничены origin проверенного `BaseAddress`; image URLs требуют HTTPS и отклоняют локальные/специальные IP literals, включая IPv4-mapped адреса.
+- `ProviderId` и все callback URLs в сохранённом handle проверяются до чтения секрета и HTTP. URL-ошибки имеют `ErrorKind.Unknown` и постоянное безопасное сообщение. `logs=1` добавляется через `UriBuilder`, сохраняя другие query-параметры и заменяя прежнее значение `logs`.
+- DNS-имена не разрешаются во время проверки: hostname, который разрешается в private IP, остаётся документированным residual risk. Автоматические redirects остаются отдельной задачей 124.
+- Проверено: `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj` (479 passed); `dotnet format ImageGen/ImageGen.Core/ImageGen.Core.csproj --verify-no-changes --no-restore`; `dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-no-changes --no-restore`.
+- Отличие от плана: нет.
 
 ## Комментарии
