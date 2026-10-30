@@ -1,8 +1,8 @@
 ---
 id: 110
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: opencode-vps
+claimed: 2026-10-30T02:40:28Z
 created: 2026-10-29
 ---
 
