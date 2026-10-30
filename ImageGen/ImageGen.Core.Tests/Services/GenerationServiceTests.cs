@@ -52,6 +52,81 @@ public class GenerationServiceTests
         _providers.DidNotReceive().GetImageProvider(Arg.Any<string>());
     }
 
+    [Theory]
+    [InlineData(CancelOutcome.Cancelled)]
+    [InlineData(CancelOutcome.CancellationRequested)]
+    [InlineData(CancelOutcome.AlreadyCompleted)]
+    [InlineData(CancelOutcome.NotFound)]
+    public async Task StopSessionAsync_SubmitReturnsHandleAfterCancellation_RemotelyCancelsBeforeStopCompletes(CancelOutcome cancelOutcome)
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseSubmit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handle = Handle();
+        var connection = Substitute.For<IProviderConnection, IModelProvider, IQueuedImageProvider>();
+        var imageProvider = (IModelProvider)connection;
+        var queued = (IQueuedImageProvider)connection;
+        _session.Settings.ImageModels = [new ModelRef("fal", "flux")];
+        _session.Settings.RunsPerModel = 1;
+        _modelRepository.ListAsync("fal", Arg.Any<CancellationToken>()).Returns([ModelCatalogServiceTests.Model("flux", "Flux", providerId: "fal")]);
+        _providers.GetImageProvider("fal").Returns(imageProvider);
+        _providers.GetConnection("fal").Returns(connection);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+        {
+            entered.TrySetResult();
+            await releaseSubmit.Task;
+            return handle;
+        });
+        queued.CancelAsync(handle, Arg.Any<CancellationToken>()).Returns(cancelOutcome);
+        queued.ClearReceivedCalls();
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var stop = _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+        releaseSubmit.TrySetResult();
+        await stop.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        await queued.Received(1).CancelAsync(handle, Arg.Is<CancellationToken>(token => !token.IsCancellationRequested));
+        await queued.DidNotReceive().PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StopSessionAsync_RemoteCancelFailure_DoesNotBlockLocalCleanup()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseSubmit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handle = Handle();
+        var connection = Substitute.For<IProviderConnection, IModelProvider, IQueuedImageProvider>();
+        var imageProvider = (IModelProvider)connection;
+        var queued = (IQueuedImageProvider)connection;
+        _session.Settings.ImageModels = [new ModelRef("fal", "flux")];
+        _session.Settings.RunsPerModel = 1;
+        _modelRepository.ListAsync("fal", Arg.Any<CancellationToken>()).Returns([ModelCatalogServiceTests.Model("flux", "Flux", providerId: "fal")]);
+        _providers.GetImageProvider("fal").Returns(imageProvider);
+        _providers.GetConnection("fal").Returns(connection);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+        {
+            entered.TrySetResult();
+            await releaseSubmit.Task;
+            return handle;
+        });
+        queued.CancelAsync(handle, Arg.Any<CancellationToken>()).Returns<Task<CancelOutcome>>(_ =>
+            throw new ProviderException(ErrorKind.Network, "sensitive provider detail"));
+        queued.ClearReceivedCalls();
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var stop = _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+        releaseSubmit.TrySetResult();
+
+        await stop.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        await queued.Received(1).CancelAsync(handle, Arg.Any<CancellationToken>());
+        var warning = Assert.Single(_logger.Entries, entry => entry.Level == LogLevel.Warning);
+        Assert.Null(warning.Exception);
+        Assert.DoesNotContain("sensitive provider detail", warning.Message, StringComparison.Ordinal);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Exception is ProviderException);
+    }
+
     [Fact]
     public async Task StartRunAsync_PreparationFailureReleasesStartLease()
     {
