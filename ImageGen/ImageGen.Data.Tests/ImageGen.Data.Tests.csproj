@@ -16,6 +16,9 @@
     <Using Include="NSubstitute" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="TestData/**" LogicalName="TestData/%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../ImageGen.Data/ImageGen.Data.csproj" />
   </ItemGroup>
 </Project>

@@ -1,3 +1,4 @@
+using System.Globalization;
 using ImageGen.Core.Domain.Descriptions;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Models;
@@ -346,6 +347,84 @@ public class GenerationItemViewModelTests
         var card = CardOf(generation);
 
         Assert.Contains("webp: not sent (the model does not support it)", card.NoticeText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ApplyImageDimensions_ReducesAspectAndUsesInvariantCulture()
+    {
+        var card = CardOf(BaseGeneration());
+        var originalCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
+
+            card.ApplyImageDimensions(new ImageDimensions(1200, 800));
+
+            Assert.Equal("1200×800 px · 3:2", card.ImageDimensionsText);
+            Assert.True(card.HasImageDimensions);
+            Assert.Contains(card.ImageDimensionsText, card.SummaryText, StringComparison.Ordinal);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+        }
+    }
+
+    [Theory]
+    [InlineData(800, 1200, "800×1200 px · 2:3")]
+    [InlineData(512, 512, "512×512 px · 1:1")]
+    [InlineData(1920, 1080, "1920×1080 px · 16:9")]
+    public void ApplyImageDimensions_ReducesPortraitSquareAndCoprimeRatios(int width, int height, string expected)
+    {
+        var card = CardOf(BaseGeneration());
+
+        card.ApplyImageDimensions(new ImageDimensions(width, height));
+
+        Assert.Equal(expected, card.ImageDimensionsText);
+    }
+
+    [Fact]
+    public void ApplyImageDimensions_Null_ClearsMetadataAndSummary()
+    {
+        var card = CardOf(BaseGeneration());
+        card.ApplyImageDimensions(new ImageDimensions(1200, 800));
+
+        card.ApplyImageDimensions(null);
+
+        Assert.Empty(card.ImageDimensionsText);
+        Assert.False(card.HasImageDimensions);
+        Assert.DoesNotContain("px", card.SummaryText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Update_SameSuccessfulImagePath_PreservesDimensions()
+    {
+        var generation = BaseGeneration();
+        generation.ImagePath = "images/s/done.png";
+        var card = CardOf(generation);
+        card.ApplyImageDimensions(new ImageDimensions(1200, 800));
+
+        card.Update(generation);
+
+        Assert.Equal("1200×800 px · 3:2", card.ImageDimensionsText);
+    }
+
+    [Theory]
+    [InlineData(GenerationStatus.Running, "images/s/done.png")]
+    [InlineData(GenerationStatus.Succeeded, "images/s/other.png")]
+    public void Update_StatusOrImagePathChanges_ClearsDimensions(GenerationStatus status, string imagePath)
+    {
+        var generation = BaseGeneration();
+        generation.ImagePath = "images/s/done.png";
+        var card = CardOf(generation);
+        card.ApplyImageDimensions(new ImageDimensions(1200, 800));
+        generation.Status = status;
+        generation.ImagePath = status == GenerationStatus.Succeeded ? imagePath : null;
+
+        card.Update(generation);
+
+        Assert.Empty(card.ImageDimensionsText);
+        Assert.False(card.HasImageDimensions);
     }
 
     private static Generation BaseGeneration() => new()

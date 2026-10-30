@@ -17,7 +17,7 @@ public class ProviderMigrationTests
         {
             await CreateVersionOneDatabaseAsync(path, ct);
 
-            await new SqliteDatabase(path).InitializeAsync(ct);
+            await InitializeThroughVersionAsync(path, 2, ct);
 
             await using var connection = new SqliteConnection($"Data Source={path}");
             await connection.OpenAsync(ct);
@@ -31,6 +31,22 @@ public class ProviderMigrationTests
             SqliteConnection.ClearAllPools();
             Directory.Delete(directory, recursive: true);
         }
+    }
+
+    private static async Task InitializeThroughVersionAsync(string path, int version, CancellationToken cancellationToken)
+    {
+        await using var connection = new SqliteConnection($"Data Source={path}");
+        await connection.OpenAsync(cancellationToken);
+        foreach (var migration in Migrations.All.Where(migration => migration.Number > 1 && migration.Number <= version))
+        {
+            await using var apply = connection.CreateCommand();
+            apply.CommandText = migration.Script;
+            await apply.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await using var updateVersion = connection.CreateCommand();
+        updateVersion.CommandText = $"PRAGMA user_version = {version};";
+        await updateVersion.ExecuteNonQueryAsync(cancellationToken);
     }
 
     [Fact]

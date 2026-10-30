@@ -38,29 +38,31 @@
 
         <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12">
         <!-- Header: title and the three chips (Models, Assistant, Parameters). -->
-        <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Classes="title" Text="{Binding Title}" VerticalAlignment="Center" />
+        <WrapPanel x:Name="ChatHeader" Orientation="Horizontal" Margin="0,0,0,-8">
+            <TextBlock x:Name="ChatTitle" Classes="title" Text="{Binding Title}" VerticalAlignment="Center"
+                       HorizontalAlignment="Left" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Margin="0,0,8,8" />
             <Button Classes="chip" Command="{Binding OpenModelsCommand}"
-                    MinHeight="28" Padding="10,0"
+                    MinHeight="28" Padding="10,0" Margin="0,0,8,8" HorizontalAlignment="Left"
                     AutomationProperties.Name="{Binding ModelsButtonText}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <TextBlock Classes="icon" Text="&#xE529;" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding ModelsButtonText}" VerticalAlignment="Center" />
                 </StackPanel>
             </Button>
-            <Border Classes="chip" VerticalAlignment="Center">
-                <TextBlock Classes="meta" Text="{Binding AssistantText}" VerticalAlignment="Center"
+            <Border Classes="chip" VerticalAlignment="Center" Margin="0,0,8,8" HorizontalAlignment="Left">
+                <TextBlock x:Name="AssistantChipText" Classes="meta" Text="{Binding AssistantText}" VerticalAlignment="Center"
+                           HorizontalAlignment="Left" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
                            AutomationProperties.Name="{Binding AssistantText}" />
             </Border>
             <Button Classes="chip" Command="{Binding OpenParametersCommand}"
-                    MinHeight="28" Padding="10,0"
+                    MinHeight="28" Padding="10,0" Margin="0,0,8,8" HorizontalAlignment="Left"
                     AutomationProperties.Name="{markup:Res ChatParametersButton}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <TextBlock Classes="icon" Text="&#xE29A;" VerticalAlignment="Center" />
                     <TextBlock Text="{markup:Res ChatParametersButton}" VerticalAlignment="Center" />
                 </StackPanel>
             </Button>
-        </StackPanel>
+        </WrapPanel>
 
         <ScrollViewer Grid.Row="1" Name="Transcript">
             <ItemsControl ItemsSource="{Binding Items}" MaxWidth="780" HorizontalAlignment="Stretch">
@@ -273,6 +275,12 @@
                                                         <TextBlock Classes="meta" Text="{Binding ModelText}" />
                                                         <TextBlock Classes="meta" Text="{Binding CostText}" />
                                                     </StackPanel>
+
+                                                    <TextBlock Classes="meta"
+                                                               Text="{Binding ImageDimensionsText}"
+                                                               IsVisible="{Binding HasImageDimensions}"
+                                                               AutomationProperties.Name="{Binding ImageDimensionsText}"
+                                                               TextWrapping="Wrap" />
 
                                                     <!-- Notice: dropped parameters and the filtered explanation. -->
                                                     <TextBlock Classes="meta"

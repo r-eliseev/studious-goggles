@@ -9,6 +9,7 @@ using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using AppTaskExtensions = ImageGen.Presentation.Utilities.TaskExtensions;
 
 namespace ImageGen.Presentation.PageModels;
 
@@ -39,6 +40,9 @@ public sealed partial class ChatPageModel(
     private Guid _sessionId;
     private string? _pendingMessage;
     private bool _subscribed;
+    private CancellationTokenSource _imageDimensionsCancellation = new();
+    private readonly Dictionary<(Guid Id, string Path), Task<ImageDimensions?>> _imageDimensionsReads = [];
+    private int _imageDimensionsEpoch;
 
     /// <summary>Rows of the chat: <see cref="MessageItemViewModel"/> or <see cref="RunItemViewModel"/>.</summary>
     public ObservableCollection<object> Items { get; } = [];
@@ -118,7 +122,11 @@ public sealed partial class ChatPageModel(
                 $"The chat route needs a valid '{Routes.SessionIdParameter}' query parameter.", nameof(query));
         }
 
-        _sessionId = sessionId;
+        if (_sessionId != sessionId)
+        {
+            CancelImageDimensionsReads();
+            _sessionId = sessionId;
+        }
         _pendingMessage = query.TryGetValue(Routes.MessageParameter, out var message) && message is string encoded
             ? Uri.UnescapeDataString(encoded)
             : null;
@@ -146,10 +154,16 @@ public sealed partial class ChatPageModel(
     /// <summary>Reads the whole timeline of the session and rebuilds the rows and cards.</summary>
     public async Task ReloadAsync()
     {
+        var epoch = BeginImageDimensionsEpoch();
+        var sessionId = _sessionId;
         currentSession.CurrentId = _sessionId;
         try
         {
             var timeline = await sessions.GetTimelineAsync(_sessionId, CancellationToken.None);
+            if (epoch != _imageDimensionsEpoch || sessionId != _sessionId)
+            {
+                return;
+            }
             var settings = timeline.Session.Settings;
             Title = timeline.Session.Title;
             ModelsButtonText = string.Format(
@@ -184,6 +198,13 @@ public sealed partial class ChatPageModel(
                 {
                     var cards = entry.Generations.Select(CreateCard).ToList();
                     Items.Add(new RunItemViewModel(run, cards, new CopyTextAction(clipboard, mainThread, run.Prompt)));
+                    foreach (var generation in entry.Generations)
+                    {
+                        if (_cards.TryGetValue(generation.Id, out var card))
+                        {
+                            StartImageDimensionsRead(generation, card, sessionId, epoch);
+                        }
+                    }
                 }
             }
 
@@ -554,11 +575,14 @@ public sealed partial class ChatPageModel(
             return;
         }
 
+        var sessionId = _sessionId;
+        var epoch = _imageDimensionsEpoch;
         mainThread.BeginInvokeOnMainThread(() =>
         {
-            if (_cards.TryGetValue(generation.Id, out var card))
+            if (sessionId == _sessionId && epoch == _imageDimensionsEpoch && _cards.TryGetValue(generation.Id, out var card))
             {
                 card.Update(generation);
+                StartImageDimensionsRead(generation, card, sessionId, epoch);
                 CardUpdated?.Invoke(this, EventArgs.Empty);
             }
         });
@@ -566,10 +590,86 @@ public sealed partial class ChatPageModel(
 
     private void Unsubscribe()
     {
+        CancelImageDimensionsReads();
         if (_subscribed)
         {
             generations.GenerationUpdated -= OnGenerationUpdated;
             _subscribed = false;
         }
+    }
+
+    private int BeginImageDimensionsEpoch()
+    {
+        CancelImageDimensionsReads();
+        _imageDimensionsCancellation.Dispose();
+        _imageDimensionsCancellation = new CancellationTokenSource();
+        _imageDimensionsReads.Clear();
+        return ++_imageDimensionsEpoch;
+    }
+
+    private void CancelImageDimensionsReads()
+    {
+        _imageDimensionsEpoch++;
+        _imageDimensionsCancellation.Cancel();
+    }
+
+    private void StartImageDimensionsRead(Generation generation, GenerationItemViewModel card, Guid sessionId, int epoch)
+    {
+        if (generation.Status != GenerationStatus.Succeeded
+            || string.IsNullOrWhiteSpace(generation.ImagePath)
+            || !card.HasImage)
+        {
+            return;
+        }
+
+        var relativePath = generation.ImagePath;
+        var key = (generation.Id, relativePath);
+        if (!_imageDimensionsReads.TryGetValue(key, out var read))
+        {
+            var cancellationToken = _imageDimensionsCancellation.Token;
+            read = Task.Run(async () => await files.TryReadDimensionsAsync(relativePath, cancellationToken), cancellationToken);
+            _imageDimensionsReads[key] = read;
+        }
+
+        AppTaskExtensions.FireAndForgetSafeAsync(
+            ApplyImageDimensionsWhenReadyAsync(read, generation.Id, relativePath, card, sessionId, epoch, _imageDimensionsCancellation.Token));
+    }
+
+    private async Task ApplyImageDimensionsWhenReadyAsync(
+        Task<ImageDimensions?> read,
+        Guid generationId,
+        string relativePath,
+        GenerationItemViewModel card,
+        Guid sessionId,
+        int epoch,
+        CancellationToken cancellationToken)
+    {
+        ImageDimensions? dimensions;
+        try
+        {
+            dimensions = await read;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        mainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (cancellationToken.IsCancellationRequested
+                || epoch != _imageDimensionsEpoch
+                || sessionId != _sessionId
+                || !_cards.TryGetValue(generationId, out var currentCard)
+                || !ReferenceEquals(currentCard, card)
+                || !card.IsDone
+                || !card.HasImage
+                || !string.Equals(files.GetFullPath(relativePath), card.ImageFilePath, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            card.ApplyImageDimensions(dimensions);
+            CardUpdated?.Invoke(this, EventArgs.Empty);
+        });
     }
 }

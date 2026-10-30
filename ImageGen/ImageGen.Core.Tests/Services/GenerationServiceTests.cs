@@ -2,8 +2,10 @@ using System.Collections.Concurrent;
 using ImageGen.Core.Diagnostics;
 using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
+using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
@@ -389,6 +391,38 @@ public class GenerationServiceTests
             Assert.Equal(Now, g.CompletedAt);
         });
         await _files.Received(4).SaveAsync(_session.Id, Arg.Any<Guid>(), Image, "image/png", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StartRunAsync_RealOpenRouterWrapper_UsesGeneratePathWithoutQueuedJobJson()
+    {
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        var handler = StubHttpMessageHandler.Json(
+            System.Net.HttpStatusCode.OK,
+            "{\"data\":[{\"b64_json\":\"AQID\",\"media_type\":\"image/png\"}]}");
+        using var httpClient = new HttpClient(handler);
+        var httpClientFactory = Substitute.For<IHttpClientFactory>();
+        httpClientFactory.CreateClient(ProviderIds.OpenRouter).Returns(httpClient);
+        var secrets = Substitute.For<ISecretStore>();
+        secrets.GetAsync(SecretNames.ForProvider(ProviderIds.OpenRouter), Arg.Any<CancellationToken>()).Returns("test-key");
+        var registry = ProviderConfigLoader.Build(
+            """{"providers":[{"id":"openrouter","kind":"openRouter","displayName":"OpenRouter","baseAddress":"https://openrouter.ai/api/v1/","timeoutSeconds":60}]}""",
+            null);
+        var router = new ProviderRouter(registry, httpClientFactory, secrets, TimeProvider.System);
+        var connection = router.GetConnection(ProviderIds.OpenRouter);
+        Assert.IsType<InMemoryQueuedImageConnection>(connection);
+        Assert.False(connection is IQueuedImageProvider);
+        var catalog = new ModelCatalogService(router, _modelRepository, NullLogger<ModelCatalogService>.Instance);
+        var service = new GenerationService(
+            _sessions, _runs, router, _files, catalog, _seeds, _attachments, TimeProvider.System, _logger, _changes);
+
+        await service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await service.WhenIdleAsync();
+
+        Assert.Null(Assert.Single(_added).JobJson);
+        Assert.Single(handler.Requests);
+        Assert.Equal("https://openrouter.ai/api/v1/images", handler.Requests.Single().RequestUri!.AbsoluteUri);
     }
 
     [Fact]

@@ -22,4 +22,7 @@ public sealed class ImageModel
     /// an empty list means the provider declared none.
     /// </summary>
     public IReadOnlyList<ModelParameter>? Parameters { get; set; }
+
+    /// <summary>Prices from the provider's catalog; empty when the provider gives none.</summary>
+    public IReadOnlyList<ImageModelPrice> Prices { get; set; } = [];
 }

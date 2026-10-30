@@ -1,6 +1,7 @@
 using ImageGen.Core;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
+using ImageGen.Core.Http;
 using ImageGen.Core.OpenRouter;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
@@ -21,8 +22,9 @@ public class CompositionTests
         using var provider = BuildProvider(NewDirectory());
         var router = provider.GetRequiredService<IProviderRouter>();
 
-        Assert.IsType<OpenRouterClient>(router.GetImageProvider(ProviderIds.OpenRouter));
-        Assert.IsType<OpenRouterClient>(router.GetChatClient(ProviderIds.OpenRouter));
+        var openRouter = Assert.IsType<InMemoryQueuedImageConnection>(router.GetConnection(ProviderIds.OpenRouter));
+        Assert.Same(openRouter, router.GetImageProvider(ProviderIds.OpenRouter));
+        Assert.Same(openRouter, router.GetChatClient(ProviderIds.OpenRouter));
         Assert.NotNull(provider.GetRequiredService<ISeedSource>());
         Assert.NotNull(provider.GetRequiredService<ApiKeyService>());
         Assert.NotNull(provider.GetRequiredService<ModelCatalogService>());
@@ -40,6 +42,26 @@ public class CompositionTests
         Assert.Same(provider.GetRequiredService<GenerationService>(), provider.GetRequiredService<ISessionGenerationCoordinator>());
         Assert.Same(provider.GetRequiredService<AssistantService>(), provider.GetRequiredService<AssistantService>());
         Assert.Same(provider.GetRequiredService<SessionService>(), provider.GetRequiredService<SessionService>());
+    }
+
+    [Fact]
+    public void FalTransport_DisablesAutomaticRedirectsAndHasOneLoggingHandler()
+    {
+        using var provider = BuildProvider(NewDirectory());
+        using var handler = provider.GetRequiredService<IHttpMessageHandlerFactory>()
+            .CreateHandler("ImageGen.Internal.FalTransport");
+        var current = handler;
+        var delegatingHandlers = new List<DelegatingHandler>();
+        while (current is DelegatingHandler delegating)
+        {
+            delegatingHandlers.Add(delegating);
+            current = delegating.InnerHandler!;
+        }
+
+        var primary = Assert.IsType<HttpClientHandler>(current);
+
+        Assert.False(primary.AllowAutoRedirect);
+        Assert.Single(delegatingHandlers.OfType<LoggingHttpHandler>());
     }
 
     [Fact]

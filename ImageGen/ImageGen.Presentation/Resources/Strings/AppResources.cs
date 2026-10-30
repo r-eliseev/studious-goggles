@@ -246,6 +246,14 @@ public static class AppResources
 
     public static string AssistantPriceUnknown => Get(nameof(AssistantPriceUnknown));
 
+    public static string ImagePricePerImageFormat => Get(nameof(ImagePricePerImageFormat));
+
+    public static string ImagePricePerMegapixelFormat => Get(nameof(ImagePricePerMegapixelFormat));
+
+    public static string ImagePricePerMillionTokensFormat => Get(nameof(ImagePricePerMillionTokensFormat));
+
+    public static string ImagePricePerRequestFormat => Get(nameof(ImagePricePerRequestFormat));
+
     public static string AssistantFree => Get(nameof(AssistantFree));
 
     public static string AssistantTakesImages => Get(nameof(AssistantTakesImages));
@@ -293,6 +301,8 @@ public static class AppResources
     public static string ImageConsentAccept => Get(nameof(ImageConsentAccept));
 
     public static string ReferenceFormat => Get(nameof(ReferenceFormat));
+
+    public static string ImageDimensionsFormat => Get(nameof(ImageDimensionsFormat));
 
     public static string RemoveAttachment => Get(nameof(RemoveAttachment));
 

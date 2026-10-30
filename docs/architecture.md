@@ -19,7 +19,7 @@ ImageGen/
     Domain/Chat/                   ChatMessage, ChatRole
     Domain/Generations/            Run, RunOrigin, Generation, GenerationStatus, ErrorKind
     Domain/Keys/                   ApiKeyStatus, SecretNames (ключ по провайдеру)
-    Domain/Models/                 ImageModel, ModelRef (ссылка «провайдер:модель»)
+    Domain/Models/                 ImageModel, ImageModelPrice, ImagePriceUnit (цена из каталога), ModelRef (ссылка «провайдер:модель»)
     Domain/Descriptions/           описания картинок (ADR 0013)
     Platform/                      ISecretStore, IAppPaths
     Storage/                       ISessionRepository, IChatMessageRepository, IRunRepository, IConversationSummaryRepository,
@@ -51,7 +51,8 @@ ImageGen/
                                    TokenCorrection (поправка по usage), SummaryPlanner и SummaryPlan (когда и что сводить, C3)
     Serialization/                 CoreJsonContext
     CoreServiceCollectionExtensions.cs   AddImageGenCore()
-  ImageGen.Data/                   net10.0, Microsoft.Data.Sqlite: SqliteDatabase, Migrations, репозитории, FileImageStore,
+  ImageGen.Data/                   net10.0, Microsoft.Data.Sqlite, MetadataExtractor (ADR 0021): SqliteDatabase, Migrations,
+                                   репозитории, FileImageStore (чтение размеров из заголовков файла в ограниченном фоне),
                                    DataServiceCollectionExtensions (AddImageGenData())
   ImageGen.Core.Tests/             xUnit v3 + NSubstitute
   ImageGen.Data.Tests/             xUnit v3, временная БД в файле

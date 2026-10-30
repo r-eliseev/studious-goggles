@@ -34,10 +34,13 @@ public sealed class ProviderRouter(
 
     private IProviderConnection Create(ProviderConfig config) => config.Kind switch
     {
-        ProviderKind.OpenRouter => new OpenRouterClient(config, httpClientFactory, secretStore, timeProvider),
-        ProviderKind.OpenAiCompatible => new OpenAiCompatibleClient(config, httpClientFactory, secretStore, timeProvider),
+        ProviderKind.OpenRouter => Wrap(new OpenRouterClient(config, httpClientFactory, secretStore, timeProvider), config.Id),
+        ProviderKind.OpenAiCompatible => Wrap(new OpenAiCompatibleClient(config, httpClientFactory, secretStore, timeProvider), config.Id),
         ProviderKind.AnthropicCompatible => new AnthropicCompatibleClient(config, httpClientFactory, secretStore, timeProvider),
         ProviderKind.Fal => new ImageGen.Core.Fal.FalImageProvider(config, httpClientFactory, secretStore, timeProvider),
         _ => throw new InvalidOperationException($"Unknown provider kind {config.Kind}."),
     };
+
+    private InMemoryQueuedImageConnection Wrap(IModelProvider provider, string providerId) =>
+        new(provider, (IAssistantChatClient)provider, providerId, timeProvider);
 }

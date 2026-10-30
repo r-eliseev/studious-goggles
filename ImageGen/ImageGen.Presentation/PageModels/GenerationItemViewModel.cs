@@ -26,6 +26,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     private readonly Func<GenerationItemViewModel, DescriptionMode, Task> _describe;
     private readonly Func<GenerationItemViewModel, Task> _otherModel;
     private string _mediaType = "image/png";
+    private string _generationImagePath = "";
 
     public GenerationItemViewModel(
         Generation generation,
@@ -134,6 +135,12 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     /// <summary>Status, details and error in one line for screen readers.</summary>
     [ObservableProperty]
     public partial string SummaryText { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string ImageDimensionsText { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool HasImageDimensions { get; set; }
 
     /// <summary>Absolute path of the saved image, or empty when there is no image.</summary>
     [ObservableProperty]
@@ -283,6 +290,14 @@ public sealed partial class GenerationItemViewModel : ObservableObject
             throw new ArgumentException("The generation does not belong to this card.", nameof(generation));
         }
 
+        var imagePath = generation.Status == GenerationStatus.Succeeded ? generation.ImagePath ?? "" : "";
+        if (!string.Equals(imagePath, _generationImagePath, StringComparison.Ordinal))
+        {
+            ImageDimensionsText = "";
+            HasImageDimensions = false;
+        }
+        _generationImagePath = imagePath;
+
         StatusText = StatusTextOf(generation.Status);
         StatusKind = StatusKindOf(generation.Status);
         DetailsText = DetailsOf(generation);
@@ -310,7 +325,44 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         _mediaType = generation.MediaType ?? "image/png";
         IsRunning = generation.Status is GenerationStatus.Queued or GenerationStatus.Running;
         IsFinished = generation.IsFinished;
-        SummaryText = string.Join(". ", new[] { StatusText, DetailsText, ErrorText }.Where(text => text.Length > 0));
+        UpdateSummaryText();
+    }
+
+    public void ApplyImageDimensions(ImageDimensions? dimensions)
+    {
+        if (dimensions is { } value)
+        {
+            var divisor = GreatestCommonDivisor(value.Width, value.Height);
+            ImageDimensionsText = string.Format(
+                CultureInfo.InvariantCulture,
+                AppResources.ImageDimensionsFormat,
+                value.Width,
+                value.Height,
+                value.Width / divisor,
+                value.Height / divisor);
+            HasImageDimensions = true;
+        }
+        else
+        {
+            ImageDimensionsText = "";
+            HasImageDimensions = false;
+        }
+
+        UpdateSummaryText();
+    }
+
+    private void UpdateSummaryText() => SummaryText = string.Join(
+        ". ",
+        new[] { StatusText, DetailsText, ImageDimensionsText, ErrorText }.Where(text => text.Length > 0));
+
+    private static int GreatestCommonDivisor(int left, int right)
+    {
+        while (right != 0)
+        {
+            (left, right) = (right, left % right);
+        }
+
+        return left;
     }
 
     private static GenerationStatusKind StatusKindOf(GenerationStatus status) => status switch

@@ -16,6 +16,12 @@ internal static class ParameterJson
     public static IReadOnlyList<ModelParameter>? ReadCatalog(string? json) =>
         json is null ? null : JsonSerializer.Deserialize(json, CoreJsonContext.Default.ListModelParameter);
 
+    public static string Prices(IReadOnlyList<ImageModelPrice> prices) =>
+        JsonSerializer.Serialize(prices.ToList(), CoreJsonContext.Default.ListImageModelPrice);
+
+    public static IReadOnlyList<ImageModelPrice> ReadPrices(string? json) =>
+        json is null ? [] : JsonSerializer.Deserialize(json, CoreJsonContext.Default.ListImageModelPrice) ?? [];
+
     public static string Run(GenerationParameters parameters) =>
         JsonSerializer.Serialize(parameters, CoreJsonContext.Default.GenerationParameters);
 

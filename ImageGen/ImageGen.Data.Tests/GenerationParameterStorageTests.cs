@@ -42,7 +42,7 @@ public class GenerationParameterStorageTests
                 await version.ExecuteNonQueryAsync(ct);
             }
 
-            await new SqliteDatabase(path).InitializeAsync(ct);
+            await InitializeThroughVersionAsync(path, 3, ct);
 
             await using var check = new SqliteConnection($"Data Source={path}");
             await check.OpenAsync(ct);
@@ -50,13 +50,29 @@ public class GenerationParameterStorageTests
             command.CommandText = "SELECT supported_parameters_json FROM image_models WHERE id = 'vendor/old';";
             Assert.Equal(DBNull.Value, await command.ExecuteScalarAsync(ct));
             command.CommandText = "PRAGMA user_version;";
-            Assert.Equal((long)Migrations.All.Count, await command.ExecuteScalarAsync(ct));
+            Assert.Equal(3L, await command.ExecuteScalarAsync(ct));
         }
         finally
         {
             SqliteConnection.ClearAllPools();
             Directory.Delete(directory, recursive: true);
         }
+    }
+
+    private static async Task InitializeThroughVersionAsync(string path, int version, CancellationToken cancellationToken)
+    {
+        await using var connection = new SqliteConnection($"Data Source={path}");
+        await connection.OpenAsync(cancellationToken);
+        foreach (var migration in Migrations.All.Where(migration => migration.Number > 2 && migration.Number <= version))
+        {
+            await using var apply = connection.CreateCommand();
+            apply.CommandText = migration.Script;
+            await apply.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await using var updateVersion = connection.CreateCommand();
+        updateVersion.CommandText = $"PRAGMA user_version = {version};";
+        await updateVersion.ExecuteNonQueryAsync(cancellationToken);
     }
 
     [Fact]

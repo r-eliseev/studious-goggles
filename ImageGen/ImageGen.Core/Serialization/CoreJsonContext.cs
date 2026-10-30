@@ -10,6 +10,7 @@ namespace ImageGen.Core.Serialization;
 [JsonSerializable(typeof(GenerationParameters))]
 [JsonSerializable(typeof(List<Guid>))]
 [JsonSerializable(typeof(List<ModelParameter>))]
+[JsonSerializable(typeof(List<ImageModelPrice>))]
 [JsonSerializable(typeof(IReadOnlyList<ModelParameter>))]
 [JsonSerializable(typeof(List<ParameterOutcome>))]
 [JsonSerializable(typeof(IReadOnlyList<ParameterOutcome>))]

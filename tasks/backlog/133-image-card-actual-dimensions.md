@@ -1,6 +1,6 @@
 ---
 id: 133
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -64,6 +64,13 @@ bash scripts/check.sh
 Файлы: `docs/decisions/NNNN-image-metadata-reader.md` (новый), `ImageGen/Directory.Packages.props`, `ImageGen/ImageGen.Data/ImageGen.Data.csproj`, `ImageGen/ImageGen.Maui/ImageGen.Maui.csproj`, `ImageGen/ImageGen.Core/Storage/ImageDimensions.cs` (новый), `ImageGen/ImageGen.Core/Storage/IImageFileStore.cs`, `ImageGen/ImageGen.Data/FileImageStore.cs`, `ImageGen/ImageGen.Data.Tests/FileImageStoreTests.cs`, `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/GenerationItemViewModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ChatPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/GenerationItemViewModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/Design/MauiGenerationCardMarkupTests.cs` (новый), `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`, `ImageGen/ImageGen.Avalonia.Tests/Views/GenerationCardMetadataTests.cs` (новый), `ImageGen/ImageGen.Avalonia/Assets/Licenses/MetadataExtractor-LICENSE.txt` (новый), `ImageGen/ImageGen.Avalonia/Assets/Licenses/XmpCore-LICENSE.txt` (новый), `ImageGen/ImageGen.Maui/Resources/Licenses/MetadataExtractor-LICENSE.txt` (новый), `ImageGen/ImageGen.Maui/Resources/Licenses/XmpCore-LICENSE.txt` (новый), `docs/architecture.md`, `docs/specs/chat-sessions.md`
 
 ## Отчёт
+
+- Добавлены `ImageDimensions` и `IImageFileStore.TryReadDimensionsAsync`; `FileImageStore` читает размеры JPEG/PNG/WebP/GIF через MetadataExtractor вне UI-потока, с лимитом двух одновременных разборов и `null` для недоступного/нечитаемого файла. БД не менялась.
+- В `GenerationItemViewModel` добавлены invariant dimensions/aspect-ratio text и строка `SummaryText`; метаданные очищаются при смене статуса/пути. `ChatPageModel` загружает их фоном, кеширует задачу чтения на `(generation id, path)`, отменяет старую эпоху при reload/session/disappear и игнорирует результат для изменившейся/заменённой карточки.
+- Добавлены строки карточек и accessibility в MAUI/Avalonia, лицензии MetadataExtractor и XmpCore в обе оболочки, ADR 0021 и описание контракта/поведения в architecture и chat-sessions. Четыре fixture-файла и provenance записаны в `ImageGen.Data.Tests/TestData/README.md`.
+- Проверки: Core 512/512; Data 86/86; Presentation 353/353; Avalonia 136 passed, 2 platform skips; MAUI Android build без предупреждений/ошибок; `dotnet list ... --vulnerable --include-transitive` — уязвимых пакетов нет; формат всех изменённых .NET-проектов; `scripts/check.sh`.
+- Ручной показ в оболочках/скринридере передан задачам 016 (MAUI Windows), 046 (Avalonia desktop) и 140 (Android).
+- Отклонений от плана нет.
 
 ## Комментарии
 
