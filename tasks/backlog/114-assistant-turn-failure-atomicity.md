@@ -1,8 +1,8 @@
 ---
 id: 114
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: codex-luna
+claimed: 2026-10-30T09:38:02Z
 created: 2026-10-29
 ---
 
