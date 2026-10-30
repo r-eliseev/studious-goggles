@@ -29,6 +29,7 @@ public partial class ChatView : UserControl, IAppearing, IDisappearing
         AvaloniaXamlLoader.Load(this);
         // Tunnel phase: Enter is taken before the TextBox turns it into a new line.
         this.FindControl<TextBox>("Input")?.AddHandler(KeyDownEvent, OnInputKeyDown, RoutingStrategies.Tunnel);
+        this.FindControl<WrapPanel>("ChatHeader")!.SizeChanged += OnHeaderSizeChanged;
         SizeChanged += (_, e) => ApplyWidth(e.NewSize.Width);
     }
 
@@ -227,5 +228,18 @@ public partial class ChatView : UserControl, IAppearing, IDisappearing
                 model.ClosePaneCommand.Execute(null);
             }
         }
+    }
+
+    private void OnHeaderSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        var header = (WrapPanel)sender!;
+        var title = this.FindControl<TextBlock>("ChatTitle")!;
+        var assistant = this.FindControl<TextBlock>("AssistantChipText")!;
+        var buttons = header.Children.OfType<Button>().ToArray();
+        title.MaxWidth = Math.Max(0, e.NewSize.Width - 8);
+
+        // Keep short titles and all chips on one row when possible; allocate the remaining width to the assistant label.
+        var fixedWidth = title.DesiredSize.Width + buttons.Sum(button => button.DesiredSize.Width) + 40;
+        assistant.MaxWidth = Math.Max(0, e.NewSize.Width - fixedWidth);
     }
 }
