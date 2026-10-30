@@ -145,9 +145,9 @@ public class AssistantServiceTests
         }));
     }
 
-    private void AssistantAcceptsImages() =>
+    private void AssistantAcceptsImages(int contextLength = 32_000) =>
         _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ChatModel>>(
-            [new ChatModel(AssistantModel, "Assistant", SupportsImageInput: true, ContextLength: 1000)]));
+            [new ChatModel(AssistantModel, "Assistant", SupportsImageInput: true, ContextLength: contextLength)]));
 
     private ChatAttachment UserAttachment()
     {
@@ -163,6 +163,15 @@ public class AssistantServiceTests
         _files.ReadAsync(attachment.RelativePath, Arg.Any<CancellationToken>()).Returns([7, 7]);
         return attachment;
     }
+
+    /// <summary>Gives the picture its own content, so that the pictures kept in a request can be told apart.</summary>
+    private static byte[] Picture(byte marker) => [marker, 2, 3];
+
+    /// <summary>The data URL of a picture with the given content.</summary>
+    private static string DataUrl(byte marker) => "data:image/png;base64," + Convert.ToBase64String(Picture(marker));
+
+    /// <summary>The warnings the service has written so far.</summary>
+    private List<LogEntry> Warnings => _logger.Entries.Where(entry => entry.Level == LogLevel.Warning).ToList();
 
     [Fact]
     public async Task SendUserMessageAsync_WithAttachment_LinksItAndSendsItToAssistantThatTakesImages()
@@ -237,6 +246,148 @@ public class AssistantServiceTests
         Assert.All(user.ImageDataUrls, url => Assert.StartsWith("data:image/png;base64,", url, StringComparison.Ordinal));
         await _files.Received(1).ReadAsync("images/a.png", Arg.Any<CancellationToken>());
         await _files.Received(1).ReadAsync("images/b.png", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ImageBudget_AllFit_KeepsFour()
+    {
+        AssistantAcceptsImages();
+        var attachment = UserAttachment();
+        _files.ReadAsync(attachment.RelativePath, Arg.Any<CancellationToken>()).Returns(Picture(1));
+        _files.ReadAsync("images/a.png", Arg.Any<CancellationToken>()).Returns(Picture(2));
+        _files.ReadAsync("images/b.png", Arg.Any<CancellationToken>()).Returns(Picture(3));
+        _files.ReadAsync("images/c.png", Arg.Any<CancellationToken>()).Returns(Picture(4));
+        AddRunWithGenerations(
+            (0, GenerationStatus.Succeeded, "images/a.png"),
+            (1, GenerationStatus.Succeeded, "images/b.png"),
+            (2, GenerationStatus.Succeeded, "images/c.png"));
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "make it red", [attachment.Id], TestContext.Current.CancellationToken);
+
+        var user = LastRequest.Messages.Last(m => m.Role == AssistantChatMessage.UserRole);
+        Assert.Equal(
+            [DataUrl(1), DataUrl(2), DataUrl(3), DataUrl(4)],
+            user.ImageDataUrls);
+        Assert.Empty(Warnings);
+    }
+
+    [Fact]
+    public async Task ImageBudget_RemovesLastRunFromEnd()
+    {
+        // Three pictures need 9229 tokens, two fit into 8000: the last picture of the run goes.
+        AssistantAcceptsImages(8_000);
+        var attachment = UserAttachment();
+        _files.ReadAsync(attachment.RelativePath, Arg.Any<CancellationToken>()).Returns(Picture(1));
+        _files.ReadAsync("images/a.png", Arg.Any<CancellationToken>()).Returns(Picture(2));
+        _files.ReadAsync("images/b.png", Arg.Any<CancellationToken>()).Returns(Picture(3));
+        AddRunWithGenerations(
+            (0, GenerationStatus.Succeeded, "images/a.png"),
+            (1, GenerationStatus.Succeeded, "images/b.png"));
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "make it red", [attachment.Id], TestContext.Current.CancellationToken);
+
+        var user = LastRequest.Messages.Last(m => m.Role == AssistantChatMessage.UserRole);
+        Assert.Equal([DataUrl(1), DataUrl(2)], user.ImageDataUrls);
+        var warning = Assert.Single(Warnings);
+        Assert.Equal(1, warning.State["ImagesRemoved"]);
+        Assert.Equal(2, warning.State["ImagesKept"]);
+    }
+
+    [Fact]
+    public async Task ImageBudget_ThenRemovesUserFromEnd()
+    {
+        // Two pictures need 7629 tokens, one fits into 7000: the run's picture goes first, then the user's.
+        AssistantAcceptsImages(7_000);
+        var first = UserAttachment();
+        var second = UserAttachment();
+        _files.ReadAsync(first.RelativePath, Arg.Any<CancellationToken>()).Returns(Picture(1));
+        _files.ReadAsync(second.RelativePath, Arg.Any<CancellationToken>()).Returns(Picture(2));
+        _files.ReadAsync("images/a.png", Arg.Any<CancellationToken>()).Returns(Picture(3));
+        AddRunWithGenerations((0, GenerationStatus.Succeeded, "images/a.png"));
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "make it red", [first.Id, second.Id], TestContext.Current.CancellationToken);
+
+        var user = LastRequest.Messages.Last(m => m.Role == AssistantChatMessage.UserRole);
+        Assert.Equal([DataUrl(1)], user.ImageDataUrls);
+        var warning = Assert.Single(Warnings);
+        Assert.Equal(2, warning.State["ImagesRemoved"]);
+        Assert.Equal(1, warning.State["ImagesKept"]);
+    }
+
+    [Fact]
+    public async Task ImageBudget_FourUserImages_DoesNotWarnForCap()
+    {
+        // The cap of four is not a loss: the run's pictures have no room, but nothing was dropped beyond the cap.
+        AssistantAcceptsImages();
+        var attachments = Enumerable.Range(0, 4).Select(_ => UserAttachment()).ToList();
+        for (var i = 0; i < attachments.Count; i++)
+        {
+            _files.ReadAsync(attachments[i].RelativePath, Arg.Any<CancellationToken>()).Returns(Picture((byte)(i + 1)));
+        }
+
+        _files.ReadAsync("images/a.png", Arg.Any<CancellationToken>()).Returns(Picture(5));
+        _files.ReadAsync("images/b.png", Arg.Any<CancellationToken>()).Returns(Picture(6));
+        AddRunWithGenerations(
+            (0, GenerationStatus.Succeeded, "images/a.png"),
+            (1, GenerationStatus.Succeeded, "images/b.png"));
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(
+            _session.Id,
+            "make it red",
+            attachments.Select(attachment => attachment.Id).ToList(),
+            TestContext.Current.CancellationToken);
+
+        var user = LastRequest.Messages.Last(m => m.Role == AssistantChatMessage.UserRole);
+        Assert.Equal(4, user.ImageDataUrls.Count);
+        Assert.Empty(Warnings);
+    }
+
+    [Fact]
+    public async Task ImageBudget_CorrectionDropsOldHistoryBeforeImages()
+    {
+        // The model's estimate was twice too small, so the factor is 2: the old history goes, the pictures stay.
+        AssistantAcceptsImages(12_000);
+        var old = string.Concat(Enumerable.Repeat("OLDHISTORY ", 150));
+        ReplyWith(new AssistantChatResult("Hi", [], null, PromptTokens: 1602));
+        await _service.SendUserMessageAsync(_session.Id, old, TestContext.Current.CancellationToken);
+
+        var attachment = UserAttachment();
+        _files.ReadAsync(attachment.RelativePath, Arg.Any<CancellationToken>()).Returns(Picture(1));
+        _files.ReadAsync("images/a.png", Arg.Any<CancellationToken>()).Returns(Picture(2));
+        AddRunWithGenerations((0, GenerationStatus.Succeeded, "images/a.png"));
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "make it red", [attachment.Id], TestContext.Current.CancellationToken);
+
+        var user = LastRequest.Messages.Last(m => m.Role == AssistantChatMessage.UserRole);
+        Assert.Equal([DataUrl(1), DataUrl(2)], user.ImageDataUrls);
+        Assert.DoesNotContain(LastRequest.Messages, message => message.Text.Contains("OLDHISTORY", StringComparison.Ordinal));
+        Assert.Empty(Warnings);
+    }
+
+    [Fact]
+    public async Task ImageBudget_MandatoryRequestTooLarge_KeepsCurrentAndWarnsOnce()
+    {
+        // Even without pictures the mandatory part does not fit: the current message stays, the pictures go, one warning.
+        AssistantAcceptsImages(4_300);
+        var attachment = UserAttachment();
+        _files.ReadAsync(attachment.RelativePath, Arg.Any<CancellationToken>()).Returns(Picture(1));
+        _files.ReadAsync("images/a.png", Arg.Any<CancellationToken>()).Returns(Picture(2));
+        AddRunWithGenerations((0, GenerationStatus.Succeeded, "images/a.png"));
+        ReplyWith(new AssistantChatResult("Hi", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "make it red", [attachment.Id], TestContext.Current.CancellationToken);
+
+        var user = LastRequest.Messages.Last(m => m.Role == AssistantChatMessage.UserRole);
+        Assert.Empty(user.ImageDataUrls);
+        Assert.Equal("make it red", user.Text);
+        var warning = Assert.Single(Warnings);
+        Assert.Equal(0, warning.State["ImagesKept"]);
+        Assert.Equal(2, warning.State["ImagesRemoved"]);
     }
 
     [Fact]
@@ -415,6 +566,15 @@ public class AssistantServiceTests
         var request = LastRequest;
         Assert.True(request.Messages.Count < 500);
         Assert.True(request.Messages.Sum(m => TokenEstimator.Estimate(m.Text)) <= 8000 - TokenEstimator.ReserveForOutput);
+
+        // The whole request fits the model's context: the reserve, the fixed part and the history, counted here
+        // independently of the budget the service uses. The system messages are part of the fixed part, so only the
+        // rest of the messages is the history.
+        var fixedTokens = AssistantPrompts.FixedTokens(AssistantPrompts.NoCurrentPrompt);
+        var history = request.Messages
+            .Where(message => message.Role != AssistantChatMessage.SystemRole)
+            .Sum(message => TokenEstimator.Estimate(message.Text));
+        Assert.True(TokenEstimator.ReserveForOutput + fixedTokens + history <= 8000);
     }
 
     [Fact]
