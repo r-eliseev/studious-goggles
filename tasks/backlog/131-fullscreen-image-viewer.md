@@ -1,6 +1,6 @@
 ---
 id: 131
-status: done
+status: blocked
 assignee:
 claimed:
 created: 2026-10-29
@@ -71,3 +71,7 @@ Platform view деревья сделаны программно внутри pa
 
 ### 2026-10-29, codex-review
 Задача нужна отдельно от compare и OS fullscreen. Убрана функционально лишняя 088; уточнены RunItemViewModel, MAUI FromStream, lifetime/cancellation и границы тестов. Не требуется Mac-only реализация для завершения Android/desktop части.
+
+### 2026-10-30, codex-audit — проверка завершённости
+Статус done не подтверждён полностью; задача оставлена вне архива и переведена в blocked до фиксов 146, 148, 149. Не выполнены исходные viewer требования: rollback при failed previous/next использует index-1 вместо последнего показанного; MAUI Windows handler обрабатывает только Escape, Left/Right отсутствуют; MAUI background tap ошибочно использует null GetPosition вместо hit-test. Подробности и тесты в отдельных fix tasks, Windows часть изолирована148.
+Исторический отчёт и прежние комментарии сохранены. Остаток реализовывать только в названных follow-up задачах, не занимать эту задачу параллельно им. Вернуть done после их merge и проверки исходных критериев; отсутствие устройства само по себе причиной reopen не было.
