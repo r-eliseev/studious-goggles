@@ -1,8 +1,8 @@
 ---
 id: 094
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: codex-luna
+claimed: 2026-10-30T08:05:22Z
 created: 2026-10-29
 ---
 
