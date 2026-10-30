@@ -78,3 +78,47 @@
 - 085 | backlog | done | 2026-10-29 | Отладочный трейс: вводы пользователя и запросы к API моделей | `tasks/backlog/085-debug-api-trace.md`
 - 086 | backlog | done | 2026-10-29 | Поддержка видео: исследование | `tasks/backlog/086-video-support-research.md`
 - 087 | backlog | done | 2026-10-29 | Самоулучшение как в Hermes: исследование и перенос идеи | `tasks/backlog/087-hermes-self-improvement.md`
+- 090 | backlog | done | 2026-10-30 | Модели сессии: вкладки «Картинки» и «Ассистент» | `tasks/backlog/090-session-models-tabs.md`
+- 091 | backlog | cancelled | 2026-10-29 | Модели сессии: кнопки «Save» и «Cancel» всегда видны | `tasks/backlog/091-session-models-sticky-actions.md`
+- 092 | backlog | done | 2026-10-30 | Модели сессии: группы по производителю, раскрывающиеся | `tasks/backlog/092-session-models-by-vendor.md`
+- 093 | backlog | done | 2026-10-30 | Цена моделей картинок в списке моделей | `tasks/backlog/093-image-model-price.md`
+- 094 | backlog | done | 2026-10-30 | Avalonia на Android и iOS вместо MAUI: исследование | `tasks/backlog/094-avalonia-mobile-research.md`
+- 095 | backlog | done | 2026-10-30 | MAUI Android: клавиатура закрывает поле ввода чата | `tasks/backlog/095-maui-android-keyboard-inset.md`
+- 096 | backlog | done | 2026-10-30 | Сводка прогона не обновляется по ходу генерации | `tasks/backlog/096-run-header-live-status.md`
+- 097 | backlog | done | 2026-10-30 | MAUI: лента чата не прокручивается к новым сообщениям | `tasks/backlog/097-maui-chat-autoscroll.md`
+- 098 | backlog | done | 2026-10-30 | MAUI: на узком экране заголовок чата скрывает кнопки | `tasks/backlog/098-maui-chat-header-narrow.md`
+- 100 | backlog | done | 2026-10-30 | Релиз: проверить, что MAUI для Windows arm64 собран под arm64 | `tasks/backlog/100-release-maui-windows-arm64.md`
+- 101 | backlog | done | 2026-10-30 | Поиск сессий: опечатка в недописанном слове | `tasks/backlog/101-search-typo-in-prefix.md`
+- 102 | backlog | done | 2026-10-30 | Общий in-memory queued adapter для synchronous image transport | `tasks/backlog/102-openrouter-background-job.md`
+- 103 | backlog | done | 2026-10-30 | MAUI: у кнопки «New session» на пустом экране нет описания для экранного диктора | `tasks/backlog/103-maui-empty-state-button-semantics.md`
+- 104 | backlog | done | 2026-10-30 | Убрать неиспользуемый пакет Avalonia.Fonts.Inter | `tasks/backlog/104-remove-unused-avalonia-inter.md`
+- 106 | backlog | done | 2026-10-30 | Ошибка polling fal всегда завершает генерацию | `tasks/backlog/106-fal-poll-errors-terminal.md`
+- 107 | backlog | done | 2026-10-30 | Применить timeout провайдера ко всем запросам fal | `tasks/backlog/107-fal-request-timeouts.md`
+- 108 | backlog | done | 2026-10-30 | Координировать lifecycle generation jobs по сессии | `tasks/backlog/108-session-delete-active-jobs.md`
+- 109 | backlog | done | 2026-10-30 | Проверять URL и model endpoint, возвращённые fal | `tasks/backlog/109-fal-callback-url-validation.md`
+- 110 | backlog | done | 2026-10-30 | Выполнить C1.6: убирать картинки при нехватке контекста | `tasks/backlog/110-assistant-image-context-budget.md`
+- 111 | backlog | done | 2026-10-30 | Ограничить локально отслеживаемые jobs отдельно для каждого provider | `tasks/backlog/111-generation-provider-concurrency.md`
+- 113 | backlog | done | 2026-10-30 | Наблюдать сбой сохранения состояния generation | `tasks/backlog/113-generation-state-persistence.md`
+- 114 | backlog | done | 2026-10-30 | Атомарно принять user message и его attachments | `tasks/backlog/114-assistant-turn-failure-atomicity.md`
+- 115 | backlog | done | 2026-10-30 | Исключить приватные данные из Android backup и transfer | `tasks/backlog/115-android-backup-policy.md`
+- 116 | backlog | done | 2026-10-30 | Заменить Replicate в нормативной документации продукта | `tasks/backlog/116-sync-provider-documentation.md`
+- 117 | backlog | done | 2026-10-30 | Синхронизировать документацию контекста ассистента | `tasks/backlog/117-sync-runtime-documentation.md`
+- 118 | backlog | done | 2026-10-30 | Добавить корневой README без обещаний roadmap-функций | `tasks/backlog/118-root-readme.md`
+- 119 | backlog | cancelled | 2026-10-29 | Уточнить документацию восстановления generation | `tasks/backlog/119-sync-generation-recovery-docs.md`
+- 120 | backlog | cancelled | 2026-10-29 | Уточнить документацию concurrency generation | `tasks/backlog/120-sync-concurrency-docs.md`
+- 121 | backlog | done | 2026-10-30 | Отменять remote queued job при удалении сессии | `tasks/backlog/121-cancel-remote-job-on-session-delete.md`
+- 122 | backlog | done | 2026-10-30 | Удалять image file, если terminal state не сохранился | `tasks/backlog/122-compensate-generation-file-save.md`
+- 123 | backlog | done | 2026-10-30 | Сохранить terminal assistant error после принятого сообщения | `tasks/backlog/123-assistant-terminal-error-after-accept.md`
+- 124 | backlog | done | 2026-10-30 | Отключить automatic redirects для всех fal transport requests | `tasks/backlog/124-fal-disable-automatic-redirects.md`
+- 125 | backlog | done | 2026-10-30 | Повторять transient сбой сохранения generation state | `tasks/backlog/125-retry-transient-generation-state-save.md`
+- 126 | backlog | done | 2026-10-30 | Подключить generation coordinator к удалению сессии | `tasks/backlog/126-wire-session-deletion-coordinator.md`
+- 128 | backlog | done | 2026-10-30 | Подключить in-memory queued adapter в ProviderRouter | `tasks/backlog/128-integrate-in-memory-provider-router.md`
+- 129 | backlog | done | 2026-10-30 | Перевести GenerationService на единый queued path | `tasks/backlog/129-unify-generation-queued-path.md`
+- 130 | backlog | done | 2026-10-30 | Зафиксировать общий in-memory adapter вместо OpenRouter-specific runner | `tasks/backlog/130-supersede-openrouter-job-adr.md`
+- 132 | backlog | done | 2026-10-30 | Поддержать Together AI contract в OpenAI-compatible client | `tasks/backlog/132-together-ai-provider.md`
+- 133 | backlog | done | 2026-10-30 | Показывать фактические pixel dimensions и aspect ratio в карточке | `tasks/backlog/133-image-card-actual-dimensions.md`
+- 136 | backlog | done | 2026-10-30 | Включить Together AI как встроенный image provider | `tasks/backlog/136-enable-together-built-in.md`
+- 137 | backlog | done | 2026-10-30 | OS fullscreen viewer: Avalonia и MAUI Android | `tasks/backlog/137-image-viewer-os-fullscreen.md`
+- 138 | backlog | done | 2026-10-30 | Карточка MAUI: общие тесты команды и диагностика меню | `tasks/backlog/138-card-actions-command-diagnostics.md`
+- 142 | backlog | done | 2026-10-30 | Зафиксировать UTF-8 локаль в CI | `tasks/backlog/142-ci-locale-for-harness-grep.md`
+- 143 | backlog | done | 2026-10-30 | Заменить устаревший TextBox.Watermark в Avalonia-оболочке | `tasks/backlog/143-avalonia-placeholder-text-warning.md`

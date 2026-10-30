@@ -1,6 +1,6 @@
 ---
 id: 127
-status: done
+status: blocked
 assignee:
 claimed:
 created: 2026-10-29
@@ -60,3 +60,7 @@ bash scripts/check.sh
 - Ограничение: вне области задачи остаётся аудит прежних warning/error в других подсистемах; ADR фиксирует политику для provider HTTP transport.
 
 ## Комментарии
+
+### 2026-10-30, codex-audit — проверка завершённости
+Статус done не подтверждён полностью; задача оставлена вне архива и переведена в blocked до фиксов 152. Production pipeline по коду соответствует, но обязательная test matrix плана шаги1/3/4/6 не завершена: Image/GeneratedImageJson exact/+1, unknown/dishonest length в handler, trace oversize без partial records, cancel body, Information request, valid large generated/request4 attachments. Это verification gap, отдельный новый runtime defect не утверждается.
+Исторический отчёт и прежние комментарии сохранены. Остаток реализовывать только в названных follow-up задачах, не занимать эту задачу параллельно им. Вернуть done после их merge и проверки исходных критериев; отсутствие устройства само по себе причиной reopen не было.
