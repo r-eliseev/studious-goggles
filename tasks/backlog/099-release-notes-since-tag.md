@@ -1,6 +1,6 @@
 ---
 id: 099
-status: blocked
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -100,6 +100,7 @@ C#-код не меняется: `dotnet test` и `dotnet format` не нужн�
 Файлы: `scripts/release-notes.sh`, `scripts/tasks-lib.sh`, `.github/workflows/release.yml`, `docs/knowledge/dev-environment.md`, `docs/harness.md`.
 
 ## Отчёт
+Дополнение по follow-up 147: исправлен случай пустого предыдущего списка done-задач, когда текущие release notes ошибочно оказывались пустыми. Регрессионные сценарии с пустым и непустым предыдущим набором, архивным `tasks/DONE.md` и cancelled подтверждены тестом `bash scripts/tests/release-notes-empty-previous.sh`. Остальные исходные проверки и поведение описаны выше.
 Заметки о релизе перечисляют задачи, завершённые между тегами, независимо от папки задачи; заголовок — версия тега.
 
 Изменения:

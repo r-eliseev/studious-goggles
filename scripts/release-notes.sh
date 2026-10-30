@@ -50,7 +50,7 @@ fi
 if [ -n "$prev_sha" ]; then
   ids=$(mktemp)
   task_done_at "$prev_sha" | cut -f1 | sort -u > "$ids"
-  new=$(awk -F'\t' 'NR==FNR { seen[$1]=1; next } !seen[$1]' "$ids" <(task_done_at "$tag_sha"))
+  new=$(awk -F'\t' 'FILENAME == ARGV[1] { seen[$1]=1; next } !seen[$1]' "$ids" <(task_done_at "$tag_sha"))
   rm -f "$ids"
 else
   new=$(task_done_at "$tag_sha")

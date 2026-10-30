@@ -1,8 +1,8 @@
 ---
 id: 147
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-10-30T16:51:03Z
+status: done
+assignee:
+claimed:
 created: 2026-10-30
 ---
 
@@ -50,6 +50,10 @@ bash scripts/check.sh
 После изменения каждого проекта: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`; после всех изменений — перечисленные тесты и `bash scripts/check.sh`. В отчёте указать команды, результаты, ручные ограничения и отличие от плана. Код писать только после одобрения плана по docs/tasks.md.
 
 ## Отчёт
+
+Исправлена разность наборов: awk теперь отличает первый входной файл по FILENAME, поэтому пустой previous-файл не заставляет считать все current IDs уже виденными. Добавлен локальный regression harness во временном Git-репозитории под `tmp/`: пустой/непустой previous set, новые и отсутствующие новые задачи, первый тег, архивный DONE.md, cancelled, compare URL, версия 0.1.9→0.1.10 и ошибки валидации. Перед исправлением тест падал на отсутствующей задаче 001; после исправления все сценарии проходят. Скрипты/workflows за пределами явно разрешённых файлов не менялись.
+
+`bash scripts/tests/release-notes-empty-previous.sh` и `bash -n scripts/release-notes.sh` прошли. Выполнен `bash scripts/check.sh` после объединения изменений (результат записан в итоговом отчёте PR).
 
 ## Комментарии
 
