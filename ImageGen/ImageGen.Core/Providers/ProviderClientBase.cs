@@ -26,6 +26,17 @@ public abstract class ProviderClientBase(
 
     protected TimeProvider TimeProvider { get; } = timeProvider;
 
+    /// <summary>The named transport client for requests made by this provider.</summary>
+    protected virtual string TransportClientName => Config.Id;
+
+    /// <summary>Gets the configured HTTP client for this provider's transport.</summary>
+    protected HttpClient CreateHttpClient() => httpClientFactory.CreateClient(TransportClientName);
+
+    /// <summary>Provider-specific response policy, run before a response body is read.</summary>
+    protected virtual void ValidateTransportResponse(HttpResponseMessage response)
+    {
+    }
+
     /// <summary>Puts the key into the request (a bearer token or a provider-specific header).</summary>
     protected abstract void Authenticate(HttpRequestMessage request, string apiKey);
 
@@ -69,7 +80,7 @@ public abstract class ProviderClientBase(
         try
         {
             using var timeout = CreateTimeout(cancellationToken);
-            using var response = await httpClientFactory.CreateClient(Config.Id).SendAsync(request, timeout.Token);
+            using var response = await CreateHttpClient().SendAsync(request, timeout.Token);
             return response.StatusCode switch
             {
                 HttpStatusCode.OK => ApiKeyStatus.Valid,
@@ -95,9 +106,10 @@ public abstract class ProviderClientBase(
         string text;
         try
         {
-            response = await httpClientFactory.CreateClient(Config.Id).SendAsync(request, timeout.Token);
+            response = await CreateHttpClient().SendAsync(request, timeout.Token);
             using (response)
             {
+                ValidateTransportResponse(response);
                 text = await response.Content.ReadAsStringAsync(timeout.Token);
                 return ParseResponse(response, text);
             }
