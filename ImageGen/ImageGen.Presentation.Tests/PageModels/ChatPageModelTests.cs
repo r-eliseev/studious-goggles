@@ -831,6 +831,35 @@ public class ChatPageModelTests
     }
 
     [Fact]
+    public async Task GeneratingCard_Done_UpdatesRunHeader()
+    {
+        var allEntered = new TaskCompletionSource();
+        var release = new TaskCompletionSource<ImageGenerationResult>();
+        var entered = 0;
+        _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            if (Interlocked.Increment(ref entered) == 2)
+            {
+                allEntered.TrySetResult();
+            }
+
+            return release.Task;
+        });
+        await _model.OnAppearingAsync();
+        await _generationService.StartRunAsync(_session.Id, "red fox", TestContext.Current.CancellationToken);
+        await allEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _model.ReloadAsync();
+        var item = Assert.IsType<RunItemViewModel>(_model.Items.Last());
+
+        release.SetResult(new ImageGenerationResult(Image, "image/png", 0.014m));
+        await _generationService.WhenIdleAsync();
+
+        Assert.Same(item, _model.Items.Last());
+        Assert.Contains("2 of 2", item.HeaderText);
+        Assert.EndsWith("$0.014", item.HeaderText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task OnDisappearing_StopsUpdatingCards()
     {
         await _model.OnAppearingAsync();

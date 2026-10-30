@@ -1,11 +1,13 @@
+using System.ComponentModel;
 using System.Globalization;
+using CommunityToolkit.Mvvm.ComponentModel;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Presentation.Resources.Strings;
 
 namespace ImageGen.Presentation.PageModels;
 
 /// <summary>One run row: the prompt followed by the cards of its generations.</summary>
-public sealed class RunItemViewModel
+public sealed partial class RunItemViewModel : ObservableObject
 {
     /// <param name="copy">Copies the prompt of the run (without the «Prompt:» label).</param>
     public RunItemViewModel(Run run, IReadOnlyList<GenerationItemViewModel> generations, CopyTextAction copy)
@@ -16,6 +18,10 @@ public sealed class RunItemViewModel
         PromptText = string.Format(CultureInfo.CurrentCulture, AppResources.RunPromptFormat, run.Prompt);
         Generations = generations;
         HeaderText = HeaderOf(generations);
+        foreach (var generation in generations)
+        {
+            generation.PropertyChanged += OnCardPropertyChanged;
+        }
         Copy = copy ?? throw new ArgumentNullException(nameof(copy));
     }
 
@@ -24,7 +30,24 @@ public sealed class RunItemViewModel
     public string PromptText { get; }
 
     /// <summary>Summary line of the run: model count, runs per model, done count and total cost.</summary>
-    public string HeaderText { get; }
+    [ObservableProperty]
+    public partial string HeaderText { get; private set; }
+
+    private void OnCardPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(GenerationItemViewModel.StatusKind))
+        {
+            HeaderText = HeaderOf(Generations);
+            return;
+        }
+
+        if (string.IsNullOrEmpty(e.PropertyName)
+            || e.PropertyName == nameof(GenerationItemViewModel.CostUsd)
+            || e.PropertyName == nameof(GenerationItemViewModel.ModelText))
+        {
+            HeaderText = HeaderOf(Generations);
+        }
+    }
 
     private static string HeaderOf(IReadOnlyList<GenerationItemViewModel> generations)
     {
