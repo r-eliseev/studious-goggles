@@ -11,6 +11,7 @@
              x:Class="ImageGen.Maui.Pages.ChatPage"
              x:Name="Page"
              x:DataType="pm:ChatPageModel"
+             SafeAreaEdges="All"
              Title="{Binding Title}">
     <ContentPage.Resources>
         <ResourceDictionary>

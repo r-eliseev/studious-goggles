@@ -5,6 +5,7 @@
              xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
              x:Class="ImageGen.Maui.Pages.SessionParametersPage"
              x:DataType="pm:SessionParametersPageModel"
+             SafeAreaEdges="All"
              Title="{x:Static strings:AppResources.SessionParametersTitle}">
     <Grid RowDefinitions="Auto,*,Auto" Padding="16" RowSpacing="8">
         <Label StyleClass="muted" Text="{x:Static strings:AppResources.SessionParametersDescription}" />

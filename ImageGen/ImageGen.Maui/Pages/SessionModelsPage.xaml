@@ -4,6 +4,7 @@
              xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
              xmlns:controls="clr-namespace:ImageGen.Maui.Controls"
              x:Class="ImageGen.Maui.Pages.SessionModelsPage"
+             SafeAreaEdges="All"
              Title="{x:Static strings:AppResources.ModelsTitle}">
     <controls:SessionModelsView />
 </ContentPage>

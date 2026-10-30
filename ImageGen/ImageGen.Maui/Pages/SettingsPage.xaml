@@ -5,6 +5,7 @@
              xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
              x:Class="ImageGen.Maui.Pages.SettingsPage"
              x:DataType="pm:SettingsPageModel"
+             SafeAreaEdges="All"
              Title="{x:Static strings:AppResources.SettingsTitle}">
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="20">
