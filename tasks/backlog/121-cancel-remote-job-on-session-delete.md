@@ -1,8 +1,8 @@
 ---
 id: 121
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-10-30T13:18:43Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -53,5 +53,11 @@ bash scripts/check.sh
 После проверок заполнить «Отчёт» (изменения, проверки, непроверенное), выполнить `scripts/release-task.sh 121`, затем `bash scripts/check.sh`; отправить PR по `docs/tasks.md`.
 
 ## Отчёт
+
+- `RunningJob` атомарно публикует queued provider/handle и сигнализирует завершение submit phase на всех путях. Recovery публикует сохранённый handle до запуска watcher.
+- Session stop снимает snapshot активных jobs до cancellation, отменяет локальные tokens, ждёт submit phases, отправляет best-effort `CancelAsync` с независимым token, затем ждёт локальные задачи. Исключения remote cancel не мешают удалению; Warning содержит только ids/outcome, details идут отдельно в Debug.
+- Обновлены контракт coordinator и описание удаления в architecture: локальные writes остановлены до удаления данных, remote cancel имеет best-effort гарантию и не охватывает незарегистрированные jobs.
+- Проверки: Core tests 553/553; `dotnet format` Core и Core.Tests `--verify-no-changes --no-restore`; `bash scripts/check.sh` — все проверки пройдены.
+- Отличие от плана: нет; проверены submit-after-cancellation race, все четыре CancelOutcome и ошибка remote cancel.
 
 ## Комментарии
