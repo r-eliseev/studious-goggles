@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using ImageGen.Core.Diagnostics;
 using ImageGen.Core.Http;
+using ImageGen.Core.Providers;
 using ImageGen.Core.Tests.TestDoubles;
 using Microsoft.Extensions.Logging;
 
@@ -45,6 +46,87 @@ public class LoggingHttpHandlerTests
     }
 
     [Fact]
+    public async Task SendAsync_Information_DoesNotReadResponseBody()
+    {
+        var content = new CountingContent([1, 2, 3]);
+        var logger = new CapturingLogger<LoggingHttpHandler>(LogLevel.Information);
+        using var client = Client(logger, new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = content }));
+        using var request = new HttpRequestMessage(HttpMethod.Get, "https://example.test/api/v1/models");
+
+        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, content.BytesRead);
+        Assert.Contains("3 bytes", logger.AllText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SendAsync_SkipResponseBody_DoesNotReadBodyEvenAtDebug()
+    {
+        var content = new CountingContent([1, 2, 3]);
+        var logger = new CapturingLogger<LoggingHttpHandler>(LogLevel.Debug);
+        using var client = Client(logger, new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = content }));
+        using var request = new HttpRequestMessage(HttpMethod.Get, "https://example.test/api/v1/key");
+        request.Options.Set(ProviderResponseLimits.SkipResponseBody, true);
+
+        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, content.BytesRead);
+    }
+
+    [Fact]
+    public async Task SendAsync_DebugResponse_RemainsReadableByCaller()
+    {
+        const string body = "{\"ok\":true}";
+        var logger = new CapturingLogger<LoggingHttpHandler>(LogLevel.Debug);
+        using var client = Client(logger, StubHttpMessageHandler.Json(HttpStatusCode.OK, body));
+
+        using var response = await client.SendAsync(
+            new HttpRequestMessage(HttpMethod.Get, "https://example.test/api/v1/models"),
+            HttpCompletionOption.ResponseHeadersRead,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(body, await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Contains(body, logger.AllText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SendAsync_DebugOversizedResponse_ThrowsWithoutPartialBodyLog()
+    {
+        var content = new CountingContent([]);
+        content.Headers.ContentLength = ProviderResponseLimits.Json + 1;
+        var logger = new CapturingLogger<LoggingHttpHandler>(LogLevel.Debug);
+        using var client = Client(logger, new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = content }));
+
+        await Assert.ThrowsAsync<ProviderResponseTooLargeException>(() => client.SendAsync(
+            new HttpRequestMessage(HttpMethod.Get, "https://example.test/api/v1/models"),
+            HttpCompletionOption.ResponseHeadersRead,
+            TestContext.Current.CancellationToken));
+
+        Assert.DoesNotContain(logger.Entries, e => e.Level == LogLevel.Debug && e.Message.Contains("Response body", StringComparison.Ordinal));
+        Assert.Equal(0, content.BytesRead);
+    }
+
+    [Fact]
+    public async Task SendAsync_DebugOversizedRequest_StopsBeforeTransportAndDoesNotLogPartialBody()
+    {
+        var content = new CountingContent([]);
+        content.Headers.ContentLength = ProviderResponseLimits.RequestBody + 1;
+        var logger = new CapturingLogger<LoggingHttpHandler>(LogLevel.Debug);
+        var inner = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
+        using var client = Client(logger, inner);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://example.test/api/v1/images") { Content = content };
+
+        await Assert.ThrowsAsync<ProviderResponseTooLargeException>(() => client.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            TestContext.Current.CancellationToken));
+
+        Assert.Empty(inner.Requests);
+        Assert.DoesNotContain(logger.Entries, e => e.Level == LogLevel.Debug && e.Message.Contains("Request body", StringComparison.Ordinal));
+        Assert.Equal(0, content.BytesRead);
+    }
+
+    [Fact]
     public async Task SendAsync_RateLimited_LogsStatusCode429AtInformation()
     {
         var logger = new CapturingLogger<LoggingHttpHandler>();
@@ -65,9 +147,11 @@ public class LoggingHttpHandlerTests
         await Assert.ThrowsAsync<HttpRequestException>(
             () => client.GetAsync("https://example.test/api/v1/key", TestContext.Current.CancellationToken));
 
-        var entry = Assert.Single(logger.Entries);
+        var entry = Assert.Single(logger.Entries, e => e.Level == LogLevel.Warning);
         Assert.Equal(LogLevel.Warning, entry.Level);
         Assert.Contains("/api/v1/key", entry.Message, StringComparison.Ordinal);
+        Assert.Null(entry.Exception);
+        Assert.Contains(logger.Entries, e => e.Level == LogLevel.Debug && e.Exception is HttpRequestException);
     }
 
     [Fact]
@@ -78,7 +162,7 @@ public class LoggingHttpHandlerTests
         var logger = new CapturingLogger<LoggingHttpHandler>();
         using var client = Client(logger, StubHttpMessageHandler.Json(HttpStatusCode.OK, json));
 
-        using var response = await client.GetAsync("https://example.test/api/v1/images", TestContext.Current.CancellationToken);
+        using var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, "https://example.test/api/v1/images"), HttpCompletionOption.ResponseHeadersRead, TestContext.Current.CancellationToken);
 
         Assert.DoesNotContain(base64, logger.AllText, StringComparison.Ordinal);
         Assert.Contains("<base64, 3000 bytes>", logger.AllText, StringComparison.Ordinal);
@@ -139,4 +223,32 @@ public class LoggingHttpHandlerTests
 
     private static HttpClient Client(ILogger<LoggingHttpHandler> logger, HttpMessageHandler inner) =>
         new(new LoggingHttpHandler(logger, NullDebugTrace.Instance) { InnerHandler = inner });
+
+    private sealed class CountingContent(byte[] bytes) : HttpContent
+    {
+        public int BytesRead { get; private set; }
+
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) => throw new NotSupportedException();
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = bytes.Length;
+            return true;
+        }
+
+        protected override Task<Stream> CreateContentReadStreamAsync() => Task.FromResult<Stream>(new CountingStream(bytes, this));
+
+        protected override Task<Stream> CreateContentReadStreamAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<Stream>(new CountingStream(bytes, this));
+
+        private sealed class CountingStream(byte[] bytes, CountingContent owner) : MemoryStream(bytes, writable: false)
+        {
+            public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+            {
+                var read = base.ReadAsync(buffer, cancellationToken);
+                owner.BytesRead += read.Result;
+                return read;
+            }
+        }
+    }
 }

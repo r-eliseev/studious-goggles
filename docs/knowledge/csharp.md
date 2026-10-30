@@ -82,5 +82,5 @@ dotnet user-secrets set <ключ> <значение> секреты для ра
 ## Логирование и имена (проверено 2026-10-28)
 - Serilog (`Serilog.Sinks.File`) в шаблоне `{Message:lj}` берёт значения в JSON-форме: строки и перечисления выходят в кавычках (`is "Succeeded"`). Для читаемой строки использовать `{Message:l}`.
 - `TaskExtensions` в .NET 10 конфликтует с `System.Threading.Tasks.TaskExtensions` при `using ImageGen.Presentation.Utilities;` в тестах. Ссылаться через алиас (`using AppTaskExtensions = ImageGen.Presentation.Utilities.TaskExtensions;`).
-- `HttpContent.TryComputeLength` доступен только внутри сборки. Размер ответа в обработчике: `(await content.ReadAsByteArrayAsync()).Length`, после этого тело остаётся читаемым.
+- В HTTP operational logging на Information не читать body ради размера: использовать `Content-Length` или записывать неизвестный размер. На Debug/trace читать только через bounded reader, выбрасывая превышение до логирования частичного body; см. `ProviderResponseLimits` и ADR 0022. После ограниченного чтения заменить content буфером с сохранёнными заголовками, если потребителю нужно прочитать те же байты. Исключение и текст провайдера не включать в operational Warning/Error: безопасные метаданные писать отдельно от exception details на Debug.
 

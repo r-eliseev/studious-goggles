@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ImageGen.Core.Diagnostics;
+using ImageGen.Core.Providers;
 using Microsoft.Extensions.Logging;
 
 namespace ImageGen.Core.Http;
@@ -20,22 +21,24 @@ public sealed class LoggingHttpHandler(ILogger<LoggingHttpHandler> logger, IDebu
         var started = Stopwatch.GetTimestamp();
         var traceId = Guid.NewGuid().ToString("N")[..8];
 
-        if (request.Content is not null && (trace.IsEnabled || logger.IsEnabled(LogLevel.Debug)))
+        var inspectRequestBody = request.Content is not null && (trace.IsEnabled || logger.IsEnabled(LogLevel.Debug));
+        string? requestBody = null;
+        if (inspectRequestBody)
         {
-            await request.Content.LoadIntoBufferAsync(cancellationToken);
+            var bytes = await BoundedHttpContentReader.ReadBytesAsync(request.Content!, ProviderResponseLimits.RequestBody, cancellationToken);
+            request.Content = ReplaceContent(request.Content!, bytes);
+            requestBody = await request.Content.ReadAsStringAsync(cancellationToken);
         }
 
-        if (logger.IsEnabled(LogLevel.Debug) && request.Content is not null)
+        if (logger.IsEnabled(LogLevel.Debug) && requestBody is not null)
         {
-            var body = await request.Content.ReadAsStringAsync(cancellationToken);
-            logger.LogDebug("Request body {Method} {Path}: {Body}", method, path, BodyRedactor.Redact(body));
+            logger.LogDebug("Request body {Method} {Path}: {Body}", method, path, BodyRedactor.Redact(requestBody));
         }
 
         if (trace.IsEnabled)
         {
             var blobs = new List<TraceBlob>();
-            var body = request.Content is null ? null : TraceRedaction.ExtractImages(
-                await request.Content.ReadAsStringAsync(cancellationToken), $"{traceId}-request", blobs);
+            var body = requestBody is null ? null : TraceRedaction.ExtractImages(requestBody, $"{traceId}-request", blobs);
             var headers = TraceRedaction.Headers(request.Content is null
                 ? request.Headers
                 : request.Headers.Concat(request.Content.Headers));
@@ -59,33 +62,66 @@ public sealed class LoggingHttpHandler(ILogger<LoggingHttpHandler> logger, IDebu
         }
         catch (HttpRequestException ex)
         {
-            logger.LogWarning(ex, "HTTP {Method} {Path} failed after {ElapsedMs} ms: network error.", method, path, ElapsedMs(started));
+            logger.LogWarning("HTTP {Method} {Path} failed after {ElapsedMs} ms: network error.", method, path, ElapsedMs(started));
+            logger.LogDebug(ex, "HTTP request detail {Method} {Path}", method, path);
             throw;
         }
         catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            logger.LogWarning(ex, "HTTP {Method} {Path} timed out after {ElapsedMs} ms.", method, path, ElapsedMs(started));
+            logger.LogWarning("HTTP {Method} {Path} timed out after {ElapsedMs} ms.", method, path, ElapsedMs(started));
+            logger.LogDebug(ex, "HTTP request detail {Method} {Path}", method, path);
             throw;
         }
 
-        // Reading the body here keeps it buffered, so the provider client can still read it afterwards.
-        var size = (await response.Content.ReadAsByteArrayAsync(cancellationToken)).Length;
+        long? size = response.Content.Headers.ContentLength;
+        var skipBody = request.Options.TryGetValue(ProviderResponseLimits.SkipResponseBody, out var skip) && skip;
+        var isCredentialCheck = IsCredentialCheck(path);
+        var inspectResponseBody = !skipBody && !isCredentialCheck && (trace.IsEnabled || logger.IsEnabled(LogLevel.Debug));
+        if (inspectResponseBody)
+        {
+            try
+            {
+                var bytes = await BoundedHttpContentReader.ReadBytesAsync(response.Content, ProviderResponseLimits.GetLimit(request), cancellationToken);
+                size = bytes.LongLength;
+                response.Content = ReplaceContent(response.Content, bytes);
+            }
+            catch (HttpRequestException ex)
+            {
+                response.Dispose();
+                logger.LogWarning("HTTP {Method} {Path} failed after {ElapsedMs} ms: network error.", method, path, ElapsedMs(started));
+                logger.LogDebug(ex, "HTTP response detail {Method} {Path}", method, path);
+                throw;
+            }
+            catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                response.Dispose();
+                logger.LogWarning("HTTP {Method} {Path} timed out after {ElapsedMs} ms.", method, path, ElapsedMs(started));
+                logger.LogDebug(ex, "HTTP response detail {Method} {Path}", method, path);
+                throw;
+            }
+            catch
+            {
+                response.Dispose();
+                throw;
+            }
+        }
+
         logger.LogInformation(
-            "HTTP {Method} {Path} -> {StatusCode} in {ElapsedMs} ms, {Size} bytes",
+            "HTTP {Method} {Path} -> {StatusCode} in {ElapsedMs} ms, {Size}",
             method,
             path,
             (int)response.StatusCode,
             ElapsedMs(started),
-            size);
+            size.HasValue ? $"{size.Value} bytes" : "unknown size");
 
-        if (logger.IsEnabled(LogLevel.Debug) && !IsCredentialCheck(path))
+        if (logger.IsEnabled(LogLevel.Debug) && inspectResponseBody)
         {
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             logger.LogDebug("Response body {Method} {Path}: {Body}", method, path, BodyRedactor.Redact(body));
         }
 
         // The key check is left out of the trace too: its body names the account.
-        if (trace.IsEnabled && !IsCredentialCheck(path))
+        if (trace.IsEnabled && inspectResponseBody)
         {
             var blobs = new List<TraceBlob>();
             var body = TraceRedaction.ExtractImages(
@@ -114,6 +150,18 @@ public sealed class LoggingHttpHandler(ILogger<LoggingHttpHandler> logger, IDebu
     /// Its body is never logged, at any level; only the method, path, status and duration are.
     /// </summary>
     private static bool IsCredentialCheck(string path) => path.EndsWith("/key", StringComparison.Ordinal);
+
+    private static HttpContent ReplaceContent(HttpContent original, byte[] bytes)
+    {
+        var replacement = new ByteArrayContent(bytes);
+        foreach (var header in original.Headers)
+        {
+            replacement.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        }
+
+        original.Dispose();
+        return replacement;
+    }
 
     private static long ElapsedMs(long started) => (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
 }
