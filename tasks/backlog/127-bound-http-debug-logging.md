@@ -1,8 +1,8 @@
 ---
 id: 127
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: codex-gpt6
+claimed: 2026-10-30T13:13:56Z
 created: 2026-10-29
 ---
 
