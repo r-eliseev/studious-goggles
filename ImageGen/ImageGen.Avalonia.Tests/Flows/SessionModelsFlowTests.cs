@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.LogicalTree;
@@ -75,6 +76,49 @@ public class SessionModelsFlowTests
         models.SearchText = "";
         Assert.Equal(2, models.Models.Count);
         Assert.True(models.Models.Single(model => model.Id == SessionSettings.DefaultImageModelId).IsSelected);
+    }
+
+    [AvaloniaFact]
+    public async Task ImageGroups_HeadersShowVendorAndCounts()
+    {
+        using var shell = new ShellHarness(openRouter: OpenRouterFakes.Create());
+        var chat = await shell.OpenNewChatAsync();
+        await chat.OpenModelsCommand.ExecuteAsync(null);
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
+        var view = (SessionModelsView)shell.Window.PageArea.Content!;
+        var models = (SessionModelsPageModel)view.DataContext!;
+        await shell.WaitUntilAsync(() => models.ImageModelGroups.Count == 2, "группы моделей");
+        shell.Window.Show();
+        shell.Window.UpdateLayout();
+
+        var expanders = view.GetVisualDescendants().OfType<Expander>().ToArray();
+
+        Assert.Equal(2, expanders.Length);
+        Assert.Equal("black-forest-labs (1) · 1 selected", expanders[0].Header);
+        Assert.Equal("vendor (1) · 0 selected", expanders[1].Header);
+        Assert.True(expanders[0].IsExpanded);
+        Assert.False(expanders[1].IsExpanded);
+    }
+
+    [AvaloniaFact]
+    public async Task ImageGroups_ExpandShowsCheckBoxes()
+    {
+        using var shell = new ShellHarness(openRouter: OpenRouterFakes.Create());
+        var chat = await shell.OpenNewChatAsync();
+        await chat.OpenModelsCommand.ExecuteAsync(null);
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
+        var view = (SessionModelsView)shell.Window.PageArea.Content!;
+        var models = (SessionModelsPageModel)view.DataContext!;
+        await shell.WaitUntilAsync(() => models.ImageModelGroups.Count == 2, "группы моделей");
+        shell.Window.Show();
+        shell.Window.UpdateLayout();
+        var expander = view.GetVisualDescendants().OfType<Expander>().Single(item => Equals(item.Header, "vendor (1) · 0 selected"));
+
+        expander.IsExpanded = true;
+        shell.Window.UpdateLayout();
+
+        var checkbox = expander.GetVisualDescendants().OfType<CheckBox>().Single();
+        Assert.Equal("Beta Pro", AutomationProperties.GetName(checkbox));
     }
 
     [AvaloniaFact]

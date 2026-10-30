@@ -246,6 +246,21 @@
   <data name="ModelNoSeed" xml:space="preserve">
     <value>no seed</value>
   </data>
+  <data name="ModelGroupOther" xml:space="preserve">
+    <value>Other</value>
+  </data>
+  <data name="ModelGroupImageHeaderFormat" xml:space="preserve">
+    <value>{0} ({1}) · {2} selected</value>
+  </data>
+  <data name="ModelGroupAssistantHeaderFormat" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="ModelGroupExpanded" xml:space="preserve">
+    <value>expanded</value>
+  </data>
+  <data name="ModelGroupCollapsed" xml:space="preserve">
+    <value>collapsed</value>
+  </data>
   <data name="Save" xml:space="preserve">
     <value>Save</value>
   </data>

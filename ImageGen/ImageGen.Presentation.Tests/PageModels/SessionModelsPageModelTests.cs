@@ -180,6 +180,100 @@ public class SessionModelsPageModelTests
     }
 
     [Fact]
+    public async Task OnAppearingAsync_GroupWithSavedModel_IsExpanded()
+    {
+        var model = await OpenAsync();
+
+        Assert.Equal(["other", "vendor"], model.ImageModelGroups.Select(group => group.Name));
+        Assert.False(model.ImageModelGroups[0].IsExpanded);
+        Assert.Empty(model.ImageModelGroups[0].Rows);
+        Assert.True(model.ImageModelGroups[1].IsExpanded);
+        Assert.Equal(["Alpha", "Beta Pro"], model.ImageModelGroups[1].Rows.Select(row => row.Name));
+    }
+
+    [Fact]
+    public async Task ToggleCommand_CollapsedGroup_FillsRows()
+    {
+        var model = await OpenAsync();
+        var group = model.ImageModelGroups.Single(item => item.Name == "other");
+
+        group.ToggleCommand.Execute(null);
+
+        Assert.True(group.IsExpanded);
+        Assert.Equal(["Gamma"], group.Rows.Select(row => row.Name));
+    }
+
+    [Fact]
+    public async Task IsSelected_Changed_UpdatesGroupHeader()
+    {
+        var model = await OpenAsync();
+        var group = model.ImageModelGroups.Single(item => item.Name == "vendor");
+
+        model.Models.Single(row => row.Id == Alpha.Id).IsSelected = true;
+
+        Assert.Equal("vendor (2) · 2 selected", group.HeaderText);
+    }
+
+    [Fact]
+    public async Task SearchText_ShowsOnlyMatchingGroupsExpanded()
+    {
+        var model = await OpenAsync();
+
+        model.SearchText = "gamma";
+
+        var group = Assert.Single(model.ImageModelGroups);
+        Assert.Equal("other", group.Name);
+        Assert.True(group.IsExpanded);
+        Assert.Equal(["Gamma"], group.Rows.Select(row => row.Name));
+    }
+
+    [Fact]
+    public async Task SearchText_Cleared_RestoresRememberedState()
+    {
+        var model = await OpenAsync();
+        model.ImageModelGroups.Single(group => group.Name == "vendor").ToggleCommand.Execute(null);
+
+        model.SearchText = "a";
+        model.SearchText = "";
+
+        Assert.All(model.ImageModelGroups, group => Assert.False(group.IsExpanded));
+    }
+
+    [Fact]
+    public async Task ToggleWhileSearching_DoesNotChangeRememberedState()
+    {
+        var model = await OpenAsync();
+        model.SearchText = "alpha";
+        model.ImageModelGroups.Single().ToggleCommand.Execute(null);
+
+        model.SearchText = "";
+
+        Assert.True(model.ImageModelGroups.Single(group => group.Name == "vendor").IsExpanded);
+    }
+
+    [Fact]
+    public async Task RefreshCommand_KeepsGroupExpandState()
+    {
+        var model = await OpenAsync();
+        model.ImageModelGroups.Single(group => group.Name == "other").ToggleCommand.Execute(null);
+
+        await model.RefreshCommand.ExecuteAsync(null);
+
+        Assert.True(model.ImageModelGroups.Single(group => group.Name == "other").IsExpanded);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_AssistantGroupWithSavedAssistant_IsExpanded()
+    {
+        var model = await OpenAsync();
+
+        var group = Assert.Single(model.AssistantModelGroups);
+        Assert.Equal("vendor", group.Name);
+        Assert.True(group.IsExpanded);
+        Assert.Equal(2, group.Rows.Count);
+    }
+
+    [Fact]
     public async Task Cancel_GoesBackWithoutSaving()
     {
         var model = CreateModel();

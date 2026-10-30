@@ -40,17 +40,27 @@
                     </StackPanel>
                     <TextBlock Grid.Row="1" Classes="section" Text="{Binding SelectedCountText}" VerticalAlignment="Center" />
                     <ScrollViewer Grid.Row="2">
-                        <ItemsControl ItemsSource="{Binding Models}">
+                        <ItemsControl ItemsSource="{Binding ImageModelGroups}">
                             <ItemsControl.DataTemplates>
-                                <DataTemplate DataType="pm:ModelOptionViewModel" x:DataType="pm:ModelOptionViewModel">
-                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                              Margin="0,2"
-                                              AutomationProperties.Name="{Binding Name}">
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Name}" />
-                                            <TextBlock Classes="meta" Text="{Binding DetailsText}" />
-                                        </StackPanel>
-                                    </CheckBox>
+                                <DataTemplate DataType="pm:ImageModelGroupViewModel" x:DataType="pm:ImageModelGroupViewModel">
+                                    <Expander Header="{Binding HeaderText}"
+                                              IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
+                                              AutomationProperties.Name="{Binding AutomationName}">
+                                        <ItemsControl ItemsSource="{Binding Rows}">
+                                            <ItemsControl.DataTemplates>
+                                                <DataTemplate DataType="pm:ModelOptionViewModel" x:DataType="pm:ModelOptionViewModel">
+                                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                              Margin="0,2"
+                                                              AutomationProperties.Name="{Binding Name}">
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Name}" />
+                                                            <TextBlock Classes="meta" Text="{Binding DetailsText}" />
+                                                        </StackPanel>
+                                                    </CheckBox>
+                                                </DataTemplate>
+                                            </ItemsControl.DataTemplates>
+                                        </ItemsControl>
+                                    </Expander>
                                 </DataTemplate>
                             </ItemsControl.DataTemplates>
                         </ItemsControl>
@@ -61,35 +71,45 @@
             <TabItem Header="{markup:Res AssistantModelTitle}"
                      AutomationProperties.Name="{markup:Res AssistantModelTitle}">
                 <ScrollViewer>
-                    <ItemsControl ItemsSource="{Binding AssistantModels}">
+                    <ItemsControl ItemsSource="{Binding AssistantModelGroups}">
                         <ItemsControl.DataTemplates>
-                            <DataTemplate DataType="pm:AssistantModelOptionViewModel" x:DataType="pm:AssistantModelOptionViewModel">
-                                <RadioButton GroupName="assistant"
-                                             IsChecked="{Binding IsSelected}"
-                                             Command="{Binding SelectCommand}"
-                                             Margin="0,2"
-                                             AutomationProperties.Name="{Binding AutomationName}">
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <TextBlock Text="{Binding Name}" />
-                                            <ItemsControl ItemsSource="{Binding Tags}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <StackPanel Orientation="Horizontal" Spacing="6" />
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.DataTemplates>
-                                                    <DataTemplate DataType="sys:String" x:DataType="sys:String">
-                                                        <Border Classes="tag">
-                                                            <TextBlock Classes="meta" Text="{Binding}" />
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.DataTemplates>
-                                            </ItemsControl>
-                                        </StackPanel>
-                                        <TextBlock Classes="meta" Text="{Binding DetailsText}" />
-                                    </StackPanel>
-                                </RadioButton>
+                            <DataTemplate DataType="pm:AssistantModelGroupViewModel" x:DataType="pm:AssistantModelGroupViewModel">
+                                <Expander Header="{Binding HeaderText}"
+                                          IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
+                                          AutomationProperties.Name="{Binding AutomationName}">
+                                    <ItemsControl ItemsSource="{Binding Rows}">
+                                        <ItemsControl.DataTemplates>
+                                            <DataTemplate DataType="pm:AssistantModelOptionViewModel" x:DataType="pm:AssistantModelOptionViewModel">
+                                                <RadioButton GroupName="assistant"
+                                                             IsChecked="{Binding IsSelected}"
+                                                             Command="{Binding SelectCommand}"
+                                                             Margin="0,2"
+                                                             AutomationProperties.Name="{Binding AutomationName}">
+                                                    <StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                                            <TextBlock Text="{Binding Name}" />
+                                                            <ItemsControl ItemsSource="{Binding Tags}">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate>
+                                                                        <StackPanel Orientation="Horizontal" Spacing="6" />
+                                                                    </ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                                <ItemsControl.DataTemplates>
+                                                                    <DataTemplate DataType="sys:String" x:DataType="sys:String">
+                                                                        <Border Classes="tag">
+                                                                            <TextBlock Classes="meta" Text="{Binding}" />
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.DataTemplates>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                        <TextBlock Classes="meta" Text="{Binding DetailsText}" />
+                                                    </StackPanel>
+                                                </RadioButton>
+                            </DataTemplate>
+                                        </ItemsControl.DataTemplates>
+                                    </ItemsControl>
+                                </Expander>
                             </DataTemplate>
                         </ItemsControl.DataTemplates>
                     </ItemsControl>

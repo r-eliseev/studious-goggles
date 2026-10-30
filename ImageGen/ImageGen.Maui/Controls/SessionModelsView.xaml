@@ -56,17 +56,39 @@
                 </HorizontalStackLayout>
                 <Label Grid.Row="1" StyleClass="section" Text="{Binding SelectedCountText}" VerticalOptions="Center" />
                 <ScrollView Grid.Row="2">
-                    <VerticalStackLayout Spacing="4" BindableLayout.ItemsSource="{Binding Models}">
+                    <VerticalStackLayout Spacing="4" BindableLayout.ItemsSource="{Binding ImageModelGroups}">
                         <BindableLayout.ItemTemplate>
-                            <DataTemplate x:DataType="pm:ModelOptionViewModel">
-                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="0,4">
-                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                              SemanticProperties.Description="{Binding Name}" />
-                                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
-                                        <Label Text="{Binding Name}" />
-                                        <Label StyleClass="meta" Text="{Binding DetailsText}" />
+                            <DataTemplate x:DataType="pm:ImageModelGroupViewModel">
+                                <VerticalStackLayout Spacing="2">
+                                    <Button StyleClass="ghost"
+                                            HorizontalOptions="Fill"
+                                            Text="{Binding HeaderText}"
+                                            Command="{Binding ToggleCommand}"
+                                            SemanticProperties.Description="{Binding AutomationName}">
+                                        <Button.ImageSource>
+                                            <FontImageSource FontFamily="LucideIcons"
+                                                             Glyph="{Binding ChevronGlyph}"
+                                                             Color="{DynamicResource IgFgColor}"
+                                                             Size="16" />
+                                        </Button.ImageSource>
+                                    </Button>
+                                    <VerticalStackLayout Spacing="4"
+                                                         IsVisible="{Binding IsExpanded}"
+                                                         BindableLayout.ItemsSource="{Binding Rows}">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate x:DataType="pm:ModelOptionViewModel">
+                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="0,4">
+                                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                              SemanticProperties.Description="{Binding Name}" />
+                                                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                                        <Label Text="{Binding Name}" />
+                                                        <Label StyleClass="meta" Text="{Binding DetailsText}" />
+                                                    </VerticalStackLayout>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
                                     </VerticalStackLayout>
-                                </Grid>
+                                </VerticalStackLayout>
                             </DataTemplate>
                         </BindableLayout.ItemTemplate>
                     </VerticalStackLayout>
@@ -74,24 +96,46 @@
             </Grid>
 
             <ScrollView IsVisible="{Binding IsAssistantTabSelected}">
-                <VerticalStackLayout Spacing="4" RadioButtonGroup.GroupName="sessionAssistant" BindableLayout.ItemsSource="{Binding AssistantModels}">
+                <VerticalStackLayout Spacing="4" RadioButtonGroup.GroupName="sessionAssistant" BindableLayout.ItemsSource="{Binding AssistantModelGroups}">
                     <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="pm:AssistantModelOptionViewModel">
-                            <VerticalStackLayout Spacing="2" Margin="0,4">
-                                <RadioButton Content="{Binding Name}"
-                                             IsChecked="{Binding IsSelected}"
-                                             CheckedChanged="OnAssistantCheckedChanged"
-                                             SemanticProperties.Description="{Binding AutomationName}" />
-                                <HorizontalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Tags}">
+                        <DataTemplate x:DataType="pm:AssistantModelGroupViewModel">
+                            <VerticalStackLayout Spacing="2">
+                                <Button StyleClass="ghost"
+                                        HorizontalOptions="Fill"
+                                        Text="{Binding HeaderText}"
+                                        Command="{Binding ToggleCommand}"
+                                        SemanticProperties.Description="{Binding AutomationName}">
+                                    <Button.ImageSource>
+                                        <FontImageSource FontFamily="LucideIcons"
+                                                         Glyph="{Binding ChevronGlyph}"
+                                                         Color="{DynamicResource IgFgColor}"
+                                                         Size="16" />
+                                    </Button.ImageSource>
+                                </Button>
+                                <VerticalStackLayout Spacing="4"
+                                                     IsVisible="{Binding IsExpanded}"
+                                                     BindableLayout.ItemsSource="{Binding Rows}">
                                     <BindableLayout.ItemTemplate>
-                                        <DataTemplate x:DataType="x:String">
-                                            <Border StyleClass="tag">
-                                                <Label StyleClass="meta" Text="{Binding .}" />
-                                            </Border>
+                                        <DataTemplate x:DataType="pm:AssistantModelOptionViewModel">
+                                            <VerticalStackLayout Spacing="2" Margin="0,4">
+                                                <RadioButton Content="{Binding Name}"
+                                                             IsChecked="{Binding IsSelected}"
+                                                             CheckedChanged="OnAssistantCheckedChanged"
+                                                             SemanticProperties.Description="{Binding AutomationName}" />
+                                                <HorizontalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Tags}">
+                                                    <BindableLayout.ItemTemplate>
+                                                        <DataTemplate x:DataType="x:String">
+                                                            <Border StyleClass="tag">
+                                                                <Label StyleClass="meta" Text="{Binding .}" />
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </BindableLayout.ItemTemplate>
+                                                </HorizontalStackLayout>
+                                                <Label StyleClass="meta" Text="{Binding DetailsText}" />
+                            </VerticalStackLayout>
                                         </DataTemplate>
                                     </BindableLayout.ItemTemplate>
-                                </HorizontalStackLayout>
-                                <Label StyleClass="meta" Text="{Binding DetailsText}" />
+                                </VerticalStackLayout>
                             </VerticalStackLayout>
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
