@@ -128,6 +128,196 @@ public class GenerationServiceTests
     }
 
     [Fact]
+    public async Task StartRunAsync_FourJobsForOneProvider_DoNotBlockAnotherProvider()
+    {
+        var otherSession = new Session
+        {
+            Id = Guid.NewGuid(),
+            Title = "Other",
+            CreatedAt = Now,
+            UpdatedAt = Now,
+            Settings = new SessionSettings
+            {
+                ImageModels = [new ModelRef("fal", "flux")],
+                RunsPerModel = 1,
+                AssistantModel = new ModelRef(ProviderIds.OpenRouter, SessionSettings.DefaultAssistantModelId),
+            },
+        };
+        _sessions.GetAsync(otherSession.Id, Arg.Any<CancellationToken>()).Returns(otherSession);
+        _modelRepository.ListAsync("fal", Arg.Any<CancellationToken>()).Returns([ModelCatalogServiceTests.Model("flux", "Flux", providerId: "fal")]);
+        var providerB = Substitute.For<IModelProvider>();
+        _providers.GetImageProvider("fal").Returns(providerB);
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 4;
+        var providerAEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var providerBEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseA = new TaskCompletionSource<ImageGenerationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseB = new TaskCompletionSource<ImageGenerationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var providerACount = 0;
+        _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+        {
+            if (Interlocked.Increment(ref providerACount) == 4)
+            {
+                providerAEntered.TrySetResult();
+            }
+
+            return await releaseA.Task;
+        });
+        providerB.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+        {
+            providerBEntered.TrySetResult();
+            return await releaseB.Task;
+        });
+
+        await _service.StartRunAsync(_session.Id, "first", TestContext.Current.CancellationToken);
+        await providerAEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _service.StartRunAsync(otherSession.Id, "second", TestContext.Current.CancellationToken);
+        await providerBEntered.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+
+        releaseA.TrySetResult(new ImageGenerationResult(Image, "image/png", null));
+        releaseB.TrySetResult(new ImageGenerationResult(Image, "image/png", null));
+        await _service.WhenIdleAsync();
+    }
+
+    [Fact]
+    public async Task StartRunAsync_QueuedJobs_HoldProviderSlotsUntilTerminal()
+    {
+        _session.Settings.ImageModels = [new ModelRef("fal", "flux")];
+        _session.Settings.RunsPerModel = 5;
+        _modelRepository.ListAsync("fal", Arg.Any<CancellationToken>()).Returns([ModelCatalogServiceTests.Model("flux", "Flux", providerId: "fal")]);
+        var connection = Substitute.For<IProviderConnection, IModelProvider, IQueuedImageProvider>();
+        var queued = (IQueuedImageProvider)connection;
+        _providers.GetImageProvider("fal").Returns((IModelProvider)connection);
+        _providers.GetConnection("fal").Returns(connection);
+        var submitCount = 0;
+        var pollCount = 0;
+        var fourPollsEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var fifthSubmitEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var finishFirst = new TaskCompletionSource<JobUpdate>(TaskCreationOptions.RunContinuationsAsynchronously);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            var index = Interlocked.Increment(ref submitCount);
+            if (index == 5)
+            {
+                fifthSubmitEntered.TrySetResult();
+            }
+
+            return Task.FromResult(new ProviderJobHandle("fal", $"req-{index}", $"https://q/{index}/s", $"https://q/{index}/r", $"https://q/{index}/c"));
+        });
+        queued.PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            var handle = call.Arg<ProviderJobHandle>();
+            if (Interlocked.Increment(ref pollCount) == 4)
+            {
+                fourPollsEntered.TrySetResult();
+            }
+
+            return handle.RequestId == "req-1" ? finishFirst.Task : Task.FromResult(new JobUpdate(JobState.Queued));
+        });
+        queued.CancelAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>()).Returns(CancelOutcome.Cancelled);
+        queued.ClearReceivedCalls();
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await fourPollsEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        Assert.Equal(4, Volatile.Read(ref submitCount));
+        Assert.False(fifthSubmitEntered.Task.IsCompleted);
+
+        finishFirst.TrySetResult(new JobUpdate(JobState.Failed, ErrorKind: ErrorKind.Unknown));
+        await fifthSubmitEntered.Task.WaitAsync(TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
+        await _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+        Assert.Equal(5, Volatile.Read(ref submitCount));
+    }
+
+    [Fact]
+    public async Task StopSessionAsync_QueuedJobWaitingForProviderSlot_DoesNotSubmitOrReleaseUnacquiredSlot()
+    {
+        _session.Settings.ImageModels = [new ModelRef("fal", "flux")];
+        _session.Settings.RunsPerModel = 5;
+        _modelRepository.ListAsync("fal", Arg.Any<CancellationToken>()).Returns([ModelCatalogServiceTests.Model("flux", "Flux", providerId: "fal")]);
+        var connection = Substitute.For<IProviderConnection, IModelProvider, IQueuedImageProvider>();
+        var queued = (IQueuedImageProvider)connection;
+        _providers.GetImageProvider("fal").Returns((IModelProvider)connection);
+        _providers.GetConnection("fal").Returns(connection);
+        var submitCount = 0;
+        var pollCount = 0;
+        var fourPollsEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            var index = Interlocked.Increment(ref submitCount);
+            return Task.FromResult(new ProviderJobHandle("fal", $"req-{index}", $"https://q/{index}/s", $"https://q/{index}/r", $"https://q/{index}/c"));
+        });
+        queued.PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            if (Interlocked.Increment(ref pollCount) == 4)
+            {
+                fourPollsEntered.TrySetResult();
+            }
+
+            return Task.FromResult(new JobUpdate(JobState.Queued));
+        });
+        queued.CancelAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>()).Returns(CancelOutcome.Cancelled);
+        queued.ClearReceivedCalls();
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await fourPollsEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        Assert.Equal(4, Volatile.Read(ref submitCount));
+
+        await _service.StopSessionAsync(_session.Id, TestContext.Current.CancellationToken);
+
+        Assert.Equal(4, Volatile.Read(ref submitCount));
+        await queued.Received(4).SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>());
+        await queued.Received(4).CancelAsync(Arg.Any<ProviderJobHandle>(), CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task RecoverInterruptedAsync_FourWatchers_HoldSlotsAgainstFreshSubmit()
+    {
+        _session.Settings.ImageModels = [new ModelRef("fal", "flux")];
+        _session.Settings.RunsPerModel = 1;
+        _modelRepository.ListAsync("fal", Arg.Any<CancellationToken>()).Returns([ModelCatalogServiceTests.Model("flux", "Flux", providerId: "fal")]);
+        var generations = Enumerable.Range(0, 4).Select(_ => ResumableGeneration()).ToArray();
+        var handle = Handle();
+        foreach (var generation in generations)
+        {
+            generation.JobJson = System.Text.Json.JsonSerializer.Serialize(handle);
+        }
+
+        _runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns(generations);
+        var connection = Substitute.For<IProviderConnection, IModelProvider, IQueuedImageProvider>();
+        var queued = (IQueuedImageProvider)connection;
+        _providers.GetConnection("fal").Returns(connection);
+        _providers.GetImageProvider("fal").Returns((IModelProvider)connection);
+        var pollCount = 0;
+        var fourPollsEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseWatchers = new TaskCompletionSource<JobUpdate>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var freshSubmitEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        queued.PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            if (Interlocked.Increment(ref pollCount) == 4)
+            {
+                fourPollsEntered.TrySetResult();
+            }
+
+            return await releaseWatchers.Task.WaitAsync(call.Arg<CancellationToken>());
+        });
+        queued.SubmitAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            freshSubmitEntered.TrySetResult();
+            return Task.FromResult(handle);
+        });
+        queued.ClearReceivedCalls();
+
+        await _service.RecoverInterruptedAsync(TestContext.Current.CancellationToken);
+        await fourPollsEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _service.StartRunAsync(_session.Id, "fresh", TestContext.Current.CancellationToken);
+        Assert.False(freshSubmitEntered.Task.IsCompleted);
+
+        releaseWatchers.TrySetResult(new JobUpdate(JobState.Failed, ErrorKind: ErrorKind.Unknown));
+        await freshSubmitEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+    }
+
+    [Fact]
     public async Task StartRunAsync_PreparationFailureReleasesStartLease()
     {
         _session.Settings.ImageModels = [];

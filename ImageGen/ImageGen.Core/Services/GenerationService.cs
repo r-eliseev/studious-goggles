@@ -36,7 +36,7 @@ public sealed class GenerationService(
     private static readonly TimeSpan PollMaxInterval = TimeSpan.FromSeconds(5);
     private const int MaxPollNetworkFailures = 5;
 
-    private readonly SemaphoreSlim _slots = new(MaxParallelGenerations, MaxParallelGenerations);
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _providerSlots = new(StringComparer.Ordinal);
     private readonly object _lifecycleGate = new();
     private readonly Dictionary<Guid, SessionJobState> _sessionStates = [];
     private readonly ConcurrentDictionary<Guid, RunningJob> _running = new();
@@ -567,7 +567,7 @@ public sealed class GenerationService(
                 await gate.Task.ConfigureAwait(false);
                 try
                 {
-                    await work(job, source.Token).ConfigureAwait(false);
+                    await RunWithProviderSlotAsync(generation.ProviderId, job, source.Token, work).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (source.IsCancellationRequested)
                 {
@@ -598,6 +598,29 @@ public sealed class GenerationService(
         }
     }
 
+    private async Task RunWithProviderSlotAsync(
+        string providerId,
+        RunningJob job,
+        CancellationToken cancellationToken,
+        Func<RunningJob, CancellationToken, Task> work)
+    {
+        var slots = _providerSlots.GetOrAdd(providerId, _ => new SemaphoreSlim(MaxParallelGenerations, MaxParallelGenerations));
+        var acquired = false;
+        try
+        {
+            await slots.WaitAsync(cancellationToken).ConfigureAwait(false);
+            acquired = true;
+            await work(job, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (acquired)
+            {
+                slots.Release();
+            }
+        }
+    }
+
     private async Task ExecuteAsync(Generation generation, RunningJob job, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -607,22 +630,14 @@ public sealed class GenerationService(
             return;
         }
 
-        await _slots.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            generation.Status = GenerationStatus.Running;
-            await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        generation.Status = GenerationStatus.Running;
+        await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
 
-            await GenerateAndStoreAsync(generation, cancellationToken).ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
-            generation.CompletedAt = timeProvider.GetUtcNow();
-            await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
-        }
-        finally
-        {
-            _slots.Release();
-        }
+        await GenerateAndStoreAsync(generation, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        generation.CompletedAt = timeProvider.GetUtcNow();
+        await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -631,11 +646,8 @@ public sealed class GenerationService(
     /// </summary>
     private async Task ExecuteQueuedAsync(Generation generation, IQueuedImageProvider queued, RunningJob job, CancellationToken cancellationToken)
     {
-        var slotAcquired = false;
         try
         {
-            await _slots.WaitAsync(cancellationToken).ConfigureAwait(false);
-            slotAcquired = true;
             cancellationToken.ThrowIfCancellationRequested();
             generation.Status = GenerationStatus.Running;
             await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
@@ -643,12 +655,8 @@ public sealed class GenerationService(
         }
         finally
         {
-            // Signal submit settlement even when waiting for the slot or preparing the request was cancelled.
+            // Signal submit settlement even when preparation was cancelled; the provider slot belongs to the job wrapper.
             job.CompleteSubmitPhase();
-            if (slotAcquired)
-            {
-                _slots.Release();
-            }
         }
 
         if (!generation.IsFinished && generation.JobJson is not null)
