@@ -135,26 +135,38 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
     public async Task UpdateGenerationAsync(Generation generation, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(generation);
-        await using var connection = await database.OpenAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-            UPDATE generations
-            SET run_id = @run_id, session_id = @session_id, provider_id = @provider_id, model_id = @model_id, prompt = @prompt, seed = @seed,
-                seed_applied = @seed_applied, status = @status, image_path = @image_path, media_type = @media_type,
-                cost_usd = @cost_usd, error_kind = @error_kind, error_message = @error_message,
-                created_at = @created_at, completed_at = @completed_at, sort_order = @sort_order, outcomes_json = @outcomes_json,
-                reference_attachment_ids_json = @reference_attachment_ids_json, job_json = @job_json
-            WHERE id = @id;
-            """;
-        AddGenerationParameters(command, generation);
-        var affectedRows = await command.ExecuteNonQueryAsync(cancellationToken);
-        if (affectedRows != 1)
+        try
+        {
+            await using var connection = await database.OpenAsync(cancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                UPDATE generations
+                SET run_id = @run_id, session_id = @session_id, provider_id = @provider_id, model_id = @model_id, prompt = @prompt, seed = @seed,
+                    seed_applied = @seed_applied, status = @status, image_path = @image_path, media_type = @media_type,
+                    cost_usd = @cost_usd, error_kind = @error_kind, error_message = @error_message,
+                    created_at = @created_at, completed_at = @completed_at, sort_order = @sort_order, outcomes_json = @outcomes_json,
+                    reference_attachment_ids_json = @reference_attachment_ids_json, job_json = @job_json
+                WHERE id = @id;
+                """;
+            AddGenerationParameters(command, generation);
+            var affectedRows = await command.ExecuteNonQueryAsync(cancellationToken);
+            if (affectedRows != 1)
+            {
+                throw new StorageWriteException(
+                    $"Could not update generation {generation.Id:N}: exactly one row was expected.",
+                    isTransient: false);
+            }
+        }
+        catch (SqliteException ex)
         {
             throw new StorageWriteException(
-                $"Could not update generation {generation.Id:N}: exactly one row was expected.",
-                isTransient: false);
+                $"Could not update generation {generation.Id:N}.",
+                IsTransientWriteError(ex),
+                ex);
         }
     }
+
+    internal static bool IsTransientWriteError(SqliteException exception) => exception.SqliteErrorCode is 5 or 6;
 
     /// <summary>Generations that were queued at a provider and not finished: their jobs are followed again after a restart.</summary>
     public async Task<IReadOnlyList<Generation>> ListResumableJobsAsync(CancellationToken cancellationToken)
