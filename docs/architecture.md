@@ -19,7 +19,7 @@ ImageGen/
     Domain/Chat/                   ChatMessage, ChatRole
     Domain/Generations/            Run, RunOrigin, Generation, GenerationStatus, ErrorKind
     Domain/Keys/                   ApiKeyStatus, SecretNames (ключ по провайдеру)
-    Domain/Models/                 ImageModel, ModelRef (ссылка «провайдер:модель»)
+    Domain/Models/                 ImageModel, ImageModelPrice, ImagePriceUnit (цена из каталога), ModelRef (ссылка «провайдер:модель»)
     Domain/Descriptions/           описания картинок (ADR 0013)
     Platform/                      ISecretStore, IAppPaths
     Storage/                       ISessionRepository, IChatMessageRepository, IRunRepository, IConversationSummaryRepository,

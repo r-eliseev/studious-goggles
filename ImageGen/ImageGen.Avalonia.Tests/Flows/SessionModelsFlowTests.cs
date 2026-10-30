@@ -101,6 +101,32 @@ public class SessionModelsFlowTests
     }
 
     [AvaloniaFact]
+    public async Task ImageModelRow_ShowsPriceAndUnknownPrice()
+    {
+        using var shell = new ShellHarness(openRouter: OpenRouterFakes.Create());
+        var chat = await shell.OpenNewChatAsync();
+        await chat.OpenModelsCommand.ExecuteAsync(null);
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
+        var view = (SessionModelsView)shell.Window.PageArea.Content!;
+        var models = (SessionModelsPageModel)view.DataContext!;
+        await shell.WaitUntilAsync(() => models.Models.Count == 2, "каталог загружен");
+        shell.Window.Show();
+        shell.Window.UpdateLayout();
+        var vendorGroup = view.GetVisualDescendants().OfType<Expander>().Single(expander =>
+            expander.Header?.ToString()?.StartsWith("vendor ", StringComparison.Ordinal) == true);
+        vendorGroup.IsExpanded = true;
+        shell.Window.UpdateLayout();
+
+        await shell.WaitUntilAsync(() => view.GetVisualDescendants().OfType<TextBlock>()
+            .Any(text => text.Text?.Contains("$0.014 / MP", StringComparison.Ordinal) == true), "цена OpenRouter");
+
+        var details = view.GetVisualDescendants().OfType<TextBlock>().Select(text => text.Text ?? "").ToList();
+        Assert.Contains(details, text => text.Contains("$0.014 / MP", StringComparison.Ordinal));
+        Assert.Contains(details, text => text.Contains("vendor/beta", StringComparison.Ordinal)
+            && text.Contains("price unknown", StringComparison.Ordinal));
+    }
+
+    [AvaloniaFact]
     public async Task ImageGroups_ExpandShowsCheckBoxes()
     {
         using var shell = new ShellHarness(openRouter: OpenRouterFakes.Create());

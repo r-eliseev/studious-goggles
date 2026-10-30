@@ -49,6 +49,16 @@ public class OpenAiCompatibleClientTests
     }
 
     [Fact]
+    public async Task ListImageModelsAsync_ConfiguredModels_EmptyPrices()
+    {
+        var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, "{}"));
+
+        var model = Assert.Single(await client.ListImageModelsAsync(TestContext.Current.CancellationToken));
+
+        Assert.Empty(model.Prices);
+    }
+
+    [Fact]
     public async Task GenerateAsync_WithSeed_PostsToImagesGenerationsWithBearerKey()
     {
         var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"data":[{"b64_json":"AQID"}]}""");

@@ -14,9 +14,12 @@ public sealed partial class ModelOptionViewModel(ImageModel model, bool isSelect
 
     public string Name { get; } = model.Name;
 
+    public string PriceText { get; } = ImagePriceText.Format(model.Prices);
+
     /// <summary>Model id and whether it accepts a seed, for example "vendor/model · seed".</summary>
     public string DetailsText { get; } =
-        model.Id + " · " + (model.SupportsSeed ? AppResources.ModelSupportsSeed : AppResources.ModelNoSeed);
+        model.Id + " · " + (model.SupportsSeed ? AppResources.ModelSupportsSeed : AppResources.ModelNoSeed)
+        + " · " + ImagePriceText.Format(model.Prices);
 
     [ObservableProperty]
     public partial bool IsSelected { get; set; } = isSelected;

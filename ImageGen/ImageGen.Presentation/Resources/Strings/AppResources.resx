@@ -387,6 +387,18 @@
   <data name="AssistantPriceUnknown" xml:space="preserve">
     <value>price unknown</value>
   </data>
+  <data name="ImagePricePerImageFormat" xml:space="preserve">
+    <value>${0} / image</value>
+  </data>
+  <data name="ImagePricePerMegapixelFormat" xml:space="preserve">
+    <value>${0} / MP</value>
+  </data>
+  <data name="ImagePricePerMillionTokensFormat" xml:space="preserve">
+    <value>${0} / 1M output tokens</value>
+  </data>
+  <data name="ImagePricePerRequestFormat" xml:space="preserve">
+    <value>${0} / request</value>
+  </data>
   <data name="AssistantFree" xml:space="preserve">
     <value>free, limits possible</value>
   </data>

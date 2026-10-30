@@ -565,6 +565,19 @@ public class FalImageProviderTests
         Assert.Contains("category=text-to-image", handler.Requests[0].RequestUri!.Query, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task ListImageModels_NoPriceInCatalog_EmptyPrices()
+    {
+        var handler = new StubHttpMessageHandler(_ => Json(HttpStatusCode.OK,
+            """{"models":[{"endpoint_id":"fal-ai/a"},{"endpoint_id":"fal-ai/b"}],"has_more":false}"""));
+        var provider = CreateProvider(handler);
+
+        var models = await provider.ListImageModelsAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, models.Count);
+        Assert.All(models, model => Assert.Empty(model.Prices));
+    }
+
     [Theory]
     [InlineData(HttpStatusCode.OK, ApiKeyStatus.Valid)]
     [InlineData(HttpStatusCode.Unauthorized, ApiKeyStatus.Invalid)]

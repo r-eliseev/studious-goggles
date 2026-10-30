@@ -26,8 +26,8 @@ public sealed class ImageModelRepository(SqliteDatabase database) : IImageModelR
             await using var insert = connection.CreateCommand();
             insert.Transaction = transaction;
             insert.CommandText = """
-                INSERT INTO image_models (provider_id, id, name, supports_seed, supports_image_input, max_images_per_request, fetched_at, supported_parameters_json)
-                VALUES (@provider_id, @id, @name, @supports_seed, @supports_image_input, @max_images_per_request, @fetched_at, @supported_parameters_json);
+                INSERT INTO image_models (provider_id, id, name, supports_seed, supports_image_input, max_images_per_request, fetched_at, supported_parameters_json, prices_json)
+                VALUES (@provider_id, @id, @name, @supports_seed, @supports_image_input, @max_images_per_request, @fetched_at, @supported_parameters_json, @prices_json);
                 """;
             insert.Parameters.AddWithValue("@provider_id", providerId);
             insert.Parameters.AddWithValue("@id", model.Id);
@@ -37,6 +37,7 @@ public sealed class ImageModelRepository(SqliteDatabase database) : IImageModelR
             insert.Parameters.AddWithValue("@max_images_per_request", model.MaxImagesPerRequest);
             insert.Parameters.AddWithValue("@fetched_at", SqliteValues.FromDate(model.FetchedAt));
             insert.Parameters.AddWithValue("@supported_parameters_json", SqliteValues.FromNullableString(ParameterJson.Catalog(model.Parameters)));
+            insert.Parameters.AddWithValue("@prices_json", ParameterJson.Prices(model.Prices));
             await insert.ExecuteNonQueryAsync(cancellationToken);
         }
 
@@ -49,7 +50,7 @@ public sealed class ImageModelRepository(SqliteDatabase database) : IImageModelR
         await using var connection = await database.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT provider_id, id, name, supports_seed, supports_image_input, max_images_per_request, fetched_at, supported_parameters_json
+            SELECT provider_id, id, name, supports_seed, supports_image_input, max_images_per_request, fetched_at, supported_parameters_json, prices_json
             FROM image_models
             WHERE provider_id = @provider_id
             ORDER BY name ASC;
@@ -69,6 +70,7 @@ public sealed class ImageModelRepository(SqliteDatabase database) : IImageModelR
                 MaxImagesPerRequest = SqliteValues.GetInt32(reader, "max_images_per_request"),
                 FetchedAt = SqliteValues.GetDate(reader, "fetched_at"),
                 Parameters = ParameterJson.ReadCatalog(SqliteValues.GetNullableString(reader, "supported_parameters_json")),
+                Prices = ParameterJson.ReadPrices(SqliteValues.GetNullableString(reader, "prices_json")),
             });
         }
 
