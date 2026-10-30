@@ -63,4 +63,16 @@ public class SessionSearchServiceTests
         Assert.Equal(SearchTextKind.Title, hit.Kind);
         Assert.Equal(3 * 3, hit.Score);
     }
+
+    [Fact]
+    public async Task Search_ExactPrefixBeatsTypo()
+    {
+        var service = Create(
+            new SearchText(First, SearchTextKind.Prompt, "date palm"),
+            new SearchText(Second, SearchTextKind.Prompt, "water lily"));
+
+        var hits = await service.SearchAsync("wate", TestContext.Current.CancellationToken);
+
+        Assert.Equal([Second, First], hits.Select(hit => hit.SessionId));
+    }
 }

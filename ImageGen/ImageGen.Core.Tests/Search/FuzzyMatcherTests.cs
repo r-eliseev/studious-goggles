@@ -64,4 +64,106 @@ public class FuzzyMatcherTests
         Assert.Equal(3, match!.Value.Score);
         Assert.Equal(8, match.Value.FirstIndex);
     }
+
+    [Fact]
+    public void Match_TypoInPrefix_Scores1()
+    {
+        var match = FuzzyMatcher.Match(["watte"], "water lily");
+
+        Assert.Equal(1, match!.Value.Score);
+        Assert.Equal(0, match.Value.FirstIndex);
+    }
+
+    [Fact]
+    public void Match_TypoInPrefixOfLongWord_Scores1()
+    {
+        var match = FuzzyMatcher.Match(["lighthu"], "Lighthouse on a rock");
+
+        Assert.Equal(1, match!.Value.Score);
+    }
+
+    [Fact]
+    public void Match_MissingLetterInPrefix_Scores1()
+    {
+        var match = FuzzyMatcher.Match(["brige"], "two bridges");
+
+        Assert.Equal(1, match!.Value.Score);
+        Assert.Equal(4, match.Value.FirstIndex);
+    }
+
+    [Fact]
+    public void Match_TypoInPrefixEveryToken_Matches()
+    {
+        var match = FuzzyMatcher.Match(["red", "watte"], "red water");
+
+        Assert.Equal(4, match!.Value.Score);
+    }
+
+    [Fact]
+    public void Match_ExactPrefix_StillScores3()
+    {
+        var match = FuzzyMatcher.Match(["wate"], "water lily");
+
+        Assert.Equal(3, match!.Value.Score);
+    }
+
+    [Fact]
+    public void Match_TypoInPrefixOtherFirstLetter_NoMatch()
+    {
+        Assert.Null(FuzzyMatcher.Match(["watte"], "attempt"));
+    }
+
+    [Fact]
+    public void Match_TwoTyposInPrefix_NoMatch()
+    {
+        Assert.Null(FuzzyMatcher.Match(["watte"], "watch tower"));
+    }
+
+    [Fact]
+    public void Match_DifferentEnding_NoMatch()
+    {
+        Assert.Null(FuzzyMatcher.Match(["house"], "hound"));
+    }
+
+    [Fact]
+    public void Match_SwappedLetters_NoMatch()
+    {
+        Assert.Null(FuzzyMatcher.Match(["wtaer"], "water lily"));
+    }
+
+    [Fact]
+    public void Match_ShortTokenTypo_NoMatch()
+    {
+        Assert.Null(FuzzyMatcher.Match(["wot"], "water lily"));
+    }
+
+    [Fact]
+    public void Match_EmptyQuery_ReturnsNull()
+    {
+        Assert.Null(FuzzyMatcher.Match([], "water lily"));
+    }
+
+    [Fact]
+    public void Match_EmptyText_ReturnsNull()
+    {
+        Assert.Null(FuzzyMatcher.Match(["water"], ""));
+    }
+
+    [Fact]
+    public void Match_CyrillicTypoInPrefix_Scores1()
+    {
+        var match = FuzzyMatcher.Match(["водопо"], "водопад и река");
+
+        Assert.Equal(1, match!.Value.Score);
+        Assert.Equal(0, match.Value.FirstIndex);
+    }
+
+    [Fact]
+    public void Match_DigitToken_ExactPrefixWins()
+    {
+        var match = FuzzyMatcher.Match(["2025"], "2026 отчёт 2025");
+
+        Assert.Equal(3, match!.Value.Score);
+        Assert.Equal(11, match.Value.FirstIndex);
+    }
 }
