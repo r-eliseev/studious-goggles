@@ -221,6 +221,9 @@ public class CompositionTests
         services.AddLogging();
         services.AddSingleton(paths);
         services.AddSingleton(secrets);
+        var defaultAssistant = Substitute.For<IDefaultAssistantModel>();
+        defaultAssistant.Current.Returns(new ModelRef(ProviderIds.OpenRouter, SessionSettings.DefaultAssistantModelId));
+        services.AddSingleton(defaultAssistant);
         services.AddImageGenCore();
         if (router is not null)
         {
