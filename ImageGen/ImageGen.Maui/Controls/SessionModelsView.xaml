@@ -123,6 +123,7 @@
                                                              IsChecked="{Binding IsSelected}"
                                                              CheckedChanged="OnAssistantCheckedChanged"
                                                              SemanticProperties.Description="{Binding AutomationName}" />
+                                                <Label StyleClass="meta" Text="{Binding ProviderText}" />
                                                 <HorizontalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Tags}">
                                                     <BindableLayout.ItemTemplate>
                                                         <DataTemplate x:DataType="x:String">

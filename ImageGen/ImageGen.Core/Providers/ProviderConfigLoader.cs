@@ -19,7 +19,7 @@ public static class ProviderConfigLoader
     private static readonly Regex SecretLikeName = new("key|secret|token|password", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly HashSet<string> KnownFields = new(StringComparer.Ordinal)
     {
-        "id", "kind", "displayName", "baseAddress", "timeoutSeconds", "imageModels", "imageResponseFormat", "imageOutputFormat",
+        "id", "kind", "displayName", "baseAddress", "timeoutSeconds", "imageModels", "imageResponseFormat", "imageOutputFormat", "chatModels",
     };
 
     /// <summary>Reads the user config from the data folder; null when the file does not exist.</summary>
@@ -152,7 +152,91 @@ public static class ProviderConfigLoader
             TimeSpan.FromSeconds(timeoutSeconds),
             ParseImageModels(entry, label),
             imageResponseFormat,
-            imageOutputFormat);
+            imageOutputFormat,
+            ParseChatModels(entry, label));
+    }
+
+    private static IReadOnlyList<ConfiguredChatModel> ParseChatModels(JsonElement entry, string label)
+    {
+        if (!entry.TryGetProperty("chatModels", out var array))
+        {
+            return [];
+        }
+
+        if (array.ValueKind != JsonValueKind.Array)
+        {
+            throw new ProviderConfigException($"Provider {label}: chatModels must be an array.");
+        }
+
+        var kind = ParseKind(ReadString(entry, "kind", label), label);
+        if (kind is not (ProviderKind.OpenAiCompatible or ProviderKind.AnthropicCompatible))
+        {
+            throw new ProviderConfigException($"Provider {label}: chatModels is allowed only for kind openAiCompatible or anthropicCompatible.");
+        }
+
+        var models = new List<ConfiguredChatModel>();
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var item in array.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                throw new ProviderConfigException($"Provider {label}: each chatModels entry must be an object.");
+            }
+
+            foreach (var property in item.EnumerateObject())
+            {
+                if (property.Name is not ("id" or "name" or "supportsImageInput" or "contextLength"))
+                {
+                    throw new ProviderConfigException($"Provider {label}: unknown chatModels field '{property.Name}'.");
+                }
+            }
+
+            var id = ReadString(item, "id", $"{label} chatModels entry");
+            if (!ids.Add(id))
+            {
+                throw new ProviderConfigException($"Provider {label}: chat model id '{id}' is defined more than once.");
+            }
+            var name = id;
+            if (item.TryGetProperty("name", out var nameElement))
+            {
+                if (nameElement.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(nameElement.GetString()))
+                {
+                    throw new ProviderConfigException($"Provider {label}: chat model '{id}' name must be a non-empty string.");
+                }
+
+                name = nameElement.GetString()!.Trim();
+            }
+
+            var supportsImageInput = false;
+            if (item.TryGetProperty("supportsImageInput", out var imageInputElement))
+            {
+                if (imageInputElement.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                {
+                    throw new ProviderConfigException($"Provider {label}: chat model '{id}' supportsImageInput must be a boolean.");
+                }
+
+                supportsImageInput = imageInputElement.GetBoolean();
+            }
+
+            int? contextLength = null;
+            if (item.TryGetProperty("contextLength", out var contextElement))
+            {
+                if (contextElement.ValueKind != JsonValueKind.Number || !contextElement.TryGetInt32(out var value))
+                {
+                    throw new ProviderConfigException($"Provider {label}: chat model '{id}' contextLength must be a positive integer.");
+                }
+
+                contextLength = value;
+                if (contextLength <= 0)
+                {
+                    throw new ProviderConfigException($"Provider {label}: chat model '{id}' contextLength must be greater than 0.");
+                }
+            }
+
+            models.Add(new ConfiguredChatModel(id, name, supportsImageInput, contextLength));
+        }
+
+        return models;
     }
 
     private static IReadOnlyList<ConfiguredImageModel> ParseImageModels(JsonElement entry, string label)

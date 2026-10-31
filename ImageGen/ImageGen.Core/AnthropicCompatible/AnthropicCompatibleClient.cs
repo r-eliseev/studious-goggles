@@ -37,7 +37,8 @@ public sealed class AnthropicCompatibleClient(
 
     /// <summary>These APIs do not list input modalities, so no model is known to take images.</summary>
     public Task<IReadOnlyList<ImageGen.Core.Domain.Models.ChatModel>> ListChatModelsAsync(CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyList<ImageGen.Core.Domain.Models.ChatModel>>([]);
+        Task.FromResult<IReadOnlyList<ImageGen.Core.Domain.Models.ChatModel>>((Config.ChatModels ?? []).Select(model =>
+            new ImageGen.Core.Domain.Models.ChatModel(model.Id, model.Name, model.SupportsImageInput, model.ContextLength, SupportsTools: true)).ToList());
 
     public async Task<AssistantChatResult> CompleteChatAsync(AssistantChatRequest request, CancellationToken cancellationToken)
     {

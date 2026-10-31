@@ -25,7 +25,7 @@ ImageGen/
     Storage/                       ISessionRepository, IChatMessageRepository, IRunRepository, IConversationSummaryRepository,
                                    IImageModelRepository (кэш по провайдеру), IImageFileStore, IChatAttachmentRepository,
                                    IImageDescriptionRepository
-    Providers/                     ProviderIds, ProviderResponseLimits, BoundedHttpContentReader, BoundedBase64ImageDecoder, ProviderConfig, ProviderKind, ConfiguredImageModel, ProviderConfigLoader (встроенный
+    Providers/                     ProviderIds, ProviderResponseLimits, BoundedHttpContentReader, BoundedBase64ImageDecoder, ProviderConfig, ProviderKind, ConfiguredImageModel, ConfiguredChatModel, ProviderConfigLoader (встроенный
                                    builtin-providers.json и providers.json в DataDirectory), ProviderRegistry (проверка),
                                    IProviderRouter / ProviderRouter (клиент по id провайдера), ProviderClientBase (HTTP,
                                    таймаут из конфига, коды ошибок), ProviderException, ProviderConfigException

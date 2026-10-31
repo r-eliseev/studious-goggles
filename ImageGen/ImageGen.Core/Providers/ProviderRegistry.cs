@@ -77,6 +77,32 @@ public sealed class ProviderRegistry
                 $"Provider '{provider.Id}': imageModels is allowed only for kind openAiCompatible.");
         }
 
+        var chatModels = provider.ChatModels ?? [];
+        if (chatModels.Count > 0 && provider.Kind is not (ProviderKind.OpenAiCompatible or ProviderKind.AnthropicCompatible))
+        {
+            throw new ProviderConfigException(
+                $"Provider '{provider.Id}': chatModels is allowed only for kind openAiCompatible or anthropicCompatible.");
+        }
+
+        var chatModelIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var model in chatModels)
+        {
+            if (string.IsNullOrWhiteSpace(model.Id) || string.IsNullOrWhiteSpace(model.Name))
+            {
+                throw new ProviderConfigException($"Provider '{provider.Id}': each chatModels entry needs a non-empty id and name.");
+            }
+
+            if (!chatModelIds.Add(model.Id))
+            {
+                throw new ProviderConfigException($"Provider '{provider.Id}': chat model id '{model.Id}' is defined more than once.");
+            }
+
+            if (model.ContextLength is <= 0)
+            {
+                throw new ProviderConfigException($"Provider '{provider.Id}': chat model '{model.Id}' contextLength must be greater than 0.");
+            }
+        }
+
         if ((provider.ImageResponseFormat is not null || provider.ImageOutputFormat is not null)
             && provider.Kind != ProviderKind.OpenAiCompatible)
         {

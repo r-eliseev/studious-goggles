@@ -33,6 +33,12 @@ public class ProviderRouterTests
     }
 
     [Fact]
+    public void ChatProviderIds_ContainsConfiguredChatProvidersInRegistryOrder()
+    {
+        Assert.Equal(["openrouter", "local", "local-two", "claude"], _router.ChatProviderIds);
+    }
+
+    [Fact]
     public void GetConnection_KindOpenRouter_ReturnsInMemoryWrapperWithQueuedCapability()
     {
         var connection = Assert.IsType<InMemoryQueuedImageConnection>(_router.GetConnection("openrouter"));

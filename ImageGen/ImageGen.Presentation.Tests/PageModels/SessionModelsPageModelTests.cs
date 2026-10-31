@@ -38,9 +38,9 @@ public class SessionModelsPageModelTests
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
     private readonly Session _session;
-    private readonly SessionService _sessionService;
+    private SessionService _sessionService;
     private readonly ModelCatalogService _catalog;
-    private readonly ChatModelCatalogService _chatModels;
+    private ChatModelCatalogService _chatModels;
     private Session? _saved;
 
     public SessionModelsPageModelTests()
@@ -286,16 +286,16 @@ public class SessionModelsPageModelTests
         Assert.Null(_saved);
     }
 
-    private SessionModelsPageModel CreateModel()
+    private SessionModelsPageModel CreateModel(ProviderRegistry? registry = null)
     {
-        var model = new SessionModelsPageModel(_sessionService, _catalog, _chatModels, ProviderDoubles.BuiltInRegistry(), _navigation, _dialogs);
+        var model = new SessionModelsPageModel(_sessionService, _catalog, _chatModels, registry ?? ProviderDoubles.BuiltInRegistry(), _navigation, _dialogs);
         model.ApplyQueryAttributes(new Dictionary<string, object> { [Routes.SessionIdParameter] = SessionId.ToString("D") });
         return model;
     }
 
-    private async Task<SessionModelsPageModel> OpenAsync()
+    private async Task<SessionModelsPageModel> OpenAsync(ProviderRegistry? registry = null)
     {
-        var model = CreateModel();
+        var model = CreateModel(registry);
         await model.OnAppearingAsync();
         return model;
     }
@@ -333,6 +333,38 @@ public class SessionModelsPageModelTests
         Assert.Equal(new[] { "vendor/assistant", "vendor/zed" }, model.AssistantModels.Select(m => m.Reference.ModelId));
         Assert.Equal("Assistant", model.AssistantModels[0].Name);
         Assert.Equal("vendor/assistant · 0.10 in, 0.50 out per 1M tokens (USD) · takes images", model.AssistantModels[0].DetailsText);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_ShowsConfiguredChatModelsWithProviderLabelsAndSavesProviderId()
+    {
+        var secondChat = Substitute.For<IAssistantChatClient>();
+        secondChat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns([
+            new ChatModel("vendor/assistant", "Assistant", SupportsImageInput: false, ContextLength: 64000, SupportsTools: true),
+        ]);
+        var router = Substitute.For<IProviderRouter>();
+        router.ChatProviderIds.Returns([ProviderIds.OpenRouter, "claude"]);
+        router.GetChatClient(ProviderIds.OpenRouter).Returns(_chat);
+        router.GetChatClient("claude").Returns(secondChat);
+        _chatModels = new ChatModelCatalogService(router, NullLogger<ChatModelCatalogService>.Instance);
+        _sessionService = new SessionService(
+            _sessions, _messages, _runs, _files, _chatModels, TimeProvider.System, Substitute.For<IConversationSummaryRepository>(),
+            new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance), Substitute.For<ISessionGenerationCoordinator>());
+        var registry = ProviderConfigLoader.Build("""
+            {"providers":[
+              {"id":"openrouter","kind":"openRouter","displayName":"OpenRouter","baseAddress":"https://openrouter.ai/api/v1/"},
+              {"id":"claude","kind":"anthropicCompatible","displayName":"Claude API","baseAddress":"https://api.example/v1/"}
+            ]}
+            """, null);
+
+        var model = await OpenAsync(registry);
+
+        var options = model.AssistantModels.Where(option => option.Reference.ModelId == "vendor/assistant").ToArray();
+        Assert.Equal(["claude", ProviderIds.OpenRouter], options.Select(option => option.Reference.ProviderId));
+        Assert.Equal("Claude API (claude)", options[0].ProviderText);
+        options[0].SelectCommand.Execute(null);
+        await model.SaveCommand.ExecuteAsync(null);
+        Assert.Equal(new ModelRef("claude", "vendor/assistant"), _saved!.Settings.AssistantModel);
     }
 
     [Fact]

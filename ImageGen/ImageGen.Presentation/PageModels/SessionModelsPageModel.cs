@@ -223,12 +223,13 @@ public sealed partial class SessionModelsPageModel(
             }
             OnPropertyChanged(nameof(SelectedCountText));
 
-            var assistants = await chatModels.ListAssistantModelsAsync(ProviderIds.OpenRouter, CancellationToken.None);
+            var assistants = await chatModels.ListAllAssistantModelsAsync(CancellationToken.None);
             _assistants.Clear();
-            _assistants.AddRange(assistants.Select(m =>
+            _assistants.AddRange(assistants.Select(item =>
             {
-                var reference = new ModelRef(ProviderIds.OpenRouter, m.Id);
-                return new AssistantModelOptionViewModel(reference, m, reference == assistant, SelectAssistant);
+                var reference = new ModelRef(item.ProviderId, item.Model.Id);
+                var providerText = $"{providers.Get(item.ProviderId).DisplayName} ({item.ProviderId})";
+                return new AssistantModelOptionViewModel(reference, providerText, item.Model, reference == assistant, SelectAssistant);
             }));
 
             _loaded = true;

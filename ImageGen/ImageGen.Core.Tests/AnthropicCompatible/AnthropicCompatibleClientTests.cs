@@ -14,7 +14,8 @@ public class AnthropicCompatibleClientTests
     private const string Key = "sk-ant-5678";
     private const string Json = """
         {"providers":[{"id":"claude","kind":"anthropicCompatible","displayName":"Claude",
-          "baseAddress":"https://api.anthropic.com/v1/","timeoutSeconds":30}]}
+          "baseAddress":"https://api.anthropic.com/v1/","timeoutSeconds":30,
+          "chatModels":[{"id":"claude-model","supportsImageInput":true,"contextLength":100000}] }]}
         """;
 
     private static AnthropicCompatibleClient CreateClient(StubHttpMessageHandler handler, string? storedKey = Key)
@@ -25,6 +26,22 @@ public class AnthropicCompatibleClientTests
         factory.CreateClient("claude").Returns(new HttpClient(handler));
         var config = ProviderConfigLoader.Build(Json, null).Get("claude");
         return new AnthropicCompatibleClient(config, factory, secrets, Substitute.For<TimeProvider>());
+    }
+
+    [Fact]
+    public async Task ListChatModelsAsync_ConfiguredModels_DoesNotNeedKeyOrHttp()
+    {
+        var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, "{}");
+        var client = CreateClient(handler, storedKey: null);
+
+        var model = Assert.Single(await client.ListChatModelsAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal("claude-model", model.Id);
+        Assert.Equal("claude-model", model.Name);
+        Assert.True(model.SupportsImageInput);
+        Assert.Equal(100000, model.ContextLength);
+        Assert.True(model.SupportsTools);
+        Assert.Empty(handler.Requests);
     }
 
     [Fact]

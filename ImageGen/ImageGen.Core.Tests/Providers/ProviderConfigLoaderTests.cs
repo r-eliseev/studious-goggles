@@ -87,6 +87,50 @@ public class ProviderConfigLoaderTests
         Assert.Equal(2, model.MaxImagesPerRequest);
     }
 
+    [Fact]
+    public void Parse_CompatibleProvidersWithChatModels_ReadsCapabilities()
+    {
+        const string json = """
+            {"providers":[
+              {"id":"openai","kind":"openAiCompatible","displayName":"OpenAI","baseAddress":"https://api.example/v1/",
+               "chatModels":[{"id":"gpt","name":"GPT","supportsImageInput":true,"contextLength":64000}]},
+              {"id":"anthropic","kind":"anthropicCompatible","displayName":"Anthropic","baseAddress":"https://api.example/",
+               "chatModels":[{"id":"claude","supportsImageInput":false}]}
+            ]}
+            """;
+
+        var providers = ProviderConfigLoader.Parse(json);
+
+        Assert.Equal("GPT", Assert.Single(providers[0].ChatModels!).Name);
+        Assert.True(providers[0].ChatModels![0].SupportsImageInput);
+        Assert.Equal(64000, providers[0].ChatModels![0].ContextLength);
+        var anthropic = Assert.Single(providers[1].ChatModels!);
+        Assert.Equal("claude", anthropic.Name);
+        Assert.Null(anthropic.ContextLength);
+    }
+
+    [Theory]
+    [InlineData("{\"unknown\":true}")]
+    [InlineData("{\"contextLength\":0}")]
+    [InlineData("{\"contextLength\":-1}")]
+    [InlineData("{\"supportsImageInput\":\"yes\"}")]
+    public void Parse_InvalidChatModelEntry_Throws(string fields)
+    {
+        var json = $$"""{"providers":[{"id":"x","kind":"openAiCompatible","displayName":"X","baseAddress":"https://x.test/v1/","chatModels":[{"id":"m",{{fields[1..]}}]}]}""";
+
+        Assert.Throws<ProviderConfigException>(() => ProviderConfigLoader.Parse(json));
+    }
+
+    [Theory]
+    [InlineData("openRouter")]
+    [InlineData("fal")]
+    public void Parse_ChatModelsOnUnsupportedProvider_Throws(string kind)
+    {
+        var json = $$"""{"providers":[{"id":"x","kind":"{{kind}}","displayName":"X","baseAddress":"https://x.test/v1/","chatModels":[]}]}""";
+
+        Assert.Throws<ProviderConfigException>(() => ProviderConfigLoader.Parse(json));
+    }
+
     [Theory]
     [InlineData("carrier")]
     [InlineData("OpenRouter")]

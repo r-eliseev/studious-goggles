@@ -6,6 +6,9 @@ public interface IProviderRouter
     /// <summary>Ids of the providers that can generate images (every configured kind except Anthropic-compatible).</summary>
     IReadOnlyList<string> ImageProviderIds { get; }
 
+    /// <summary>Configured provider ids that support assistant chat, in registry order.</summary>
+    IReadOnlyList<string> ChatProviderIds { get; }
+
     IProviderConnection GetConnection(string providerId);
 
     IQueuedImageProvider GetQueuedImageProvider(string providerId);

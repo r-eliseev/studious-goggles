@@ -17,7 +17,8 @@ public class OpenAiCompatibleClientTests
     private const string Json = """
         {"providers":[{"id":"local","kind":"openAiCompatible","displayName":"Local","baseAddress":"http://localhost:1234/v1",
           "timeoutSeconds":5,
-          "imageModels":[{"id":"sd-xl","name":"SD XL","supportsSeed":true,"maxImagesPerRequest":1}]}]}
+          "imageModels":[{"id":"sd-xl","name":"SD XL","supportsSeed":true,"maxImagesPerRequest":1}],
+          "chatModels":[{"id":"chat-model","name":"Chat model","supportsImageInput":true,"contextLength":32000}]}]}
         """;
     private static readonly DateTimeOffset Now = new(2026, 10, 28, 9, 0, 0, TimeSpan.Zero);
 
@@ -58,6 +59,21 @@ public class OpenAiCompatibleClientTests
         var model = Assert.Single(await client.ListImageModelsAsync(TestContext.Current.CancellationToken));
 
         Assert.Empty(model.Prices);
+    }
+
+    [Fact]
+    public async Task ListChatModelsAsync_ConfiguredModels_DoesNotNeedKeyOrHttp()
+    {
+        var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, "{}");
+        var client = CreateClient(handler, storedKey: null);
+
+        var model = Assert.Single(await client.ListChatModelsAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal("chat-model", model.Id);
+        Assert.True(model.SupportsImageInput);
+        Assert.Equal(32000, model.ContextLength);
+        Assert.True(model.SupportsTools);
+        Assert.Empty(handler.Requests);
     }
 
     [Fact]
