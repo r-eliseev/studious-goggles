@@ -1,8 +1,8 @@
 ---
 id: 134
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: claude-audit
+claimed: 2026-10-31T10:52:28Z
 created: 2026-10-29
 ---
 
