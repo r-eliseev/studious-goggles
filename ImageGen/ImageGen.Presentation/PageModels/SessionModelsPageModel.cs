@@ -8,6 +8,7 @@ using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Presentation.PageModels;
 
@@ -23,8 +24,10 @@ public sealed partial class SessionModelsPageModel(
     ChatModelCatalogService chatModels,
     ProviderRegistry providers,
     INavigationService navigation,
-    IDialogService dialogs) : ObservableObject
+    IDialogService dialogs,
+    ErrorAlert? errorAlert = null) : ObservableObject
 {
+    private readonly ErrorAlert _errorAlert = errorAlert ?? new ErrorAlert(dialogs, NullLogger<ErrorAlert>.Instance);
     private readonly List<ModelOptionViewModel> _all = [];
     private readonly List<AssistantModelOptionViewModel> _assistants = [];
     private readonly Dictionary<string, bool> _imageGroupExpanded = new(StringComparer.Ordinal);
@@ -156,7 +159,7 @@ public sealed partial class SessionModelsPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
     }
 
@@ -223,12 +226,13 @@ public sealed partial class SessionModelsPageModel(
             }
             OnPropertyChanged(nameof(SelectedCountText));
 
-            var assistants = await chatModels.ListAssistantModelsAsync(ProviderIds.OpenRouter, CancellationToken.None);
+            var assistants = await chatModels.ListAllAssistantModelsAsync(CancellationToken.None);
             _assistants.Clear();
-            _assistants.AddRange(assistants.Select(m =>
+            _assistants.AddRange(assistants.Select(item =>
             {
-                var reference = new ModelRef(ProviderIds.OpenRouter, m.Id);
-                return new AssistantModelOptionViewModel(reference, m, reference == assistant, SelectAssistant);
+                var reference = new ModelRef(item.ProviderId, item.Model.Id);
+                var providerText = $"{providers.Get(item.ProviderId).DisplayName} ({item.ProviderId})";
+                return new AssistantModelOptionViewModel(reference, providerText, item.Model, reference == assistant, SelectAssistant);
             }));
 
             _loaded = true;
@@ -236,7 +240,7 @@ public sealed partial class SessionModelsPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
         finally
         {

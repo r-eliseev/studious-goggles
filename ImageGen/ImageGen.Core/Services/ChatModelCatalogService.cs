@@ -38,6 +38,21 @@ public sealed class ChatModelCatalogService(IProviderRouter providers, ILogger<C
             .ToList();
     }
 
+    /// <summary>Assistant models across configured chat providers, with a provider id for each model.</summary>
+    public async Task<IReadOnlyList<(string ProviderId, ChatModel Model)>> ListAllAssistantModelsAsync(CancellationToken cancellationToken)
+    {
+        var result = new List<(string ProviderId, ChatModel Model)>();
+        foreach (var providerId in providers.ChatProviderIds)
+        {
+            var models = await ListAssistantModelsAsync(providerId, cancellationToken);
+            result.AddRange(models.Select(model => (providerId, model)));
+        }
+
+        return result.OrderBy(item => item.Model.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.ProviderId, StringComparer.Ordinal)
+            .ToList();
+    }
+
     /// <summary>
     /// Chat models of a provider, or null when the list cannot be loaded. The caller decides what to do without it;
     /// the failure is logged here.
@@ -57,7 +72,8 @@ public sealed class ChatModelCatalogService(IProviderRouter providers, ILogger<C
         }
         catch (ProviderException ex)
         {
-            logger.LogWarning(ex, "Chat model catalog of provider {ProviderId} failed to load.", providerId);
+            logger.LogWarning("Chat model catalog of provider {ProviderId} failed to load.", providerId);
+            logger.LogDebug(ex, "Chat model catalog of provider {ProviderId} failed to load.", providerId);
             return null;
         }
     }

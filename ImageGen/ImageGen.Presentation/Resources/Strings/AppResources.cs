@@ -404,6 +404,12 @@ public static class AppResources
 
     public static string ErrorKindImageSaveFailed => Get(nameof(ErrorKindImageSaveFailed));
 
+    public static string DescriptionModelDoesNotAcceptImages => Get(nameof(DescriptionModelDoesNotAcceptImages));
+
+    public static string DescriptionSourceMissing => Get(nameof(DescriptionSourceMissing));
+
+    public static string DescriptionEmptyResponse => Get(nameof(DescriptionEmptyResponse));
+
     public static string OtherModel => Get(nameof(OtherModel));
 
     public static string CopyPrompt => Get(nameof(CopyPrompt));

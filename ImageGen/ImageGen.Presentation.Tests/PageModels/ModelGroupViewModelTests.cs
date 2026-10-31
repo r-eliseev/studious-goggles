@@ -63,5 +63,5 @@ public class ModelGroupViewModelTests
     }
 
     private static AssistantModelOptionViewModel AssistantItem(string id, string name) =>
-        new(new ModelRef("openrouter", id), new ChatModel(id, name, SupportsImageInput: false, ContextLength: 1000), false, _ => { });
+        new(new ModelRef("openrouter", id), "OpenRouter (openrouter)", new ChatModel(id, name, SupportsImageInput: false, ContextLength: 1000), false, _ => { });
 }

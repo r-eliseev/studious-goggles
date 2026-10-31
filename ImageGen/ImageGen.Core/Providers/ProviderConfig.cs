@@ -15,4 +15,5 @@ public sealed record ProviderConfig(
     TimeSpan Timeout,
     IReadOnlyList<ConfiguredImageModel> ImageModels,
     string? ImageResponseFormat = null,
-    string? ImageOutputFormat = null);
+    string? ImageOutputFormat = null,
+    IReadOnlyList<ConfiguredChatModel>? ChatModels = null);

@@ -275,7 +275,7 @@ public class SessionsPageModelTests : IDisposable
 
         await model.OnAppearingAsync();
 
-        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, "database is locked");
+        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, AppResources.ErrorKindUnknown);
         Assert.False(model.IsBusy);
     }
 

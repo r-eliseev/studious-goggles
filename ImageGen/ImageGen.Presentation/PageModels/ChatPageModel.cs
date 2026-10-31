@@ -9,6 +9,7 @@ using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 using AppTaskExtensions = ImageGen.Presentation.Utilities.TaskExtensions;
 
 namespace ImageGen.Presentation.PageModels;
@@ -34,8 +35,10 @@ public sealed partial class ChatPageModel(
     ICurrentSessionTracker currentSession,
     Func<SessionModelsPageModel> modelsPaneFactory,
     Func<SessionParametersPageModel> parametersPaneFactory,
-    IImageViewerService imageViewer) : ObservableObject
+    IImageViewerService imageViewer,
+    ErrorAlert? errorAlert = null) : ObservableObject
 {
+    private readonly ErrorAlert _errorAlert = errorAlert ?? new ErrorAlert(dialogs, NullLogger<ErrorAlert>.Instance);
     private readonly Dictionary<Guid, GenerationItemViewModel> _cards = [];
     private bool _imageConsentGiven;
     private Guid _sessionId;
@@ -252,7 +255,7 @@ public sealed partial class ChatPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
     }
 
@@ -300,7 +303,7 @@ public sealed partial class ChatPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
     }
 
@@ -358,7 +361,7 @@ public sealed partial class ChatPageModel(
                 RefreshAttachments();
             }
 
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
         finally
         {
@@ -410,7 +413,7 @@ public sealed partial class ChatPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
         finally
         {
@@ -448,7 +451,7 @@ public sealed partial class ChatPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
     }
 
@@ -480,7 +483,7 @@ public sealed partial class ChatPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
     }
 
@@ -532,7 +535,7 @@ public sealed partial class ChatPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
 
         await ReloadAsync();
@@ -561,7 +564,7 @@ public sealed partial class ChatPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
     }
 

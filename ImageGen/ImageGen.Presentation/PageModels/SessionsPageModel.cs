@@ -8,6 +8,7 @@ using ImageGen.Core.Services;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
 using ImageGen.Presentation.Utilities;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Presentation.PageModels;
 
@@ -21,8 +22,10 @@ public sealed partial class SessionsPageModel(
     ICurrentSessionTracker tracker,
     SessionSearchService searchService,
     SessionChangeNotifier changes,
-    IMainThread mainThread) : ObservableObject
+    IMainThread mainThread,
+    ErrorAlert? errorAlert = null) : ObservableObject
 {
+    private readonly ErrorAlert _errorAlert = errorAlert ?? new ErrorAlert(dialogs, NullLogger<ErrorAlert>.Instance);
     /// <summary>Pause after the last keystroke before the search runs.</summary>
     public static readonly TimeSpan SearchDebounce = TimeSpan.FromMilliseconds(250);
 
@@ -162,7 +165,7 @@ public sealed partial class SessionsPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
         finally
         {
@@ -190,7 +193,7 @@ public sealed partial class SessionsPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
         finally
         {
@@ -299,7 +302,7 @@ public sealed partial class SessionsPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
     }
 
@@ -318,7 +321,7 @@ public sealed partial class SessionsPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
     }
 
@@ -335,7 +338,7 @@ public sealed partial class SessionsPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
     }
 
@@ -405,7 +408,7 @@ public sealed partial class SessionsPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
     }
 
@@ -431,7 +434,7 @@ public sealed partial class SessionsPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
     }
 
@@ -463,7 +466,7 @@ public sealed partial class SessionsPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
     }
 }

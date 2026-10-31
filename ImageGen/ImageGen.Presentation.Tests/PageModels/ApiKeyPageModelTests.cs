@@ -244,7 +244,7 @@ public class ApiKeyPageModelTests
 
         await model.SaveCommand.ExecuteAsync(null);
 
-        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, "disk is full");
+        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, AppResources.ErrorKindUnknown);
         Assert.Equal("", model.StatusText);
         Assert.Equal("sk-or-test", model.ApiKey);
         Assert.False(model.IsBusy);

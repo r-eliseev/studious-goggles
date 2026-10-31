@@ -21,6 +21,11 @@ public sealed class ProviderRouter(
         .Select(p => p.Id)
         .ToList();
 
+    public IReadOnlyList<string> ChatProviderIds => registry.All
+        .Where(p => p.Kind is ProviderKind.OpenRouter or ProviderKind.OpenAiCompatible or ProviderKind.AnthropicCompatible)
+        .Select(p => p.Id)
+        .ToList();
+
     public IProviderConnection GetConnection(string providerId) =>
         _connections.GetOrAdd(providerId, id => Create(registry.Get(id)));
 

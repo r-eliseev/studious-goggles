@@ -15,6 +15,7 @@ public static class ProviderDoubles
         var imageProvider = images ?? Substitute.For<IModelProvider>();
         var router = Substitute.For<IProviderRouter>();
         router.ImageProviderIds.Returns([providerId]);
+        router.ChatProviderIds.Returns([providerId]);
         router.GetConnection(providerId).Returns(imageProvider);
         router.GetImageProvider(providerId).Returns(imageProvider);
         router.GetQueuedImageProvider(providerId).Returns(new InMemoryQueuedImageProvider(

@@ -79,6 +79,27 @@ public class ChatModelCatalogServiceTests
     }
 
     [Fact]
+    public async Task ListAllAssistantModelsAsync_CombinesProvidersAndSkipsFailedCatalog()
+    {
+        var other = Substitute.For<IAssistantChatClient>();
+        _providers.ChatProviderIds.Returns([ProviderIds.OpenRouter, "other", "broken"]);
+        _providers.GetChatClient("other").Returns(other);
+        _providers.GetChatClient("broken").Returns(_chat);
+        other.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns([
+            new ChatModel("same", "Same", false, 200, SupportsTools: true),
+        ]);
+        _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns<Task<IReadOnlyList<ChatModel>>>(
+            _ => throw new ProviderException(ErrorKind.Network, "sensitive details"));
+        var service = new ChatModelCatalogService(_providers, NullLogger<ChatModelCatalogService>.Instance);
+
+        var models = await service.ListAllAssistantModelsAsync(TestContext.Current.CancellationToken);
+
+        var model = Assert.Single(models);
+        Assert.Equal("other", model.ProviderId);
+        Assert.Equal("same", model.Model.Id);
+    }
+
+    [Fact]
     public async Task IsImageInputAsync_CalledTwice_LoadsCatalogOnce()
     {
         var ct = TestContext.Current.CancellationToken;

@@ -1,6 +1,6 @@
 ---
 id: 156
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-31
@@ -70,6 +70,9 @@ created: 2026-10-31
 Файлы: `docs/decisions/0024-configured-chat-models.md` (новый), `ImageGen/ImageGen.Core/Providers/ConfiguredChatModel.cs` (новый), `ImageGen/ImageGen.Core/Providers/ProviderConfig.cs`, `ImageGen/ImageGen.Core/Providers/ProviderConfigLoader.cs`, `ImageGen/ImageGen.Core/Providers/ProviderRegistry.cs`, `ImageGen/ImageGen.Core/Providers/IProviderRouter.cs`, `ImageGen/ImageGen.Core/Providers/ProviderRouter.cs`, `ImageGen/ImageGen.Core/OpenAiCompatible/OpenAiCompatibleClient.cs`, `ImageGen/ImageGen.Core/AnthropicCompatible/AnthropicCompatibleClient.cs`, `ImageGen/ImageGen.Core/Services/ChatModelCatalogService.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/AssistantModelOptionViewModel.cs`, `ImageGen/ImageGen.Avalonia/Views/SessionModelsView.axaml`, `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml`, тесты в `ImageGen.Core.Tests` (Providers, OpenAiCompatible, AnthropicCompatible, Services), `ImageGen.Presentation.Tests/PageModels/SessionModelsPageModelTests.cs`, `ImageGen.Avalonia.Tests`, `docs/specs/chat-sessions.md`, `docs/architecture.md`, `tasks/v0.1/016-skeleton-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`.
 
 ## Отчёт
+Добавлен `chatModels` для OpenAI- и Anthropic-совместимых провайдеров; каталоги преобразуются в чат-модели без HTTP и ключа. Каталог ассистента объединяет все chat-провайдеры, переживает ошибку отдельного каталога, сортирует по имени и id провайдера. Выбранные строки сохраняют provider id + model id и показывают подпись провайдера. Обновлены ADR 0024, спецификация чата, архитектура и ручные проверки 016/046.
+
+Проверено: тесты Core 696/696, Data 96/96, Presentation 417/417, Avalonia 149/149 (2 платформенных теста пропущены); `dotnet format --verify-no-changes` для Core, Core.Tests, Presentation, Presentation.Tests и Avalonia; MAUI Android build без предупреждений и ошибок. Ручная проверка интерфейса добавлена в 016 и 046, не выполнена в этой среде.
 
 ## Комментарии
 ### 2026-10-31, claude-audit

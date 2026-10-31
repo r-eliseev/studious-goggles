@@ -12,6 +12,7 @@ namespace ImageGen.Presentation.PageModels;
 /// </summary>
 public sealed partial class AssistantModelOptionViewModel(
     ModelRef reference,
+    string providerText,
     ChatModel model,
     bool isSelected,
     Action<AssistantModelOptionViewModel> select) : ObservableObject
@@ -20,6 +21,8 @@ public sealed partial class AssistantModelOptionViewModel(
     public ModelRef Reference { get; } = reference;
 
     public string Name { get; } = model.Name;
+
+    public string ProviderText { get; } = providerText;
 
     /// <summary>Model id, price and whether it takes images, for example "vendor/model · price · takes images".</summary>
     public string DetailsText { get; } = BuildDetails(model);
@@ -36,7 +39,7 @@ public sealed partial class AssistantModelOptionViewModel(
     public string DisplayName => IsSelected ? "✓ " + Name : Name;
 
     /// <summary>The name with the selected state, read by screen readers.</summary>
-    public string AutomationName => IsSelected ? $"{Name}, {AppResources.AssistantSelected}" : Name;
+    public string AutomationName => IsSelected ? $"{Name}, {ProviderText}, {AppResources.AssistantSelected}" : $"{Name}, {ProviderText}";
 
     [RelayCommand]
     private void Select() => select(this);

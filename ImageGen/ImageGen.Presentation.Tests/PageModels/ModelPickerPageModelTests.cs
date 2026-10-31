@@ -174,9 +174,7 @@ public class ModelPickerPageModelTests
 
         await model.PickCommand.ExecuteAsync(model.AllModels.Single(option => option.Id == "vendor/beta"));
 
-        await _dialogs.Received(1).AlertAsync(
-            AppResources.ErrorTitle,
-            Arg.Is<string>(message => message.Contains("reference", StringComparison.OrdinalIgnoreCase)));
+        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, AppResources.ErrorKindModelWithoutReferences);
         await _navigation.DidNotReceive().GoBackAsync();
         await _runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
     }

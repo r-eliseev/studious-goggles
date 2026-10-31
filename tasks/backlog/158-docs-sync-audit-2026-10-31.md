@@ -1,6 +1,6 @@
 ---
 id: 158
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-31
@@ -74,6 +74,9 @@ created: 2026-10-31
 Файлы: `docs/status.md`, `docs/specs/chat-sessions.md`, `docs/architecture.md`, `docs/conventions.md`, `docs/index.md`, `docs/knowledge/dev-environment.md`, `docs/specs/debug-trace.md`, `docs/specs/image-client.md`.
 
 ## Отчёт
+Документация сверена с кодом по пунктам описания: обновлены очередь и блокеры в `docs/status.md`; архитектурная раскладка, правила слоёв и сведения о ключах в `docs/architecture.md`; актуальные соглашения и тестовые проекты; индекс базы знаний; сведения о логах Avalonia; ограничения debug trace; решения о платформах и параметрах ответа в спецификациях. ADR 0022/0023 уже приняты владельцем; ADR 0019 остаётся единственным предложенным ADR.
+
+Проверено: `git diff --check`, `scripts/check.sh`, `scripts/audit.sh` (раздел 5 показывает только ADR 0019). Код не менялся.
 
 ## Комментарии
 ### 2026-10-31, владелец (в чате, записал claude-audit)

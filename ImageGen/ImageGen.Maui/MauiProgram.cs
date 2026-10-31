@@ -87,6 +87,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IMauiFullScreenController, NoOpFullScreenController>();
 #endif
         builder.Services.AddSingleton<ICurrentSessionTracker, CurrentSessionTracker>();
+        builder.Services.AddSingleton<ErrorAlert>();
 
         // Pages and page models
         builder.Services.AddSingleton<SessionsPageModel>();

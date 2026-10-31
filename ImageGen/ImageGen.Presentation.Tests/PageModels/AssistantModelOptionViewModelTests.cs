@@ -24,7 +24,7 @@ public class AssistantModelOptionViewModelTests
         try
         {
             var option = new AssistantModelOptionViewModel(
-                new ModelRef(ProviderIds.OpenRouter, model.Id), model, isSelected: false, select: _ => { });
+                new ModelRef(ProviderIds.OpenRouter, model.Id), "OpenRouter (openrouter)", model, isSelected: false, select: _ => { });
 
             Assert.Equal("vendor/assistant · 0.10 in, 0.50 out per 1M tokens (USD)", option.DetailsText);
         }
@@ -40,7 +40,7 @@ public class AssistantModelOptionViewModelTests
         var model = new ChatModel("vendor/assistant", "Assistant", SupportsImageInput: true, ContextLength: 1000, SupportsTools: true);
 
         var option = new AssistantModelOptionViewModel(
-            new ModelRef(ProviderIds.OpenRouter, model.Id), model, isSelected: false, select: _ => { });
+            new ModelRef(ProviderIds.OpenRouter, model.Id), "OpenRouter (openrouter)", model, isSelected: false, select: _ => { });
 
         Assert.Contains(AppResources.AssistantTakesImages, option.Tags);
     }
