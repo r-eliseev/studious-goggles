@@ -1,6 +1,6 @@
 ---
 id: 031
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-27
@@ -65,3 +65,6 @@ ASP.NET Core: вход по паролю из переменной окруже�
 
 ### 2026-10-31, claude-audit
 План готов, статус planned. Допущения: пароль из `IMAGEGEN_WEB_PASSWORD`, папка данных из `IMAGEGEN_DATA_DIR` (по умолчанию `/data`), cookie на 30 дней, лимит 5 попыток входа в минуту, SSE для событий, ADR 0025 до кода.
+
+### 2026-10-31, владелец (в чате, записал claude-audit)
+План одобрен вместе с допущениями из комментария выше.
