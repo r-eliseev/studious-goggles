@@ -1,8 +1,8 @@
 ---
 id: 170
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: codex
+claimed: 2026-10-31T14:13:14Z
 created: 2026-10-31
 ---
 
