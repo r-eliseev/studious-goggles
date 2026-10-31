@@ -24,10 +24,16 @@ public sealed class SessionSettings
     [property: JsonPropertyName("assistantModelId")]
     public ModelRef AssistantModel { get; set; } = new(ProviderIds.OpenRouter, DefaultAssistantModelId);
 
-    public static SessionSettings CreateDefault() => new()
+    public static SessionSettings CreateDefault() => CreateDefault(new ModelRef(ProviderIds.OpenRouter, DefaultAssistantModelId));
+
+    public static SessionSettings CreateDefault(ModelRef assistantModel)
     {
-        ImageModels = [new ModelRef(ProviderIds.OpenRouter, DefaultImageModelId)],
-        RunsPerModel = MinRunsPerModel,
-        AssistantModel = new ModelRef(ProviderIds.OpenRouter, DefaultAssistantModelId),
-    };
+        ArgumentNullException.ThrowIfNull(assistantModel);
+        return new SessionSettings
+        {
+            ImageModels = [new ModelRef(ProviderIds.OpenRouter, DefaultImageModelId)],
+            RunsPerModel = MinRunsPerModel,
+            AssistantModel = assistantModel,
+        };
+    }
 }

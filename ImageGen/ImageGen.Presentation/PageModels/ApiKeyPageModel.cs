@@ -1,7 +1,9 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ImageGen.Core.Domain.Keys;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Presentation.Resources.Strings;
@@ -15,10 +17,30 @@ public sealed partial class ApiKeyPageModel(
     INavigationService navigation,
     IDialogService dialogs,
     ISecretPersistence persistence,
-    ErrorAlert errorAlert) : ObservableObject
+    ErrorAlert errorAlert,
+    ChatModelCatalogService chatModels,
+    IDefaultAssistantModel defaultAssistantModel) : ObservableObject
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
     private bool _invalidRouteAlertShown;
+
+    public ObservableCollection<AssistantProviderOption> ChatProviders { get; } = [];
+
+    public ObservableCollection<AssistantModelOption> AssistantModels { get; } = [];
+
+    [ObservableProperty]
+    public partial bool IsFirstRun { get; private set; }
+
+    [ObservableProperty]
+    public partial bool IsChoosingAssistantModel { get; private set; }
+
+    [ObservableProperty]
+    public partial AssistantProviderOption? SelectedChatProvider { get; set; }
+
+    [ObservableProperty]
+    public partial AssistantModelOption? SelectedAssistantModel { get; set; }
+
+    public bool HasAssistantModels => AssistantModels.Count > 0;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
@@ -75,6 +97,14 @@ public sealed partial class ApiKeyPageModel(
         StatusText = "";
         HasError = false;
         PersistenceWarning = "";
+        IsChoosingAssistantModel = false;
+        AssistantModels.Clear();
+        IsFirstRun = ReadFirstRun(query);
+        ChatProviders.Clear();
+        foreach (var chatProviderId in providers.All.Where(IsChatProvider))
+        {
+            ChatProviders.Add(new AssistantProviderOption(chatProviderId.Id, chatProviderId.DisplayName));
+        }
         IsRouteInvalid = !query.TryGetValue(Routes.ProviderIdParameter, out var value)
             || value is not string providerId
             || !providers.TryGet(providerId, out _);
@@ -82,9 +112,24 @@ public sealed partial class ApiKeyPageModel(
         {
             ProviderId = provider.Id;
             ProviderDisplayName = provider.DisplayName;
+            SelectedChatProvider = ChatProviders.FirstOrDefault(option => option.Id == provider.Id);
         }
 
         _invalidRouteAlertShown = false;
+    }
+
+    private static bool ReadFirstRun(IDictionary<string, object> query) =>
+        query.TryGetValue(Routes.FirstRunParameter, out var value)
+        && string.Equals(value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+
+    partial void OnSelectedChatProviderChanged(AssistantProviderOption? value)
+    {
+        if (!IsFirstRun || value is null || !providers.TryGet(value.Id, out var provider)) return;
+        ProviderId = provider.Id;
+        ProviderDisplayName = provider.DisplayName;
+        ApiKey = "";
+        StatusText = "";
+        HasError = false;
     }
 
     /// <summary>Checks persistence and safely rejects a missing/unknown provider route once.</summary>
@@ -125,6 +170,26 @@ public sealed partial class ApiKeyPageModel(
             {
                 ApiKey = "";
                 StatusText = "";
+                if (IsFirstRun && providerId != defaultAssistantModel.Current.ProviderId)
+                {
+                    var models = await chatModels.ListAssistantModelsAsync(providerId, CancellationToken.None);
+                    AssistantModels.Clear();
+                    foreach (var model in models)
+                    {
+                        AssistantModels.Add(new AssistantModelOption(new ModelRef(providerId, model.Id), model.Name, provider.DisplayName));
+                    }
+
+                    SelectedAssistantModel = AssistantModels.FirstOrDefault(option => option.Reference == defaultAssistantModel.Current);
+                    IsChoosingAssistantModel = true;
+                    OnPropertyChanged(nameof(HasAssistantModels));
+                    if (AssistantModels.Count == 0)
+                    {
+                        StatusText = AppResources.NoAssistantModelsConfigured;
+                    }
+
+                    return;
+                }
+
                 await navigation.GoBackAsync();
                 return;
             }
@@ -147,5 +212,24 @@ public sealed partial class ApiKeyPageModel(
         }
     }
 
+    [RelayCommand]
+    private async Task UseSelectedAssistantModelAsync()
+    {
+        if (SelectedAssistantModel is null || !IsChoosingAssistantModel) return;
+        try
+        {
+            await defaultAssistantModel.SaveAsync(SelectedAssistantModel.Reference, CancellationToken.None);
+            await navigation.GoBackAsync();
+        }
+        catch (Exception ex)
+        {
+            await _errorAlert.ShowAsync(ex);
+        }
+    }
+
     private bool CanSave() => ProviderId is not null && !IsRouteInvalid && !IsBusy && !string.IsNullOrWhiteSpace(ApiKey);
+
+    private static bool IsChatProvider(ProviderConfig provider) =>
+        provider.Kind == ProviderKind.OpenRouter
+        || (provider.Kind is ProviderKind.OpenAiCompatible or ProviderKind.AnthropicCompatible) && provider.ChatModels is not null;
 }

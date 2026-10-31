@@ -19,6 +19,17 @@ public class SessionSettingsTests
     }
 
     [Fact]
+    public void CreateDefault_CustomAssistant_UsesSuppliedModel()
+    {
+        var assistant = new ModelRef("claude", "vendor/model");
+
+        var settings = SessionSettings.CreateDefault(assistant);
+
+        Assert.Equal(assistant, settings.AssistantModel);
+        Assert.Equal([new ModelRef(ProviderIds.OpenRouter, SessionSettings.DefaultImageModelId)], settings.ImageModels);
+    }
+
+    [Fact]
     public void Serialize_ThenDeserialize_KeepsValues()
     {
         var settings = new SessionSettings

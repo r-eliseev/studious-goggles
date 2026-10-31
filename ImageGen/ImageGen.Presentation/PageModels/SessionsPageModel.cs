@@ -22,7 +22,8 @@ public sealed partial class SessionsPageModel(
     SessionSearchService searchService,
     SessionChangeNotifier changes,
     IMainThread mainThread,
-    ErrorAlert errorAlert) : ObservableObject
+    ErrorAlert errorAlert,
+    IDefaultAssistantModel defaultAssistantModel) : ObservableObject
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
     /// <summary>Pause after the last keystroke before the search runs.</summary>
@@ -125,9 +126,9 @@ public sealed partial class SessionsPageModel(
         try
         {
             await initializer.EnsureInitializedAsync();
-            if (!await apiKeyService.HasKeyAsync(ProviderIds.OpenRouter, CancellationToken.None))
+            if (!await apiKeyService.HasKeyAsync(defaultAssistantModel.Current.ProviderId, CancellationToken.None))
             {
-                await navigation.GoToAsync(Routes.ApiKeyFor(ProviderIds.OpenRouter));
+                await navigation.GoToAsync(Routes.ApiKeyFor(defaultAssistantModel.Current.ProviderId, firstRun: true));
                 return;
             }
 

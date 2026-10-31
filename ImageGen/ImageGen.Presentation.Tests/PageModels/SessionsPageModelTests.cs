@@ -61,7 +61,7 @@ public class SessionsPageModelTests : IDisposable
 
         await model.OnAppearingAsync();
 
-        await _navigation.Received(1).GoToAsync(Routes.ApiKeyFor(ProviderIds.OpenRouter));
+        await _navigation.Received(1).GoToAsync(Routes.ApiKeyFor(ProviderIds.OpenRouter, firstRun: true));
         await _sessionRepository.DidNotReceive().ListAsync(Arg.Any<CancellationToken>());
         Assert.Empty(model.Sessions);
         Assert.False(model.IsBusy);
@@ -583,12 +583,25 @@ public class SessionsPageModelTests : IDisposable
 
     private readonly CurrentSessionTracker _tracker = new();
 
-    private SessionsPageModel CreateModel(TimeProvider? time = null)
+    private SessionsPageModel CreateModel(TimeProvider? time = null, ModelRef? defaultAssistant = null)
     {
         var catalog = new ChatModelCatalogService(ProviderDoubles.Router(), NullLogger<ChatModelCatalogService>.Instance);
-        var sessions = new SessionService(_sessionRepository, Substitute.For<IChatMessageRepository>(), _runs, _files, catalog, TimeProvider.System, Substitute.For<IConversationSummaryRepository>(), _changes, Substitute.For<ISessionGenerationCoordinator>());
+        var sessions = new SessionService(_sessionRepository, Substitute.For<IChatMessageRepository>(), _runs, _files, catalog, TimeProvider.System, Substitute.For<IConversationSummaryRepository>(), _changes, Substitute.For<ISessionGenerationCoordinator>(), DefaultAssistantModels.Create());
         var apiKeys = new ApiKeyService(ProviderDoubles.Router(_provider), _secrets, NullLogger<ApiKeyService>.Instance);
-        return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs, time ?? TimeProvider.System, _tracker, new SessionSearchService(_searchTexts), _changes, _mainThread, ErrorAlerts.Create(_dialogs));
+        return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs, time ?? TimeProvider.System, _tracker, new SessionSearchService(_searchTexts), _changes, _mainThread, ErrorAlerts.Create(_dialogs), DefaultAssistantModels.Create(defaultAssistant));
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_DefaultAssistantUsesOtherProvider_RequestsItsKey()
+    {
+        var assistant = new ModelRef("claude", "vendor/assistant");
+        _secrets.GetAsync("provider.claude.api_key", Arg.Any<CancellationToken>()).Returns((string?)null);
+        var model = CreateModel(defaultAssistant: assistant);
+
+        await model.OnAppearingAsync();
+
+        await _navigation.Received(1).GoToAsync(Routes.ApiKeyFor("claude", firstRun: true));
+        await _sessionRepository.DidNotReceive().ListAsync(Arg.Any<CancellationToken>());
     }
 
     private static Session NewSession(string title, DateTimeOffset updatedAt) => new()

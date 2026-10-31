@@ -48,7 +48,7 @@ public class SessionModelsPageModelTests
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
         _chatModels = new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance);
-        _sessionService = new SessionService(_sessions, _messages, _runs, _files, _chatModels, time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance), Substitute.For<ISessionGenerationCoordinator>());
+        _sessionService = new SessionService(_sessions, _messages, _runs, _files, _chatModels, time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance), Substitute.For<ISessionGenerationCoordinator>(), DefaultAssistantModels.Create());
         _catalog = new ModelCatalogService(ProviderDoubles.Router(_provider), _modelRepository, NullLogger<ModelCatalogService>.Instance);
         _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ChatModel>>(
         [
@@ -349,7 +349,7 @@ public class SessionModelsPageModelTests
         _chatModels = new ChatModelCatalogService(router, NullLogger<ChatModelCatalogService>.Instance);
         _sessionService = new SessionService(
             _sessions, _messages, _runs, _files, _chatModels, TimeProvider.System, Substitute.For<IConversationSummaryRepository>(),
-            new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance), Substitute.For<ISessionGenerationCoordinator>());
+            new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance), Substitute.For<ISessionGenerationCoordinator>(), DefaultAssistantModels.Create());
         var registry = ProviderConfigLoader.Build("""
             {"providers":[
               {"id":"openrouter","kind":"openRouter","displayName":"OpenRouter","baseAddress":"https://openrouter.ai/api/v1/"},

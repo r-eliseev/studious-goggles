@@ -224,7 +224,7 @@ public sealed partial class SessionModelsPageModel(
             }
             OnPropertyChanged(nameof(SelectedCountText));
 
-            var assistants = await chatModels.ListAllAssistantModelsAsync(CancellationToken.None);
+            var assistants = await chatModels.ListAllAssistantModelsAsync(forceRefresh, CancellationToken.None);
             _assistants.Clear();
             _assistants.AddRange(assistants.Select(item =>
             {

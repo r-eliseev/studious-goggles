@@ -18,6 +18,14 @@
                 <TextBlock Classes="heading" Text="{Binding ProviderTitle}" TextWrapping="Wrap" />
                 <TextBlock Classes="muted" Text="{Binding ProviderDescription}" TextWrapping="Wrap" />
 
+                <StackPanel Spacing="6" IsVisible="{Binding IsFirstRun}">
+                    <TextBlock Text="{markup:Res FirstRunProviderPrompt}" />
+                    <ComboBox ItemsSource="{Binding ChatProviders}"
+                              SelectedItem="{Binding SelectedChatProvider, Mode=TwoWay}"
+                              DisplayMemberBinding="{Binding DisplayName}"
+                              AutomationProperties.Name="{markup:Res FirstRunProviderPrompt}" />
+                </StackPanel>
+
                 <TextBox Text="{Binding ApiKey, Mode=TwoWay}"
                          Classes.error="{Binding HasError}"
                          PasswordChar="*"
@@ -30,6 +38,19 @@
                         HorizontalAlignment="Stretch"
                         Content="{markup:Res ApiKeySave}"
                         AutomationProperties.Name="{markup:Res ApiKeySave}" />
+
+                <StackPanel Spacing="6" IsVisible="{Binding IsChoosingAssistantModel}">
+                    <TextBlock Text="{markup:Res FirstRunAssistantModelPrompt}" />
+                    <ComboBox ItemsSource="{Binding AssistantModels}"
+                              SelectedItem="{Binding SelectedAssistantModel, Mode=TwoWay}"
+                              DisplayMemberBinding="{Binding DisplayName}"
+                              AutomationProperties.Name="{markup:Res FirstRunAssistantModelPrompt}" />
+                    <Button Classes="primary"
+                            Command="{Binding UseSelectedAssistantModelCommand}"
+                            IsEnabled="{Binding HasAssistantModels}"
+                            Content="{markup:Res UseAssistantModel}"
+                            AutomationProperties.Name="{markup:Res UseAssistantModel}" />
+                </StackPanel>
 
                 <ProgressBar IsIndeterminate="True"
                              IsVisible="{Binding IsBusy}"

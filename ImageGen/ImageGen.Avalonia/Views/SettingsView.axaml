@@ -48,6 +48,18 @@
             </StackPanel>
 
             <StackPanel Spacing="8">
+                <TextBlock Classes="section" Text="{markup:Res SettingsDefaultAssistantModel}" />
+                <ComboBox ItemsSource="{Binding AssistantModels}"
+                          SelectedItem="{Binding SelectedAssistantModel, Mode=TwoWay}"
+                          DisplayMemberBinding="{Binding DisplayName}"
+                          AutomationProperties.Name="{markup:Res SettingsDefaultAssistantModel}" />
+                <Button Classes="ghost"
+                        Content="{markup:Res SettingsSaveAssistantModel}"
+                        Command="{Binding SaveDefaultAssistantModelCommand}"
+                        AutomationProperties.Name="{markup:Res SettingsSaveAssistantModel}" />
+            </StackPanel>
+
+            <StackPanel Spacing="8">
                 <TextBlock Classes="section" Text="{markup:Res SettingsAppearance}" />
                 <TextBlock Text="{markup:Res SettingsStyle}" />
                 <ItemsControl ItemsSource="{Binding Styles}">

@@ -1,4 +1,5 @@
 using ImageGen.Core.Domain.Keys;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
@@ -22,6 +23,7 @@ public sealed class SettingsPageModelTests : IDisposable
     private readonly IFolderLauncher _folders = Substitute.For<IFolderLauncher>();
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly IProviderRouter _router = Substitute.For<IProviderRouter>();
+    private readonly IDefaultAssistantModel _defaultAssistantModel = DefaultAssistantModels.Create();
     private readonly ProviderRegistry _registry = new([
         new ProviderConfig(ProviderIds.OpenRouter, ProviderKind.OpenRouter, "OpenRouter", new Uri("https://openrouter.ai/api/v1/"), TimeSpan.FromSeconds(10), []),
         new ProviderConfig(ProviderIds.Fal, ProviderKind.Fal, "fal.ai", new Uri("https://queue.fal.run/"), TimeSpan.FromSeconds(10), []),
@@ -126,6 +128,17 @@ public sealed class SettingsPageModelTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveDefaultAssistantModel_SelectedModel_PersistsReference()
+    {
+        var model = CreateModel();
+        model.SelectedAssistantModel = new AssistantModelOption(new ModelRef("claude", "vendor/assistant"), "Assistant", "Claude API");
+
+        await model.SaveDefaultAssistantModelCommand.ExecuteAsync(null);
+
+        await _defaultAssistantModel.Received(1).SaveAsync(new ModelRef("claude", "vendor/assistant"), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ProviderChangeCommand_NavigatesWithProviderId()
     {
         var model = CreateModel();
@@ -206,7 +219,8 @@ public sealed class SettingsPageModelTests : IDisposable
         Assert.True(CreateModel().CanOpenLogs);
     }
 
-    private SettingsPageModel CreateModel() => new(_appearance, _keyService, _registry, _navigation, _folders, new TestPaths(_directory), _dialogs, ErrorAlerts.Create(_dialogs));
+    private SettingsPageModel CreateModel() => new(_appearance, _keyService, _registry, _navigation, _folders, new TestPaths(_directory), _dialogs,
+        ErrorAlerts.Create(_dialogs), new ChatModelCatalogService(_router, NullLogger<ChatModelCatalogService>.Instance), _defaultAssistantModel);
 
     private sealed record TestPaths(string DataDirectory) : IAppPaths;
 }

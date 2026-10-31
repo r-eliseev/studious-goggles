@@ -1,4 +1,6 @@
 using ImageGen.Core.Domain.Keys;
+using ImageGen.Core.Domain.Models;
+using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
@@ -19,17 +21,26 @@ public class ApiKeyPageModelTests
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly ISecretPersistence _persistence = Substitute.For<ISecretPersistence>();
     private readonly IProviderRouter _router = Substitute.For<IProviderRouter>();
+    private readonly IAssistantChatClient _claude = Substitute.For<IAssistantChatClient>();
+    private readonly IDefaultAssistantModel _defaults = DefaultAssistantModels.Create();
     private readonly ProviderRegistry _registry = new([
         new ProviderConfig(ProviderIds.OpenRouter, ProviderKind.OpenRouter, "OpenRouter", new Uri("https://openrouter.ai/api/v1/"), TimeSpan.FromSeconds(10), []),
         new ProviderConfig(ProviderIds.Fal, ProviderKind.Fal, "fal.ai", new Uri("https://queue.fal.run/"), TimeSpan.FromSeconds(10), []),
         new ProviderConfig("together", ProviderKind.OpenAiCompatible, "Together AI", new Uri("https://api.together.ai/v1/"), TimeSpan.FromSeconds(10), []),
+        new ProviderConfig("claude", ProviderKind.AnthropicCompatible, "Claude API", new Uri("https://api.example/v1/"), TimeSpan.FromSeconds(10), [], ChatModels: [new ConfiguredChatModel("vendor/assistant", "Assistant", false, 4000)]),
     ]);
 
-    public ApiKeyPageModelTests() => _router.GetConnection(Arg.Any<string>()).Returns(_provider);
+    public ApiKeyPageModelTests()
+    {
+        _router.GetConnection(Arg.Any<string>()).Returns(_provider);
+        _router.ChatProviderIds.Returns([ProviderIds.OpenRouter, "claude"]);
+        _router.GetChatClient("claude").Returns(_claude);
+        _claude.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns([new ChatModel("vendor/assistant", "Assistant", false, 4000, SupportsTools: true)]);
+    }
 
     private ApiKeyPageModel CreateModel(string providerId = ProviderIds.OpenRouter)
     {
-        var model = new ApiKeyPageModel(new ApiKeyService(_router, _secrets, NullLogger<ApiKeyService>.Instance), _registry, _navigation, _dialogs, _persistence, ErrorAlerts.Create(_dialogs));
+        var model = CreatePageModel();
         model.ApplyQueryAttributes(new Dictionary<string, object> { [Routes.ProviderIdParameter] = providerId });
         return model;
     }
@@ -55,7 +66,7 @@ public class ApiKeyPageModelTests
     [InlineData(null)]
     public async Task OnAppearingAsync_UnknownOrMissingProvider_AlertsAndGoesBackOnceWithoutReadingSecrets(string? providerId)
     {
-        var model = new ApiKeyPageModel(new ApiKeyService(_router, _secrets, NullLogger<ApiKeyService>.Instance), _registry, _navigation, _dialogs, _persistence, ErrorAlerts.Create(_dialogs));
+        var model = CreatePageModel();
         var query = new Dictionary<string, object>();
         if (providerId is not null)
         {
@@ -73,6 +84,36 @@ public class ApiKeyPageModelTests
         await _navigation.Received(1).GoBackAsync();
         await _secrets.DidNotReceive().GetAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task SaveCommand_FirstRunAlternativeProvider_ShowsAndSavesAssistantModel()
+    {
+        _provider.CheckKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(ApiKeyStatus.Valid);
+        var model = CreatePageModel();
+        model.ApplyQueryAttributes(new Dictionary<string, object>
+        {
+            [Routes.ProviderIdParameter] = ProviderIds.OpenRouter,
+            [Routes.FirstRunParameter] = "true",
+        });
+        model.SelectedChatProvider = model.ChatProviders.Single(option => option.Id == "claude");
+        model.ApiKey = "claude-key";
+
+        await model.SaveCommand.ExecuteAsync(null);
+
+        Assert.True(model.IsChoosingAssistantModel);
+        Assert.Equal("claude", model.ProviderId);
+        Assert.Single(model.AssistantModels);
+        await _navigation.DidNotReceive().GoBackAsync();
+        model.SelectedAssistantModel = model.AssistantModels.Single();
+        await model.UseSelectedAssistantModelCommand.ExecuteAsync(null);
+
+        await _defaults.Received(1).SaveAsync(new ModelRef("claude", "vendor/assistant"), Arg.Any<CancellationToken>());
+        await _navigation.Received(1).GoBackAsync();
+    }
+
+    private ApiKeyPageModel CreatePageModel() => new(
+        new ApiKeyService(_router, _secrets, NullLogger<ApiKeyService>.Instance), _registry, _navigation, _dialogs, _persistence,
+        ErrorAlerts.Create(_dialogs), new ChatModelCatalogService(_router, NullLogger<ChatModelCatalogService>.Instance), _defaults);
 
     [Fact]
     public void ApplyQueryAttributes_RouteChanges_ClearsOldKeyAndStatus()

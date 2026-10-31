@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
@@ -23,7 +24,9 @@ public sealed partial class SettingsPageModel(
     IFolderLauncher folders,
     IAppPaths paths,
     IDialogService dialogs,
-    ErrorAlert errorAlert) : ObservableObject
+    ErrorAlert errorAlert,
+    ChatModelCatalogService chatModels,
+    IDefaultAssistantModel defaultAssistantModel) : ObservableObject
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
     /// <summary>The style cards; built on the first <see cref="LoadCommand"/>, because they refer to this page model.</summary>
@@ -31,6 +34,12 @@ public sealed partial class SettingsPageModel(
 
     /// <summary>Configured providers and their masked key status, in registry order.</summary>
     public ObservableCollection<ProviderKeyItemViewModel> ProviderKeys { get; } = [];
+
+    public ObservableCollection<AssistantModelOption> AssistantModels { get; } = [];
+
+    [ObservableProperty]
+    public partial AssistantModelOption? SelectedAssistantModel { get; set; }
+
 
     /// <summary>The theme in effect; the radio buttons show it. Changed through <see cref="SelectThemeCommand"/>.</summary>
     [ObservableProperty]
@@ -70,11 +79,38 @@ public sealed partial class SettingsPageModel(
             await key.RefreshAsync();
         }
 
+        var assistants = await chatModels.ListAllAssistantModelsAsync(forceRefresh: false, CancellationToken.None);
+        AssistantModels.Clear();
+        foreach (var (providerId, model) in assistants)
+        {
+            var providerName = providers.TryGet(providerId, out var provider) ? provider.DisplayName : providerId;
+            AssistantModels.Add(new AssistantModelOption(new ModelRef(providerId, model.Id), model.Name, providerName));
+        }
+
+        SelectedAssistantModel = AssistantModels.FirstOrDefault(option => option.Reference == defaultAssistantModel.Current)
+            ?? new AssistantModelOption(defaultAssistantModel.Current, defaultAssistantModel.Current.ModelId,
+                providers.TryGet(defaultAssistantModel.Current.ProviderId, out var currentProvider) ? currentProvider.DisplayName : defaultAssistantModel.Current.ProviderId);
+
         ShowAppearance(appearance.Current);
     }
 
     [RelayCommand]
     private Task OpenLogsAsync() => folders.OpenAsync(LogsFolder, CancellationToken.None);
+
+    [RelayCommand]
+    private async Task SaveDefaultAssistantModelAsync()
+    {
+        var selected = SelectedAssistantModel;
+        if (selected is null) return;
+        try
+        {
+            await defaultAssistantModel.SaveAsync(selected.Reference, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            await _errorAlert.ShowAsync(ex);
+        }
+    }
 
     [RelayCommand]
     private async Task SelectThemeAsync(AppearanceTheme theme)
