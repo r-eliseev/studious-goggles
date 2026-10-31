@@ -1,6 +1,6 @@
 ---
 id: 022
-status: todo
+status: planned
 assignee:
 claimed:
 created: 2026-10-27
@@ -30,16 +30,28 @@ created: 2026-10-27
 
 UI надо делать в двух оболочках через общую PageModel; сквозная задача слишком велика для Haiku/Luna. Рекомендуемое разбиение после согласования: read-model/репозиторий с пагинацией → общая PageModel/маршрут → две оболочки и виртуализация.
 
-## План
-Этап подготовки плана, код пока не писать:
-1. Уточнить проекцию элемента: GenerationId, RunId, SessionId, provider/model, created time, status, relative ImagePath и отображаемые метаданные. Назвать, входят ли ошибки/queued записи в ленту и как группируются прогоны на границе страницы.
-2. Спроектировать `IGalleryRepository`/`GalleryQuery`/`GalleryPage`: size с верхней границей, nullable cursor, диапазон дат с включённым началом/исключённым концом, provider+model как составная ссылка. Назвать стабильные поля сортировки и индекс, необходимый запросу.
-3. Составить SQL-тесты Data.Tests: одинаковые timestamps; пустой результат; несколько страниц; пересечение фильтров; удаление между страницами; отрицательный/слишком большой size. Не создавать зависимость Core.Tests от Data.
-4. Спроектировать `GalleryPageModel` и LoadMoreCommand: один активный запрос, IsBusy/HasMore/Error, generation запроса при смене фильтра, bounded thumbnail-cache и освобождение картинок. Не хранить все декодированные bitmap за всю сессию.
-5. Назвать маршруты, точки входа и конкретные Views/Pages обеих оболочек; планировать тесты отмены/устаревших ответов в Presentation и virtualized-view поведения в Avalonia. Повторно использовать открытие сессии через INavigationService.
-6. Опубликовать точный список файлов и небольшие части с зависимостями, поставить `planned` и ждать одобрения. Будущие проверки: Data.Tests, Presentation.Tests, Avalonia.Tests, build обеих оболочек по доступным TFM, dotnet format затронутых проектов, `bash scripts/check.sh`; завершение по `docs/tasks.md`.
 
-Файлы для анализа: `ImageGen/ImageGen.Core/Storage/IRunRepository.cs`, `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Core/Search/SessionSearchService.cs`, `ImageGen/ImageGen.Presentation/Routes.cs`, `ImageGen/ImageGen.Presentation/Services/INavigationService.cs`, `docs/specs/image-client.md`. Новые файлы назвать в окончательном плане.
+Уточнение 2026-10-31 (claude-audit, по коду `b4d00d9`): `IRunRepository` умеет только выборки по сессии; индекса по `generations.created_at` нет (`ix_generations_run`, `_session`, `_status`). Миниатюр в коде нет: Avalonia `FilePathToBitmapConverter` и MAUI `FilePathToImageSourceConverter` грузят файл целиком.
+
+## План
+Сначала падающий тест, затем код (ub-mode). Два этапа, отдельные PR.
+
+**Этап A. Данные и модель страницы.**
+1. В галерею входят только успешные генерации с файлом (`Succeeded`, `image_path` не NULL). Ошибки, очередь и отфильтрованные остаются в чатах — допущение.
+2. Core: `Storage/IGalleryRepository.ListAsync(GalleryQuery, CancellationToken)` → `GalleryPage(Items, NextCursor)`. `GalleryQuery`: `PageSize` (1..100, иначе `ArgumentOutOfRangeException`), `Cursor?`, `ModelRef?`, `From?` (включительно), `To?` (исключительно, локальные даты переводятся в UTC в PageModel). `GalleryItem`: GenerationId, RunId, SessionId, SessionTitle, ModelRef, Prompt, ImagePath, MediaType, CostUsd, CompletedAt. Курсор — пара (`completed_at`, `id`), порядок убывающий.
+3. Data: миграция `NNNN_gallery_index.sql` — индекс `generations(status, completed_at DESC, id DESC)`; запрос keyset `WHERE (completed_at, id) < (@at, @id)` с фильтрами до `LIMIT`; join с `sessions` для названия.
+4. Presentation: `GalleryPageModel` (маршрут `gallery`): `Items`, `LoadMoreCommand` (один запрос за раз), `HasMore`, `IsBusy`, фильтры модели (из моделей, встречающихся в галерее — `IGalleryRepository.ListModelsAsync`) и периода (всё время / 7 дней / 30 дней). Смена фильтра сбрасывает список и курсор; ответ старого запроса отбрасывается по номеру эпохи. `OpenCommand` открывает сессию (`Routes.ChatFor`); удалённая сессия/нет файла — сообщение и строка помечается.
+5. Тесты Data: одинаковые `completed_at` на границе страниц — без пропусков и дублей; фильтр модели и дат; удаление между страницами; пустой результат; неверный размер страницы. Presentation: сброс при смене фильтра, устаревший ответ, удалённая сессия.
+
+**Этап B. Экраны.**
+1. Avalonia `Views/GalleryView.axaml`: `ItemsRepeater`/`ListBox` с виртуализацией, `UniformGridLayout`, миниатюра через новый `ThumbnailConverter` (`Bitmap.DecodeToWidth(…, 256)`), догрузка при прокрутке к концу.
+2. MAUI `Pages/GalleryPage.xaml`: `CollectionView` с `GridItemsLayout`, `RemainingItemsThreshold` → `LoadMoreCommand`; миниатюры через `Image` с `HeightRequest` (MAUI не уменьшает декодирование — память ограничивает виртуализация, проверить на Android в 140).
+3. Вход: кнопка «Gallery» внизу списка сессий в обеих оболочках (рядом с Settings).
+4. Тесты Avalonia headless: открытие, догрузка, переход в сессию. Ручные пункты — 046 и 140.
+
+Проверки: Data.Tests, Presentation.Tests, Avalonia.Tests, сборка MAUI Android, `dotnet format`, `scripts/check.sh`. Документы: `docs/specs/image-client.md` F7.3–F7.4 (что сделано), `docs/architecture.md` (новые типы).
+
+Файлы: `ImageGen/ImageGen.Core/Storage/IGalleryRepository.cs`, `ImageGen/ImageGen.Core/Domain/Gallery/GalleryQuery.cs`, `GalleryPage.cs`, `GalleryItem.cs`, `GalleryCursor.cs` (новые); `ImageGen/ImageGen.Data/Migrations/NNNN_gallery_index.sql`, `ImageGen/ImageGen.Data/Repositories/GalleryRepository.cs` (новые), `DataServiceCollectionExtensions.cs`; `ImageGen/ImageGen.Presentation/PageModels/GalleryPageModel.cs`, `GalleryItemViewModel.cs` (новые), `Routes.cs`, `SessionsPageModel.cs`, `AppResources.resx/.cs`; `ImageGen/ImageGen.Avalonia/Views/GalleryView.axaml(.cs)`, `Converters/ThumbnailConverter.cs`, `Services/Navigation/PageRoutes.cs`, `Views/SessionsListView.axaml`, `Composition/AppServices.cs`; `ImageGen/ImageGen.Maui/Pages/GalleryPage.xaml(.cs)`, `Controls/SessionsListView.xaml`, `MauiProgram.cs`; тесты Data/Presentation/Avalonia.
 
 ## Отчёт
 
@@ -50,3 +62,6 @@ UI надо делать в двух оболочках через общую Pa
 
 ### 2026-10-29, codex-backlog-review
 Ревью по поручению владельца: устаревшая блокировка ожиданием 016 снята; скелет уже существует. Задача возвращена в `todo` для подготовки одобряемого плана. Текущие границы и критерии уточнены по коду и спецификации; это не одобрение реализации. Исторические комментарии выше сохранены.
+
+### 2026-10-31, claude-audit
+План готов, статус planned. Допущения: в галерее только успешные генерации с файлом; фильтр периода — всё время / 7 / 30 дней; вход — кнопка в списке сессий. Избранное, теги и коллекции не входят (отдельные задачи).

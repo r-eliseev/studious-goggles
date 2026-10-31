@@ -1,6 +1,6 @@
 ---
 id: 032
-status: todo
+status: planned
 assignee:
 claimed:
 created: 2026-10-27
@@ -29,17 +29,22 @@ Vue 3 + Vite + TypeScript для Web API: вход, сессии, чат, выб
 
 Для Haiku/Luna нужны отдельные части: (1) scaffold/build/API client/error/auth state; (2) список/CRUD сессий; (3) чат/отправка/история; (4) модели/ключи; (5) live generation state/image rendering; (6) интеграционные E2E/публикация assets. Все части опираются на опубликованный контракт 031, не выдумывают собственные статусы и provider URLs.
 
-## План
-Этап подготовки плана:
-1. По 031 перечислить endpoint/DTO/error/event contract для каждого экрана. Развести server-state, transient form state и router state; выбрать один простой подход и записать новые зависимости/ADR при необходимости.
-2. Определить структуру `ImageGen.Web/ClientApp` (Vue3/Vite/TS), lockfile, npm scripts и публикацию wwwroot из ASP.NET publish. Dev proxy/test URLs не должны попадать в production bundle.
-3. Зафиксировать routes login/sessions/chat/models/key/settings в фактическом объёме 031 и точки navigation, empty/loading/error/unauthorized states; не добавлять несуществующие gallery/spending endpoints.
-4. Для network client описать credentials same-origin, CSRF из 031, отсутствие автоматического повторения платных POST, отмену устаревших GET, clear key form после submit и безопасный рендер текста ассистента без raw HTML.
-5. Для event stream описать один consumer на активную страницу, merge по GenerationId/version либо refetch, reconnect/backoff и cleanup; тест «старый ответ другого session не заменяет новый экран».
-6. Для каждой выделенной части назвать файлы, unit/component tests и E2E: auth/401, submit, provider error, reload/deep link, reconnect, две сессии, keyboard navigation, narrow viewport. Реальные ключи/платные запросы в тесты не добавлять.
-7. После готового API и одобрения декомпозиции — planned и ожидание одобрения реализации. Будущие проверки: npm ci, typecheck, lint, test и build (точные имена scripts задать в плане), Web.Tests и browser smoke опубликованного хоста, `bash scripts/check.sh`; отчёт/завершение по docs/tasks.md.
 
-Файлы для анализа: `tasks/backlog/031-web-host-and-api.md`, `ImageGen/ImageGen.Presentation/PageModels/SessionsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `docs/specs/chat-sessions.md`. Новые ClientApp-файлы/команды назвать в окончательных планах.
+Уточнение 2026-10-31 (claude-audit): контракт API — план 031 (этапы 4–6). Клиент не содержит правил генерации: только DTO и команды.
+
+## План
+Реализация — после этапов 4–6 задачи 031. Четыре этапа, отдельные PR. Перед этапом 1 — дополнить ADR 0025 (или новый ADR) фронтенд-зависимостями: `vue`, `vue-router`, `vite`, `typescript`, `vitest`, `@vue/test-utils`, `@playwright/test` (все MIT/Apache-2.0 — проверить при добавлении), без UI-фреймворков и менеджеров состояния.
+
+**1. Каркас.** `ImageGen/ImageGen.Web/ClientApp`: Vite + Vue 3 + TypeScript, `package-lock.json` в git, скрипты `typecheck`, `lint` (vue-tsc + eslint), `test` (vitest), `e2e` (playwright), `build` → `../wwwroot`. Dev-сервер проксирует `/api` на хост; адрес прокси только в `vite.config.ts`. `api.ts`: `fetch` с `credentials: 'same-origin'`, заголовок antiforgery, 401 → маршрут `/login` с возвратом; POST платных действий без автоповтора. Хост отдаёт `wwwroot` и `index.html` для неизвестных путей (deep link) — правка в 031.
+**2. Вход и сессии.** Маршруты `/login`, `/` (список сессий: новые сверху, создать, переименовать, удалить с подтверждением, поиск по названию на клиенте — серверный поиск позже). Состояние — composables (`useSessions`), без глобального стора.
+**3. Чат и генерации.** `/sessions/:id`: лента (сообщения и прогоны), отправка, вложения, карточки генераций со статусом/ценой («price unknown» вместо 0), действия Repeat/New seed/Edit/Other model/Copy prompt/Save image, текст ассистента рендерится как текст (без `v-html`). `useEvents`: один `EventSource` на открытую сессию, слияние по `generationId`, на `resync` и переподключение — перечитать ленту; уход со страницы закрывает поток.
+**4. Модели и ключи.** `/sessions/:id/models` (вкладки картинок и ассистента, как S5.3–S5.7), `/settings` (ключи провайдеров: поле ключа очищается после отправки, не пишется в `localStorage`/URL; тема).
+
+Тесты: vitest на api-клиент (401, CSRF, отсутствие повтора POST), слияние событий (дубли, старое событие чужой сессии не меняет экран), очистку формы ключа. Playwright против опубликованного хоста с поддельными провайдерами (`ImageGen.Web.Tests` поднимает хост): вход/выход, отправка сообщения → карточка обновляется по событию, перезагрузка и deep link, переподключение, клавиатурная навигация, узкий экран 375 px. Реальных ключей и платных запросов нет.
+
+Проверки: `npm ci && npm run typecheck && npm run lint && npm test && npm run build`, e2e, Web.Tests, `scripts/check.sh`. Документы: `docs/knowledge/dev-environment.md` (Node, команды), `docs/architecture.md`.
+
+Файлы: `ImageGen/ImageGen.Web/ClientApp/{package.json,package-lock.json,vite.config.ts,tsconfig.json,index.html,src/**}`, `ImageGen/ImageGen.Web/Program.cs` (статические файлы и fallback), `docs/decisions/0025-web-host.md` (дополнение), тесты в `ClientApp/src/**/*.spec.ts` и `ClientApp/e2e/*`.
 
 ## Отчёт
 
@@ -50,3 +55,6 @@ Vue 3 + Vite + TypeScript для Web API: вход, сессии, чат, выб
 
 ### 2026-10-29, codex-backlog-review
 Устаревший блокер ожиданием016 снят: код скелета существует. Задача допускается к планированию, но не получила автоматического одобрения реализации. Исторические комментарии сохранены.
+
+### 2026-10-31, claude-audit
+План готов, статус planned; занимать после 031 (этапы 4–6). Допущения: без менеджера состояния и UI-библиотеки; поиск сессий в браузере — по названию на клиенте.

@@ -1,6 +1,6 @@
 ---
 id: 033
-status: todo
+status: planned
 assignee:
 claimed:
 created: 2026-10-27
@@ -31,17 +31,22 @@ created: 2026-10-27
 
 Нужные runtime library/base-image зависимости определяются по фактическому Web/Data проекту. Alpine/musl не выбирать только ради размера без SQLite smoke. Загрузки при сборке учитывают proxy/CA среды; TLS verification не отключать.
 
-## План
-Этап подготовки плана:
-1. По publish contract 031/032 назвать SDK/runtime base tags и порядок stages Vue build → dotnet publish → runtime, единственный output и process entrypoint. Описать .dockerignore без исключения нужных файлов и без включения tmp/github-auth, .git или development secrets.
-2. Согласовать DataDirectory=/data и расположение DB/images/secret store/key ring с Web host. Назвать UID/GID и поведение свежего тома, documented volume ownership; no recursive chmod777.
-3. Описать compose env/ports/volume/shutdown grace period. Пароль передаётся runtime env/поддержанным secret механизмом 031, не ARG/build layer; пример конфигурации не содержит реального пароля.
-4. Test cases: первый запуск/миграции, недостающий пароль → fail startup, authenticated health/application call, save fake generation+key, stop/recreate with same volume, прочитать прежнюю картинку и проверить decryption key, no resubmit восстановленного job, том не удаляется cleanup.
-5. Назвать build/smoke команды и файлы тестового fixture; healthcheck не должен обходить auth остальных endpoints или зависеть от внешнего провайдера.
-6. Подготовить отдельное предложение CI с точным workflow diff и явно получить разрешение на .github/workflows/ до изменений. Publication в registry — отдельная задача после выбора registry/tag policy.
-7. После готового плана planned и ожидание одобрения. Будущие проверки docker build/compose config/smoke/recreate, `bash scripts/check.sh`; отчёт с версией Docker/архитектурой и limitations, release-task по docs/tasks.md.
 
-Файлы для анализа: `tasks/backlog/031-web-host-and-api.md`, `tasks/backlog/032-vue-frontend.md`, `docs/architecture.md`, `ImageGen/ImageGen.Data/SqliteDatabase.cs`, `ImageGen/ImageGen.Data/FileImageStore.cs`. Будущие новые `Dockerfile`, `.dockerignore`, `docker-compose.yml`, Web deployment docs и smoke fixture назвать в окончательном плане; scripts/workflows не менять автоматически.
+Уточнение 2026-10-31 (claude-audit): выход публикации задают 031 (`dotnet publish ImageGen.Web`) и 032 (`npm run build` → `wwwroot`). Папка данных Web — `IMAGEGEN_DATA_DIR` (план 031).
+
+## План
+Реализация — после 031 и 032. Сначала проверка, затем код.
+
+1. `Dockerfile` в корне, три стадии: `node:22-bookworm-slim` (`npm ci`, `npm run build`) → `mcr.microsoft.com/dotnet/sdk:10.0` (`dotnet publish ImageGen/ImageGen.Web -c Release -o /app` с собранным `wwwroot`) → `mcr.microsoft.com/dotnet/aspnet:10.0` (Debian, не Alpine — SQLite проверен на glibc). Теги — с конкретной минорной версией на момент реализации. `USER $APP_UID` (встроенный пользователь образа .NET), `ENV IMAGEGEN_DATA_DIR=/data ASPNETCORE_HTTP_PORTS=8080`, `VOLUME /data`, `EXPOSE 8080`, `ENTRYPOINT ["dotnet","ImageGen.Web.dll"]`, `HEALTHCHECK` на `/api/health`.
+2. `.dockerignore`: `.git`, `tmp`, `**/bin`, `**/obj`, `**/node_modules`, `poc`, `docs`, `tasks` — не исключать `ImageGen/`, `Directory.*.props`, `global.json`.
+3. `docker-compose.yml`: сервис `imagegen`, `ports: ["127.0.0.1:8080:8080"]`, `volumes: [imagegen-data:/data]`, `environment: IMAGEGEN_WEB_PASSWORD: ${IMAGEGEN_WEB_PASSWORD:?set the password}`, `stop_grace_period: 30s`, именованный том. Пароль только через окружение, не через ARG/слой.
+4. Права: свежий именованный том создаётся с владельцем `$APP_UID` (каталог `/data` создаётся в образе с этим владельцем); bind mount — инструкция `chown` в документации, без `chmod 777`.
+5. Smoke `docker/smoke.sh` (не в `scripts/`): `docker compose up -d` с тестовым паролем → health → вход → сохранить ключ поддельного провайдера (через `providers.json` в томе с localhost-заглушкой) → прогон → `docker compose down` (без `-v`) → `up` → вход, ключ читается, картинка отдаётся, повторного submit нет → `down -v` в конце. Без внешних провайдеров.
+6. CI — отдельным предложением с diff workflow и только после разрешения владельца; публикация в registry — отдельная задача.
+
+Проверки: `docker build`, `docker compose config`, `docker/smoke.sh`, `scripts/check.sh`; в отчёте — версия Docker и архитектура. Документы: `docs/knowledge/docker.md` (новый: запуск, том, бэкап `/data`, смена пароля), `docs/index.md`, `README.md`.
+
+Файлы: `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `docker/smoke.sh`, `docs/knowledge/docker.md`, `docs/index.md`, `README.md`.
 
 ## Отчёт
 
@@ -52,3 +57,6 @@ created: 2026-10-27
 
 ### 2026-10-29, codex-backlog-review
 Устаревший блокер ожиданием016 снят: код скелета существует. Задача допускается к планированию, но не получила автоматического одобрения реализации. Исторические комментарии сохранены.
+
+### 2026-10-31, claude-audit
+План готов, статус planned; занимать после 031 и 032. Допущения: Debian-образы .NET, порт 8080 только на 127.0.0.1, именованный том; smoke-скрипт в новой папке `docker/`, а не в `scripts/`.

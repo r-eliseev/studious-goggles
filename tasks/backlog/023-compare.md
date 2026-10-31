@@ -1,6 +1,6 @@
 ---
 id: 023
-status: todo
+status: planned
 assignee:
 claimed:
 created: 2026-10-27
@@ -28,16 +28,21 @@ created: 2026-10-27
 
 С 131 общий код диалога/viewer и строки ресурсов. До её завершения план можно исследовать, но реализацию не занимать. Разные размеры требуют общей нормализованной системы viewport, а не копирования абсолютных пикселей pan между картинками. Прежде чем давать исполнение небольшой модели, в плане должны быть определены порядок выбора, способ открытия сравнения и поведение изображения за границами viewport.
 
-## План
-Этап подготовки плана после 131, код пока не писать:
-1. Прочитать реализацию viewer 131 и F6.3. Назвать точку выбора первого/второго результата, способы отмены selection и ограничения сравнения между сессиями; недостающие продуктовые решения записать вопросом, не угадывать.
-2. Описать `ComparisonPageModel`: ids/метаданные двух результатов, side-by-side/overlay mode, нормализованные zoom/offset и slider fraction 0..1. Чётко выбрать clamp и начальное fit-поведение при разных aspect ratio.
-3. Назвать контракт открытия сравнения и реализации в обеих оболочках; использовать загрузку/проверку путей/cleanup viewer, не открывать два независимых окна без синхронизации.
-4. Test cases: selection только двух Succeeded; второй удалён до открытия; clamp slider/zoom; pan/zoom отражаются в обоих viewport; разные размеры; неизвестная стоимость; закрытие освобождает обе картинки; error не оставляет незакрываемый overlay.
-5. Разбить реализацию на общую модель, Avalonia UI и MAUI UI с точными файлами и проверками; после плана `planned`, ждать одобрения. Ручные пункты фиксировать в актуальной задаче проверки соответствующей платформы, не в архивном файле 016.
-6. Будущие проверки: Presentation.Tests, Avalonia.Tests, build MAUI Android, format затронутых проектов, `bash scripts/check.sh`; отчёт/снятие занятости по `docs/tasks.md`.
 
-Файлы для анализа: `tasks/backlog/131-fullscreen-image-viewer.md`, `ImageGen/ImageGen.Presentation/PageModels/GenerationItemViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/RunItemViewModel.cs`, `ImageGen/ImageGen.Presentation/Services/IDialogService.cs`, `docs/specs/image-client.md`. Финальные новые файлы должны быть названы в одобряемом плане.
+Уточнение 2026-10-31 (claude-audit): код viewer 131 в main (`IImageViewerService`, `ImageViewerItem`, `ImageViewerNavigationState`; Avalonia и MAUI реализации); 131 держится только Windows-задачей 148. Контракт открытия уже есть — сравнение делается отдельным сервисом рядом, а не режимом существующего viewer.
+
+## План
+Реализация — после того как 131 станет done. Сначала падающий тест, затем код.
+
+1. **Выбор.** В меню карточки успешной генерации — «Compare…». Открывает выбор второй картинки: успешные генерации той же сессии (кроме исходной), в порядке ленты, с моделью и сидом. Сравнение между сессиями — позже через галерею 022 (вне объёма).
+2. **Модель.** `Presentation/PageModels/ComparisonPageModel` (не зависит от UI-типов): два `ImageViewerItem` + метаданные (модель, сид, цена: `ImagePriceText`/«price unknown»), `Mode` (`SideBySide | Overlay`), `Zoom` (1..8), `Offset` в нормализованных координатах (доля кадра, −0.5..0.5 после clamp), `SliderFraction` 0..1. Обе картинки вписываются (fit) в одинаковый viewport; zoom/offset применяются к нормализованным координатам, поэтому разные размеры и пропорции совпадают по центру и не растягиваются.
+3. **Сервис.** `IImageComparisonService.ShowAsync(ComparisonPageModel)` — реализации `AvaloniaImageComparisonService` (модальное окно поверх главного, как viewer) и `MauiImageComparisonService` (modal page). Загрузка и освобождение bitmap — теми же способами, что во viewer 131; отсутствующий файл → сообщение и закрытие, без висящего окна.
+4. **Жесты.** Avalonia: колесо — zoom вокруг курсора, перетаскивание — pan, оба изображения через один `TransformGroup`. MAUI: `PinchGestureRecognizer` + `PanGestureRecognizer` на общем контейнере, `Scale`/`TranslationX/Y` обоих `Image`. Overlay: верхнее изображение обрезается `Clip` по `SliderFraction`, `Slider` под картинкой; клавиши ←/→ двигают слайдер на десктопе.
+5. **Тесты.** Presentation: выбор только двух успешных; второй удалён до открытия; clamp zoom/offset/slider; нормализация для разных пропорций (вписанный прямоугольник); неизвестная цена не ноль. Avalonia headless: открытие, переключение режима, синхронный zoom обоих, закрытие освобождает обе картинки. Ручные: 046 (desktop), 140 (Android, pinch), 016 (Windows).
+
+Проверки: Presentation.Tests, Avalonia.Tests, сборка MAUI Android, `dotnet format`, `scripts/check.sh`. Документы: `docs/specs/image-client.md` F6.3, `docs/architecture.md`.
+
+Файлы: `ImageGen/ImageGen.Presentation/PageModels/ComparisonPageModel.cs`, `ComparisonMode.cs`, `ImageGen/ImageGen.Presentation/Services/IImageComparisonService.cs`, `ComparisonViewport.cs` (новые), `GenerationItemViewModel.cs`, `ChatPageModel.cs`, `AppResources.resx/.cs`; `ImageGen/ImageGen.Avalonia/Services/AvaloniaImageComparisonService.cs`, `Views/ComparisonView.axaml(.cs)` (новые), `Views/ChatView.axaml`, `Composition/AppServices.cs`; `ImageGen/ImageGen.Maui/Services/MauiImageComparisonService.cs`, `Pages/ComparisonPage.xaml(.cs)` (новые), `Pages/ChatPage.xaml`, `MauiProgram.cs`; тесты Presentation и Avalonia; `tasks/backlog/046-desktop-manual-check.md`, `tasks/backlog/140-android-manual-check.md`, `tasks/v0.1/016-skeleton-manual-check.md`.
 
 ## Отчёт
 
@@ -48,3 +53,6 @@ created: 2026-10-27
 
 ### 2026-10-29, codex-backlog-review
 Ревью по поручению владельца: устаревшая блокировка ожиданием 016 снята; скелет уже существует. Задача возвращена в `todo` для подготовки одобряемого плана. Текущие границы и критерии уточнены по коду и спецификации; это не одобрение реализации. Исторические комментарии выше сохранены.
+
+### 2026-10-31, claude-audit
+План готов, статус planned; занимать после done 131. Допущения: вторая картинка выбирается из той же сессии; zoom 1–8×; сравнение — отдельное модальное окно, не режим viewer.
