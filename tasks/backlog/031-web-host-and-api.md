@@ -1,6 +1,6 @@
 ---
 id: 031
-status: todo
+status: approved
 assignee:
 claimed:
 created: 2026-10-27
@@ -31,17 +31,27 @@ ASP.NET Core: вход по паролю из переменной окруже�
 
 Для Haiku/Luna это эпик, не один патч. Нужны последовательные маленькие части: (1) host/paths/DI/startup integration tests; (2) auth/session/CSRF; (3) Data Protection secret store; (4) DTO и session/model/key endpoints; (5) chat/generation/image endpoints; (6) bounded event stream/reconnect. Номера и зависимые задачи назначаются при одобрении декомпозиции.
 
-## План
-Этап подготовки плана:
-1. Сверить docs/architecture.md и существующие сервисы. Зафиксировать target net10.0, ImageGen.Web/ImageGen.Web.Tests, зависимости на Core/Data, persistent DataDirectory, startup/recovery/shutdown и конфигурацию password env без дефолтного пароля.
-2. Описать API contract: endpoints/DTO, ids и validation, JSON enum/error codes, HTTP statuses; исключить наружу provider keys, raw exceptions и JobJson. Для изображения — lookup GenerationId, проверка принадлежности/доступа, безопасное чтение relative ImagePath.
-3. Описать login/logout, cookie SameSite/HttpOnly/Secure policy в reverse-proxy deployment, server-side verification и CSRF token для mutations, bounded неудачные login попытки. Не внедрять OAuth/multi-user, которых продукт не требует.
-4. Определить encrypted ISecretStore file format и atomic write, persistent Data Protection key ring/application name; тестирование рестарта с тем же и другим key ring без печати секретов.
-5. Выбрать формат event stream (SSE либо иной один протокол) и правило reconnect: snapshot/refetch до incremental updates, bounded fan-out, slow/disconnected subscriber cleanup. Не реализовывать неограниченный replay всей истории и не обещать exactly-once доставку.
-6. Для каждой выделенной части составить Файлы, контракты и тесты WebApplicationFactory с временной БД/фейковыми провайдерами. Явно тестировать zero calls до авторизации, два одновременных клиента получают update, disconnect не отменяет run, shutdown не теряет наблюдение за job.
-7. Опубликовать декомпозицию и планы, поставить planned и ждать одобрения. Будущие проверки: Web.Tests, Core/Data regression по затронутым контрактам, format затронутых проектов, `bash scripts/check.sh`; docs/architecture/spec и отчёт/release-task по docs/tasks.md.
 
-Файлы для анализа: `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data/DataServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Core/Platform/ISecretStore.cs`, `ImageGen/ImageGen.Core/Platform/IAppPaths.cs`, `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Presentation/Services/AppInitializer.cs`, `ImageGen/ImageGen.slnx`, `ImageGen/Directory.Packages.props`, `docs/architecture.md`. Новые файлы/пакеты назвать в одобряемых планах; существующие scripts/workflows без отдельной просьбы не менять.
+Уточнение 2026-10-31 (claude-audit, по коду `b4d00d9`): платформенные контракты маленькие — `ISecretStore` (Get/Set/Remove по имени) и `IAppPaths.DataDirectory`. События ядра: `GenerationService.GenerationUpdated` и `SessionChangeNotifier.SessionChanged` — обычные .NET события, синхронные. `AppInitializer` (Presentation) делает две вещи: `SqliteDatabase.InitializeAsync` и `GenerationService.RecoverInterruptedAsync` — Web повторяет их сам, без ссылки на Presentation. Пакета `Microsoft.AspNetCore.Mvc.Testing` в `Directory.Packages.props` нет — нужен ADR.
+
+## План
+Шесть этапов, каждый — отдельный PR в этой задаче, по порядку. Сначала падающий тест (ub-mode). Перед этапом 1 — ADR `0025-web-host.md`: ASP.NET Core minimal API в `ImageGen.Web` (FrameworkReference, без новых пакетов в продукте), тестовый пакет `Microsoft.AspNetCore.Mvc.Testing` (MIT, проверить лицензию при добавлении), SSE для событий, cookie + antiforgery.
+
+**1. Хост и запуск.** Проекты `ImageGen.Web` (net10.0, ссылки Core, Data) и `ImageGen.Web.Tests` (xUnit v3, `WebApplicationFactory`), оба в `ImageGen.slnx`. `WebAppPaths` (папка данных из `IMAGEGEN_DATA_DIR`, иначе `/data`; создаётся при старте). `StartupInitializer : IHostedService` — миграции и `RecoverInterruptedAsync` до приёма запросов. Без `IMAGEGEN_WEB_PASSWORD` (пустого или отсутствующего) хост не стартует с понятной ошибкой. `GET /api/health` без авторизации — только `{"status":"ok"}`. Тесты: старт на временной папке, отсутствие пароля → ошибка, повторный старт не переприменяет миграции.
+
+**2. Вход и защита.** `POST /api/auth/login {password}` — сравнение SHA-256 через `CryptographicOperations.FixedTimeEquals`, cookie `HttpOnly`, `SameSite=Strict`, `Secure` (кроме `localhost`), срок 30 дней со скольжением; ограничение 5 попыток в минуту на IP (`Microsoft.AspNetCore.RateLimiting`). `POST /api/auth/logout`, `GET /api/auth/me`. Неавторизованный `/api/*` → `401` JSON, без редиректа. Изменяющие запросы требуют заголовок antiforgery (`GET /api/auth/csrf` выдаёт токен). Тесты: неверный пароль без cookie, 401 JSON, CSRF без токена → 400, лимит попыток.
+
+**3. Ключи провайдеров.** `DataProtectionSecretStore : ISecretStore` — файл `secrets.json` в папке данных, значения через `IDataProtector` (purpose `ImageGen.Secrets`), запись атомарно (временный файл + rename); key ring — `PersistKeysToFileSystem(<data>/keys)`, `SetApplicationName("ImageGen")`. Тесты: значение в файле не открытым текстом; перезапуск с тем же key ring читает; с другим key ring — ключ считается отсутствующим, не падает.
+
+**4. Сессии, модели, ключи (DTO).** `GET/POST /api/sessions`, `PATCH /api/sessions/{id}` (название), `DELETE /api/sessions/{id}`, `GET /api/sessions/{id}/timeline`, `PUT /api/sessions/{id}/settings`, `GET /api/models/image`, `GET /api/models/assistant`, `GET /api/providers` (статус ключа с последними 4 символами), `PUT/DELETE /api/providers/{id}/key`. Ошибки — `{"error": "<ErrorKind>"}` и HTTP-статус, без текста исключений и `JobJson`. Тесты: CRUD, неизвестный id → 404, ключ никогда не возвращается.
+
+**5. Чат, генерации, картинки.** `POST /api/sessions/{id}/messages` (вложения — `multipart`), `POST /api/generations/{id}/repeat|new-seed|edit|other-model`, `GET /api/generations/{id}/image` — путь берётся только из БД по id, проверка, что файл внутри папки данных. Выполнение прогонов — на singleton `GenerationService`: токен HTTP-запроса не передаётся в фоновую работу, закрытие вкладки не отменяет прогон. Тесты на подменённых провайдерах: прогон завершается после отмены запроса; картинка без входа → 401; чужой путь невозможен.
+
+**6. Поток событий.** `GET /api/events` — SSE (`text/event-stream`): события `generation` (`{generationId, sessionId, status}`) и `session` (`{sessionId}`). Каждый подписчик — свой `Channel` на 256 событий, `DropOldest`; при переполнении отправляется `resync`, клиент перечитывает состояние. Отключение клиента освобождает подписку; heartbeat-комментарий раз в 20 с. Тесты: два клиента получают одно событие; медленный клиент получает `resync`; отключение не отменяет прогон.
+
+Документы: `docs/architecture.md` (раскладка Web), `docs/knowledge/dev-environment.md` (запуск Web), `docs/specs/image-client.md` (Web-часть). Проверки каждого этапа: Web.Tests, Core/Data.Tests при изменении контрактов, `dotnet format` новых проектов, `scripts/check.sh`. Изменения CI — отдельно, с разрешения владельца.
+
+Файлы (по этапам; точные — в отчётах этапов): `docs/decisions/0025-web-host.md`, `ImageGen/ImageGen.slnx`, `ImageGen/Directory.Packages.props`, `ImageGen/ImageGen.Web/ImageGen.Web.csproj`, `Program.cs`, `WebAppPaths.cs`, `StartupInitializer.cs`, `Auth/*`, `Secrets/DataProtectionSecretStore.cs`, `Api/*Endpoints.cs`, `Api/Dtos/*`, `Events/EventHub.cs`, `Events/EventsEndpoint.cs`; `ImageGen/ImageGen.Web.Tests/*`.
 
 ## Отчёт
 
@@ -52,3 +62,9 @@ ASP.NET Core: вход по паролю из переменной окруже�
 
 ### 2026-10-29, codex-backlog-review
 Устаревший блокер ожиданием016 снят: код скелета существует. Задача допускается к планированию, но не получила автоматического одобрения реализации. Исторические комментарии сохранены.
+
+### 2026-10-31, claude-audit
+План готов, статус planned. Допущения: пароль из `IMAGEGEN_WEB_PASSWORD`, папка данных из `IMAGEGEN_DATA_DIR` (по умолчанию `/data`), cookie на 30 дней, лимит 5 попыток входа в минуту, SSE для событий, ADR 0025 до кода.
+
+### 2026-10-31, владелец (в чате, записал claude-audit)
+План одобрен вместе с допущениями из комментария выше.

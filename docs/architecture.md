@@ -108,7 +108,7 @@ SQLite-файл `imagegen.db` в `IAppPaths.DataDirectory`, схема в `Image
 ImageGen.Core       + Catalog с фильтрами; расходы
 ImageGen.Data       + таблица расходов, теги, коллекции
 ImageGen.Presentation, ImageGen.Avalonia   + модели и экраны новых фич (раскладка — «Текущая раскладка»)
-ImageGen.Maui       + Галерея, Сравнение, Расходы, Настройки; сохранение в галерею Android и iOS; ru-локализация
+ImageGen.Maui       + Галерея, Сравнение, Расходы, Настройки; сохранение в галерею Android и iOS
 ImageGen.Web        ASP.NET Core: вход по паролю из переменной окружения, Data Protection для секретов,
                     фоновое выполнение прогонов, поток событий браузеру
 ImageGen.Web/ClientApp   Vue 3 + Vite + TypeScript

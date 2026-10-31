@@ -1,6 +1,6 @@
 ---
 id: 024
-status: todo
+status: approved
 assignee:
 claimed:
 created: 2026-10-27
@@ -28,16 +28,31 @@ created: 2026-10-27
 
 После 129 все image-провайдеры используют единый queued-путь. Будущий план обязан опираться на его RunningJob/handle/submit settlement и сериализацию terminal-state из 121/113, без второй независимой таблицы активных заданий. Сигнал CancellationRequested не равен гарантированному Cancelled: watch продолжается по контракту провайдера, пока не выбран и документирован явный режим прекращения локального ожидания.
 
-## План
-Этап подготовки плана после 121/129, код пока не писать:
-1. Назвать `CancelGenerationAsync` и `CancelRunAsync` в GenerationService, тип возвращаемого outcome для UI и правила nonexistent id/session ownership. Найти все пути до submit, во время submit, polling, download/save и после terminal commit.
-2. Описать атомарную точку выбора победителя «cancel или result». Для каждого CancelOutcome задать persisted state, продолжение watch, текст UI и освобождение slot. CancellationRequested не превращать автоматически в Cancelled.
-3. Перенести безопасную публикацию handle/SubmitSettled из 121, использовать отдельный bounded token remote call; не перезапускать submit и не отменять caller token так, чтобы потерять handle. Для cancel до submit гарантировать zero remote calls.
-4. Для отмены прогона использовать snapshot его активных GenerationId и отменять каждую независимо; один сбой не пропускает остальные и отображается отдельным исходом. Повторный клик не даёт повторных remote cancel.
-5. Определить команды/CanExecute в GenerationItemViewModel и RunItemViewModel, тексты AppResources и обе разметки. Проверки: queued before slot, late handle, every CancelOutcome, provider exception, result wins/cancel wins, late file cleanup, repeated cancel, один failed cancel среди нескольких.
-6. Подготовить точную строку Файлы, разбить Core state machine и UI на маленькие последовательные части. После согласования поставить `planned` и ждать одобрения. Будущие проверки Core.Tests, Data.Tests для persisted-state сценариев, Presentation.Tests, Avalonia.Tests, MAUI Android build, format, `bash scripts/check.sh`; завершение по `docs/tasks.md`.
 
-Файлы для анализа: `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/Providers/CancelOutcome.cs`, `ImageGen/ImageGen.Core/Storage/IRunRepository.cs`, `ImageGen/ImageGen.Presentation/PageModels/GenerationItemViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/RunItemViewModel.cs`, `tasks/backlog/121-cancel-remote-job-on-session-delete.md`, `tasks/backlog/129-unify-generation-queued-path.md`. Финальный список зависит от реализованных контрактов prerequisite-задач.
+Уточнение 2026-10-31 (claude-audit, по коду `b4d00d9`): 121 и 129 выполнены. В `GenerationService` активные задания — `_running` (`RunningJob`: свой `CancellationTokenSource`, связанный с `SessionJobState.StopSource`, опубликованный handle, `SubmitSettled`, однократный `TryBeginRemoteCancel`). `StopSessionAsync` останавливает всю сессию и запрещает дальнейшие записи — для пользовательской отмены не подходит. `CancelRemoteJobBestEffortAsync` уже вызывает `CancelAsync` ровно один раз. `ApplyUpdateAsync` переводит `JobState.Cancelled` в `GenerationStatus.Cancelled`.
+
+## План
+Сначала падающий тест, затем код (ub-mode). Два этапа, отдельные PR.
+
+**Этап A. Ядро.**
+1. `GenerationService.CancelGenerationAsync(generationId, ct)` → `GenerationCancelResult { NotActive, Cancelled, CancellationRequested, CancelFailed }`; `CancelRunAsync(runId, ct)` → список результатов по каждой активной генерации прогона (снимок `_running` по RunId). Чужой/несуществующий id → `NotActive`.
+2. Флаг `RunningJob.UserCancelRequested` (атомарно, повторный вызов возвращает текущий исход без второго remote cancel).
+3. Ветки:
+   - до submit (нет handle): отменить токен задания → генерация `Cancelled` (`CompletedAt`), ноль удалённых вызовов;
+   - во время submit: дождаться `SubmitSettled`; если handle пришёл — как ниже, если submit упал — исход по ошибке submit;
+   - есть handle: `CancelAsync` с отдельным ограниченным токеном (таймаут провайдера). `Cancelled`/`AlreadyCompleted`/`NotFound` — локальное ожидание прекращается, статус `Cancelled` (если ещё не терминальный). `CancellationRequested` — статус остаётся активным, наблюдение продолжается, карточка помечается «cancel requested» (новое поле `Generation.CancelRequestedAt`, миграция `NNNN_generation_cancel_requested.sql`); ошибка `CancelAsync` → `CancelFailed`, наблюдение продолжается.
+4. Гонка результата и отмены: точка выбора — сериализованная запись терминального состояния (`PersistStateWithRetryAsync`). Если результат уже записан — `NotActive`, файл и Succeeded остаются. Если отмена записала `Cancelled` первой — поздно пришедший результат не сохраняется в файл (проверка флага перед `files.SaveAsync`), состояние не откатывается.
+5. Слот провайдера освобождается по terminal, как сейчас; при `CancellationRequested` слот держится до terminal (честный лимит).
+
+**Этап B. Интерфейс.**
+1. `GenerationItemViewModel.CancelCommand` (виден для Queued/Running, недоступен при уже отправленной отмене), `RunItemViewModel.CancelRunCommand` (виден, если есть активные). Тексты: «Cancelled», «Cancel requested — the provider may still finish and charge», «Could not cancel». Без обещания остановки у провайдера.
+2. Разметка: кнопка в карточке и в заголовке прогона в обеих оболочках, `SemanticProperties`/`AutomationProperties`.
+
+Тесты Core (подменённые провайдеры и временные задержки): cancel до слота, во время submit с поздним handle, каждый `CancelOutcome`, исключение `CancelAsync`, «результат победил»/«отмена победила», нет позднего файла, повторная отмена (один remote cancel), отмена прогона с одним сбоем среди нескольких, восстановление после перезапуска с `CancelRequestedAt`. Data: roundtrip нового поля. Presentation: видимость/состояния команд и тексты.
+
+Проверки: Core.Tests, Data.Tests, Presentation.Tests, Avalonia.Tests, сборка MAUI Android, `dotnet format`, `scripts/check.sh`. Документы: `docs/specs/chat-sessions.md` (S4 — отмена), `docs/specs/image-client.md` F5.4, `docs/architecture.md` (поток «Отмена»).
+
+Файлы: `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `GenerationCancelResult.cs` (новый), `ImageGen/ImageGen.Core/Domain/Generations/Generation.cs`, `ImageGen/ImageGen.Data/Migrations/NNNN_generation_cancel_requested.sql` (новый), `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Presentation/PageModels/GenerationItemViewModel.cs`, `RunItemViewModel.cs`, `ChatPageModel.cs`, `AppResources.resx/.cs`, `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, тесты Core/Data/Presentation/Avalonia.
 
 ## Отчёт
 
@@ -51,3 +66,9 @@ created: 2026-10-27
 
 ### 2026-10-29, codex-backlog-review
 Ревью по поручению владельца: устаревшая блокировка ожиданием 016 снята; скелет уже существует. Задача возвращена в `todo` для подготовки одобряемого плана. Текущие границы и критерии уточнены по коду и спецификации; это не одобрение реализации. Исторические комментарии выше сохранены.
+
+### 2026-10-31, claude-audit
+План готов, статус planned. Допущения: при `CancellationRequested` наблюдение продолжается до ответа провайдера (результат, пришедший после запроса отмены, но до подтверждения, сохраняется — плата уже списана); новое поле `CancelRequestedAt` переживает перезапуск.
+
+### 2026-10-31, владелец (в чате, записал claude-audit)
+План одобрен вместе с допущениями из комментария выше.
