@@ -152,8 +152,8 @@ jobs:
           dotnet-version: 10.0.x
       - run: dotnet workload install maui-android
       # The APK is signed with the release keystore from the repository secrets, so every release has the same
-      # certificate and installs over the previous one (task 163). The build's debug key changes on every runner:
-      # a tag without the secrets fails; a manual run may use the debug key to check the build only.
+      # certificate and installs over the previous one (task 163). Until the owner adds the secrets (task 165) the build
+      # signs with the runner's debug key, as before, and warns: such an APK does not install over another release.
       - name: Restore signing key
         id: signing
         shell: bash
@@ -166,11 +166,8 @@ jobs:
           if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
             printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/imagegen-release.keystore"
             echo "keystore=$RUNNER_TEMP/imagegen-release.keystore" >> "$GITHUB_OUTPUT"
-          elif [ "$GITHUB_REF_TYPE" = "tag" ]; then
-            echo "::error::Release keystore secrets are missing (ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD). A debug-signed APK would not install over the previous release."
-            exit 1
           else
-            echo "::warning::Release keystore secrets are missing: this manual run signs the APK with the debug key, which does not install over a release."
+            echo "::warning::Release keystore secrets are missing (ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD): the APK is signed with the debug key and does not install over another release."
           fi
       - name: Publish MAUI Android (APK)
         shell: bash
