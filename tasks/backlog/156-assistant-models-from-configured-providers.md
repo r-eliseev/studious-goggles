@@ -1,8 +1,8 @@
 ---
 id: 156
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: codex
+claimed: 2026-10-31T12:41:25Z
 created: 2026-10-31
 ---
 
