@@ -1,8 +1,8 @@
 ---
 id: 160
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: claude-audit
+claimed: 2026-10-31T10:52:34Z
 created: 2026-10-31
 ---
 
