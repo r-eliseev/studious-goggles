@@ -1,6 +1,6 @@
 ---
 id: 161
-status: todo
+status: planned
 assignee:
 claimed:
 created: 2026-10-31
@@ -22,8 +22,23 @@ created: 2026-10-31
 - Тест `Presentation` на найденную причину (если она в общей логике) или ручная проверка владельцем (если в разметке Android).
 
 ## Анализ
+Ответ владельца 2026-10-31: вариант (а) — пропадают прежние сессии в списке сессий (MAUI Android, Samsung Galaxy S25, Android 17).
+
+- Логика `SessionsPageModel` (`OnAppearingAsync`, `OnSessionChanged` → `RefreshSessionAsync` → `ApplySessionRow`) на `c6f8948` строк не теряет: перенос Earlier → Today, вставка новой сессии по времени, обновление названия и числа прогонов покрыты `SessionsPageModelTests` (`SessionChanged_*`) и проходят. Но тесты отдают из репозитория тот же объект `Session`, что уже в списке, и выполняют `BeginInvokeOnMainThread` синхронно; сценарий «новая сессия → первое сообщение (название) → старт прогона → завершение генераций» с отдельными объектами из репозитория одним тестом не проверен.
+- Разметка MAUI (`Controls/SessionsListView.xaml`): `ScrollView` → `VerticalStackLayout` → два `BindableLayout` (`Today`, `Earlier`) с заголовками. На Android вставка или перенос строки в `BindableLayout` внутри `ScrollView` может не пересчитать высоту содержимого: новая строка сверху сдвигает «Earlier» вниз, а прокручиваемая высота остаётся прежней — нижние (старые) строки обрезаются и недостижимы. Это согласуется с «до первой генерации видно, после — нет»: первые уведомления о сессиях (089/151, впервые в v0.1.5) добавляют и переносят строки без полной перезагрузки списка. На устройстве не проверено.
+- 162 правит тот же файл (жест строки, `SwipeView`). Порядок: 162 → 161, общий шаблон строки из 162 используется здесь.
 
 ## План
+1. **Тест логики** (сначала): `SessionsPageModelTests` — старые сессии в `Earlier`, затем создание сессии, уведомление о названии, о старте прогона и нескольких генерациях; репозиторий каждый раз отдаёт новый объект `Session`; `BeginInvokeOnMainThread` — отложенный (очередь), а не синхронный. Ожидание: `Sessions`, `Today` и `Earlier` вместе содержат все сессии ровно по одному разу. Если тест падает — исправить `ApplySessionRow`/`RefreshSessionAsync` и на этом остановиться с проверкой у владельца.
+2. **Разметка** (если тест проходит): заменить `ScrollView` + два `BindableLayout` на один `CollectionView` с группами «Today» и «Earlier» (`IsGrouped`, `GroupHeaderTemplate`): `CollectionView` сам обрабатывает вставку, удаление и перенос без пересчёта всей страницы. Для этого в `SessionsPageModel` — коллекция групп (`SessionGroup` с заголовком и строками) поверх существующих `Today`/`Earlier`, без смены их поведения (Avalonia продолжает использовать `Today`/`Earlier`). Шаблон строки — общий из 162. Примеры (`StarterExamples`) — `Footer` списка.
+3. Результаты поиска оставить отдельным списком (их не трогает уведомление о порядке), при необходимости тоже `CollectionView`.
+4. Документы: `docs/knowledge/maui.md` — факт о `BindableLayout` в `ScrollView` на Android после подтверждения; пункт в 140.
+
+Тест-кейсы: автоматический — шаг 1; разметочный тест в `Presentation.Tests/Design`: список сессий MAUI — `CollectionView` с группами, без `BindableLayout` для Today/Earlier. Ручные у владельца: 10+ старых сессий, новая сессия, сообщение, генерация — все старые сессии видны и прокручиваются до последней; перенос старой сессии в Today после генерации в ней; удаление; поиск.
+
+Проверка: тесты Presentation и Avalonia, сборка MAUI `-f net10.0-android`, `dotnet format` изменённых проектов, `scripts/check.sh`; Windows — CI.
+
+Файлы: `ImageGen/ImageGen.Presentation/PageModels/SessionsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionGroup.cs` (новый, если шаг 2), `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionsPageModelTests.cs`, `ImageGen/ImageGen.Maui/Controls/SessionsListView.xaml`, `ImageGen/ImageGen.Presentation.Tests/Design/MauiSessionsListMarkupTests.cs`, `docs/knowledge/maui.md`, `tasks/backlog/140-android-manual-check.md`.
 
 ## Отчёт
 
@@ -35,3 +50,9 @@ created: 2026-10-31
 - (а) после генерации `SessionsPageModel.OnSessionChanged` → `ApplySessionRow` переносит строку между `Today` и `Earlier` (`Remove`/`Insert`/`Move`); в MAUI список — два `BindableLayout` внутри `ScrollView` (`Controls/SessionsListView.xaml`). Обновление вызывается из каждой генерации (`SessionChangeNotifier`, 089/151/154 — впервые в v0.1.5).
 - (б) задача 159: после прогона последняя строка ленты выше окна, и автопрокрутка (097, впервые в v0.1.5) возвращает ленту к началу прогона; сообщения выше могут быть недостижимы при обновлениях карточек.
 До ответа задача остаётся todo: план зависит от варианта.
+
+### 2026-10-31, владелец (в чате, записал claude-audit)
+Вариант (а): пропадают прежние сессии в списке сессий. Устройство: Samsung Galaxy S25, Android 17.
+
+### 2026-10-31, claude-audit
+Анализ и план готовы, статус planned. Нужен ответ владельца: можно ли прокрутить список сессий до конца после того, как старые пропали, и возвращаются ли они после перезапуска приложения?

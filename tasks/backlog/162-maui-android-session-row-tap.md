@@ -1,6 +1,6 @@
 ---
 id: 162
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-31
@@ -47,3 +47,6 @@ created: 2026-10-31
 
 ### 2026-10-31, claude-audit
 Создано по отчёту владельца. Анализ и план — ниже, статус planned.
+
+### 2026-10-31, владелец (в чате, записал claude-audit)
+План одобрен. Устройство для проверки: Samsung Galaxy S25, Android 17.
