@@ -36,7 +36,7 @@ public class GenerationServiceTests
     private readonly IChatAttachmentRepository _chatAttachments = Substitute.For<IChatAttachmentRepository>();
     private readonly AttachmentService _attachments;
     private readonly GenerationService _service;
-    private readonly SessionChangeNotifier _changes = new();
+    private readonly SessionChangeNotifier _changes = new(NullLogger<SessionChangeNotifier>.Instance);
     private readonly Session _session;
     private IReadOnlyList<Generation> _added = [];
     private readonly ConcurrentDictionary<Guid, Run> _savedRuns = new();

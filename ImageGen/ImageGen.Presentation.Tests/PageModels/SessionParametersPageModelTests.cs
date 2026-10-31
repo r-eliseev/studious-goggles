@@ -35,7 +35,7 @@ public class SessionParametersPageModelTests
             Substitute.For<IRunRepository>(),
             Substitute.For<IImageFileStore>(),
             new ChatModelCatalogService(ProviderDoubles.Router(), NullLogger<ChatModelCatalogService>.Instance),
-            time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier(), Substitute.For<ISessionGenerationCoordinator>());
+            time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance), Substitute.For<ISessionGenerationCoordinator>());
         var catalog = new ModelCatalogService(
             ProviderDoubles.Router(), _modelRepository, NullLogger<ModelCatalogService>.Instance);
         _model = new SessionParametersPageModel(sessionService, catalog, _navigation, _dialogs);

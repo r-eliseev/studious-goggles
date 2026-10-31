@@ -1,6 +1,6 @@
 ---
 id: 154
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-30
@@ -53,6 +53,32 @@ bash scripts/check.sh
 После изменения каждого проекта: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`; после всех изменений — перечисленные тесты и `bash scripts/check.sh`. В отчёте указать команды, результаты, ручные ограничения и отличие от плана. Код писать только после одобрения плана по docs/tasks.md.
 
 ## Отчёт
+Исключение подписчика больше не прерывает остальных и не доходит до вызывающего.
+
+Изменения:
+- `ImageGen/ImageGen.Core/Services/SessionChangeNotifier.cs`: в первичный конструктор добавлен `ILogger<SessionChangeNotifier> logger`. `Notify` снимает снимок `SessionChanged`, обходит `GetInvocationList()` по очереди и вызывает каждый обработчик в своём try/catch — одного общего catch вокруг multicast-вызова нет. Операционная запись `LogWarning` содержит только `SessionId` и не несёт exception object или текст ошибки; детали — отдельная запись `LogDebug` с самим исключением.
+- `ImageGen/ImageGen.Core.Tests/Services/SessionChangeNotifierTests.cs`: прежний тест сохранён и переведён на новый конструктор; добавлены `Notify_WithoutSubscribers_DoesNothing`, `Notify_HandlerThrows_OtherHandlersStillCalled` (три подписчика, средний бросает `InvalidOperationException` с фиктивным приватным текстом; `Notify` не бросает, все три вызваны с тем же sender и id; для всех записей выше Debug `Exception` равен `null` и фиктивного текста в сообщении нет, а в Debug лежит исходное исключение) и `Notify_SubscribeDuringHandler_AffectsNextCallOnly` (подписка внутри обработчика действует на следующий `Notify`, текущий снимок стабилен).
+- `ImageGen/ImageGen.Core.Tests/Services/SessionServiceTests.cs`: регрессия `RenameAsync_ThrowingSubscriber_StillWritesAndCallsNextHandler` — запись состояния состоялась, метод завершился успешно, следующий обработчик вызван.
+- Все прямые конструкторы `new SessionChangeNotifier(...)` приведены к новой сигнатуре: `Core.Tests` (`SessionServiceTests`, `GenerationServiceTests`, `AssistantServiceTests`), `Presentation.Tests` (`AppInitializerTests`, `ModelPickerPageModelTests`, `ChatPageModelTests` ×2, `SessionModelsPageModelTests`, `SessionParametersPageModelTests`, `SessionsPageModelTests`), `SessionChangeNotifierTests`. Найдены все формы, включая target-typed `new()`. Логигер в тестах — `NullLogger<SessionChangeNotifier>.Instance`; optional-параметра и нового интерфейса не добавлял. DI не менялся: `services.AddSingleton<SessionChangeNotifier>()` — `ILogger<T>` подставляется контейнером.
+
+TDD: тесты на изоляцию и на снимок подписок написаны первыми и падали (в том числе не собирались — конструктора с логгером ещё не было); после реализации проходят. Прежний тест не удалялся.
+
+Замечание об отклонении от плана: сначала проверка на тексте Debug-сообщения искала приватный текст в `LogEntry.Message`, но `CapturingLogger` держит текст исключения в отдельном поле `Exception`, а в `Message` его нет — проверка перенесена на `debug.Exception.Message`.
+
+Проверено:
+```
+dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj        → 643 теста, 3 упавших
+dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj        → 96 тестов, 0 упавших
+dotnet test --project ImageGen/ImageGen.Presentation.Tests/…                         → 401 тест, 1 упавший
+dotnet test --project ImageGen/ImageGen.Avalonia.Tests/…                             → 151 тест, 0 упавших
+dotnet format … --verify-no-changes (Core, Core.Tests, Data.Tests, Presentation.Tests, Avalonia.Tests) → без изменений
+bash scripts/check.sh                                                                 → все проверки пройдены
+```
+Четыре упавших теста (`GenerationServiceTests.RunOnModelAsync_*` — три и `ModelPickerPageModelTests.Pick_TargetDoesNotSupportSourceReferences_ShowsErrorAndStaysOnPage`) **падают и на чистом `main`** — проверено откатом моих правок: это не следствие этой задачи, а отдельный долг (проверка целевой модели на поддержку референсов). Свои тесты задачи не трогал.
+
+Ручных проверок не требуется: изменения только в ядре и тестах.
+
+Результат дописан в задачу 089: она остаётся `blocked` до задачи 151 (уведомление после создания сессии).
 
 ## Комментарии
 

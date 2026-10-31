@@ -19,7 +19,7 @@ public class SessionServiceTests
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
     private readonly IConversationSummaryRepository _summaries = Substitute.For<IConversationSummaryRepository>();
     private readonly ISessionGenerationCoordinator _generationCoordinator = Substitute.For<ISessionGenerationCoordinator>();
-    private readonly SessionChangeNotifier _changes = new();
+    private readonly SessionChangeNotifier _changes = new(NullLogger<SessionChangeNotifier>.Instance);
     private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
     private readonly SessionService _service;
 
@@ -417,6 +417,23 @@ public class SessionServiceTests
 
         Assert.Equal("Lighthouse", session.Title);
         await _sessions.Received(1).UpdateAsync(session, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RenameAsync_ThrowingSubscriber_StillWritesAndCallsNextHandler()
+    {
+        var session = ExistingSession("Old");
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        var called = 0;
+        _changes.SessionChanged += (_, _) => throw new InvalidOperationException("подписчик упал");
+        _changes.SessionChanged += (_, _) => called++;
+
+        await _service.RenameAsync(session.Id, "Lighthouse", TestContext.Current.CancellationToken);
+
+        // The write went through, the method finished, and the next subscriber was called.
+        Assert.Equal("Lighthouse", session.Title);
+        await _sessions.Received(1).UpdateAsync(session, Arg.Any<CancellationToken>());
+        Assert.Equal(1, called);
     }
 
     [Fact]

@@ -48,7 +48,7 @@ public class SessionModelsPageModelTests
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
         _chatModels = new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance);
-        _sessionService = new SessionService(_sessions, _messages, _runs, _files, _chatModels, time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier(), Substitute.For<ISessionGenerationCoordinator>());
+        _sessionService = new SessionService(_sessions, _messages, _runs, _files, _chatModels, time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance), Substitute.For<ISessionGenerationCoordinator>());
         _catalog = new ModelCatalogService(ProviderDoubles.Router(_provider), _modelRepository, NullLogger<ModelCatalogService>.Instance);
         _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ChatModel>>(
         [
