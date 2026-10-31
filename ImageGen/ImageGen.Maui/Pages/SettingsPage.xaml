@@ -24,13 +24,11 @@
                                             StyleClass="ghost"
                                             Text="{x:Static strings:AppResources.SettingsChangeKey}"
                                             Command="{Binding ChangeCommand}"
-                                            MinimumHeightRequest="44"
                                             SemanticProperties.Description="{x:Static strings:AppResources.SettingsChangeKey}" />
                                     <Button Grid.Column="2"
                                             StyleClass="ghost"
                                             Text="{x:Static strings:AppResources.ProviderKeyRemove}"
                                             Command="{Binding RemoveCommand}"
-                                            MinimumHeightRequest="44"
                                             SemanticProperties.Description="{x:Static strings:AppResources.ProviderKeyRemove}" />
                                 </Grid>
                             </Border>
