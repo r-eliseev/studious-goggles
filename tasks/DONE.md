@@ -122,3 +122,19 @@
 - 138 | backlog | done | 2026-10-30 | Карточка MAUI: общие тесты команды и диагностика меню | `tasks/backlog/138-card-actions-command-diagnostics.md`
 - 142 | backlog | done | 2026-10-30 | Зафиксировать UTF-8 локаль в CI | `tasks/backlog/142-ci-locale-for-harness-grep.md`
 - 143 | backlog | done | 2026-10-30 | Заменить устаревший TextBox.Watermark в Avalonia-оболочке | `tasks/backlog/143-avalonia-placeholder-text-warning.md`
+- 089 | backlog | done | 2026-10-31 | Список сессий: название и число прогонов не обновляются | `tasks/backlog/089-sessions-list-refresh.md`
+- 099 | backlog | done | 2026-10-30 | Заметки о релизе: что изменилось с прошлого тега | `tasks/backlog/099-release-notes-since-tag.md`
+- 112 | backlog | done | 2026-10-31 | Добавить bounded reader для provider responses | `tasks/backlog/112-provider-response-size-limits.md`
+- 127 | backlog | done | 2026-10-31 | Ограничить HTTP logging buffer, сохранив Debug content | `tasks/backlog/127-bound-http-debug-logging.md`
+- 135 | backlog | done | 2026-10-31 | Сделать управление provider keys общим | `tasks/backlog/135-provider-neutral-key-ui.md`
+- 144 | backlog | done | 2026-10-30 | Ошибка сохранения картинки должна завершать задание | `tasks/backlog/144-generation-file-save-failure.md`
+- 145 | backlog | done | 2026-10-31 | Проверять референсы при запуске на другой модели | `tasks/backlog/145-other-model-reference-validation.md`
+- 146 | backlog | done | 2026-10-30 | Сохранять позицию viewer при неудачной навигации | `tasks/backlog/146-viewer-failed-navigation.md`
+- 147 | backlog | done | 2026-10-30 | Не терять release notes при пустом предыдущем наборе задач | `tasks/backlog/147-release-notes-empty-previous-set.md`
+- 149 | backlog | done | 2026-10-30 | Закрывать MAUI viewer по нажатию на фон | `tasks/backlog/149-maui-viewer-background-tap.md`
+- 150 | backlog | done | 2026-10-31 | Учитывать whitespace при ограничении base64 изображений | `tasks/backlog/150-base64-whitespace-image-limit.md`
+- 151 | backlog | done | 2026-10-31 | Уведомлять подписчиков после создания сессии | `tasks/backlog/151-notify-session-created.md`
+- 152 | backlog | done | 2026-10-31 | Дополнить обязательные тесты bounded HTTP pipeline | `tasks/backlog/152-http-logging-boundary-tests.md`
+- 153 | backlog | done | 2026-10-31 | Соблюдать Android touch target у кнопок ключей | `tasks/backlog/153-android-provider-key-touch-targets.md`
+- 154 | backlog | done | 2026-10-31 | Изолировать исключения подписчиков SessionChanged | `tasks/backlog/154-isolate-session-change-subscribers.md`
+- 155 | backlog | cancelled | 2026-10-31 | other-model-reference-validation | `tasks/backlog/155-other-model-reference-validation.md`
