@@ -167,6 +167,36 @@ public sealed class FileImageStoreTests : IDisposable
         Assert.Equal(content, await File.ReadAllBytesAsync(_store.GetFullPath(relative), ct));
     }
 
+    [Fact]
+    public async Task SaveAsync_ExistingImage_AtomicallyReplacesBytes()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var sessionId = Guid.NewGuid();
+        var generationId = Guid.NewGuid();
+        var relative = await _store.SaveAsync(sessionId, generationId, [1], "image/png", ct);
+
+        var overwritten = await _store.SaveAsync(sessionId, generationId, [2, 3], "image/png", ct);
+
+        Assert.Equal(relative, overwritten);
+        Assert.Equal(new byte[] { 2, 3 }, await File.ReadAllBytesAsync(_store.GetFullPath(relative), ct));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(_store.GetFullPath(relative))!, "*.tmp"));
+    }
+
+    [Fact]
+    public async Task SaveAttachmentAsync_ExistingAttachment_AtomicallyReplacesBytes()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var sessionId = Guid.NewGuid();
+        var attachmentId = Guid.NewGuid();
+        var relative = await _store.SaveAttachmentAsync(sessionId, attachmentId, [1], "image/png", ct);
+
+        var overwritten = await _store.SaveAttachmentAsync(sessionId, attachmentId, [4, 5], "image/png", ct);
+
+        Assert.Equal(relative, overwritten);
+        Assert.Equal(new byte[] { 4, 5 }, await File.ReadAllBytesAsync(_store.GetFullPath(relative), ct));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(_store.GetFullPath(relative))!, "*.tmp"));
+    }
+
     [Theory]
     [InlineData("image/png", ".png")]
     [InlineData("image/jpeg", ".jpg")]

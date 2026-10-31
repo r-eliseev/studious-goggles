@@ -16,6 +16,7 @@ namespace ImageGen.Data;
 public sealed class FileImageStore(IAppPaths appPaths, ILogger<FileImageStore> logger) : IImageFileStore
 {
     public const string ImagesFolder = "images";
+    private readonly AtomicImageFileWriter atomicWriter = new();
     private readonly SemaphoreSlim _metadataReadGate = new(2, 2);
 
     public async Task<string> SaveAsync(
@@ -32,8 +33,8 @@ public sealed class FileImageStore(IAppPaths appPaths, ILogger<FileImageStore> l
         var relativePath = $"{ImagesFolder}/{sessionId:N}/{generationId:N}{GetExtension(mediaType)}";
         var fullPath = GetFullPath(relativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        await File.WriteAllBytesAsync(fullPath, content, cancellationToken);
-        logger.LogDebug("Image saved: {Path} ({Bytes} bytes, {MediaType}).", relativePath, content.Length, mediaType);
+        await atomicWriter.WriteAsync(fullPath, content, cancellationToken);
+        LogSavedSafely(logger, relativePath, content.Length, mediaType);
         return relativePath;
     }
 
@@ -50,7 +51,7 @@ public sealed class FileImageStore(IAppPaths appPaths, ILogger<FileImageStore> l
         var relativePath = $"{ImagesFolder}/{sessionId:N}/attachments/{attachmentId:N}{GetExtension(mediaType)}";
         var fullPath = GetFullPath(relativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        await File.WriteAllBytesAsync(fullPath, content, cancellationToken);
+        await atomicWriter.WriteAsync(fullPath, content, cancellationToken);
         return relativePath;
     }
 
@@ -173,4 +174,16 @@ public sealed class FileImageStore(IAppPaths appPaths, ILogger<FileImageStore> l
         "image/gif" => ".gif",
         _ => ".bin",
     };
+
+    private static void LogSavedSafely(ILogger logger, string relativePath, int byteCount, string mediaType)
+    {
+        try
+        {
+            logger.LogDebug("Image saved: {Path} ({Bytes} bytes, {MediaType}).", relativePath, byteCount, mediaType);
+        }
+        catch
+        {
+            // Diagnostics cannot change the result after the file has been committed.
+        }
+    }
 }
