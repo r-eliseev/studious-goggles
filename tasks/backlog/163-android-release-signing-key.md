@@ -1,6 +1,6 @@
 ---
 id: 163
-status: in-progress
+status: blocked
 assignee: claude-audit
 claimed: 2026-10-31T11:38:25Z
 created: 2026-10-31
@@ -41,6 +41,10 @@ Android не ставит обновление с другой подписью 
 Файлы: `.github/workflows/release.yml`, `docs/knowledge/dev-environment.md`, `README.md`.
 
 ## Отчёт
+Сделано (код и документы):
+- `.github/workflows/release.yml`, задача `maui-android`: шаг «Restore signing key» декодирует keystore из секретов в `$RUNNER_TEMP`; без секретов тег падает с `::error::`, ручной запуск подписывает отладочным ключом с `::warning::`; публикация передаёт `AndroidKeyStore`, `AndroidSigningKeyStore`, `AndroidSigningKeyAlias` и пароли через `env:`; шаг «Remove signing key» (`if: always()`) удаляет файл.
+- `docs/knowledge/dev-environment.md`, «Релиз», и `README.md`: секреты, однократная переустановка при переходе, проверка сертификата.
+Проверено: синтаксис YAML (`yaml.safe_load`), `scripts/check.sh`. Не проверено: запуск workflow — нужны секреты владельца.
 
 ## Комментарии
 
@@ -49,3 +53,6 @@ Android не ставит обновление с другой подписью 
 
 ### 2026-10-31, владелец (в чате, записал claude-audit)
 Нужна инструкция по ключу; затем перенастроить release.yml (выбрано в вопросе). Тестовый APK для 134/159/160/162 владелец проверит после появления ключа.
+
+### 2026-10-31, claude-audit
+Код готов; задача blocked до секретов владельца (инструкция дана в чате). После добавления: два ручных запуска release workflow с одинаковым сертификатом APK, затем установка у владельца; затем done.
