@@ -81,10 +81,12 @@ public class MauiChatPageMarkupTests
     {
         // A run taller than the transcript is always the visible last row: scrolling to it on every gesture threw the
         // user back to the top of the run on Android (task 159).
-        var code = File.ReadAllText(Path.Combine(MauiRoot(), "Pages", "ChatPage.xaml.cs"));
+        // A Windows checkout has CRLF line endings (text=auto), so the source is normalized before searching.
+        var code = File.ReadAllText(Path.Combine(MauiRoot(), "Pages", "ChatPage.xaml.cs")).ReplaceLineEndings("\n");
         var start = code.IndexOf("private void OnTranscriptScrolled(", StringComparison.Ordinal);
         Assert.True(start >= 0);
         var end = code.IndexOf("\n    }\n", start, StringComparison.Ordinal);
+        Assert.True(end > start, "The end of OnTranscriptScrolled was not found.");
         var body = code[start..end];
 
         Assert.DoesNotContain("ScrollToEndLater", body, StringComparison.Ordinal);
