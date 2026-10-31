@@ -1,8 +1,8 @@
 ---
 id: 163
 status: todo
-assignee:
-claimed:
+assignee: claude-audit
+claimed: 2026-10-31T11:38:25Z
 created: 2026-10-31
 ---
 
