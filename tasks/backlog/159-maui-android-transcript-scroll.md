@@ -1,0 +1,73 @@
+---
+id: 159
+status: done
+assignee:
+claimed:
+created: 2026-10-31
+---
+
+# MAUI Android: лента чата не прокручивается вниз внутри прогона
+
+## Описание
+Наблюдение владельца 2026-10-31 (Android, релиз v0.1.5 = `c6f8948`, скриншот в чате): в сессии с прогоном 7 моделей × 1 видно только начало блока прогона (заголовок, промпт, верх первой карточки); прокрутить ниже нельзя — лента возвращается назад, картинки посмотреть невозможно. Владелец: «стало хуже» по сравнению с прежней версией. В v0.1.5 впервые вошли автопрокрутка 097 (`a02bedc`) и перенос чипов 098 (`383ab37`).
+
+Зависит от: —
+Среда: Linux или Windows с Android SDK (сборка); проверка на устройстве — у владельца (агент без устройства не воспроизводит, `docs/knowledge/claude-cloud-session.md`).
+
+## Критерии готовности
+- На Android в прогоне, который выше окна ленты, можно прокрутить до последней карточки и её кнопок; во время генерации обновления карточек не отбрасывают пользователя наверх блока.
+- Следование за концом (S2.7) сохраняется: новая строка и обновление карточки, пока пользователь у конца, показывают нижний край последней строки, а не её верх.
+- Прокрутка вверх по-прежнему приостанавливает следование; возврат к концу его возобновляет.
+- Windows MAUI и Avalonia не ломаются (Avalonia `TranscriptScrollTests` зелёные; Windows — CI и 016).
+- Проверено владельцем на устройстве: прогон 7 × 1 на телефоне, прокрутка до конца во время и после генерации.
+
+## Анализ
+Код (`ImageGen.Maui/Pages/ChatPage.xaml.cs`, задача 097):
+- Строка ленты — целый прогон: заголовок, промпт и `FlexLayout` с карточками 280 px. На телефоне карточки идут по одной в ряд, поэтому блок прогона из 7 карточек в несколько раз выше окна ленты (на скриншоте окно ленты ~40 % экрана, остальное — шапка и поле ввода).
+- `OnTranscriptScrolled`: при прокрутке вниз (`VerticalDelta > 0`), если виден последний элемент (`LastVisibleItemIndex >= Count - 1`), вызывается `ScrollToEndLater()`. Когда последний элемент — высокий блок прогона, он виден всегда, значит **каждый жест вниз вызывает программную прокрутку**.
+- `ScrollToEndLater` делает `Transcript.ScrollTo(lastIndex, ScrollToPosition.End)`. На скриншоте после неё показан **верх** последнего элемента, а не низ: для элемента выше окна Android-реализация `ScrollTo(…, End)` не доводит до нижнего края (поведение по факту на устройстве владельца; документация MAUI этот случай не описывает). Итог — жест вниз → прыжок к верху блока: «не разрешает прокрутить ниже».
+- Та же прокрутка срабатывает на `CardUpdated` и `SizeChanged` (обновления 4 of 7 → 7 of 7) — пока следование включено, каждое обновление карточки тоже отбрасывает к верху блока.
+- Логика решения «следовать или нет» — в `Presentation/Utilities/TranscriptFollower` (общая, тесты есть); дефект — в способе прокрутки на Android и в том, что жест вниз сам запускает прокрутку.
+- Avalonia использует свой `ScrollViewer` и прокручивает по смещению, её это не касается.
+- Дополнительно: шапка (три чипа во всю ширину после 098) и поле ввода оставляют ленте мало высоты — отдельный вопрос вёрстки, в эту задачу не входит.
+
+## План
+1. **Жест пользователя не запускает прокрутку.** В `OnTranscriptScrolled` при движении вниз у конца только сообщать `TranscriptFollower.UserScrolled(true)`, без `ScrollToEndLater()`: пользователь уже прокручивает сам.
+2. **«К концу» = к нижнему краю содержимого, а не к началу последнего элемента.** Новый метод страницы `ScrollToBottom()`, который вызывает `ScrollToEndLater` вместо `ScrollTo(lastIndex, End)`:
+   - Android (`#if ANDROID` в `ChatPage.xaml.cs` или маленький helper `Platforms/Android/TranscriptScroller.cs`): взять нативный `RecyclerView` из `Transcript.Handler.PlatformView`, `ScrollToPosition(last)`, затем после разметки (`Post`) прокрутить на остаток вниз (`ScrollBy` до `CanScrollVertically(1) == false`, ограничено числом шагов). Без анимации, флаг `_programmaticScroll` как сейчас.
+   - Остальные платформы: прежний `ScrollTo(lastIndex, End)` (Windows проверен в 097).
+3. **Определение «у конца»** для Android при высоком последнем элементе: `LastVisibleItemIndex` недостаточно. Считать «у конца», если `!recyclerView.CanScrollVertically(1)` (helper из шага 2); на других платформах — как сейчас.
+4. `TranscriptFollower` и Presentation не меняются; если понадобится новая чистая логика, сначала тест в `TranscriptFollowerTests`.
+5. Документы: `docs/knowledge/maui.md` — факт про `ScrollTo(…, End)` для элемента выше окна на Android (после подтверждения владельцем); пункт в 140.
+
+Тест-кейсы (ручные на устройстве владельца, автоматических для нативной прокрутки нет): прогон 7 × 1 — свайп вниз до последней карточки во время генерации и после; открытие сессии — показан низ последнего прогона; новый прогон у конца — лента следует к низу; свайп вверх — обновления карточек не дёргают ленту; возврат к концу — следование включается; поворот экрана. Регрессия: Avalonia `TranscriptScrollTests`, Presentation `TranscriptFollowerTests`.
+
+Проверка: `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android`, `dotnet format ImageGen/ImageGen.Maui/ImageGen.Maui.csproj --verify-no-changes` (с Android SDK), тесты Presentation и Avalonia, `scripts/check.sh`; Windows-сборка — CI. APK — артефакт ручного запуска release workflow для владельца.
+
+Файлы: `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml.cs`, `ImageGen/ImageGen.Maui/Platforms/Android/TranscriptScroller.cs` (новый, если helper), `docs/knowledge/maui.md`, `tasks/backlog/140-android-manual-check.md`.
+
+## Отчёт
+Изменено:
+- `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml.cs`: жест вниз больше не вызывает прокрутку — только возобновляет следование у конца (`IsAtEnd`); прокрутка к концу идёт через `ScrollTranscriptToEnd`, на Android — `TranscriptScroller`, на остальных — прежний `ScrollTo(…, End)`.
+- `ImageGen/ImageGen.Maui/Platforms/Android/TranscriptScroller.cs` (новый): `ScrollToBottom` — `ScrollToPosition(last)`, затем на следующем проходе `ScrollBy` до `CanScrollVertically(1) == false` (не больше 64 шагов); `IsAtBottom`.
+- `ImageGen/ImageGen.Presentation.Tests/Design/MauiChatPageMarkupTests.cs`: два теста исходника (жест не запускает прокрутку; на Android используется `TranscriptScroller`) — сначала красные, затем зелёные.
+- `docs/knowledge/maui.md`: факт про `ScrollTo(…, End)` для высокой строки.
+`TranscriptFollower` не менялся.
+
+Проверено в облачной сессии (Linux, .NET 10.0.403, Android SDK 36):
+- `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj` — 415/415;
+- `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android` — 0 предупреждений, 0 ошибок;
+- `dotnet format --verify-no-changes` для Presentation, Presentation.Tests, Maui;
+- `scripts/check.sh`.
+Не проверено: работа на устройстве (нет устройства и эмулятора; проверяет владелец APK-сборкой с этими исправлениями), Windows-цель MAUI (CI). Ручные пункты — в задаче 140.
+
+## Комментарии
+
+### 2026-10-31, claude-audit
+Создано по отчёту владельца (скриншот). Причина установлена по коду, на устройстве не воспроизводилась: жест вниз у высокого последнего элемента сам запускает `ScrollTo(…, End)`, а на Android эта прокрутка показывает верх элемента. План в статусе planned; проверка на устройстве — владелец.
+
+### 2026-10-31, владелец (в чате, записал claude-audit)
+План одобрен. Устройство для проверки: Samsung Galaxy S25, Android 17.
+
+### 2026-10-31, claude-audit
+Код готов, задача done; на устройстве ждёт проверки владельцем (пункты в 140).

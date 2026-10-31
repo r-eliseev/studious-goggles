@@ -7,6 +7,59 @@
              xmlns:controls="clr-namespace:ImageGen.Maui.Controls"
              x:Class="ImageGen.Maui.Controls.SessionsListView"
              x:DataType="pm:SessionsPageModel">
+    <ContentView.Resources>
+        <!-- One row for Today and Earlier. The whole row opens the session: a Button inside the SwipeView lost the tap
+             to the swipe on Android and showed Rename/Delete instead (task 162). -->
+        <DataTemplate x:Key="SessionRowTemplate" x:DataType="pm:SessionItemViewModel">
+            <SwipeView Threshold="96">
+                <SwipeView.RightItems>
+                    <SwipeItems SwipeBehaviorOnInvoked="Close">
+                        <SwipeItem Text="{x:Static strings:AppResources.Rename}"
+                                   BackgroundColor="{DynamicResource IgMutedColor}"
+                                   Command="{Binding RenameCommand}" />
+                        <SwipeItem Text="{x:Static strings:AppResources.DeleteSession}"
+                                   BackgroundColor="{DynamicResource IgErrColor}"
+                                   Command="{Binding DeleteCommand}" />
+                    </SwipeItems>
+                </SwipeView.RightItems>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4"
+                      MinimumHeightRequest="{StaticResource IgControlHeight}"
+                      BackgroundColor="Transparent"
+                      SemanticProperties.Description="{Binding Title}">
+                    <Grid.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenCommand}" />
+                    </Grid.GestureRecognizers>
+                    <FlyoutBase.ContextFlyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="{x:Static strings:AppResources.Rename}"
+                                            Command="{Binding RenameCommand}" />
+                            <MenuFlyoutItem Text="{x:Static strings:AppResources.DeleteSession}"
+                                            Command="{Binding DeleteCommand}" />
+                        </MenuFlyout>
+                    </FlyoutBase.ContextFlyout>
+                    <VerticalStackLayout Spacing="2" Padding="14,8" VerticalOptions="Center">
+                        <Label Text="{Binding Title}"
+                               FontFamily="{DynamicResource IgFontText}"
+                               FontSize="{DynamicResource IgFontSizeBody}"
+                               TextColor="{DynamicResource IgFgColor}"
+                               MaxLines="1"
+                               LineBreakMode="TailTruncation" />
+                        <Label StyleClass="meta"
+                               Text="{Binding DetailsText}" />
+                    </VerticalStackLayout>
+                    <Button Grid.Column="1"
+                            StyleClass="ghost"
+                            Command="{Binding DeleteCommand}"
+                            IsVisible="{OnIdiom Desktop=True, Default=False}"
+                            SemanticProperties.Description="{x:Static strings:AppResources.DeleteSession}">
+                        <Button.ImageSource>
+                            <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Delete}" Color="{DynamicResource IgMutedColor}" Size="16" />
+                        </Button.ImageSource>
+                    </Button>
+                </Grid>
+            </SwipeView>
+        </DataTemplate>
+    </ContentView.Resources>
     <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
         <VerticalStackLayout Spacing="8">
             <Button StyleClass="primary"
@@ -33,102 +86,12 @@
         <ScrollView Grid.Row="2" IsVisible="{Binding IsSearchInactive}">
             <VerticalStackLayout Spacing="6">
                 <Label StyleClass="section" Text="{x:Static strings:AppResources.SessionsToday}" Margin="4,8,0,0" />
-                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Today}">
-                    <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="pm:SessionItemViewModel">
-                            <SwipeView>
-                                <SwipeView.RightItems>
-                                    <SwipeItems>
-                                        <SwipeItem Text="{x:Static strings:AppResources.Rename}"
-                                                   BackgroundColor="{DynamicResource IgMutedColor}"
-                                                   Command="{Binding RenameCommand}" />
-                                        <SwipeItem Text="{x:Static strings:AppResources.DeleteSession}"
-                                                   BackgroundColor="{DynamicResource IgErrColor}"
-                                                   Command="{Binding DeleteCommand}" />
-                                    </SwipeItems>
-                                </SwipeView.RightItems>
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                                    <FlyoutBase.ContextFlyout>
-                                        <MenuFlyout>
-                                            <MenuFlyoutItem Text="{x:Static strings:AppResources.Rename}"
-                                                            Command="{Binding RenameCommand}" />
-                                            <MenuFlyoutItem Text="{x:Static strings:AppResources.DeleteSession}"
-                                                            Command="{Binding DeleteCommand}" />
-                                        </MenuFlyout>
-                                    </FlyoutBase.ContextFlyout>
-                                    <VerticalStackLayout Spacing="2">
-                                        <Button StyleClass="ghost"
-                                                Command="{Binding OpenCommand}"
-                                                HorizontalOptions="Fill"
-                                                Text="{Binding Title}"
-                                                SemanticProperties.Description="{Binding Title}" />
-                                        <Label StyleClass="meta"
-                                               Margin="12,0,0,0"
-                                               Text="{Binding DetailsText}" />
-                                    </VerticalStackLayout>
-                                    <Button Grid.Column="1"
-                                            StyleClass="ghost"
-                                            Command="{Binding DeleteCommand}"
-                                            IsVisible="{OnIdiom Desktop=True, Default=False}"
-                                            SemanticProperties.Description="{x:Static strings:AppResources.DeleteSession}">
-                                        <Button.ImageSource>
-                                            <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Delete}" Color="{DynamicResource IgMutedColor}" Size="16" />
-                                        </Button.ImageSource>
-                                    </Button>
-                                </Grid>
-                            </SwipeView>
-                        </DataTemplate>
-                    </BindableLayout.ItemTemplate>
-                </VerticalStackLayout>
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Today}"
+                                    BindableLayout.ItemTemplate="{StaticResource SessionRowTemplate}" />
 
                 <Label StyleClass="section" Text="{x:Static strings:AppResources.SessionsEarlier}" Margin="4,8,0,0" />
-                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Earlier}">
-                    <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="pm:SessionItemViewModel">
-                            <SwipeView>
-                                <SwipeView.RightItems>
-                                    <SwipeItems>
-                                        <SwipeItem Text="{x:Static strings:AppResources.Rename}"
-                                                   BackgroundColor="{DynamicResource IgMutedColor}"
-                                                   Command="{Binding RenameCommand}" />
-                                        <SwipeItem Text="{x:Static strings:AppResources.DeleteSession}"
-                                                   BackgroundColor="{DynamicResource IgErrColor}"
-                                                   Command="{Binding DeleteCommand}" />
-                                    </SwipeItems>
-                                </SwipeView.RightItems>
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                                    <FlyoutBase.ContextFlyout>
-                                        <MenuFlyout>
-                                            <MenuFlyoutItem Text="{x:Static strings:AppResources.Rename}"
-                                                            Command="{Binding RenameCommand}" />
-                                            <MenuFlyoutItem Text="{x:Static strings:AppResources.DeleteSession}"
-                                                            Command="{Binding DeleteCommand}" />
-                                        </MenuFlyout>
-                                    </FlyoutBase.ContextFlyout>
-                                    <VerticalStackLayout Spacing="2">
-                                        <Button StyleClass="ghost"
-                                                Command="{Binding OpenCommand}"
-                                                HorizontalOptions="Fill"
-                                                Text="{Binding Title}"
-                                                SemanticProperties.Description="{Binding Title}" />
-                                        <Label StyleClass="meta"
-                                               Margin="12,0,0,0"
-                                               Text="{Binding DetailsText}" />
-                                    </VerticalStackLayout>
-                                    <Button Grid.Column="1"
-                                            StyleClass="ghost"
-                                            Command="{Binding DeleteCommand}"
-                                            IsVisible="{OnIdiom Desktop=True, Default=False}"
-                                            SemanticProperties.Description="{x:Static strings:AppResources.DeleteSession}">
-                                        <Button.ImageSource>
-                                            <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Delete}" Color="{DynamicResource IgMutedColor}" Size="16" />
-                                        </Button.ImageSource>
-                                    </Button>
-                                </Grid>
-                            </SwipeView>
-                        </DataTemplate>
-                    </BindableLayout.ItemTemplate>
-                </VerticalStackLayout>
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Earlier}"
+                                    BindableLayout.ItemTemplate="{StaticResource SessionRowTemplate}" />
 
                 <!-- Narrow layout: with no sessions the examples take the place of the empty-state panel (task 078). -->
                 <controls:StarterExamples IsVisible="{Binding ShowsListExamples}" Margin="0,8,0,0" />

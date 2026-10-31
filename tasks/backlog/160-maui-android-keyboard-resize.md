@@ -1,0 +1,65 @@
+---
+id: 160
+status: done
+assignee:
+claimed:
+created: 2026-10-31
+---
+
+# MAUI Android: поле ввода закрыто клавиатурой
+
+## Описание
+Наблюдение владельца 2026-10-31 (Android, релиз v0.1.5, Gboard PL/EN, скриншот в чате): при открытой клавиатуре страница чата сдвигается целиком вверх (шапка уходит под строку состояния), а поле ввода видно только первой строкой, кнопки прикрепления и отправки — под клавиатурой. Задача 095 (`SafeAreaEdges="All"` на страницах) этого не исправила.
+
+Зависит от: —
+Среда: Linux или Windows с Android SDK (сборка); проверка на устройстве — у владельца.
+
+## Критерии готовности
+- На Android при открытой клавиатуре поле ввода целиком и кнопки прикрепления/отправки видны над клавиатурой; лента уменьшается по высоте, шапка не уходит под строку состояния.
+- После скрытия клавиатуры раскладка возвращается; при следовании за концом лента показывает низ последней строки (совместно с 159).
+- То же на остальных страницах с полями ввода (ключ API, параметры, поиск в списке сессий): поле над клавиатурой.
+- Windows, iOS/Mac Catalyst не меняются (код только для Android).
+- Проверено владельцем на устройстве; модель, версия Android и клавиатуры — в отчёте.
+
+## Анализ
+- `docs/knowledge/maui.md` (задача 095): «по документации safe area для Android при необходимости `WindowSoftInputModeAdjust(Resize)` применяется вместе с `All` … `Resize` не включали». В коде режима нет: ни `UseWindowSoftInputModeAdjust`, ни `WindowSoftInputMode` в `MainActivity` (`Platforms/Android/MainActivity.cs`), ни в манифесте.
+- Без явного режима окно работает как pan: Android сдвигает всё окно ровно настолько, чтобы была видна строка с курсором. Это совпадает со скриншотом: шапка уехала вверх, видна первая строка поля, остальное под клавиатурой.
+- Target SDK 36: окно edge-to-edge, клавиатура приходит как IME inset; `SafeAreaEdges="All"` в .NET 10 учитывает его, только если окно не панорамируется (документация MAUI safe area, раздел Android).
+- Edge-to-edge также объясняет фиолетовую строку состояния на первом скриншоте — отдельно не исправляется, если Resize её не меняет.
+
+## План
+1. Включить resize для приложения: `Application.On<Microsoft.Maui.Controls.PlatformConfiguration.Android>().UseWindowSoftInputModeAdjust(WindowSoftInputModeAdjust.Resize)` при создании `App` (или атрибут `WindowSoftInputMode = SoftInput.AdjustResize` у `MainActivity` — выбрать один способ, предпочтительно platform-specific MAUI, как в документации), только для Android.
+2. Страницы оставляют `SafeAreaEdges="All"` (095); никаких ручных отступов под клавиатуру.
+3. Если на устройстве после шага 1 поле всё ещё под клавиатурой — не подбирать отступы вслепую: снять с владельцем, какой элемент перекрыт, и записать в комментарий; следующий шаг — обработка IME inset у корневого `Grid` чата (отдельное согласование).
+4. `docs/knowledge/maui.md`: заменить «`Resize` не включали» фактом после проверки; пункты в 140 (поле над клавиатурой на всех страницах ввода, поворот).
+
+Тест-кейсы (ручные у владельца): чат — фокус в поле, видны поле и обе кнопки; длинный многострочный текст до `MaximumHeightRequest`; скрытие клавиатуры; поворот; страница ключа API и поиск в списке сессий. Автоматического теста нет (нативное поведение окна).
+
+Проверка: `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android`, `dotnet format` MAUI-проекта (с Android SDK), `scripts/check.sh`; Windows — CI.
+
+Файлы: `ImageGen/ImageGen.Maui/App.xaml.cs` (или `Platforms/Android/MainActivity.cs`), `docs/knowledge/maui.md`, `tasks/backlog/140-android-manual-check.md`.
+
+## Отчёт
+Изменено:
+- `ImageGen/ImageGen.Maui/App.xaml.cs`: `UseWindowSoftInputModeAdjust(WindowSoftInputModeAdjust.Resize)` для Android (platform-specific MAUI, на других платформах не действует).
+- `ImageGen/ImageGen.Presentation.Tests/Design/MauiSafeAreaTests.cs`: тест `App_ResizesWindowForAndroidKeyboard` — сначала красный, затем зелёный.
+- `docs/knowledge/maui.md`: «`Resize` не включали» заменено фактом.
+Шаг 3 плана (обработка IME inset у корневого Grid) не понадобился до проверки владельцем.
+
+Проверено в облачной сессии (Linux, .NET 10.0.403, Android SDK 36):
+- `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj` — 415/415;
+- `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android` — 0 предупреждений, 0 ошибок;
+- `dotnet format --verify-no-changes` для Presentation, Presentation.Tests, Maui;
+- `scripts/check.sh`.
+Не проверено: работа на устройстве (нет устройства и эмулятора; проверяет владелец APK-сборкой с этими исправлениями), Windows-цель MAUI (CI). Ручные пункты — в задаче 140.
+
+## Комментарии
+
+### 2026-10-31, claude-audit
+Создано по отчёту владельца (скриншот). Причина по коду: режим клавиатуры Android не задан, окно панорамируется вместо resize; 095 оставила Resize выключенным. План в статусе planned; проверка на устройстве — владелец.
+
+### 2026-10-31, владелец (в чате, записал claude-audit)
+План одобрен. Устройство для проверки: Samsung Galaxy S25, Android 17.
+
+### 2026-10-31, claude-audit
+Код готов, задача done; на устройстве ждёт проверки владельцем (пункты в 140). Если поле всё ещё под клавиатурой — переоткрыть со скриншотом.

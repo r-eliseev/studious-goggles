@@ -126,11 +126,34 @@ public partial class ChatPage : ContentPage, IQueryAttributable
             return;
         }
 
-        if (e.LastVisibleItemIndex >= _model.Items.Count - 1)
+        // The user scrolls down by hand: following resumes at the end, and nothing is scrolled from here. A run taller
+        // than the transcript is always the visible last row, so scrolling to it here threw the user back (task 159).
+        if (IsAtEnd(e))
         {
             _follower.UserScrolled(true);
-            ScrollToEndLater();
         }
+    }
+
+    private bool IsAtEnd(ItemsViewScrolledEventArgs e)
+    {
+#if ANDROID
+        if (ImageGen.Maui.Platforms.Android.TranscriptScroller.IsAtBottom(Transcript.Handler?.PlatformView) is { } atBottom)
+        {
+            return atBottom;
+        }
+#endif
+        return e.LastVisibleItemIndex >= _model.Items.Count - 1;
+    }
+
+    private void ScrollTranscriptToEnd()
+    {
+#if ANDROID
+        if (ImageGen.Maui.Platforms.Android.TranscriptScroller.ScrollToBottom(Transcript.Handler?.PlatformView))
+        {
+            return;
+        }
+#endif
+        Transcript.ScrollTo(_model.Items.Count - 1, position: ScrollToPosition.End, animate: false);
     }
 
     private void OnTranscriptRowSizeChanged(object? sender, EventArgs e)
@@ -159,7 +182,7 @@ public partial class ChatPage : ContentPage, IQueryAttributable
                 }
 
                 _programmaticScroll = true;
-                Transcript.ScrollTo(_model.Items.Count - 1, position: ScrollToPosition.End, animate: false);
+                ScrollTranscriptToEnd();
                 Dispatcher.Dispatch(() => _programmaticScroll = false);
             }
             finally

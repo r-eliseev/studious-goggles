@@ -16,6 +16,16 @@ public class MauiSafeAreaTests
         }
     }
 
+    [Fact]
+    public void App_ResizesWindowForAndroidKeyboard()
+    {
+        // Without Resize Android pans the whole window and the chat input stays under the keyboard (task 160).
+        var code = File.ReadAllText(Path.Combine(MauiRoot(), "App.xaml.cs"));
+
+        Assert.Contains("UseWindowSoftInputModeAdjust(", code, StringComparison.Ordinal);
+        Assert.Contains("WindowSoftInputModeAdjust.Resize", code, StringComparison.Ordinal);
+    }
+
     private static string MauiRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

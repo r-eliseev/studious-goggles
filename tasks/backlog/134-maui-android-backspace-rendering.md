@@ -1,6 +1,6 @@
 ---
 id: 134
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -49,8 +49,34 @@ bash scripts/check.sh
 Файлы: `ImageGen/ImageGen.Maui/Platforms/Android/ChatEditorImeHandling.cs`, `docs/knowledge/maui.md`, задача ручной проверки Android140 (регрессия, без правки архивированной095). Если диагностика подтверждает handler lifecycle, также `ImageGen/ImageGen.Maui/Controls/ChatEditor.cs`; если выделяется тестируемая platform-neutral функция обработки клавиш — её файл и содержательные unit-тесты записать в «Файлы» перед изменением. Строковый тест исходника не обязателен и сам по себе дефект не проверяет. Любой дополнительный файл сначала записать в комментарий с подтверждённой причиной.
 
 ## Отчёт
+Причина по коду (на устройстве не воспроизводилась, по согласию владельца проверка — его APK): обработчик `KeyPress` в `ChatEditorImeHandling` оставлял `Handled = true` (значение по умолчанию этого события в .NET for Android) для всех клавиш, кроме Enter, и поле не получало `KEYCODE_DEL` от Gboard.
+
+Изменено:
+- `ImageGen/ImageGen.Presentation/Utilities/ChatInputKeys.cs`, `ChatKeyAction.cs` (новые): правило клавиш — Enter без Shift на нажатие отправляет, его отпускание поглощается (иначе однострочное поле запустило бы своё действие ещё раз), Shift+Enter и остальные клавиши идут полю.
+- `ImageGen/ImageGen.Maui/Platforms/Android/ChatEditorImeHandling.cs`: `KeyPress` ставит `Handled` по правилу; `ImeOptions`, `SetRawInputType` и `EditorAction` не менялись.
+- `ImageGen/ImageGen.Presentation.Tests/Utilities/ChatInputKeysTests.cs` (новый): тест сначала не собирался (красный), затем зелёный.
+- `docs/knowledge/maui.md`: факт про `KeyPress`.
+
+Отличие от плана: шаги 1–3 (воспроизведение и диагностика агентом) заменены проверкой владельцем, как он согласовал 2026-10-31; подписки при переподключении handler не трогались (вне подтверждённой причины).
+
+Проверено в облачной сессии (Linux, .NET 10.0.403, Android SDK 36):
+- `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj` — 415/415;
+- `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android` — 0 предупреждений, 0 ошибок;
+- `dotnet format --verify-no-changes` для Presentation, Presentation.Tests, Maui;
+- `scripts/check.sh`.
+Не проверено: работа на устройстве (нет устройства и эмулятора; проверяет владелец APK-сборкой с этими исправлениями), Windows-цель MAUI (CI). Ручные пункты — в задаче 140.
 
 ## Комментарии
 
 ### 2026-10-29, codex-review
 Задача нужна как подтверждённый пользователем Android input defect. 095 исключена из обязательных зависимостей: она меняет другую функциональность. До занятия требуется доступное воспроизведение; дополнительные ручные регрессии передаются140, архивированную095 не править.
+
+### 2026-10-31, claude-audit
+Повтор владельца 2026-10-31 на релизе v0.1.5: стирание символов по-прежнему не работает (Gboard, раскладка PL/EN). Устройство у владельца есть; модель и версии Android/Gboard ещё не записаны.
+Гипотеза по коду (не проверена на устройстве): `ChatEditorImeHandling` подписывается на `field.KeyPress`, а в .NET for Android у `View.KeyEventArgs` для этого события `Handled` по умолчанию `true`. Обработчик ставит `Handled` только для Enter и не сбрасывает его для остальных клавиш, поэтому все остальные key events поглощаются. Буквы Gboard вводит через `InputConnection.commitText` (не key events), а Backspace без composing-текста часто отправляет как `KEYCODE_DEL` — он и теряется. Узкое исправление: в `KeyPress` для всех клавиш, кроме обрабатываемого Enter, явно `args.Handled = false`. Шаги 1–3 плана (воспроизведение и диагностику) может заменить проверка владельцем APK с этим исправлением, если владелец согласен; иначе план остаётся как есть.
+
+### 2026-10-31, владелец (в чате, записал claude-audit)
+Согласен: вместо воспроизведения агентом — проверка владельцем APK с узким исправлением `KeyPress`. Устройство: Samsung Galaxy S25, Android 17; клавиатура по скриншоту — Gboard (раскладка PL/EN), версия не указана.
+
+### 2026-10-31, claude-audit
+Код готов, задача done; на устройстве ждёт проверки владельцем. Если Backspace всё ещё не стирает — переоткрыть с моделью клавиатуры и наблюдением (стирает ли в других приложениях, стирает ли выделенный текст).

@@ -151,14 +151,47 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - run: dotnet workload install maui-android
-      # No release keystore yet: the APK is signed with the build's debug key (installable by sideloading, not for a store).
+      # The APK is signed with the release keystore from the repository secrets, so every release has the same
+      # certificate and installs over the previous one (task 163). Until the owner adds the secrets (task 165) the build
+      # signs with the runner's debug key, as before, and warns: such an APK does not install over another release.
+      - name: Restore signing key
+        id: signing
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/imagegen-release.keystore"
+            echo "keystore=$RUNNER_TEMP/imagegen-release.keystore" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Release keystore secrets are missing (ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD): the APK is signed with the debug key and does not install over another release."
+          fi
       - name: Publish MAUI Android (APK)
         shell: bash
-        run: >-
-          dotnet publish ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -c Release -f net10.0-android
-          -p:AndroidPackageFormat=apk
-          -p:ApplicationDisplayVersion=${{ needs.version.outputs.version }} -p:ApplicationVersion=${{ github.run_number }}
-          -o publish/android
+        env:
+          KEYSTORE: ${{ steps.signing.outputs.keystore }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          signing=()
+          if [ -n "$KEYSTORE" ]; then
+            # Passwords come from the environment (env: prefix), not from the command line.
+            signing=(-p:AndroidKeyStore=true "-p:AndroidSigningKeyStore=$KEYSTORE" "-p:AndroidSigningKeyAlias=$KEY_ALIAS"
+              -p:AndroidSigningStorePass=env:ANDROID_KEYSTORE_PASSWORD -p:AndroidSigningKeyPass=env:ANDROID_KEY_PASSWORD)
+          fi
+          dotnet publish ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -c Release -f net10.0-android \
+            -p:AndroidPackageFormat=apk \
+            -p:ApplicationDisplayVersion=${{ needs.version.outputs.version }} -p:ApplicationVersion=${{ github.run_number }} \
+            "${signing[@]}" \
+            -o publish/android
+      - name: Remove signing key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/imagegen-release.keystore"
       - name: Pack
         shell: bash
         run: cp publish/android/*-Signed.apk "$ASSET.apk"
