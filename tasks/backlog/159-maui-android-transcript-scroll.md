@@ -1,8 +1,8 @@
 ---
 id: 159
-status: in-progress
-assignee: claude-audit
-claimed: 2026-10-31T10:52:31Z
+status: done
+assignee:
+claimed:
 created: 2026-10-31
 ---
 
@@ -47,6 +47,19 @@ created: 2026-10-31
 Файлы: `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml.cs`, `ImageGen/ImageGen.Maui/Platforms/Android/TranscriptScroller.cs` (новый, если helper), `docs/knowledge/maui.md`, `tasks/backlog/140-android-manual-check.md`.
 
 ## Отчёт
+Изменено:
+- `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml.cs`: жест вниз больше не вызывает прокрутку — только возобновляет следование у конца (`IsAtEnd`); прокрутка к концу идёт через `ScrollTranscriptToEnd`, на Android — `TranscriptScroller`, на остальных — прежний `ScrollTo(…, End)`.
+- `ImageGen/ImageGen.Maui/Platforms/Android/TranscriptScroller.cs` (новый): `ScrollToBottom` — `ScrollToPosition(last)`, затем на следующем проходе `ScrollBy` до `CanScrollVertically(1) == false` (не больше 64 шагов); `IsAtBottom`.
+- `ImageGen/ImageGen.Presentation.Tests/Design/MauiChatPageMarkupTests.cs`: два теста исходника (жест не запускает прокрутку; на Android используется `TranscriptScroller`) — сначала красные, затем зелёные.
+- `docs/knowledge/maui.md`: факт про `ScrollTo(…, End)` для высокой строки.
+`TranscriptFollower` не менялся.
+
+Проверено в облачной сессии (Linux, .NET 10.0.403, Android SDK 36):
+- `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj` — 415/415;
+- `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android` — 0 предупреждений, 0 ошибок;
+- `dotnet format --verify-no-changes` для Presentation, Presentation.Tests, Maui;
+- `scripts/check.sh`.
+Не проверено: работа на устройстве (нет устройства и эмулятора; проверяет владелец APK-сборкой с этими исправлениями), Windows-цель MAUI (CI). Ручные пункты — в задаче 140.
 
 ## Комментарии
 
@@ -55,3 +68,6 @@ created: 2026-10-31
 
 ### 2026-10-31, владелец (в чате, записал claude-audit)
 План одобрен. Устройство для проверки: Samsung Galaxy S25, Android 17.
+
+### 2026-10-31, claude-audit
+Код готов, задача done; на устройстве ждёт проверки владельцем (пункты в 140).

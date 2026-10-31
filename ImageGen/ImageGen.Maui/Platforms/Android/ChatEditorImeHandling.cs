@@ -2,6 +2,7 @@ using Android.Text;
 using Android.Views;
 using Android.Views.InputMethods;
 using ImageGen.Maui.Controls;
+using ImageGen.Presentation.Utilities;
 using Microsoft.Maui.Handlers;
 
 namespace ImageGen.Maui.Platforms.Android;
@@ -34,9 +35,15 @@ public static class ChatEditorImeHandling
             };
             field.KeyPress += (_, args) =>
             {
-                if (args.KeyCode == Keycode.Enter && args.Event?.Action == KeyEventActions.Down && args.Event.IsShiftPressed == false)
+                // KeyPress starts with Handled = true: a key left so is lost to the field. Backspace comes from Gboard
+                // as KEYCODE_DEL, so every key but Enter has to be passed on explicitly (task 134).
+                var action = ChatInputKeys.Decide(
+                    args.KeyCode == Keycode.Enter,
+                    args.Event?.Action == KeyEventActions.Down,
+                    args.Event?.IsShiftPressed == true);
+                args.Handled = action != ChatKeyAction.PassToField;
+                if (action == ChatKeyAction.Send)
                 {
-                    args.Handled = true;
                     Send(editor);
                 }
             };

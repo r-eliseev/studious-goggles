@@ -1,8 +1,8 @@
 ---
 id: 160
-status: in-progress
-assignee: claude-audit
-claimed: 2026-10-31T10:52:34Z
+status: done
+assignee:
+claimed:
 created: 2026-10-31
 ---
 
@@ -40,6 +40,18 @@ created: 2026-10-31
 Файлы: `ImageGen/ImageGen.Maui/App.xaml.cs` (или `Platforms/Android/MainActivity.cs`), `docs/knowledge/maui.md`, `tasks/backlog/140-android-manual-check.md`.
 
 ## Отчёт
+Изменено:
+- `ImageGen/ImageGen.Maui/App.xaml.cs`: `UseWindowSoftInputModeAdjust(WindowSoftInputModeAdjust.Resize)` для Android (platform-specific MAUI, на других платформах не действует).
+- `ImageGen/ImageGen.Presentation.Tests/Design/MauiSafeAreaTests.cs`: тест `App_ResizesWindowForAndroidKeyboard` — сначала красный, затем зелёный.
+- `docs/knowledge/maui.md`: «`Resize` не включали» заменено фактом.
+Шаг 3 плана (обработка IME inset у корневого Grid) не понадобился до проверки владельцем.
+
+Проверено в облачной сессии (Linux, .NET 10.0.403, Android SDK 36):
+- `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj` — 415/415;
+- `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android` — 0 предупреждений, 0 ошибок;
+- `dotnet format --verify-no-changes` для Presentation, Presentation.Tests, Maui;
+- `scripts/check.sh`.
+Не проверено: работа на устройстве (нет устройства и эмулятора; проверяет владелец APK-сборкой с этими исправлениями), Windows-цель MAUI (CI). Ручные пункты — в задаче 140.
 
 ## Комментарии
 
@@ -48,3 +60,6 @@ created: 2026-10-31
 
 ### 2026-10-31, владелец (в чате, записал claude-audit)
 План одобрен. Устройство для проверки: Samsung Galaxy S25, Android 17.
+
+### 2026-10-31, claude-audit
+Код готов, задача done; на устройстве ждёт проверки владельцем (пункты в 140). Если поле всё ещё под клавиатурой — переоткрыть со скриншотом.
