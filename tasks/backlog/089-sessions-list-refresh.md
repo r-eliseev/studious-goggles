@@ -1,6 +1,6 @@
 ---
 id: 089
-status: blocked
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -144,3 +144,19 @@ bash scripts/check.sh
 ### 2026-10-30, codex-audit — проверка завершённости
 Статус done не подтверждён полностью; задача оставлена вне архива и переведена в blocked до фиксов 151, 154. В плане шаг1 требовал изоляцию handlers и безопасный ILogger; SessionChangeNotifier.cs:8 всё ещё вызывает multicast event одним Invoke, тест с throwing handler отсутствует. Шаг2 требовал Notify после CreateAsync; SessionService.cs:31–32 возвращает сразу после AddAsync. Основной refresh работает, но полный одобренный объём не завершён.
 Исторический отчёт и прежние комментарии сохранены. Остаток реализовывать только в названных follow-up задачах, не занимать эту задачу параллельно им. Вернуть done после их merge и проверки исходных критериев; отсутствие устройства само по себе причиной reopen не было.
+
+### 2026-10-31, opencode-vps — выполнена задача 154
+Изоляция подписчиков `SessionChanged` сделана (задача 154): каждый обработчик вызывается в своём try/catch, исключение одного не прерывает остальных и не доходит до вызывающего; в журнале Warning только `SessionId` без текста ошибки, детали — отдельной записью Debug. Регрессия на `RenameAsync` с бросающим подписчиком закрыта: запись состояния состоялась, метод завершился успешно, следующий обработчик вызван.
+Остаток 089 — задача 151 (уведомление после создания сессии): `SessionService.CreateAsync` возвращает сразу после `AddAsync`, без `changes.Notify`. До неё задача остаётся `blocked`.
+
+### 2026-10-31, opencode-vps — выполнена задача 151, задача закрыта
+Уведомление после создания сессии сделано (задача 151): `SessionService.CreateAsync` публикует ровно одно `SessionChanged` с id созданной сессии после подтверждённого `AddAsync`; при падении или отмене `AddAsync` события нет; исключение подписчика изолировано (задача 154) — создание возвращает сессию, остальные подписчики вызваны.
+Добавлен недостающий тест `SessionChanged_NewRun_UpdatesRunCount`: число прогонов в строке растёт после прогона без перезапуска и без перехода между экранами.
+
+Проверка исходных критериев 089:
+- новое название в строке без перезапуска — `SessionChanged_NewTitle_UpdatesExistingRow` ✓;
+- число прогонов растёт после каждого прогона — `SessionChanged_NewRun_UpdatesRunCount` ✓;
+- группы «Today / Earlier» и порядок не ломаются — `SessionChanged_EarlierUpdatedToday_MovesToTopOfToday`, `SessionChanged_UnknownSession_InsertsInTimestampOrder` ✓; введённый поиск не сбрасывается — `SessionChanged_WhileSearching_KeepsQueryAndResultsAndUpdatesTitle` ✓; удалённая сессия убирается из всех списков — `SessionChanged_DeletedSession_RemovesRowFromEveryList` ✓;
+- поведение одинаково в MAUI и Avalonia: логика в общем `Presentation`, тесты в `ImageGen.Presentation.Tests` ✓.
+
+Остаток закрыт: 154 (изоляция подписчиков) и 151 (уведомление после создания) — обе в этом PR.

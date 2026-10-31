@@ -32,6 +32,15 @@ public sealed class MauiProviderKeysMarkupTests
         Assert.Equal("pm:ProviderKeyItemViewModel", (string?)template.Attributes().Single(attribute => attribute.Name.LocalName == "DataType"));
         Assert.Contains(template.Descendants(), element => (string?)element.Attribute("Command") == "{Binding ChangeCommand}");
         Assert.Contains(template.Descendants(), element => (string?)element.Attribute("Command") == "{Binding RemoveCommand}");
+
+        // The buttons of a provider row take the platform size from the common style (IgControlHeight), not a local one.
+        foreach (var command in new[] { "{Binding ChangeCommand}", "{Binding RemoveCommand}" })
+        {
+            var button = Assert.Single(template.Descendants(), element => element.Name.LocalName == "Button"
+                && (string?)element.Attribute("Command") == command);
+            Assert.Null(button.Attribute("MinimumHeightRequest"));
+            Assert.Equal("ghost", (string?)button.Attribute("StyleClass"));
+        }
     }
 
     [Fact]

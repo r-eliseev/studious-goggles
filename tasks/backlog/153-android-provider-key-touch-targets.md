@@ -1,6 +1,6 @@
 ---
 id: 153
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-30
@@ -48,6 +48,26 @@ bash scripts/check.sh
 После изменения каждого проекта: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`; после всех изменений — перечисленные тесты и `bash scripts/check.sh`. В отчёте указать команды, результаты, ручные ограничения и отличие от плана. Код писать только после одобрения плана по docs/tasks.md.
 
 ## Отчёт
+Кнопки Change и Remove в строке ключа провайдера берут общий platform-aware размер цели касания.
+
+Изменения:
+- `ImageGen/ImageGen.Maui/Pages/SettingsPage.xaml`: у кнопок Change и Remove удалён локальный `MinimumHeightRequest="44"` (два вхождения). Размер теперь задаёт неявный стиль `Button` через `MinimumHeightRequest="{StaticResource IgControlHeight}"`: Android 48, iOS 44, WinUI/MacCatalyst 32 (`ImageGen/ImageGen.Maui/Resources/Themes/Common.xaml:35`, `Resources/Styles/Styles.xaml:43`). Стиль `ghost` высоту не задаёт, поэтому локальное значение было единственным, что перекрывало общий ресурс. Команды, подписи, семантика и provider rows не тронуты; новые значения высоты не вводились.
+- `ImageGen/ImageGen.Presentation.Tests/Design/MauiProviderKeysMarkupTests.cs`: существующая проверка `SettingsPage_ShowsProviderKeyRowsWithChangeAndRemoveActions` дополнена — у кнопок с командами Change и Remove нет атрибута `MinimumHeightRequest` и они используют общий стиль `ghost`.
+- `tasks/backlog/140-android-manual-check.md`: в пункт 5 добавлена ручная проверка кнопок на Android (не меньше 48 dp, длинные имена провайдеров, TalkBack).
+- `tasks/backlog/135-provider-neutral-key-ui.md`: дописан отчёт о закрытии остатка, задача возвращена в `done` — аудит удерживал её именно до этого остатка.
+
+TDD: утверждение в существующей проверке разметки добавлено первым и падало (`Assert.Null() Failure: Value is not null` — локальный `MinimumHeightRequest` был); после удаления атрибутов проходит. Новый тестовый проект не создавался, общие стили не переписывались.
+
+Проверено:
+```
+dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android → успешно, без предупреждений
+dotnet test --project ImageGen/ImageGen.Presentation.Tests/… → 402 теста, 1 упавший
+dotnet format ImageGen/ImageGen.Presentation.Tests/… --verify-no-changes → без изменений
+bash scripts/check.sh → все проверки пройдены
+```
+Единственный упавший тест (`ModelPickerPageModelTests.Pick_TargetDoesNotSupportSourceReferences_ShowsErrorAndStaysOnPage`) падает и на чистом `main` — это отдельный долг, к задаче отношения не имеет.
+
+**На устройстве не проверено** — Android-устройства в среде нет. Ручной пункт записан в 140: высота кнопок не меньше 48 dp, кнопки не обрезаны при длинном имени провайдера, TalkBack читает обе. Windows UI на Linux не объявляю проверенным.
 
 ## Комментарии
 
