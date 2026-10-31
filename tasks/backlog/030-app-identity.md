@@ -36,7 +36,7 @@ created: 2026-10-27
 4. Для Windows получить фактические пути и доступность SecureStorage на тестовом профиле; только после этого планировать атомарный идемпотентный перенос с резервной копией и восстановлением. Не удалять исходные данные до успешной проверки.
 5. Каждая часть получает точную строку Файлы, сборку и проверки. Общая часть: MAUI Android build; Windows: Windows build и ручная смена identity на тестовых данных. Завершение: отчёт, актуальные инструкции migration и `bash scripts/check.sh` по docs/tasks.md.
 
-Файлы для анализа: `ImageGen/ImageGen.Maui/ImageGen.Maui.csproj`, `ImageGen/ImageGen.Maui/Platforms/Windows/Package.appxmanifest`, `ImageGen/ImageGen.Maui/Resources/AppIcon/appicon.svg`, `ImageGen/ImageGen.Maui/Resources/AppIcon/appiconfg.svg`, `ImageGen/ImageGen.Maui/Resources/Splash/splash.svg`, `ImageGen/ImageGen.Maui/Services/MauiAppPaths.cs`, `ImageGen/ImageGen.Maui/Services/MauiSecretStore.cs`, `ImageGen/ImageGen.Avalonia/Platform/DesktopAppPaths.cs`, `docs/knowledge/windows-machine.md`.
+Файлы для анализа: `ImageGen/ImageGen.Maui/ImageGen.Maui.csproj`, `ImageGen/ImageGen.Maui/Platforms/Windows/Package.appxmanifest`, `ImageGen/ImageGen.Maui/Resources/AppIcon/appicon.svg`, `ImageGen/ImageGen.Maui/Resources/AppIcon/appiconfg.svg`, `ImageGen/ImageGen.Maui/Resources/Splash/splash.svg`, `ImageGen/ImageGen.Maui/Services/MauiAppPaths.cs`, `ImageGen/ImageGen.Maui/Services/MauiSecretStore.cs`, `ImageGen/ImageGen.Avalonia/Platform/DesktopAppPaths.cs`, `docs/knowledge/dev-environment.md`.
 
 ## Отчёт
 

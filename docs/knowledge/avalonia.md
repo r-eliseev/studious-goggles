@@ -1,6 +1,18 @@
 # Avalonia: неочевидные факты
 
-Факты, найденные при работе с `ImageGen.Avalonia` (задача 039). Проверено 2026-10-28 в облачной сессии (Linux), Avalonia 12.1.4, .NET 10.0.403. Общий обзор сред: `docs/knowledge/dev-environment.md`. Запуск MAUI-кода через Avalonia (Avalonia MAUI Backend) — отдельный разбор: `docs/knowledge/avalonia-maui-backend.md`.
+Факты, найденные при работе с `ImageGen.Avalonia` (задача 039). Проверено 2026-10-28 в облачной сессии (Linux), Avalonia 12.1.4, .NET 10.0.403. Общий обзор сред: `docs/knowledge/dev-environment.md`.
+
+## Avalonia MAUI Backend
+
+Оценка от 2026-10-28: `Avalonia.Controls.Maui` позволяет запускать MAUI-разметку внутри Avalonia и потенциально использовать одну оболочку для Linux и браузера. На дату проверки пакет был pre-release `11.0.0-rc.3`, требовал .NET 11 и MAUI 11, тогда как проект использует .NET 10. Были отмечены ограничения для `MainThread`, `SecureStorage`, доступности и Shell. Решение ADR 0006 не меняется: остаются две оболочки; пересматривать подход имеет смысл после стабильного релиза под актуальный стек.
+
+## Android и iOS (исследование 094)
+
+Проверено 2026-10-30. Avalonia 12.1.4, .NET SDK 10.0.403, Android target `net10.0-android36.0`, `Avalonia.Android` и `Avalonia.Themes.Fluent` восстановились и собрали пробник на Linux. Шаблон `Avalonia.Templates@12.1.4` создаёт Android/iOS/Desktop/Browser головы; Android использует `Application : AvaloniaAndroidApplication<App>`, `MainActivity : AvaloniaMainActivity` и `MainViewFactory`, потому что Android может создавать несколько Activity.
+
+Пробник ссылками подключал актуальные `Views/*.axaml`, code-behind, Presentation, темы, шрифты, навигацию и платформенные службы к мобильной голове. Debug APK собирался без предупреждений. Живой запуск не проверен (`adb devices` был пуст); не проверены KeyStore, backup/restore, клавиатура, Back, clipboard, picker, галерея, overlay и TalkBack. Сценарии переданы в задачу 140. APK Release `android-arm64` был 29,152,195 байт (27.8 МиБ), на 6,968,679 байт (6.65 МиБ) больше MAUI APK 22,183,516 байт (21.2 МиБ); фактический размер установки не измерен.
+
+iOS проверена только по официальной документации Avalonia на 2026-10-30: сборка требует Mac и Xcode (либо удалённый Mac build host). Пробник содержал шаблонную iOS голову, но workload и сборка не проверялись; устройства и Mac не было.
 
 ## Тесты
 - `Avalonia.Headless.XUnit` 12.1.4 не работает с `xunit.v3` 4.0.2: при обнаружении тестов `MissingMethodException`. Решение и обход — `docs/decisions/0007-avalonia-tests-xunit-3-2.md` (`VersionOverride` 3.2.2 только в `ImageGen.Avalonia.Tests`).

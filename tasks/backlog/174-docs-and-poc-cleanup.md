@@ -1,6 +1,6 @@
 ---
 id: 174
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-31
@@ -42,6 +42,13 @@ created: 2026-10-31
 Файлы: удаляемые — п. 2–3; изменяемые — `AGENTS.md`, `scripts/audit.sh` (две строки), `docs/specs/chat-sessions.md`, `docs/knowledge/providers.md` (новый), удаляемые также `docs/specs/assistant-context.md`, `docs/knowledge/avalonia-mobile.md`, `docs/knowledge/together-ai.md`, `docs/design/README.md`, `docs/harness.md`, `docs/audit.md`, `docs/subagents.md`; `README.md` (если ссылается), `poc/README.md`, `docs/index.md`, `docs/history.md` (новый), `docs/audit.md`, `docs/harness.md`, `docs/tasks.md`, `docs/status.md`, `docs/product.md`, `docs/specs/image-client.md`, `docs/knowledge/dev-environment.md`, `docs/knowledge/avalonia.md`, `docs/design/README.md`, `docs/design/implementation.md`, `tasks/backlog/105-semantic-text-search.md` и другие файлы со ссылками из п. 1.
 
 ## Отчёт
+
+- Удалены старые POC v0.1, 040 и 081, макеты/снимки дизайна, Kiro Web, отдельные документы аудита/харнеса и спецификация assistant-context; POC 094 сохранён. Удалено 18 журналов, которые реально были в `docs/log/` (в карточке было указано 19); краткие датированные записи собраны в `docs/history.md`, шаблон журнала оставлен.
+- Объединены документы сред в `docs/knowledge/dev-environment.md`, сведения о мобильном Avalonia и Avalonia MAUI Backend в `docs/knowledge/avalonia.md`, Together AI в новый `docs/knowledge/providers.md`, рекомендации и исследование дизайн-системы в `docs/design/implementation.md`, а правила аудита/делегирования — в `docs/tasks.md`. Харнес перенесён в `AGENTS.md`; постоянные решения собраны в `docs/product.md`, `status.md` оставлен для CI, очереди, открытых вопросов и проблем. Из `image-client.md` убраны устаревшее исследование API/приложений и источники.
+- Активные ссылки перенесены на актуальные документы; локальные Markdown-ссылки проверены автоматически — битых ссылок нет. Исторические ссылки внутри ADR не изменялись по прямому указанию в плане; ссылки на удалённые материалы там остаются историческими. `docs/design/tokens.json` не тронут.
+- Изменён `scripts/audit.sh` только в двух строках, как прямо разрешено задачей; остальных скриптов и workflow это изменение не касается.
+- Проверено: `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj` — 420/420; `scripts/check.sh`; `scripts/audit.sh` (показывает только предложенный ADR 0019, решение по мобильной оболочке остаётся за владельцем); `git diff --check`; локальная проверка Markdown-ссылок — 0 ошибок.
+- Итоговый diff задачи: 121 файл, 469 добавлений и 5454 удаления на момент измерения; основной объём — удалённые устаревшие POC и макетные материалы. Изменений кода продукта нет, кроме обновления комментария со ссылкой на ADR.
 
 ## Комментарии
 
