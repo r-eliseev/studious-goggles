@@ -174,6 +174,23 @@ public sealed class GenerationService(
         var source = await GetSourceAsync(generationId, cancellationToken);
         using var lease = AcquireStartLease(source.SessionId);
         var requested = await GetRunParametersAsync(source.RunId, cancellationToken);
+        if (source.ReferenceAttachmentIds.Count > 0)
+        {
+            var target = await ReadModelAsync(model, cancellationToken);
+            var limit = ReferenceImageLimit.Of(target);
+            if (limit == 0)
+            {
+                throw new ProviderException(ErrorKind.ModelWithoutReferences, "The selected model does not support reference images.");
+            }
+
+            if (source.ReferenceAttachmentIds.Count > limit)
+            {
+                throw new ProviderException(
+                    ErrorKind.BadRequest,
+                    $"The selected model accepts up to {limit} reference images, but {source.ReferenceAttachmentIds.Count} were provided.");
+            }
+        }
+
         return await CreateRunAsync(source.SessionId, source.Prompt, RunOrigin.OtherModel,
             [(model, source.Seed, source.ReferenceAttachmentIds)], requested, cancellationToken, lease);
     }
