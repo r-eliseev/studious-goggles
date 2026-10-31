@@ -7,7 +7,7 @@
 - Один тип на файл, имя файла равно имени типа (в примере нарушено: `TaskRespository.cs`, не повторять).
 - Пространства имён по каталогам. `GlobalUsings.cs` допустим для своих пространств, как в примере.
 - Асинхронные методы заканчиваются на `Async`, принимают `CancellationToken` (в ядре обязательно, в PageModel где есть отмена).
-- Форматирование проверяет `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes` по каждому изменённому проекту (решение целиком не форматировать: на Linux MAUI-проект не загружается; `AGENTS.md`, «Команды»). Если в корне появится `.editorconfig`, он главный.
+- Форматирование проверяет `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes` по каждому изменённому проекту (решение целиком не форматировать: на Linux MAUI-проект не загружается; `AGENTS.md`, «Команды»). `.editorconfig` в корне — главный источник правил форматирования.
 
 ## Слои (подробно в `docs/architecture.md`)
 - Ядро не ссылается на MAUI, ASP.NET Core и UI-типы. Платформенное через интерфейсы ядра.
@@ -21,7 +21,7 @@
 - Навигация: Shell с маршрутами; параметры через `IQueryAttributable` и `ShellNavigationQueryParameters`, возврат `..` или `..?refresh=true`.
 - Доступность обязательна: `SemanticProperties.Description` у интерактивных элементов, `SemanticScreenReader.Announce` для важных изменений, цель касания не меньше 44 (как в стилях примера). Статус не передаётся одним цветом (требование спецификации).
 - Адаптивность: `OnIdiom` и `OnPlatform` в XAML, а не ветки в коде. Один код для телефона и десктопа.
-- Фоновые async-вызовы из синхронных мест: `FireAndForgetSafeAsync(errorHandler)` из примера, а не голый `async void`.
+- Фоновые async-вызовы из синхронных мест: `FireAndForgetSafeAsync()`; ошибка записывается через `TaskExtensions.Logger`, а не голый `async void`.
 - Нельзя блокировать UI-поток: никаких `.Result`, `.Wait()`.
 
 ## Секреты и данные
@@ -32,13 +32,13 @@
 - Результат генерации сохраняется сразу при получении, до показа пользователю.
 
 ## Зависимости
-- Версии пакетов фиксируются явно; единый список в одном месте (`Directory.Packages.props`, когда проектов станет больше одного).
+- Версии пакетов фиксируются явно; единый список в `Directory.Packages.props`.
 - Новый пакет только после проверки лицензии и решения в `docs/decisions/`. `Syncfusion.Maui.Toolkit` (MIT) пока не используем; когда понадобятся графики, shimmer, pull-to-refresh, это первый выбор, если нет лучшего (`docs/status.md`); подключение оформить ADR.
 
 ## Тесты
 - Ядро покрывается тестами обязательно: перевод параметров в запросы провайдеров, приведение статусов к единой модели, расчёт цены, повторы и отмена. Вызовы провайдеров в тестах только через подменённый `HttpMessageHandler`, реальные ключи в тестах запрещены.
 - Имена тестов: `Метод_Условие_Результат`. Запуск: `dotnet test --project <путь к тестовому csproj>` (см. `docs/knowledge/csharp.md`, раздел «Тесты»).
-- Библиотеки: xUnit v3 и NSubstitute (ADR 0004). Тестовые проекты заводятся задачами 001 и 003.
+- Библиотеки: xUnit v3 и NSubstitute (ADR 0004). Тестовые проекты: `ImageGen.Core.Tests`, `ImageGen.Data.Tests`, `ImageGen.Presentation.Tests`, `ImageGen.Avalonia.Tests`.
 - Модели страниц пишутся в `ImageGen.Presentation` без типов UI-фреймворков (`IQueryAttributable`, `MainThread`, `ImageSource`, `Shell`, Avalonia): такие типы остаются в странице или в реализации интерфейса (`IMainThread`, `INavigationService`, `IDialogService`) в оболочке. Тесты — в `ImageGen.Presentation.Tests` (`docs/architecture.md`).
 - Тесты не зависят от культуры и ОС машины: числа и цены в интерфейсе до локализации (задача 028) форматируются `CultureInfo.InvariantCulture`; где культура важна, тест задаёт её сам (`CultureInfo.CurrentCulture = new CultureInfo("pl-PL")` в `try`/`finally`). Тесты, которые удаляют временную папку с базой, сначала дожидаются фоновой работы (`GenerationService.WhenIdleAsync`): на Windows открытый файл не удалить. CI гоняет тесты и на `windows-latest` (задача `windows-tests`).
 
