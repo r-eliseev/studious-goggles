@@ -1,6 +1,6 @@
 ---
 id: 112
-status: blocked
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -57,6 +57,8 @@ bash scripts/check.sh
 - Добавлены reader и provider tests, включая JSON image payload больше 8 MiB, mapping превышения в `Unknown`, charset, лимит чтения и отмену. Исправлен fal `BlockingContent` test double: теперь блокировка происходит при чтении stream после заголовков.
 - Проверки: `dotnet build ImageGen/ImageGen.Core/ImageGen.Core.csproj --no-restore` (успешно, 0 предупреждений); `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj` (558/558); `dotnet format` для Core и Core.Tests с `--verify-no-changes --no-restore`; `bash scripts/check.sh` (успешно).
 - Ограничение по плану: `LoggingHttpHandler` пока предварительно буферизует ответы; полная гарантия production memory cap остаётся задачей 127.
+- Follow-up 150: исправлен pre-allocation guard base64 в обоих JSON image clients с учётом допустимых ASCII whitespace; Core.Tests — 652/652, включая production 50 MiB boundary и wrapped payload обоих клиентов. Оставшаяся Fal/OpenAI-compatible limits matrix выполняется в 152; задача остаётся blocked до завершения 152.
+- Follow-up 152 завершён: client/pipeline matrix для Fal и OpenAI-compatible подтверждена, полный Core.Tests — 685/685. Оба остатка 150/152 закрыты; исходная оговорка о предварительной буферизации в LoggingHttpHandler снята после тестов 127.
 
 ## Комментарии
 

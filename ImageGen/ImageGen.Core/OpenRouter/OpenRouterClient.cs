@@ -184,21 +184,7 @@ public sealed class OpenRouterClient(
     }
 
     private static byte[] DecodeImage(string base64)
-    {
-        var maximumEncodedLength = ((ProviderResponseLimits.Image + 2) / 3) * 4;
-        if (base64.Length > maximumEncodedLength)
-        {
-            throw new ProviderResponseTooLargeException(ProviderResponseLimits.Image);
-        }
-
-        var bytes = Convert.FromBase64String(base64);
-        if (bytes.LongLength > ProviderResponseLimits.Image)
-        {
-            throw new ProviderResponseTooLargeException(ProviderResponseLimits.Image);
-        }
-
-        return bytes;
-    }
+        => BoundedBase64ImageDecoder.Decode(base64, ProviderResponseLimits.Image);
 
     /// <summary>Chat models of OpenRouter with their input modalities and context window. Entries without an id are skipped.</summary>
     public async Task<IReadOnlyList<ChatModel>> ListChatModelsAsync(CancellationToken cancellationToken)

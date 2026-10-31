@@ -6,10 +6,12 @@ using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.Fal;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
+using ImageGen.Core.Tests.Providers;
 using ImageGen.Core.Tests.TestDoubles;
 
 namespace ImageGen.Core.Tests.Fal;
 
+[Collection(ProviderResponseSizeCollection.Name)]
 public class FalImageProviderTests
 {
     private const string FalTransportName = "ImageGen.Internal.FalTransport";
@@ -682,6 +684,63 @@ public class FalImageProviderTests
     }
 
     [Theory]
+    [InlineData("status")]
+    [InlineData("result")]
+    public async Task Poll_UnknownLengthOverJsonLimit_MapsToUnknown(string oversizedResponse)
+    {
+        var content = new CountingStreamContent(ProviderResponseLimits.Json + 1);
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            var path = request.RequestUri!.AbsolutePath;
+            if (path.EndsWith("/status", StringComparison.Ordinal))
+            {
+                return oversizedResponse == "status"
+                    ? new HttpResponseMessage(HttpStatusCode.OK) { Content = content }
+                    : Json(HttpStatusCode.OK, "{\"status\":\"COMPLETED\"}");
+            }
+
+            return oversizedResponse == "result"
+                ? new HttpResponseMessage(HttpStatusCode.OK) { Content = content }
+                : Json(HttpStatusCode.OK, "{}");
+        });
+        var provider = CreateProvider(handler);
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => provider.PollAsync(Handle, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+        Assert.DoesNotContain("xxxx", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(ProviderResponseLimits.Json + 1, content.BytesRead);
+        Assert.True(content.StreamDisposed);
+        Assert.True(content.ContentDisposed);
+    }
+
+    [Fact]
+    public async Task Poll_UnknownLengthOverImageLimitDownload_MapsToUnknown()
+    {
+        var content = new CountingStreamContent(ProviderResponseLimits.Image + 1);
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.Host == "cdn")
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
+            }
+
+            return request.RequestUri.AbsolutePath.EndsWith("/status", StringComparison.Ordinal)
+                ? Json(HttpStatusCode.OK, "{\"status\":\"COMPLETED\"}")
+                : Json(HttpStatusCode.OK, "{\"images\":[{\"url\":\"https://cdn/img.png\"}],\"has_nsfw_concepts\":[false]}");
+        });
+        var provider = CreateProvider(handler);
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => provider.PollAsync(Handle, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+        Assert.DoesNotContain("xxxx", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(ProviderResponseLimits.Image + 1, content.BytesRead);
+        Assert.True(content.StreamDisposed);
+        Assert.True(content.ContentDisposed);
+    }
+
+    [Theory]
     [InlineData("https://127.1/x.png")]
     [InlineData("https://[::ffff:127.0.0.1]/x.png")]
     [InlineData("https://localhost./x.png")]
@@ -715,6 +774,25 @@ public class FalImageProviderTests
         Assert.Equal(expected, outcome);
         Assert.Equal(HttpMethod.Put, handler.Requests.Single().Method);
         Assert.Equal(Handle.CancelUrl, handler.Requests.Single().RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task Cancel_SetsSkipBodyFlagAndLeavesResponseUnread()
+    {
+        using var content = new CountingStreamContent(100);
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            Assert.True(request.Options.TryGetValue(ProviderResponseLimits.SkipResponseBody, out var skip));
+            Assert.True(skip);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
+        });
+        var provider = CreateProvider(handler);
+
+        var outcome = await provider.CancelAsync(Handle, TestContext.Current.CancellationToken);
+
+        Assert.Equal(CancelOutcome.Cancelled, outcome);
+        Assert.Equal(0, content.BytesRead);
+        Assert.True(content.ContentDisposed);
     }
 
     [Fact]
