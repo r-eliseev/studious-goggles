@@ -1,6 +1,6 @@
 ---
 id: 157
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-31
@@ -61,3 +61,6 @@ created: 2026-10-31
 
 ### 2026-10-31, claude-audit
 План готов, статус planned. Допущения: текст для исключений без кода — общий «Something went wrong.» (`ErrorKindUnknown`), без технических деталей в диалоге; детали только в журнале на Debug. Делать после 156 (общий `SessionModelsPageModel`).
+
+### 2026-10-31, владелец (в чате, записал claude-audit)
+План одобрен.
