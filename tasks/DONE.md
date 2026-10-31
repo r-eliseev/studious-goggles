@@ -147,3 +147,4 @@
 - 161 | backlog | cancelled | 2026-10-31 | Старая история не видна после первой генерации | `tasks/backlog/161-history-hidden-after-first-generation.md`
 - 162 | backlog | done | 2026-10-31 | MAUI Android: нажатие на сессию в списке открывает кнопки вместо сессии | `tasks/backlog/162-maui-android-session-row-tap.md`
 - 164 | backlog | done | 2026-10-31 | Идентификатор Android-приложения com.eliseev.imagegen | `tasks/backlog/164-android-application-id.md`
+- 028 | backlog | cancelled | 2026-10-31 | Русский язык интерфейса | `tasks/backlog/028-localization-and-themes.md`
