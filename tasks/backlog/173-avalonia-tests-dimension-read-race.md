@@ -1,8 +1,8 @@
 ---
 id: 173
-status: in-progress
-assignee: codex
-claimed: 2026-10-31T14:23:13Z
+status: done
+assignee:
+claimed:
 created: 2026-10-31
 ---
 
@@ -36,6 +36,10 @@ CI `windows-tests` на PR #61 (только документы и задачи,
 Файлы: `ImageGen/ImageGen.Data/FileImageStore.cs`, `ImageGen/ImageGen.Data.Tests/FileImageStoreTests.cs`, `ImageGen/ImageGen.Avalonia.Tests/TestDoubles/ShellHarness.cs`; при необходимости `ImageGen/ImageGen.Core/Storage/IImageFileStore.cs` и `docs/conventions.md` («Тесты»).
 
 ## Отчёт
+
+Причина подтверждена кодом: `ChatPageModel` начинает фоновый `FileImageStore.TryReadDimensionsAsync`; `GenerationService.WhenIdleAsync` этот вызов не отслеживает. `FileImageStore` теперь считает выполняющиеся чтения размеров и предоставляет `IImageFileStore.WhenIdleAsync()`. `ShellHarness` после ожидания генераций прокачивает UI callbacks, ждёт чтения размеров в пределах того же 10-секундного срока и только затем закрывает контейнер/временную папку. Исключение удаления не подавляется.
+
+Добавлен детерминированный Data-тест: заблокированный reader удерживает `WhenIdleAsync`, завершение reader освобождает ожидание. Linux проверка: Data.Tests 106/106; Avalonia.Tests 149 passed, 2 skipped (DPAPI и Secret Service недоступны в среде); `scripts/check.sh` и форматирование Core/Data/Data.Tests/Avalonia.Tests прошли. Повторяемые прогоны `windows-tests` недоступны локально и ожидаются в CI PR.
 
 ## Комментарии
 

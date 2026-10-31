@@ -130,6 +130,30 @@ public sealed class FileImageStoreTests : IDisposable
             () => _store.TryReadDimensionsAsync("images/missing/no-image.png", cancellation.Token));
     }
 
+    [Fact]
+    public async Task WhenIdleAsync_DimensionReadIsRunning_WaitsUntilReadCompletes()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var paths = Substitute.For<IAppPaths>();
+        paths.DataDirectory.Returns(_directory);
+        var store = new FileImageStore(paths, _logger, _ =>
+        {
+            entered.TrySetResult();
+            release.Task.GetAwaiter().GetResult();
+            return null;
+        });
+        var read = store.TryReadDimensionsAsync("images/session/image.png", TestContext.Current.CancellationToken);
+        await entered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        var idle = store.WhenIdleAsync();
+        Assert.False(idle.IsCompleted);
+
+        release.TrySetResult();
+        Assert.Null(await read);
+        await idle.WaitAsync(TestContext.Current.CancellationToken);
+    }
+
     private static byte[] ReadFixture(string name)
     {
         using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"TestData/{name}");

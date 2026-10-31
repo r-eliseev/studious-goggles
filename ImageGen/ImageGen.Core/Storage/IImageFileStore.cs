@@ -17,6 +17,9 @@ public interface IImageFileStore
     /// <summary>Reads raster pixel dimensions from a stored image, or returns null for missing or unreadable data.</summary>
     Task<ImageDimensions?> TryReadDimensionsAsync(string relativePath, CancellationToken cancellationToken);
 
+    /// <summary>Completes after all dimension reads already started by this store have finished.</summary>
+    Task WhenIdleAsync();
+
     /// <summary>Converts a relative path returned by <see cref="SaveAsync"/> to an absolute path.</summary>
     string GetFullPath(string relativePath);
 
