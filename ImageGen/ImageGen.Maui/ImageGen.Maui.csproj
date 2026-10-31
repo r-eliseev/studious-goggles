@@ -32,6 +32,9 @@
 
 		<!-- App Identifier -->
 		<ApplicationId>com.companyname.imagegen.maui</ApplicationId>
+		<!-- Android uses the approved id since the release signing key (task 164); Windows keeps the old id until the data
+		     migration of task 030, because the id decides its data and secret folders. -->
+		<ApplicationId Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">com.eliseev.imagegen</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>

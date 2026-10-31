@@ -1,8 +1,8 @@
 ---
 id: 164
-status: in-progress
-assignee: claude-audit
-claimed: 2026-10-31T11:44:57Z
+status: done
+assignee:
+claimed:
 created: 2026-10-31
 ---
 
@@ -37,8 +37,16 @@ Windows, iOS и Mac Catalyst не меняются: у Windows смена иде
 Файлы: `ImageGen/ImageGen.Maui/ImageGen.Maui.csproj`, `ImageGen/ImageGen.Presentation.Tests/Design/MauiProjectTests.cs` (новый), `README.md`, `docs/knowledge/dev-environment.md`, `tasks/backlog/030-app-identity.md`.
 
 ## Отчёт
+Изменено:
+- `ImageGen/ImageGen.Maui/ImageGen.Maui.csproj`: условный `ApplicationId` `com.eliseev.imagegen` для Android после общего; остальные цели прежние.
+- `ImageGen/ImageGen.Presentation.Tests/Design/MauiProjectTests.cs` (новый): тест сначала красный, затем зелёный.
+- `README.md`, `docs/knowledge/dev-environment.md` («Релиз»): новый пакет — отдельное приложение, данные не переносятся.
+Проверено: Presentation.Tests 416/416; `dotnet build -f net10.0-android` — 0 предупреждений; `aapt2 dump badging` — `package: name='com.eliseev.imagegen'`; `scripts/check.sh`. Не проверено: Windows-цель (CI), установка на устройстве (вместе с первым релизом с ключом 163).
 
 ## Комментарии
 
 ### 2026-10-31, владелец (в чате, записал claude-audit)
 Сменить идентификатор в том же релизе, что и постоянный ключ (выбрано в вопросе; путь «выделить задачу, спланировать и сделать» одобрен). Допущение: переноса данных старого пакета не нужно — данные владельца уже стёрты переустановкой.
+
+### 2026-10-31, claude-audit
+Сделано; установка проверяется вместе с первым релизом, подписанным ключом 163.
