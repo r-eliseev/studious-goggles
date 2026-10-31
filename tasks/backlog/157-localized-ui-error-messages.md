@@ -1,8 +1,8 @@
 ---
 id: 157
-status: in-progress
-assignee: codex
-claimed: 2026-10-31T12:49:54Z
+status: done
+assignee:
+claimed:
 created: 2026-10-31
 ---
 
@@ -56,6 +56,9 @@ created: 2026-10-31
 Файлы: `ImageGen/ImageGen.Presentation/Services/ErrorAlert.cs` (новый), `ImageGen/ImageGen.Presentation/Services/DescriptionErrorText.cs` (новый), `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionParametersPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ModelPickerPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ApiKeyPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SettingsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ProviderKeyItemViewModel.cs`, `ImageGen/ImageGen.Avalonia/Composition/AppServices.cs`, `ImageGen/ImageGen.Maui/MauiProgram.cs`, тесты в `ImageGen.Presentation.Tests` (Services, PageModels), `docs/conventions.md`.
 
 ## Отчёт
+Добавлены `ErrorAlert` и `DescriptionErrorText`. Все 24 обработчика в PageModels/ используют безопасный диалог: коды провайдера и описания локализуются, остальные ошибки показывают общий текст. Warning содержит только тип исключения и безопасный код; объект исключения и детали журналируются на Debug. `ErrorAlert` зарегистрирован в MAUI и Avalonia; поведение и правило добавлены в тесты и `docs/conventions.md`. Существующие действия catch-блоков сохранены.
+
+Проверено: Presentation.Tests 420/420; Avalonia.Tests 149/149 (2 пропуска для Windows DPAPI и недоступного Linux Secret Service); `dotnet format --verify-no-changes` для Presentation, Presentation.Tests, Avalonia и MAUI; сборка MAUI Android без предупреждений и ошибок. Тесты проверяют локализованный `ModelWithoutReferences`, общий текст без пути и отсутствие технических деталей в Warning.
 
 ## Комментарии
 

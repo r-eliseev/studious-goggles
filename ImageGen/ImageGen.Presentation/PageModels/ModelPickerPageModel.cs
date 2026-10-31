@@ -7,6 +7,7 @@ using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Presentation.PageModels;
 
@@ -22,8 +23,10 @@ public sealed partial class ModelPickerPageModel(
     GenerationService generations,
     ProviderRegistry providers,
     INavigationService navigation,
-    IDialogService dialogs) : ObservableObject
+    IDialogService dialogs,
+    ErrorAlert? errorAlert = null) : ObservableObject
 {
+    private readonly ErrorAlert _errorAlert = errorAlert ?? new ErrorAlert(dialogs, NullLogger<ErrorAlert>.Instance);
     private readonly List<ModelOptionViewModel> _all = [];
     private Guid _sessionId;
     private Guid _generationId;
@@ -112,7 +115,7 @@ public sealed partial class ModelPickerPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
         finally
         {
@@ -135,7 +138,7 @@ public sealed partial class ModelPickerPageModel(
         }
         catch (Exception ex)
         {
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
     }
 

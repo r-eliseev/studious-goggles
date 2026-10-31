@@ -594,6 +594,9 @@
   <data name="ErrorKindImageSaveFailed" xml:space="preserve">
     <value>Could not save the generated image. Check free space and folder permissions.</value>
   </data>
+  <data name="DescriptionModelDoesNotAcceptImages" xml:space="preserve"><value>This model does not accept images.</value></data>
+  <data name="DescriptionSourceMissing" xml:space="preserve"><value>The source image is missing or unreadable.</value></data>
+  <data name="DescriptionEmptyResponse" xml:space="preserve"><value>The assistant did not return an image description.</value></data>
   <data name="ImageViewerOpen" xml:space="preserve"><value>Open image</value></data>
   <data name="ImageViewerClose" xml:space="preserve"><value>Close</value></data>
   <data name="ImageViewerPrevious" xml:space="preserve"><value>Previous</value></data>

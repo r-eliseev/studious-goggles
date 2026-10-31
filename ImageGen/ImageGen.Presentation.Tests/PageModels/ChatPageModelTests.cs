@@ -916,7 +916,7 @@ public class ChatPageModelTests
         Assert.Equal("draw a fox", _model.InputText);
         Assert.Equal(attachment, Assert.Single(_model.PendingAttachments));
         Assert.False(_model.IsBusy);
-        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, "database unavailable");
+        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, AppResources.ErrorKindUnknown);
         await _chat.DidNotReceive().CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
     }
 
@@ -1215,7 +1215,7 @@ public class ChatPageModelTests
 
         await Assert.Single(Cards).RepeatCommand.ExecuteAsync(null);
 
-        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, "disk full");
+        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, AppResources.ErrorKindUnknown);
         Assert.Single(_model.Items.OfType<RunItemViewModel>());
     }
 

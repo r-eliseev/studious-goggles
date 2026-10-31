@@ -70,6 +70,7 @@ public static class AppServices
             sp.GetRequiredService<AvaloniaFullScreenController>(),
             sp.GetRequiredService<IDialogService>()));
         services.AddSingleton<ICurrentSessionTracker, CurrentSessionTracker>();
+        services.AddSingleton<ErrorAlert>();
 
         services.AddSingleton(sp => new PageRoutes()
             .Add(Routes.Sessions, _ => new SessionsView { DataContext = sp.GetRequiredService<SessionsPageModel>() })

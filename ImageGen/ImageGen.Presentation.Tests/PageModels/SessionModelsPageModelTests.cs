@@ -561,7 +561,7 @@ public class SessionModelsPageModelTests
         await model.OnAppearingAsync();
 
         Assert.Empty(model.Models);
-        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, "Network down");
+        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, AppResources.ErrorKindUnknown);
         Assert.False(model.IsBusy);
     }
 
@@ -574,7 +574,7 @@ public class SessionModelsPageModelTests
 
         await model.SaveCommand.ExecuteAsync(null);
 
-        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, "Disk full");
+        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, AppResources.ErrorKindUnknown);
         await _navigation.DidNotReceive().GoBackAsync();
     }
 

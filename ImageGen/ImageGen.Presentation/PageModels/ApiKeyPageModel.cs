@@ -6,6 +6,7 @@ using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Presentation.PageModels;
 
@@ -14,8 +15,10 @@ public sealed partial class ApiKeyPageModel(
     ProviderRegistry providers,
     INavigationService navigation,
     IDialogService dialogs,
-    ISecretPersistence persistence) : ObservableObject
+    ISecretPersistence persistence,
+    ErrorAlert? errorAlert = null) : ObservableObject
 {
+    private readonly ErrorAlert _errorAlert = errorAlert ?? new ErrorAlert(dialogs, NullLogger<ErrorAlert>.Instance);
     private bool _invalidRouteAlertShown;
 
     [ObservableProperty]
@@ -137,7 +140,7 @@ public sealed partial class ApiKeyPageModel(
         catch (Exception ex)
         {
             StatusText = "";
-            await dialogs.AlertAsync(AppResources.ErrorTitle, ex.Message);
+            await _errorAlert.ShowAsync(ex);
         }
         finally
         {
