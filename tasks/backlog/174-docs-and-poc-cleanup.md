@@ -12,12 +12,14 @@ created: 2026-10-31
 Решение владельца 2026-10-31: документации и прочих файлов (кроме кода и задач) слишком много — 190 файлов, из них ~55 пробного кода к закрытым задачам и 1.1 МБ материалов выбора дизайна. Удалённое остаётся в истории git. ADR не удаляются и не переписываются (`AGENTS.md`, «Запреты»).
 
 Зависит от: —
-Среда: Linux или Windows. Разрешены правки `AGENTS.md`, `docs/audit.md`, `docs/harness.md`, `docs/tasks.md` в объёме правила о журналах (п. 3 плана); `scripts/` и `.github/` не менять.
+Среда: Linux или Windows. Разрешены правки `AGENTS.md`, `docs/tasks.md` и удаление `docs/audit.md`, `docs/harness.md`, `docs/subagents.md` (п. 3 и 8 плана); `scripts/` и `.github/` не менять.
 
 ## Критерии готовности
 - Удалены: `poc/v0.1/*`, `poc/backlog/040-*`, `poc/backlog/081-*`; `docs/design/screenshots/`, `docs/design/directions.html`, `docs/design/prototype.html`; `docs/knowledge/kiro-web-session.md`; журналы `docs/log/*.md` (кроме шаблона) — их выводы сведены в один файл.
 - Объединены: описания сред — в `docs/knowledge/dev-environment.md`; `avalonia-maui-backend.md` — в `avalonia.md`; `docs/design/research.md` — в `implementation.md`; из `docs/specs/image-client.md` убрано датированное исследование провайдеров и чужих приложений; постоянные решения владельца из `docs/status.md` перенесены в `docs/product.md` (или существующие ADR), в `status.md` остаются открытые вопросы, очередь и известные проблемы.
 - Нет битых ссылок: в `docs/`, `AGENTS.md`, `README.md`, задачах (кроме архивных строк `tasks/DONE.md`), комментариях кода и тестах; `docs/index.md` соответствует файлам; `tokens.json` и всё, на что ссылаются тесты, на месте.
+- Дополнительно (решение владельца 2026-10-31): `docs/specs/assistant-context.md` влит в `chat-sessions.md` (S2.6); `docs/knowledge/avalonia-mobile.md` — в `avalonia.md`; `docs/knowledge/together-ai.md` — в новый `docs/knowledge/providers.md`; `docs/design/README.md` — в `implementation.md`.
+- Правила работы: `docs/harness.md` перенесён в `AGENTS.md`; `docs/audit.md` и `docs/subagents.md` влиты разделами в `docs/tasks.md` (сам `docs/tasks.md` остаётся — его требует `scripts/check-docs.sh`; `scripts/` не меняются).
 - `scripts/check.sh` и `scripts/audit.sh` проходят; тесты (в том числе `Presentation.Tests/Design`) зелёные.
 
 ## Анализ
@@ -33,9 +35,11 @@ created: 2026-10-31
 4. **Слить:** `claude-cloud-session.md`, `vps-session.md`, `windows-machine.md` → разделы `docs/knowledge/dev-environment.md` (факты дословно, без потери «проверено/не проверено» и дат); `avalonia-maui-backend.md` → раздел `avalonia.md`; `docs/design/research.md` → раздел `implementation.md`.
 5. **`image-client.md`:** убрать разделы «Как работают API провайдеров» (датированное исследование, включая Replicate), «Функции найденных приложений», «Источники»; требования F*, экраны, сущности и ограничения оставить. Если факт из исследования нужен (например, сроки хранения файлов fal) — перенести строкой в `docs/knowledge/` с датой.
 6. **`status.md`:** постоянные решения владельца (разделы «Решения владельца …») → `docs/product.md`, раздел «Решения» с датами (или ссылка на соответствующий ADR); исторические абзацы аудитов → `docs/history.md`. В `status.md` остаются: CI, очередь/доступность задач, открытые вопросы, известные проблемы.
-7. Проверки: `scripts/check.sh`, `scripts/audit.sh`, Presentation.Tests (тесты дизайна), поиск битых путей (`grep` по списку из п. 1 — пусто), `git diff --stat` в «Отчёт».
+7. **Ещё слить** (решение владельца): `docs/specs/assistant-context.md` → раздел S2.6 `chat-sessions.md` (статус и код-ссылки сохранить, ADR 0015 ссылается — ADR не править, ссылка в нём остаётся исторической); `docs/knowledge/avalonia-mobile.md` → раздел «Android и iOS (исследование 094)» в `avalonia.md`; `docs/knowledge/together-ai.md` → `docs/knowledge/providers.md` (раздел Together; сюда же позже факты 170); `docs/design/README.md` → вводная часть `implementation.md`.
+8. **Правила работы.** `docs/harness.md` → раздел `AGENTS.md` «Как устроен харнес» (сжато: структура репозитория, ветки, параллельная работа; без повторов уже имеющихся в `AGENTS.md` правил). `docs/audit.md` → раздел «Аудит» в `docs/tasks.md`; `docs/subagents.md` → раздел «Вспомогательные агенты» в `docs/tasks.md`; ссылки в `AGENTS.md` («Вспомогательные агенты», «Аудит») переписать на эти разделы. `scripts/` не менять: строка `docs/audit.md` в выводе `scripts/audit.sh` и комментарии скриптов устаревают — записать это в «Известные проблемы» `docs/status.md`.
+9. Проверки: `scripts/check.sh`, `scripts/audit.sh`, Presentation.Tests (тесты дизайна), поиск битых путей (`grep` по списку из п. 1 — пусто), `git diff --stat` в «Отчёт».
 
-Файлы: удаляемые — п. 2–3; изменяемые — `AGENTS.md`, `README.md` (если ссылается), `poc/README.md`, `docs/index.md`, `docs/history.md` (новый), `docs/audit.md`, `docs/harness.md`, `docs/tasks.md`, `docs/status.md`, `docs/product.md`, `docs/specs/image-client.md`, `docs/knowledge/dev-environment.md`, `docs/knowledge/avalonia.md`, `docs/design/README.md`, `docs/design/implementation.md`, `tasks/backlog/105-semantic-text-search.md` и другие файлы со ссылками из п. 1.
+Файлы: удаляемые — п. 2–3; изменяемые — `AGENTS.md`, `docs/specs/chat-sessions.md`, `docs/knowledge/providers.md` (новый), удаляемые также `docs/specs/assistant-context.md`, `docs/knowledge/avalonia-mobile.md`, `docs/knowledge/together-ai.md`, `docs/design/README.md`, `docs/harness.md`, `docs/audit.md`, `docs/subagents.md`; `README.md` (если ссылается), `poc/README.md`, `docs/index.md`, `docs/history.md` (новый), `docs/audit.md`, `docs/harness.md`, `docs/tasks.md`, `docs/status.md`, `docs/product.md`, `docs/specs/image-client.md`, `docs/knowledge/dev-environment.md`, `docs/knowledge/avalonia.md`, `docs/design/README.md`, `docs/design/implementation.md`, `tasks/backlog/105-semantic-text-search.md` и другие файлы со ссылками из п. 1.
 
 ## Отчёт
 
@@ -43,3 +47,6 @@ created: 2026-10-31
 
 ### 2026-10-31, владелец (в чате, записал claude-audit)
 Включить всё: старый poc, материалы дизайна, журналы docs/log, объединение документов. Kiro Web не используется — удалить. Avalonia для Android отложена, ADR 0019 остаётся «предложено», `poc/backlog/094` не трогать. Объём одобрен (выбран в вопросе).
+
+### 2026-10-31, владелец (в чате, записал claude-audit)
+Добавить: слияние спецификаций и знаний (assistant-context, avalonia-mobile, together-ai, design/README) и перенос правил работы в AGENTS.md. `scripts/` не трогать — `docs/tasks.md` остаётся, в него вливаются audit и subagents. ADR не сводить.
