@@ -138,3 +138,12 @@
 - 153 | backlog | done | 2026-10-31 | Соблюдать Android touch target у кнопок ключей | `tasks/backlog/153-android-provider-key-touch-targets.md`
 - 154 | backlog | done | 2026-10-31 | Изолировать исключения подписчиков SessionChanged | `tasks/backlog/154-isolate-session-change-subscribers.md`
 - 155 | backlog | cancelled | 2026-10-31 | other-model-reference-validation | `tasks/backlog/155-other-model-reference-validation.md`
+- 134 | backlog | done | 2026-10-31 | MAUI Android: Backspace должен сразу перерисовывать Editor | `tasks/backlog/134-maui-android-backspace-rendering.md`
+- 156 | backlog | done | 2026-10-31 | Выбор модели ассистента только из OpenRouter | `tasks/backlog/156-assistant-models-from-configured-providers.md`
+- 157 | backlog | done | 2026-10-31 | Не показывать текст исключений в диалогах ошибок | `tasks/backlog/157-localized-ui-error-messages.md`
+- 158 | backlog | done | 2026-10-31 | Сверить документацию с кодом по итогам аудита 2026-10-31 | `tasks/backlog/158-docs-sync-audit-2026-10-31.md`
+- 159 | backlog | done | 2026-10-31 | MAUI Android: лента чата не прокручивается вниз внутри прогона | `tasks/backlog/159-maui-android-transcript-scroll.md`
+- 160 | backlog | done | 2026-10-31 | MAUI Android: поле ввода закрыто клавиатурой | `tasks/backlog/160-maui-android-keyboard-resize.md`
+- 161 | backlog | cancelled | 2026-10-31 | Старая история не видна после первой генерации | `tasks/backlog/161-history-hidden-after-first-generation.md`
+- 162 | backlog | done | 2026-10-31 | MAUI Android: нажатие на сессию в списке открывает кнопки вместо сессии | `tasks/backlog/162-maui-android-session-row-tap.md`
+- 164 | backlog | done | 2026-10-31 | Идентификатор Android-приложения com.eliseev.imagegen | `tasks/backlog/164-android-application-id.md`
