@@ -4,6 +4,7 @@ using ImageGen.Core.Providers;
 
 namespace ImageGen.Core.Tests.Providers;
 
+[Collection(ProviderResponseSizeCollection.Name)]
 public sealed class BoundedHttpContentReaderTests
 {
     [Fact]

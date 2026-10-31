@@ -3,11 +3,13 @@ using System.Net.Http.Headers;
 using System.Text;
 using ImageGen.Core.Diagnostics;
 using ImageGen.Core.Http;
+using ImageGen.Core.Tests.Providers;
 using ImageGen.Core.Tests.TestDoubles;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Core.Tests.Diagnostics;
 
+[Collection(ProviderResponseSizeCollection.Name)]
 public class DebugTraceHandlerTests
 {
     private const string SecretKey = "sk-or-test-123456";
@@ -50,6 +52,27 @@ public class DebugTraceHandlerTests
         Assert.Equal(Convert.FromBase64String(Picture), blob.Content);
         Assert.Contains($"blob:{blob.Name}", record.Fields["body"], StringComparison.Ordinal);
         Assert.DoesNotContain(Picture, trace.AllText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SendAsync_FourAttachmentRequest_RemainsReadableAndTraceExtractsImages()
+    {
+        const string image = "data:image/png;base64,AQID";
+        var body = System.Text.Json.JsonSerializer.Serialize(new { images = new[] { image, image, image, image } });
+        var trace = new CapturingDebugTrace();
+        var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, "{}");
+        using var client = Client(trace, handler);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://example.test/api/v1/images")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+        };
+
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(body, Assert.Single(handler.RequestBodies));
+        var record = Assert.Single(trace.Records, entry => entry.Kind == "http-request");
+        Assert.Equal(4, record.Blobs.Count);
+        Assert.Equal(4, record.Fields["body"]!.Split("blob:", StringSplitOptions.None).Length - 1);
     }
 
     [Fact]

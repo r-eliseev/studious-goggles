@@ -7,10 +7,12 @@ using ImageGen.Core.Domain.Models;
 using ImageGen.Core.OpenRouter;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
+using ImageGen.Core.Tests.Providers;
 using ImageGen.Core.Tests.TestDoubles;
 
 namespace ImageGen.Core.Tests.OpenRouter;
 
+[Collection(ProviderResponseSizeCollection.Name)]
 public class OpenRouterClientTests
 {
     private const string ApiKey = "sk-or-test-1234";

@@ -1,6 +1,6 @@
 ---
 id: 127
-status: blocked
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -64,3 +64,6 @@ bash scripts/check.sh
 ### 2026-10-30, codex-audit — проверка завершённости
 Статус done не подтверждён полностью; задача оставлена вне архива и переведена в blocked до фиксов 152. Production pipeline по коду соответствует, но обязательная test matrix плана шаги1/3/4/6 не завершена: Image/GeneratedImageJson exact/+1, unknown/dishonest length в handler, trace oversize без partial records, cancel body, Information request, valid large generated/request4 attachments. Это verification gap, отдельный новый runtime defect не утверждается.
 Исторический отчёт и прежние комментарии сохранены. Остаток реализовывать только в названных follow-up задачах, не занимать эту задачу параллельно им. Вернуть done после их merge и проверки исходных критериев; отсутствие устройства само по себе причиной reopen не было.
+
+### 2026-10-31, codex-gpt6 — закрытие follow-up 152
+Подтверждены неизвестная и заниженная длина, exact/+1 response для всех трёх BodyKind, request cap, Information no-read, SkipResponseBody/credential, trace oversize без partial records, large generated JSON, четыре attachments, binary downstream readability и provider mapping/cancellation. Core.Tests — 685/685; форматирование Core/Core.Tests и финальный harness пройдены. Runtime-код 127 не потребовал изменений.

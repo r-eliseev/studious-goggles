@@ -5,10 +5,12 @@ using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.OpenAiCompatible;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
+using ImageGen.Core.Tests.Providers;
 using ImageGen.Core.Tests.TestDoubles;
 
 namespace ImageGen.Core.Tests.OpenAiCompatible;
 
+[Collection(ProviderResponseSizeCollection.Name)]
 public class OpenAiCompatibleClientTests
 {
     private const string Key = "sk-local-1234";
@@ -158,6 +160,41 @@ public class OpenAiCompatibleClientTests
             client.GenerateAsync(new ImageGenerationRequest("sd-xl", "p", null), TestContext.Current.CancellationToken));
 
         Assert.Equal(ErrorKind.EmptyResponse, ex.Kind);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_UnknownLengthOverGeneratedJsonLimit_MapsToUnknown()
+    {
+        var content = new CountingStreamContent(ProviderResponseLimits.GeneratedImageJson + 1);
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
+        var client = CreateClient(handler);
+
+        var exception = await Assert.ThrowsAsync<ProviderException>(() => client.GenerateAsync(
+            new ImageGenerationRequest("sd-xl", "p", null), TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, exception.Kind);
+        Assert.DoesNotContain("xxxx", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(ProviderResponseLimits.GeneratedImageJson + 1, content.BytesRead);
+        Assert.True(content.StreamDisposed);
+        Assert.True(content.ContentDisposed);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_CallerCancelsWhileReadingResponse_RemainsOperationCanceled()
+    {
+        var readStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new BlockingReadStreamContent(readStarted),
+        });
+        var client = CreateClient(handler);
+        using var cancellation = new CancellationTokenSource();
+
+        var operation = client.GenerateAsync(new ImageGenerationRequest("sd-xl", "p", null), cancellation.Token);
+        await readStarted.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => operation);
     }
 
     [Fact]

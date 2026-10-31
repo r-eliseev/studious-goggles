@@ -1,8 +1,8 @@
 ---
 id: 152
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-10-30T16:56:26Z
+status: done
+assignee:
+claimed:
 created: 2026-10-30
 ---
 
@@ -53,6 +53,10 @@ bash scripts/check.sh
 После изменения каждого проекта: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`; после всех изменений — перечисленные тесты и `bash scripts/check.sh`. В отчёте указать команды, результаты, ручные ограничения и отличие от плана. Код писать только после одобрения плана по docs/tasks.md.
 
 ## Отчёт
+
+Пополнены test doubles non-seekable counting stream с неизвестной/заниженной длиной и блокирующий stream для caller cancellation. В `LoggingHttpHandler` подтверждены exact/+1 для Json, GeneratedImageJson и Image при неизвестной длине; отдельный dishonest-low response; request cap exact/+1 и dishonest-low; лимит+1 реально прочитан не больше, response/content/stream освобождаются, transport и частичные body records отсутствуют. Добавлены Information request/response no-read, skip/credential cases на Debug и trace, trace oversize response/request, допустимый GeneratedImageJson >8MiB, читаемость бинарного ответа, четырёх image attachments, Fal status/result/download oversized mapping и OpenAI-compatible generated JSON/image limits + caller cancellation. Oversize exception безопасен и маппится в `Unknown`; production дефектов в LoggingHttpHandler/BoundedHttpContentReader не найдено, runtime-код 127 не менялся.
+
+Core.Tests — 685/685. `dotnet format` Core и Core.Tests `--verify-no-changes --no-restore` и `bash scripts/check.sh` прошли. Тестовые классы с production size payload объединены в непараллельную collection; wrapped fixture теперь формируется одним StringBuilder без сотен тысяч временных substring.
 
 ## Комментарии
 

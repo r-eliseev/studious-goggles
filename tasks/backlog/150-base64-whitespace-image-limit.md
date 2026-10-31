@@ -1,8 +1,8 @@
 ---
 id: 150
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-10-30T16:52:12Z
+status: done
+assignee:
+claimed:
 created: 2026-10-30
 ---
 
@@ -49,6 +49,10 @@ bash scripts/check.sh
 После изменения каждого проекта: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`; после всех изменений — перечисленные тесты и `bash scripts/check.sh`. В отчёте указать команды, результаты, ручные ограничения и отличие от плана. Код писать только после одобрения плана по docs/tasks.md.
 
 ## Отчёт
+
+OpenRouter и OpenAI-compatible теперь вызывают общий bounded decoder. Он за один проход считает только base64 символы, не создавая строку без whitespace; разрешены только ASCII space/tab/CR/LF, затем `Convert.FromBase64String` валидирует формат, а decoded length проверяется повторно. `ProviderResponseLimits.Image` и JSON 72 MiB не менялись. Добавлены unit tests configurable/exact production limit, padding, разрешённых пробелов, invalid Unicode/символов и превышения; интеграционный тест обоих клиентов сериализует настоящий JSON с wrapped 49 MiB payload. Оба клиента сохраняют `FormatException` на invalid base64, OpenAI-compatible oversized маппит в `Unknown`; существующий OpenRouter oversized test сохранён.
+
+Core.Tests — 652/652 на изолированных проверках 150; полный suite после follow-up 152 — 685/685. Тесты response size объявлены непараллельной xUnit collection, включая обе клиентские группы и production-size тесты. Оставшаяся Fal/OpenAI-compatible client-limit matrix закрыта задачей 152.
 
 ## Комментарии
 

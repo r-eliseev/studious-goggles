@@ -98,21 +98,7 @@ public sealed class OpenAiCompatibleClient(
     }
 
     private static byte[] DecodeImage(string base64)
-    {
-        var maximumEncodedLength = ((ProviderResponseLimits.Image + 2) / 3) * 4;
-        if (base64.Length > maximumEncodedLength)
-        {
-            throw new ProviderResponseTooLargeException(ProviderResponseLimits.Image);
-        }
-
-        var bytes = Convert.FromBase64String(base64);
-        if (bytes.LongLength > ProviderResponseLimits.Image)
-        {
-            throw new ProviderResponseTooLargeException(ProviderResponseLimits.Image);
-        }
-
-        return bytes;
-    }
+        => BoundedBase64ImageDecoder.Decode(base64, ProviderResponseLimits.Image);
 
     /// <summary>These APIs do not list input modalities, so no model is known to take images.</summary>
     public Task<IReadOnlyList<ImageGen.Core.Domain.Models.ChatModel>> ListChatModelsAsync(CancellationToken cancellationToken) =>
