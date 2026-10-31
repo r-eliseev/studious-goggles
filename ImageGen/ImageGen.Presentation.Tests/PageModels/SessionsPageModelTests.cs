@@ -151,6 +151,27 @@ public class SessionsPageModelTests : IDisposable
     }
 
     [Fact]
+    public async Task SessionChanged_NewRun_UpdatesRunCount()
+    {
+        var session = NewSession("New session", DateTimeOffset.UtcNow);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
+        _sessionRepository.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        _runs.CountRunsBySessionAsync(Arg.Any<CancellationToken>()).Returns(new Dictionary<Guid, int>());
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+        var row = Assert.Single(model.Sessions);
+        Assert.Equal(0, row.RunCount);
+
+        _runs.CountRunsBySessionAsync(Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<Guid, int> { [session.Id] = 1 });
+        _changes.Notify(session.Id);
+        await WaitUntilAsync(() => row.RunCount == 1);
+
+        Assert.Same(row, Assert.Single(model.Sessions));
+        Assert.EndsWith("1 run", row.DetailsText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task SessionChanged_UnknownSession_InsertsInTimestampOrder()
     {
         var first = NewSession("First", DateTimeOffset.UtcNow);

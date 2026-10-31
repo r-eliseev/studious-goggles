@@ -29,6 +29,7 @@ public sealed class SessionService(
             Settings = SessionSettings.CreateDefault(),
         };
         await sessions.AddAsync(session, cancellationToken);
+        changes.Notify(session.Id);
         return session;
     }
 

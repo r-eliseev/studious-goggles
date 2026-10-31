@@ -63,6 +63,52 @@ public class SessionServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_NotifiesSessionChanged()
+    {
+        var notified = new List<Guid>();
+        var added = 0;
+        _changes.SessionChanged += (_, sessionId) =>
+        {
+            added++;
+            notified.Add(sessionId);
+        };
+
+        var session = await _service.CreateAsync(TestContext.Current.CancellationToken);
+
+        // Exactly one notification, with the id of the created session, and the write has happened by then.
+        Assert.Equal([session.Id], notified);
+        Assert.Equal(1, added);
+        await _sessions.Received(1).AddAsync(session, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateAsync_AddFails_DoesNotNotify()
+    {
+        var notified = 0;
+        _changes.SessionChanged += (_, _) => notified++;
+        _sessions.AddAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(_ => throw new InvalidOperationException("storage is down"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(0, notified);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ThrowingSubscriber_StillReturnsSessionAndCallsNextHandler()
+    {
+        var called = 0;
+        _changes.SessionChanged += (_, _) => throw new InvalidOperationException("subscriber failed");
+        _changes.SessionChanged += (_, _) => called++;
+
+        var session = await _service.CreateAsync(TestContext.Current.CancellationToken);
+
+        Assert.NotEqual(Guid.Empty, session.Id);
+        Assert.Equal(1, called);
+    }
+
+    [Fact]
     public async Task CreateAsync_NewSession_UsesClaudeHaikuAsAssistant()
     {
         var session = await _service.CreateAsync(TestContext.Current.CancellationToken);

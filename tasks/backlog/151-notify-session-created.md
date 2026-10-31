@@ -1,6 +1,6 @@
 ---
 id: 151
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-30
@@ -49,6 +49,26 @@ bash scripts/check.sh
 После изменения каждого проекта: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`; после всех изменений — перечисленные тесты и `bash scripts/check.sh`. В отчёте указать команды, результаты, ручные ограничения и отличие от плана. Код писать только после одобрения плана по docs/tasks.md.
 
 ## Отчёт
+Создание сессии теперь публикует уведомление — недостающий контракт закрыт.
+
+Изменения:
+- `ImageGen/ImageGen.Core/Services/SessionService.cs`: в `CreateAsync` сразу после `await sessions.AddAsync(session, cancellationToken)` и до `return` добавлено `changes.Notify(session.Id)`. Поля и настройки по умолчанию не менялись, других путей изменения не тронуто, новый notifier/интерфейс не вводился, список сессий не перезагружается.
+- `ImageGen/ImageGen.Core.Tests/Services/SessionServiceTests.cs`: добавлены `CreateAsync_NotifiesSessionChanged` (ровно одно уведомление с id созданной сессии, `AddAsync` к моменту уведомления уже завершён), `CreateAsync_AddFails_DoesNotNotify` (падение `AddAsync` — события нет), `CreateAsync_ThrowingSubscriber_StillReturnsSessionAndCallsNextHandler` (бросающий подписчик: создание возвращает сессию, следующий обработчик вызван; используется существующий контракт notifier, его реализация не менялась).
+- `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionsPageModelTests.cs`: добавлен недостающий по критериям 089 тест `SessionChanged_NewRun_UpdatesRunCount` — число прогонов в строке растёт после прогона без перезапуска.
+- `tasks/backlog/089-sessions-list-refresh.md`: дописан результат, задача возвращена в `done` (закрыты 154 и 151, исходные критерии проверены тестами).
+
+TDD: сначала `CreateAsync_NotifiesSessionChanged` и `CreateAsync_ThrowingSubscriber_...` — падали (уведомления не было вовсе), `CreateAsync_AddFails_DoesNotNotify` проходил сразу как страховка. После одной строки в `CreateAsync` все проходят.
+
+Проверено:
+```
+dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj        → 646 тестов, 3 упавших
+dotnet test --project ImageGen/ImageGen.Presentation.Tests/…                         → 402 теста, 1 упавший
+dotnet format ImageGen/ImageGen.Core/… и …/Core.Tests/… --verify-no-changes          → без изменений
+bash scripts/check.sh                                                                 → все проверки пройдены
+```
+Четыре упавших теста (три `GenerationServiceTests.RunOnModelAsync_*` и `ModelPickerPageModelTests.Pick_TargetDoesNotSupportSourceReferences_ShowsErrorAndStaysOnPage`) падают и на чистом `main` — это отдельный долг по проверке целевой модели на поддержку референсов, к этой задаче отношения не имеют.
+
+Ручных проверок не требуется: изменение только в ядре и тестах, поведение оболочек не менялось.
 
 ## Комментарии
 
