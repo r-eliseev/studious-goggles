@@ -8,6 +8,7 @@ using ImageGen.Presentation.Logging;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using ImageGen.Presentation.Tests.TestDoubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
@@ -205,7 +206,7 @@ public sealed class SettingsPageModelTests : IDisposable
         Assert.True(CreateModel().CanOpenLogs);
     }
 
-    private SettingsPageModel CreateModel() => new(_appearance, _keyService, _registry, _navigation, _folders, new TestPaths(_directory), _dialogs);
+    private SettingsPageModel CreateModel() => new(_appearance, _keyService, _registry, _navigation, _folders, new TestPaths(_directory), _dialogs, ErrorAlerts.Create(_dialogs));
 
     private sealed record TestPaths(string DataDirectory) : IAppPaths;
 }

@@ -288,7 +288,7 @@ public class SessionModelsPageModelTests
 
     private SessionModelsPageModel CreateModel(ProviderRegistry? registry = null)
     {
-        var model = new SessionModelsPageModel(_sessionService, _catalog, _chatModels, registry ?? ProviderDoubles.BuiltInRegistry(), _navigation, _dialogs);
+        var model = new SessionModelsPageModel(_sessionService, _catalog, _chatModels, registry ?? ProviderDoubles.BuiltInRegistry(), _navigation, ErrorAlerts.Create(_dialogs));
         model.ApplyQueryAttributes(new Dictionary<string, object> { [Routes.SessionIdParameter] = SessionId.ToString("D") });
         return model;
     }
@@ -603,7 +603,7 @@ public class SessionModelsPageModelTests
     [Fact]
     public void ApplyQueryAttributes_InvalidSessionId_Throws()
     {
-        var model = new SessionModelsPageModel(_sessionService, _catalog, _chatModels, ProviderDoubles.BuiltInRegistry(), _navigation, _dialogs);
+        var model = new SessionModelsPageModel(_sessionService, _catalog, _chatModels, ProviderDoubles.BuiltInRegistry(), _navigation, ErrorAlerts.Create(_dialogs));
 
         Assert.Throws<ArgumentException>(() =>
             model.ApplyQueryAttributes(new Dictionary<string, object> { [Routes.SessionIdParameter] = "not-a-guid" }));

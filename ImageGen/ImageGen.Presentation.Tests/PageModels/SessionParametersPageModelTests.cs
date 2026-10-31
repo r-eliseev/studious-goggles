@@ -38,7 +38,7 @@ public class SessionParametersPageModelTests
             time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance), Substitute.For<ISessionGenerationCoordinator>());
         var catalog = new ModelCatalogService(
             ProviderDoubles.Router(), _modelRepository, NullLogger<ModelCatalogService>.Instance);
-        _model = new SessionParametersPageModel(sessionService, catalog, _navigation, _dialogs);
+        _model = new SessionParametersPageModel(sessionService, catalog, _navigation, ErrorAlerts.Create(_dialogs));
         _model.ApplyQueryAttributes(new Dictionary<string, object> { [Routes.SessionIdParameter] = SessionId.ToString("D") });
 
         _session = new Session

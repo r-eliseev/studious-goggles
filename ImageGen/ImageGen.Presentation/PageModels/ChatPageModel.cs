@@ -9,7 +9,6 @@ using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
-using Microsoft.Extensions.Logging.Abstractions;
 using AppTaskExtensions = ImageGen.Presentation.Utilities.TaskExtensions;
 
 namespace ImageGen.Presentation.PageModels;
@@ -36,9 +35,9 @@ public sealed partial class ChatPageModel(
     Func<SessionModelsPageModel> modelsPaneFactory,
     Func<SessionParametersPageModel> parametersPaneFactory,
     IImageViewerService imageViewer,
-    ErrorAlert? errorAlert = null) : ObservableObject
+    ErrorAlert errorAlert) : ObservableObject
 {
-    private readonly ErrorAlert _errorAlert = errorAlert ?? new ErrorAlert(dialogs, NullLogger<ErrorAlert>.Instance);
+    private readonly ErrorAlert _errorAlert = errorAlert;
     private readonly Dictionary<Guid, GenerationItemViewModel> _cards = [];
     private bool _imageConsentGiven;
     private Guid _sessionId;

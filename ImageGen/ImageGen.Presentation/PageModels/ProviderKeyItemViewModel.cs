@@ -5,7 +5,6 @@ using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Presentation.PageModels;
 
@@ -24,14 +23,14 @@ public sealed partial class ProviderKeyItemViewModel : ObservableObject
         ApiKeyService keys,
         INavigationService navigation,
         IDialogService dialogs,
-        ErrorAlert? errorAlert = null)
+        ErrorAlert errorAlert)
     {
         ProviderId = providerId;
         DisplayName = displayName;
         _keys = keys;
         _navigation = navigation;
         _dialogs = dialogs;
-        _errorAlert = errorAlert ?? new ErrorAlert(dialogs, NullLogger<ErrorAlert>.Instance);
+        _errorAlert = errorAlert;
         _isOpenRouter = providerId == ProviderIds.OpenRouter;
     }
 

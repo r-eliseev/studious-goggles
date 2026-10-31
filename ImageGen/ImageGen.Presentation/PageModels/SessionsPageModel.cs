@@ -8,7 +8,6 @@ using ImageGen.Core.Services;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
 using ImageGen.Presentation.Utilities;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Presentation.PageModels;
 
@@ -23,9 +22,9 @@ public sealed partial class SessionsPageModel(
     SessionSearchService searchService,
     SessionChangeNotifier changes,
     IMainThread mainThread,
-    ErrorAlert? errorAlert = null) : ObservableObject
+    ErrorAlert errorAlert) : ObservableObject
 {
-    private readonly ErrorAlert _errorAlert = errorAlert ?? new ErrorAlert(dialogs, NullLogger<ErrorAlert>.Instance);
+    private readonly ErrorAlert _errorAlert = errorAlert;
     /// <summary>Pause after the last keystroke before the search runs.</summary>
     public static readonly TimeSpan SearchDebounce = TimeSpan.FromMilliseconds(250);
 

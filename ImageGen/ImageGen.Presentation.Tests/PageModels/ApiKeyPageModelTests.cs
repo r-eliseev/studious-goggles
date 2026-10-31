@@ -5,6 +5,7 @@ using ImageGen.Core.Services;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using ImageGen.Presentation.Tests.TestDoubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute.ExceptionExtensions;
 
@@ -28,7 +29,7 @@ public class ApiKeyPageModelTests
 
     private ApiKeyPageModel CreateModel(string providerId = ProviderIds.OpenRouter)
     {
-        var model = new ApiKeyPageModel(new ApiKeyService(_router, _secrets, NullLogger<ApiKeyService>.Instance), _registry, _navigation, _dialogs, _persistence);
+        var model = new ApiKeyPageModel(new ApiKeyService(_router, _secrets, NullLogger<ApiKeyService>.Instance), _registry, _navigation, _dialogs, _persistence, ErrorAlerts.Create(_dialogs));
         model.ApplyQueryAttributes(new Dictionary<string, object> { [Routes.ProviderIdParameter] = providerId });
         return model;
     }
@@ -54,7 +55,7 @@ public class ApiKeyPageModelTests
     [InlineData(null)]
     public async Task OnAppearingAsync_UnknownOrMissingProvider_AlertsAndGoesBackOnceWithoutReadingSecrets(string? providerId)
     {
-        var model = new ApiKeyPageModel(new ApiKeyService(_router, _secrets, NullLogger<ApiKeyService>.Instance), _registry, _navigation, _dialogs, _persistence);
+        var model = new ApiKeyPageModel(new ApiKeyService(_router, _secrets, NullLogger<ApiKeyService>.Instance), _registry, _navigation, _dialogs, _persistence, ErrorAlerts.Create(_dialogs));
         var query = new Dictionary<string, object>();
         if (providerId is not null)
         {

@@ -8,7 +8,6 @@ using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.Logging;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Presentation.PageModels;
 
@@ -24,9 +23,9 @@ public sealed partial class SettingsPageModel(
     IFolderLauncher folders,
     IAppPaths paths,
     IDialogService dialogs,
-    ErrorAlert? errorAlert = null) : ObservableObject
+    ErrorAlert errorAlert) : ObservableObject
 {
-    private readonly ErrorAlert _errorAlert = errorAlert ?? new ErrorAlert(dialogs, NullLogger<ErrorAlert>.Instance);
+    private readonly ErrorAlert _errorAlert = errorAlert;
     /// <summary>The style cards; built on the first <see cref="LoadCommand"/>, because they refer to this page model.</summary>
     public ObservableCollection<StyleOptionViewModel> Styles { get; } = [];
 

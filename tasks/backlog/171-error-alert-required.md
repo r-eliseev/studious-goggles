@@ -1,8 +1,8 @@
 ---
 id: 171
-status: in-progress
-assignee: codex
-claimed: 2026-10-31T14:26:53Z
+status: done
+assignee:
+claimed:
 created: 2026-10-31
 ---
 
@@ -31,6 +31,10 @@ created: 2026-10-31
 Файлы: восемь файлов из «Анализа» в `ImageGen/ImageGen.Presentation/PageModels/`, `ImageGen/ImageGen.Presentation.Tests/TestDoubles/ErrorAlerts.cs` (новый), `ImageGen/ImageGen.Presentation.Tests/PageModels/*Tests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/ErrorAlertDependencyTests.cs` (новый).
 
 ## Отчёт
+
+У всех восьми PageModels и `ProviderKeyItemViewModel` `ErrorAlert` теперь обязательный параметр; запасное создание с `NullLogger` убрано. У трёх моделей, где `IDialogService` использовался только для создания fallback, лишний параметр удалён. Добавлен общий `TestDoubles/ErrorAlerts.Create(IDialogService)` и тест рефлексии проверяющий, что во всех конструкторах параметр не optional. DI-регистрации Avalonia и MAUI уже содержали `ErrorAlert`, их менять не пришлось.
+
+Проверки: сначала новый reflection test падал для всех восьми типов; после правки Presentation.Tests 428/428, Avalonia.Tests 149 passed и 2 skipped (недоступные OS secret backends); MAUI Android build прошёл без предупреждений; `dotnet format` Presentation и Presentation.Tests прошёл. Также `scripts/check.sh`.
 
 ## Комментарии
 

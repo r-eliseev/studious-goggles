@@ -6,7 +6,6 @@ using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Services;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Presentation.PageModels;
 
@@ -19,10 +18,9 @@ public sealed partial class SessionParametersPageModel(
     SessionService sessionService,
     ModelCatalogService catalog,
     INavigationService navigation,
-    IDialogService dialogs,
-    ErrorAlert? errorAlert = null) : ObservableObject
+    ErrorAlert errorAlert) : ObservableObject
 {
-    private readonly ErrorAlert _errorAlert = errorAlert ?? new ErrorAlert(dialogs, NullLogger<ErrorAlert>.Instance);
+    private readonly ErrorAlert _errorAlert = errorAlert;
     /// <summary>Output formats the service accepts (see <c>SessionService</c>).</summary>
     private static readonly string[] OutputFormats = ["png", "jpeg", "webp"];
 

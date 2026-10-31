@@ -87,7 +87,7 @@ public class ModelPickerPageModelTests
 
     private ModelPickerPageModel CreateModel()
     {
-        var model = new ModelPickerPageModel(_runs, _catalog, _generations, ProviderDoubles.BuiltInRegistry(), _navigation, _dialogs);
+        var model = new ModelPickerPageModel(_runs, _catalog, _generations, ProviderDoubles.BuiltInRegistry(), _navigation, ErrorAlerts.Create(_dialogs));
         model.ApplyQueryAttributes(new Dictionary<string, object>
         {
             [Routes.SessionIdParameter] = SessionId.ToString("D"),

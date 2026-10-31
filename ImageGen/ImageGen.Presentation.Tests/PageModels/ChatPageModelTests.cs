@@ -220,10 +220,10 @@ public class ChatPageModelTests
     private ModelCatalogService Catalog => new(ProviderDoubles.Router(), _modelRepository, NullLogger<ModelCatalogService>.Instance);
 
     private SessionModelsPageModel NewModelsPane() =>
-        new(_sessionService, Catalog, ChatModels, ProviderDoubles.BuiltInRegistry(), _navigation, _dialogs);
+        new(_sessionService, Catalog, ChatModels, ProviderDoubles.BuiltInRegistry(), _navigation, ErrorAlerts.Create(_dialogs));
 
     private SessionParametersPageModel NewParametersPane() =>
-        new(_sessionService, Catalog, _navigation, _dialogs);
+        new(_sessionService, Catalog, _navigation, ErrorAlerts.Create(_dialogs));
 
     private ChatPageModel CreateModel(Guid sessionId)
     {
@@ -243,7 +243,8 @@ public class ChatPageModelTests
             _tracker,
             NewModelsPane,
             NewParametersPane,
-            _imageViewer);
+            _imageViewer,
+            ErrorAlerts.Create(_dialogs));
         model.ApplyQueryAttributes(new Dictionary<string, object>
         {
             [Routes.SessionIdParameter] = sessionId.ToString("D"),
@@ -675,7 +676,7 @@ public class ChatPageModelTests
     public void ApplyQueryAttributes_MissingSessionId_Throws()
     {
         var model = new ChatPageModel(
-            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard, Substitute.For<IImageSaver>(), _tracker, NewModelsPane, NewParametersPane, _imageViewer);
+            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard, Substitute.For<IImageSaver>(), _tracker, NewModelsPane, NewParametersPane, _imageViewer, ErrorAlerts.Create(_dialogs));
 
         Assert.Throws<ArgumentException>(() => model.ApplyQueryAttributes(new Dictionary<string, object>()));
     }
