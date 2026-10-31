@@ -1,6 +1,6 @@
 ---
 id: 171
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-31
@@ -36,3 +36,6 @@ created: 2026-10-31
 
 ### 2026-10-31, владелец (в чате, записал claude-audit)
 Завести задачу: ErrorAlert обязательный (выбрано в вопросе).
+
+### 2026-10-31, владелец (в чате, записал claude-audit)
+План одобрен.
