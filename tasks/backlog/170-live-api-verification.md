@@ -41,6 +41,10 @@ created: 2026-10-31
 
 ## Отчёт
 
+Инструмент `ImageGen.LiveCheck` и тесты подготовлены. Добавлен запуск с ключами из аргументов или переменных `IMAGEGEN_LIVE_*_KEY`, ограничение бюджета/числа запросов, выбор моделей, сценарии OpenRouter/fal/Together и конфигурируемых OpenAI-compatible/Anthropic клиентов. Отчёт и безопасный HTTP trace записываются в каталог `--out`; все клиенты приложения создаются через `AddImageGenCore` и `LoggingHttpHandler`. Описания запуска добавлены в `docs/knowledge/dev-environment.md`, структура — в `docs/architecture.md`.
+
+Проверено: `dotnet build ImageGen/ImageGen.LiveCheck/ImageGen.LiveCheck.csproj --no-restore`; `dotnet test --project ImageGen/ImageGen.LiveCheck.Tests/ImageGen.LiveCheck.Tests.csproj --no-restore` (4/4); `dotnet format` обоих новых проектов (`--verify-no-changes --no-restore`); CLI отклоняет нулевой бюджет без вывода значения ключа. Живые API и оплата не проверялись: для этого необходим запуск владельцем с ключами и выбранным бюджетом. Результаты сценариев пока помечены как требующие сверки с trace и заглушками; факты для ADR/knowledge и задачи по расхождениям будут оформлены после получения live-отчёта. Сценарий неудачного chat completion реализован обычным коротким запросом: намеренно отправлять гарантированно невалидный/платный запрос нельзя считать безопасным до согласования конкретного провайдера и модели.
+
 ## Комментарии
 
 ### 2026-10-31, владелец (в чате, записал claude-audit)

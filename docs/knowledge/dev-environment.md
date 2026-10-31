@@ -20,6 +20,18 @@
 | `ImageGen.Maui`, цель Android (`net10.0-android`) | да | да, проверено (APK собран на шаблоне) | сборка да (не проверено на проекте); запуск/отладка нет — нет эмулятора, `adb`, `/dev/kvm` | сборка да, проверено (APK собран на проекте); запуск/отладка — только на реальном устройстве по сети через `adb connect`, эмулятор не работает (нет KVM) |
 | `ImageGen.Maui`, цель Windows (`net10.0-windows…`) | да | нет, проверено (XAML-компилятор только под Windows) | нет, проверено (как в облачной сессии) | сборка да, проверено, но через Wine и неофициально (1 ч 45 мин); запуск и отладка нет — WinUI 3 под Wine не работает |
 
+## Live API check (задача 170)
+
+Инструмент использует реальные клиенты `ImageGen.Core` и пишет безопасный HTTP-трейс через `LoggingHttpHandler`/`FileDebugTrace`. Никогда не передавайте ключи третьим лицам. Параметры командной строки могут сохраняться в истории оболочки и быть видны локальным процессам; используйте переменные окружения `IMAGEGEN_LIVE_OPENROUTER_KEY`, `IMAGEGEN_LIVE_FAL_KEY`, `IMAGEGEN_LIVE_TOGETHER_KEY` или `--provider-key-<id>` для дополнительных провайдеров.
+
+Перед платными запросами ограничьте бюджет и число вызовов для каждого провайдера. Значения по умолчанию: `$1` и 40 запросов. Для OpenAI-compatible/Anthropic из собственного `providers.json` задайте `--openai-compatible <путь>` и `--provider-key-<id> <ключ>`. Модели можно закрепить параметрами `--openrouter-image-model`, `--openrouter-chat-model`, `--fal-image-model`, `--together-image-model`; без них выбирается первая из каталога/конфига.
+
+```bash
+dotnet run --project ImageGen/ImageGen.LiveCheck -- --budget-usd 1 --max-requests 40 --only openrouter,fal --out tmp/live-check
+```
+
+Отчёт и отладочный трейс появляются под `tmp/live-check/<UTC-дата>/report.md` и `tmp/live-check/debug/<UTC-дата>/trace.jsonl`. Проверьте каждый сценарий вручную по колонке статуса, модели и ссылке на trace. Сценарии генерации резервируют оценочную цену до запроса и останавливаются, если не помещаются в бюджет. Цены из каталога могут быть устаревшими или переменными; отчёт помечает их как оценочные. Тесты инструмента работают без сети и ключей.
+
 Отладка GUI: Windows-приложение — только на Windows-машине; Android вживую (эмулятор/устройство, точки останова, Hot Reload) — ни в облачной сессии, ни в Kiro Web (там Android только компилируется), ни на VPS (там эмулятор не запускается, но есть отладка на реальном устройстве по сети). Подробности по Kiro Web: `docs/knowledge/kiro-web-session.md`.
 - Сборка всего решения (`dotnet build ImageGen/ImageGen.slnx`) и `dotnet format ImageGen/ImageGen.slnx` на Linux не запускаются, потому что решение включает MAUI-проект, а без нагрузки MAUI он не загружается. Форматирование и сборка по отдельным проектам: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`.
 - В CI на ubuntu-latest установка нагрузки `maui-android` падала с «Disk quota exceeded», поэтому Android в CI собирается на Windows (`.github/workflows/build.yml`, задача `maui`). В облачной сессии Android-сборка проверена, но CI на ней не настроен.

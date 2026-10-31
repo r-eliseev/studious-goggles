@@ -12,6 +12,8 @@
 global.json                        режим dotnet test: Microsoft.Testing.Platform
 ImageGen/
   ImageGen.slnx
+  ImageGen.LiveCheck/               net10.0 CLI для ограниченной по бюджету проверки живых API; использует клиентов Core и безопасный debug trace
+  ImageGen.LiveCheck.Tests/         xUnit v3: аргументы, лимиты бюджета, отказ записи секретов
   Directory.Build.props            Nullable, ImplicitUsings, TreatWarningsAsErrors
   Directory.Packages.props         все версии пакетов
   ImageGen.Core/                   net10.0, без UI и без SQLite
