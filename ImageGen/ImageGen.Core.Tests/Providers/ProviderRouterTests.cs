@@ -89,6 +89,22 @@ public class ProviderRouterTests
     }
 
     [Fact]
+    public void GetTextEmbeddingClient_OpenRouter_ReturnsProviderConnection()
+    {
+        Assert.Same(_router.GetConnection("openrouter"), _router.GetTextEmbeddingClient("openrouter"));
+    }
+
+    [Fact]
+    public async Task GetTextEmbeddingClient_OpenAiCompatible_ThrowsModelUnavailable()
+    {
+        var client = _router.GetTextEmbeddingClient("local");
+
+        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync(["text"], TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.ModelUnavailable, error.Kind);
+    }
+
+    [Fact]
     public void GetConnection_UnknownId_ThrowsModelUnavailableWithoutCreatingClient()
     {
         var ex = Assert.Throws<ProviderException>(() => _router.GetConnection("missing"));

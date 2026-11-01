@@ -16,9 +16,10 @@ public sealed class OpenRouterClient(
     IHttpClientFactory httpClientFactory,
     ISecretStore secretStore,
     TimeProvider timeProvider)
-    : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient, ISynchronousImageTransport
+    : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient, ISynchronousImageTransport, ITextEmbeddingClient
 {
     private const int PriceRequestParallelism = 4;
+    private const string EmbeddingModel = "baai/bge-m3";
 
     protected override void Authenticate(HttpRequestMessage request, string apiKey) => AuthenticateBearer(request, apiKey);
 
@@ -229,6 +230,87 @@ public sealed class OpenRouterClient(
         var (text, toolCalls) = OpenAiChatWire.ReadReply(root, Config.DisplayName);
         return new AssistantChatResult(text, toolCalls, ReadCost(root), ReadPromptTokens(root));
     }
+
+    public async Task<EmbeddingResult> EmbedAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(texts);
+        if (texts.Count == 0)
+        {
+            throw new ArgumentException("At least one text is required.", nameof(texts));
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var input = new JsonArray(texts.Select(text => (JsonNode?)JsonValue.Create(text)).ToArray());
+        var body = new JsonObject
+        {
+            ["model"] = EmbeddingModel,
+            ["input"] = input,
+        };
+        using var request = await CreateAuthorizedRequestAsync(HttpMethod.Post, "embeddings", body, cancellationToken);
+        var root = await SendJsonAsync(request, cancellationToken);
+        var vectors = ReadEmbeddings(root, texts.Count);
+        var model = root["model"] is JsonValue modelNode && modelNode.TryGetValue<string>(out var responseModel)
+            && !string.IsNullOrWhiteSpace(responseModel)
+            ? responseModel
+            : EmbeddingModel;
+        // OpenRouter's usage.cost unit has not been verified for embeddings; do not label an unknown unit as USD.
+        return new EmbeddingResult(vectors, model, vectors[0].Length, null);
+    }
+
+    private static float[][] ReadEmbeddings(JsonNode root, int expectedCount)
+    {
+        if (root["data"] is not JsonArray data || data.Count != expectedCount)
+        {
+            throw InvalidEmbeddingResponse();
+        }
+
+        var vectors = new float[expectedCount][];
+        var dimensions = 0;
+        foreach (var item in data)
+        {
+            if (item?["index"] is not JsonValue indexValue || !indexValue.TryGetValue<int>(out var index)
+                || index < 0 || index >= expectedCount || vectors[index] is not null
+                || item["embedding"] is not JsonArray values || values.Count == 0)
+            {
+                throw InvalidEmbeddingResponse();
+            }
+
+            if (dimensions == 0)
+            {
+                dimensions = values.Count;
+            }
+            else if (values.Count != dimensions)
+            {
+                throw InvalidEmbeddingResponse();
+            }
+
+            var vector = new float[dimensions];
+            for (var dimension = 0; dimension < values.Count; dimension++)
+            {
+                if (values[dimension] is not JsonValue valueNode
+                    || !valueNode.TryGetValue<double>(out var value)
+                    || !double.IsFinite(value)
+                    || value > float.MaxValue
+                    || value < -float.MaxValue)
+                {
+                    throw InvalidEmbeddingResponse();
+                }
+
+                vector[dimension] = (float)value;
+                if (!float.IsFinite(vector[dimension]))
+                {
+                    throw InvalidEmbeddingResponse();
+                }
+            }
+
+            vectors[index] = vector;
+        }
+
+        return vectors.Any(vector => vector is null) ? throw InvalidEmbeddingResponse() : vectors;
+    }
+
+    private static ProviderException InvalidEmbeddingResponse() =>
+        new(ErrorKind.Unknown, "OpenRouter returned an invalid embedding response.");
 
     private static int? ReadPromptTokens(JsonNode root) =>
         root["usage"]?["prompt_tokens"] is JsonValue tokens && tokens.TryGetValue<int>(out var count) ? count : null;

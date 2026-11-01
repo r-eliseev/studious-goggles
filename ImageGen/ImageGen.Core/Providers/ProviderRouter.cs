@@ -41,6 +41,10 @@ public sealed class ProviderRouter(
         GetConnection(providerId) as IAssistantChatClient
         ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support assistant chat.");
 
+    public ITextEmbeddingClient GetTextEmbeddingClient(string providerId) =>
+        GetConnection(providerId) as ITextEmbeddingClient
+        ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support text embeddings.");
+
     private IProviderConnection Create(ProviderConfig config) => config.Kind switch
     {
         ProviderKind.OpenRouter => Wrap(new OpenRouterClient(config, httpClientFactory, secretStore, timeProvider), config.Id),

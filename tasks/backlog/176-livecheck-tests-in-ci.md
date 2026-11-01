@@ -1,6 +1,6 @@
 ---
 id: 176
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-01
@@ -30,6 +30,10 @@ created: 2026-11-01
 Файлы: `.github/workflows/build.yml`.
 
 ## Отчёт
+
+Добавлены четыре шага в `core` workflow: форматирование LiveCheck и его тестового проекта, Release-сборка тестового проекта и запуск тестов без повторной сборки. Секреты и `IMAGEGEN_LIVE_*` в CI не добавлялись; остальные jobs и `release.yml` не менялись.
+
+Локально прошли `dotnet format` обоих проектов (`--verify-no-changes`), Release-сборка `ImageGen.LiveCheck.Tests` и тесты (4/4). `scripts/check.sh` прошёл; после публикации PR проверяется CI.
 
 ## Комментарии
 

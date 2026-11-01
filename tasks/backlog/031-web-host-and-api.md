@@ -1,8 +1,8 @@
 ---
 id: 031
-status: approved
+status: done
 assignee:
-claimed:
+claimed: 2026-11-01T19:43:19Z
 created: 2026-10-27
 ---
 
@@ -54,6 +54,16 @@ ASP.NET Core: вход по паролю из переменной окруже�
 Файлы (по этапам; точные — в отчётах этапов): `docs/decisions/0025-web-host.md`, `ImageGen/ImageGen.slnx`, `ImageGen/Directory.Packages.props`, `ImageGen/ImageGen.Web/ImageGen.Web.csproj`, `Program.cs`, `WebAppPaths.cs`, `StartupInitializer.cs`, `Auth/*`, `Secrets/DataProtectionSecretStore.cs`, `Api/*Endpoints.cs`, `Api/Dtos/*`, `Events/EventHub.cs`, `Events/EventsEndpoint.cs`; `ImageGen/ImageGen.Web.Tests/*`.
 
 ## Отчёт
+
+Этапы 1–5 реализованы ранее: хост, auth/CSRF, зашифрованные ключи, API сессий/провайдеров, чат/генерации/картинки.
+
+Этап 6: добавлены `EventHub` и `/api/events` в формате SSE. Хаб подписывается на события `GenerationService` и `SessionChangeNotifier`, отправляет JSON-события `generation` и `session` всем подписчикам. У каждого клиента собственный bounded channel (256); при переполнении очередь очищается и на следующем событии отправляется `resync`. SSE endpoint отправляет heartbeat-комментарий раз в 20 секунд и освобождает подписку при отключении клиента; фоновые генерации не связаны с токеном запроса.
+
+Проверки этапа 6: Web.Tests покрывают auth для endpoint, доставку события нескольким подписчикам и маркер `resync` после переполнения очереди. `Web.Tests` — 18/18; `dotnet format` Web и Web.Tests, `git diff --check`, `scripts/check.sh` прошли.
+
+Этапы 1–5: добавлены `ImageGen.Web` и `ImageGen.Web.Tests`, ASP.NET Core minimal API композиция, `IMAGEGEN_DATA_DIR` (по умолчанию `/data`), проверка непустого `IMAGEGEN_WEB_PASSWORD`, hosted startup initializer (миграции SQLite и восстановление generation jobs), открытый `GET /api/health`. Хранилище `ISecretStore` реализовано через ASP.NET Core Data Protection с постоянным key ring. Вход по паролю сравнивает SHA-256 через `FixedTimeEquals`, применяет лимит 5 попыток за минуту и выдаёт 30-дневную cookie (`HttpOnly`, `SameSite=Strict`, `Secure` вне localhost); защищённые auth endpoints возвращают JSON 401 без redirect. Antiforgery token endpoint выдаёт request token, а все изменяющие API-запросы его проверяют. Реализованы DTO endpoints для сессий/timeline, image/assistant моделей и ключей провайдеров; timeline не возвращает `JobJson`, ключи только проверяются и маскируются, исходное значение не возвращается. Чат принимает multipart сообщения и изображения через `AttachmentService`; после принятия turn продолжает работу с независимым от HTTP cancellation token. Repeat/new-seed/edit/other-model возвращают 202; получение изображения по id проверяет наличие файла и принадлежность пути папке данных. Неизвестная сессия/провайдер/generation даёт 404, ошибки API скрывают текст исключения. Добавлен ADR 0025. Этап 6 ещё не реализован.
+
+Проверено: Web.Tests 15/15, форматирование Web и Web.Tests, `scripts/check.sh`. `Microsoft.AspNetCore.Mvc.Testing` имеет MIT лицензию; использован патч 10.0.14. ASP.NET Core Data Protection Extensions входит в shared framework и не требует отдельной ссылки на пакет.
 
 ## Комментарии
 

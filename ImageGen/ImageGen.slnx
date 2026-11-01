@@ -10,4 +10,6 @@
   <Project Path="ImageGen.Avalonia/ImageGen.Avalonia.csproj" />
   <Project Path="ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj" />
   <Project Path="ImageGen.Maui/ImageGen.Maui.csproj" />
+  <Project Path="ImageGen.Web.Tests/ImageGen.Web.Tests.csproj" />
+  <Project Path="ImageGen.Web/ImageGen.Web.csproj" />
 </Solution>

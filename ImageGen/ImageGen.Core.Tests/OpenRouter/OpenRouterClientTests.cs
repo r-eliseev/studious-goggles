@@ -19,6 +19,7 @@ public class OpenRouterClientTests
     private static readonly DateTimeOffset Now = new(2026, 10, 27, 12, 0, 0, TimeSpan.Zero);
 
     private static readonly Uri OpenRouterAddress = new("https://openrouter.ai/api/v1/");
+    private const string EmbeddingModel = "baai/bge-m3";
     private const string FluxModelId = "black-forest-labs/flux.2-klein-4b";
     private const string QwenModelId = "qwen/qwen-image-2.1-turbo";
     private const string FluxPriceJson = """
@@ -72,6 +73,89 @@ public class OpenRouterClientTests
     {
         Content = new StringContent(json, Encoding.UTF8, "application/json"),
     };
+
+    [Fact]
+    public async Task EmbedAsync_ValidResponse_OrdersVectorsByIndexAndSendsOnlyTexts()
+    {
+        var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, """
+            {"model":"baai/bge-m3","data":[
+              {"index":1,"embedding":[0.25,0.5]},
+              {"index":0,"embedding":[1.0,0.0]}]}
+            """);
+        var client = CreateClient(handler);
+
+        var result = await client.EmbedAsync(["first", "second"], TestContext.Current.CancellationToken);
+
+        Assert.Equal("https://openrouter.ai/api/v1/embeddings", handler.Requests[0].RequestUri!.ToString());
+        Assert.Equal("Bearer " + ApiKey, handler.Requests[0].Headers.Authorization!.ToString());
+        Assert.Equal("baai/bge-m3", result.Model);
+        Assert.Equal(2, result.Dimensions);
+        Assert.Equal(new[] { 1f, 0f }, result.Vectors[0]);
+        Assert.Equal(new[] { 0.25f, 0.5f }, result.Vectors[1]);
+        var request = JsonNode.Parse(handler.RequestBodies[0])!.AsObject();
+        Assert.Equal(EmbeddingModel, request["model"]!.GetValue<string>());
+        Assert.Equal("[\"first\",\"second\"]", request["input"]!.ToJsonString());
+        Assert.Equal(2, request.Count);
+    }
+
+    [Fact]
+    public async Task EmbedAsync_MissingKey_ThrowsInvalidKey()
+    {
+        var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, "{}"), storedKey: null);
+
+        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync(["text"], TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.InvalidKey, error.Kind);
+    }
+
+    [Theory]
+    [InlineData("{\"data\":[]}", 1)]
+    [InlineData("{\"data\":[{\"index\":0,\"embedding\":[]}]}", 1)]
+    [InlineData("{\"data\":[{\"index\":0,\"embedding\":[0.1]}]}", 2)]
+    [InlineData("{\"data\":[{\"index\":2,\"embedding\":[0.1]}]}", 1)]
+    [InlineData("{\"data\":[{\"index\":0,\"embedding\":[0.1]},{\"index\":1,\"embedding\":[0.2,0.3]}]}", 2)]
+    [InlineData("{\"data\":[{\"index\":0,\"embedding\":[1.0e100]}]}", 1)]
+    public async Task EmbedAsync_MalformedResponse_ThrowsUnknown(string json, int textCount)
+    {
+        var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, json));
+
+        IReadOnlyList<string> texts = textCount == 2 ? ["one", "two"] : ["one"];
+        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync(texts, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ErrorKind.Unknown, error.Kind);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized, ErrorKind.InvalidKey)]
+    [InlineData(HttpStatusCode.TooManyRequests, ErrorKind.RateLimited)]
+    [InlineData(HttpStatusCode.InternalServerError, ErrorKind.Unknown)]
+    public async Task EmbedAsync_ErrorStatus_MapsProviderError(HttpStatusCode status, ErrorKind expected)
+    {
+        var client = CreateClient(StubHttpMessageHandler.Json(status, "{}"));
+
+        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync(["text"], TestContext.Current.CancellationToken));
+
+        Assert.Equal(expected, error.Kind);
+    }
+
+    [Fact]
+    public async Task EmbedAsync_CancelledRequest_PropagatesCancellation()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handler = new StubHttpMessageHandler(async (_, token) =>
+        {
+            entered.SetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, token);
+            return JsonResponse(HttpStatusCode.OK, "{}");
+        });
+        var client = CreateClient(handler);
+        using var cancellation = new CancellationTokenSource();
+        var pending = client.EmbedAsync(["text"], cancellation.Token);
+        await entered.Task.WaitAsync(TestContext.Current.CancellationToken);
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
+    }
 
     [Theory]
     [InlineData(HttpStatusCode.OK, ApiKeyStatus.Valid)]
