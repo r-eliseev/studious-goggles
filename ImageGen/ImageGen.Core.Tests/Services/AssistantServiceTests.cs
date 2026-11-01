@@ -553,7 +553,7 @@ public class AssistantServiceTests
     [Fact]
     public async Task SendUserMessageAsync_TextReply_SavesUserAndAssistantWithoutRun()
     {
-        ReplyWith(new AssistantChatResult("  Which style do you want?  ", [], null));
+        ReplyWith(new AssistantChatResult("  Which style do you want?  ", [], 0.004m));
 
         var result = await _service.SendUserMessageAsync(_session.Id, "  a fox  ", TestContext.Current.CancellationToken);
 
@@ -564,6 +564,9 @@ public class AssistantServiceTests
         Assert.Equal("Which style do you want?", result.AssistantMessage.Text);
         Assert.False(result.AssistantMessage.IsError);
         Assert.Null(result.AssistantMessage.RunId);
+        Assert.Equal(0.004m, result.AssistantMessage.CostUsd);
+        Assert.Equal(ProviderIds.OpenRouter, result.AssistantMessage.ProviderId);
+        Assert.Equal(AssistantModel, result.AssistantMessage.ModelId);
         Assert.Equal(2, _stored.Count);
         Assert.Empty(_storedRuns);
     }

@@ -138,8 +138,11 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
         try
         {
             await using var connection = await database.OpenAsync(cancellationToken);
-            await using var command = connection.CreateCommand();
-            command.CommandText = """
+            await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
+            await using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText = """
                 UPDATE generations
                 SET run_id = @run_id, session_id = @session_id, provider_id = @provider_id, model_id = @model_id, prompt = @prompt, seed = @seed,
                     seed_applied = @seed_applied, status = @status, image_path = @image_path, media_type = @media_type,
@@ -148,14 +151,31 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
                     reference_attachment_ids_json = @reference_attachment_ids_json, job_json = @job_json
                 WHERE id = @id;
                 """;
-            AddGenerationParameters(command, generation);
-            var affectedRows = await command.ExecuteNonQueryAsync(cancellationToken);
-            if (affectedRows != 1)
-            {
-                throw new StorageWriteException(
-                    $"Could not update generation {generation.Id:N}: exactly one row was expected.",
-                    isTransient: false);
+                AddGenerationParameters(command, generation);
+                var affectedRows = await command.ExecuteNonQueryAsync(cancellationToken);
+                if (affectedRows != 1)
+                {
+                    throw new StorageWriteException(
+                        $"Could not update generation {generation.Id:N}: exactly one row was expected.",
+                        isTransient: false);
+                }
             }
+
+            if (generation.CostUsd is { } cost)
+            {
+                await ExpenseRepository.UpsertAsync(connection, transaction, new ImageGen.Core.Domain.Expenses.Expense
+                {
+                    OperationId = $"gen:{generation.Id:N}",
+                    Kind = ImageGen.Core.Domain.Expenses.ExpenseKind.Image,
+                    ProviderId = generation.ProviderId,
+                    ModelId = generation.ModelId,
+                    CostUsd = cost,
+                    OccurredAt = generation.CompletedAt ?? generation.CreatedAt,
+                    SessionId = generation.SessionId,
+                }, cancellationToken);
+            }
+
+            await transaction.CommitAsync(cancellationToken);
         }
         catch (SqliteException ex)
         {

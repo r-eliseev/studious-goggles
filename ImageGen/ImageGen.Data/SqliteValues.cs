@@ -17,6 +17,11 @@ internal static class SqliteValues
     public static object FromNullableDecimal(decimal? value) =>
         value.HasValue ? value.Value.ToString(CultureInfo.InvariantCulture) : DBNull.Value;
 
+    public static string FromDecimal(decimal value) => value.ToString(CultureInfo.InvariantCulture);
+
+    public static decimal GetDecimal(SqliteDataReader reader, string column) =>
+        decimal.Parse(reader.GetString(reader.GetOrdinal(column)), CultureInfo.InvariantCulture);
+
     public static object FromNullableString(string? value) => value is null ? DBNull.Value : value;
 
     public static long FromBool(bool value) => value ? 1 : 0;
