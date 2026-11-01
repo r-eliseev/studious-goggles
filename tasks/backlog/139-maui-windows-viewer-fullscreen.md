@@ -40,3 +40,6 @@ Windows-часть исходной137: использовать WinUI AppWindow
 
 ### 2026-10-29, codex-review
 Выделено при ревью PR #42 по поручению владельца. Это план работы, не отчёт об исполнении. Одобрение исходной задачи сохраняется для перенесённого объёма; код в этом PR не реализуется.
+
+### 2026-11-01, claude-audit — сверка Windows-задач с кодом
+Зависимость 137 выполнена, задачу можно занимать на Windows. Контракт `IMauiFullScreenController.Enter(Window) → IDisposable` совпадает с кодом. Поправка к шагу 4: отдельной регистрации no-op для Windows нет, в `MauiProgram.cs` (строки 86–90) стоит `#if ANDROID … #else NoOpFullScreenController`, и в `#else` попадают ещё iOS и Mac Catalyst. Нужно добавить ветку `#elif WINDOWS` с `WindowsFullScreenController`, а `#else` с NoOp оставить. По шагу 5: если второго монитора нет, так и записать в отчёт.
