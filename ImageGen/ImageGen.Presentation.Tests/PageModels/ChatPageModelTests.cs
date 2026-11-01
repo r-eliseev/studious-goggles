@@ -557,6 +557,26 @@ public class ChatPageModelTests
     }
 
     [Fact]
+    public async Task Query_ReappliedAfterPendingMessageSent_DoesNotSendAgain()
+    {
+        _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AssistantChatResult("Hi", [], null));
+        var query = new Dictionary<string, object>
+        {
+            [Routes.SessionIdParameter] = _session.Id.ToString("D"),
+            [Routes.MessageParameter] = Uri.EscapeDataString("A lighthouse at dusk"),
+        };
+        _model.ApplyQueryAttributes(query);
+        await _model.OnAppearingAsync();
+
+        // Shell applies the route query again when the page comes back from the fullscreen image viewer.
+        _model.ApplyQueryAttributes(query);
+        await _model.OnAppearingAsync();
+
+        await _chat.Received(1).CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task OnAppearingAsync_WithSummary_InsertsMarkerAfterCoveredMessage()
     {
         var first = new ChatMessage { Id = Guid.NewGuid(), SessionId = _session.Id, Role = ChatRole.User, Text = "first", CreatedAt = Now.AddMinutes(-3) };
