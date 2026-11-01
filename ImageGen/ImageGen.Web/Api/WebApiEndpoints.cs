@@ -15,6 +15,7 @@ public static class WebApiEndpoints
         ArgumentNullException.ThrowIfNull(endpoints);
         MapSessions(endpoints.MapGroup("/api/sessions"));
         MapModelsAndProviders(endpoints.MapGroup("/api"));
+        GenerationEndpoints.Map(endpoints);
         return endpoints;
     }
 
