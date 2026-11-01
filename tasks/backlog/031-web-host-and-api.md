@@ -55,6 +55,10 @@ ASP.NET Core: вход по паролю из переменной окруже�
 
 ## Отчёт
 
+Этап 1: добавлены `ImageGen.Web` и `ImageGen.Web.Tests`, начальная ASP.NET Core minimal API композиция, `IMAGEGEN_DATA_DIR` (по умолчанию `/data`), проверка непустого `IMAGEGEN_WEB_PASSWORD`, hosted startup initializer (миграции SQLite и восстановление generation jobs), открытый `GET /api/health`. Хранилище `ISecretStore` реализовано через ASP.NET Core Data Protection с постоянным key ring, так как оно необходимо серверной композиции и recovery. Добавлен ADR 0025. Остальные этапы задачи ещё не реализованы.
+
+Проверено: Web.Tests 3/3, форматирование новых проектов, `scripts/check.sh`. `Microsoft.AspNetCore.Mvc.Testing` имеет MIT лицензию; использован патч 10.0.14. ASP.NET Core Data Protection Extensions входит в shared framework и не требует отдельной ссылки на пакет.
+
 ## Комментарии
 
 ### 2026-10-29, claude-536f
