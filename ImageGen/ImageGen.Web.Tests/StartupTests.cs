@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace ImageGen.Web.Tests;
 
+[Collection(WebTestCollection.Name)]
 public sealed class StartupTests
 {
     [Fact]
