@@ -52,7 +52,7 @@ public sealed class ConversationSummaryRepository(SqliteDatabase database) : ICo
         {
             await ExpenseRepository.UpsertAsync(connection, transaction, new ImageGen.Core.Domain.Expenses.Expense
             {
-                OperationId = $"sum:{summary.SessionId:N}:{summary.CoversUpToMessageId:N}",
+                OperationId = $"sum:{summary.SessionId:D}:{summary.CoversUpToMessageId:D}",
                 Kind = ImageGen.Core.Domain.Expenses.ExpenseKind.Summary,
                 ProviderId = summary.Model.ProviderId,
                 ModelId = summary.Model.ModelId,

@@ -78,7 +78,7 @@ public sealed class ChatMessageRepository(SqliteDatabase database) : IChatMessag
         {
             await ExpenseRepository.UpsertAsync(connection, transaction, new ImageGen.Core.Domain.Expenses.Expense
             {
-                OperationId = $"msg:{message.Id:N}",
+                OperationId = $"msg:{message.Id:D}",
                 Kind = ImageGen.Core.Domain.Expenses.ExpenseKind.AssistantReply,
                 ProviderId = message.ProviderId ?? string.Empty,
                 ModelId = message.ModelId ?? string.Empty,

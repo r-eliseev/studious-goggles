@@ -165,7 +165,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
             {
                 await ExpenseRepository.UpsertAsync(connection, transaction, new ImageGen.Core.Domain.Expenses.Expense
                 {
-                    OperationId = $"gen:{generation.Id:N}",
+                    OperationId = $"gen:{generation.Id:D}",
                     Kind = ImageGen.Core.Domain.Expenses.ExpenseKind.Image,
                     ProviderId = generation.ProviderId,
                     ModelId = generation.ModelId,

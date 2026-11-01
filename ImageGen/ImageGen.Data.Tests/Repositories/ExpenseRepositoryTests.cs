@@ -61,6 +61,9 @@ public class ExpenseRepositoryTests
         var directory = Path.Combine(Path.GetTempPath(), "imagegen-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, SqliteDatabase.FileName);
+        var sessionId = Guid.NewGuid();
+        var runId = Guid.NewGuid();
+        var generationId = Guid.NewGuid();
         try
         {
             await using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={path};Foreign Keys=True"))
@@ -78,7 +81,6 @@ public class ExpenseRepositoryTests
                     await command.ExecuteNonQueryAsync(ct);
                 }
 
-                var session = TestData.Session();
                 await using var seed = connection.CreateCommand();
                 seed.CommandText = """
                     INSERT INTO sessions (id, title, created_at, updated_at, settings_json) VALUES (@id, 'legacy', @created, @created, '{}');
@@ -86,9 +88,9 @@ public class ExpenseRepositoryTests
                     INSERT INTO generations (id, run_id, session_id, provider_id, model_id, prompt, seed, seed_applied, status, cost_usd, created_at, completed_at, sort_order, outcomes_json, reference_attachment_ids_json)
                     VALUES (@generation, @run, @id, 'openrouter', 'model', 'prompt', 1, 1, 2, '0.5', @created, @created, 0, '[]', '[]');
                     """;
-                seed.Parameters.AddWithValue("@id", session.Id.ToString("D"));
-                seed.Parameters.AddWithValue("@run", Guid.NewGuid().ToString("D"));
-                seed.Parameters.AddWithValue("@generation", Guid.NewGuid().ToString("D"));
+                seed.Parameters.AddWithValue("@id", sessionId.ToString("D"));
+                seed.Parameters.AddWithValue("@run", runId.ToString("D"));
+                seed.Parameters.AddWithValue("@generation", generationId.ToString("D"));
                 seed.Parameters.AddWithValue("@created", TestData.BaseTime.ToString("O"));
                 await seed.ExecuteNonQueryAsync(ct);
             }
@@ -97,6 +99,22 @@ public class ExpenseRepositoryTests
             await reopened.InitializeAsync(ct);
             await reopened.InitializeAsync(ct);
             var expenses = new ExpenseRepository(reopened);
+            await new RunRepository(reopened).UpdateGenerationAsync(new ImageGen.Core.Domain.Generations.Generation
+            {
+                Id = generationId,
+                RunId = runId,
+                SessionId = sessionId,
+                ProviderId = "openrouter",
+                ModelId = "model",
+                Prompt = "prompt",
+                Seed = 1,
+                SeedApplied = true,
+                Status = GenerationStatus.Succeeded,
+                CostUsd = 0.5m,
+                CreatedAt = TestData.BaseTime,
+                CompletedAt = TestData.BaseTime,
+                SortOrder = 0,
+            }, ct);
             Assert.Equal(0.5m, await expenses.SumAsync(ct));
             Assert.Equal(1, await expenses.CountAsync(ct));
         }

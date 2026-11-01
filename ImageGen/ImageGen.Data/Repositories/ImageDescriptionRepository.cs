@@ -36,7 +36,7 @@ public sealed class ImageDescriptionRepository(SqliteDatabase database) : IImage
         {
             await ExpenseRepository.UpsertAsync(connection, transaction, new ImageGen.Core.Domain.Expenses.Expense
             {
-                OperationId = $"desc:{description.Id:N}",
+                OperationId = $"desc:{description.Id:D}",
                 Kind = ImageGen.Core.Domain.Expenses.ExpenseKind.Description,
                 ProviderId = description.ProviderId,
                 ModelId = description.ModelId,
