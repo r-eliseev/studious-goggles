@@ -130,7 +130,7 @@
                                                 </Border.StrokeShape>
                                                 <!-- Long press (phones) opens the actions sheet; right-click (Windows, Mac) opens the flyout. -->
                                                 <Border.Behaviors>
-                                                    <toolkit:TouchBehavior LongPressCommand="{Binding ShowActionsCommand}" />
+                                                    <toolkit:TouchBehavior IsEnabled="{OnPlatform Android=True, Default=False}" LongPressCommand="{Binding ShowActionsCommand}" />
                                                 </Border.Behaviors>
                                                 <Border.GestureRecognizers>
                                                     <TapGestureRecognizer Command="{Binding Source={x:Reference Page}, Path=BindingContext.SelectCardCommand}"
