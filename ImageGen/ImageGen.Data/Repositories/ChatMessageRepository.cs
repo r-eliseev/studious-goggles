@@ -30,8 +30,8 @@ public sealed class ChatMessageRepository(SqliteDatabase database) : IChatMessag
         {
             command.Transaction = transaction;
             command.CommandText = """
-                INSERT INTO chat_messages (id, session_id, role, text, created_at, run_id, is_error, error_kind)
-                VALUES (@id, @session_id, @role, @text, @created_at, @run_id, @is_error, @error_kind);
+                INSERT INTO chat_messages (id, session_id, role, text, created_at, run_id, is_error, error_kind, cost_usd, provider_id, model_id)
+                VALUES (@id, @session_id, @role, @text, @created_at, @run_id, @is_error, @error_kind, @cost_usd, @provider_id, @model_id);
                 """;
             BindMessage(command, message);
             await command.ExecuteNonQueryAsync(cancellationToken);
@@ -62,13 +62,33 @@ public sealed class ChatMessageRepository(SqliteDatabase database) : IChatMessag
     {
         ArgumentNullException.ThrowIfNull(message);
         await using var connection = await database.OpenAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-            INSERT INTO chat_messages (id, session_id, role, text, created_at, run_id, is_error, error_kind)
-            VALUES (@id, @session_id, @role, @text, @created_at, @run_id, @is_error, @error_kind);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
+        await using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText = """
+            INSERT INTO chat_messages (id, session_id, role, text, created_at, run_id, is_error, error_kind, cost_usd, provider_id, model_id)
+            VALUES (@id, @session_id, @role, @text, @created_at, @run_id, @is_error, @error_kind, @cost_usd, @provider_id, @model_id);
             """;
-        BindMessage(command, message);
-        await command.ExecuteNonQueryAsync(cancellationToken);
+            BindMessage(command, message);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        if (message.Role == ChatRole.Assistant && message.CostUsd is { } cost)
+        {
+            await ExpenseRepository.UpsertAsync(connection, transaction, new ImageGen.Core.Domain.Expenses.Expense
+            {
+                OperationId = $"msg:{message.Id:N}",
+                Kind = ImageGen.Core.Domain.Expenses.ExpenseKind.AssistantReply,
+                ProviderId = message.ProviderId ?? string.Empty,
+                ModelId = message.ModelId ?? string.Empty,
+                CostUsd = cost,
+                OccurredAt = message.CreatedAt,
+                SessionId = message.SessionId,
+            }, cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
     }
 
     private static void BindMessage(SqliteCommand command, ChatMessage message)
@@ -81,6 +101,9 @@ public sealed class ChatMessageRepository(SqliteDatabase database) : IChatMessag
         command.Parameters.AddWithValue("@run_id", SqliteValues.FromNullableGuid(message.RunId));
         command.Parameters.AddWithValue("@is_error", SqliteValues.FromBool(message.IsError));
         command.Parameters.AddWithValue("@error_kind", message.ErrorKind is { } kind ? (object)(int)kind : DBNull.Value);
+        command.Parameters.AddWithValue("@cost_usd", SqliteValues.FromNullableDecimal(message.CostUsd));
+        command.Parameters.AddWithValue("@provider_id", SqliteValues.FromNullableString(message.ProviderId));
+        command.Parameters.AddWithValue("@model_id", SqliteValues.FromNullableString(message.ModelId));
     }
 
     public async Task<IReadOnlyList<ChatMessage>> ListBySessionAsync(Guid sessionId, CancellationToken cancellationToken)
@@ -88,7 +111,7 @@ public sealed class ChatMessageRepository(SqliteDatabase database) : IChatMessag
         await using var connection = await database.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT id, session_id, role, text, created_at, run_id, is_error, error_kind
+            SELECT id, session_id, role, text, created_at, run_id, is_error, error_kind, cost_usd, provider_id, model_id
             FROM chat_messages
             WHERE session_id = @session_id
             ORDER BY created_at ASC;
@@ -114,5 +137,8 @@ public sealed class ChatMessageRepository(SqliteDatabase database) : IChatMessag
         RunId = SqliteValues.GetNullableGuid(reader, "run_id"),
         IsError = SqliteValues.GetBool(reader, "is_error"),
         ErrorKind = SqliteValues.GetNullableInt32(reader, "error_kind") is { } kind ? (ErrorKind)kind : null,
+        CostUsd = SqliteValues.GetNullableDecimal(reader, "cost_usd"),
+        ProviderId = SqliteValues.GetNullableString(reader, "provider_id"),
+        ModelId = SqliteValues.GetNullableString(reader, "model_id"),
     };
 }

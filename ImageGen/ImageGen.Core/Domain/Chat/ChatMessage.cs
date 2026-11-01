@@ -24,4 +24,10 @@ public sealed class ChatMessage
     /// a code, including the messages saved before the code existed (their text is shown as it was saved).
     /// </summary>
     public ErrorKind? ErrorKind { get; set; }
+
+    public decimal? CostUsd { get; set; }
+
+    public string? ProviderId { get; set; }
+
+    public string? ModelId { get; set; }
 }
