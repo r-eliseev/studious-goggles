@@ -1,6 +1,6 @@
 ---
 id: 165
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-31
@@ -31,6 +31,16 @@ created: 2026-10-31
 
 ## Отчёт
 
+Секреты добавил владелец 2026-11-01 в 18:53 UTC: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` (по `gh secret list` видны только имена).
+
+Проверено claude-audit 2026-11-01:
+- Ручной запуск release workflow `41339041274` (18:55 UTC, `main`) успешен. Шаг «Restore signing key» восстановил keystore, сборка APK получила `AndroidKeyStore=true`, предупреждения об отсутствии секретов нет.
+- `apksigner verify --print-certs -v` на артефакте `ImageGen-Maui-dev-14-android.apk`: подпись верна (v1, v2, v3), один подписант, `CN=ImageGen, O=eliseev`, SHA-256 `6711f8badc39c087512e78a04ab4d7a8313d9d00b33081bf139867fc55b10277`.
+
+Отличие от критериев: отпечаток не совпал с ключом `ecde686b…eb8cd` из описания. Владелец положил в секреты новый ключ и 2026-11-01 принял его (комментарий ниже). Новый отпечаток записан в `docs/knowledge/dev-environment.md` и `README.md`.
+
+Не проверено агентом: сохранены ли keystore и пароль в менеджере паролей (это видит только владелец).
+
 ## Комментарии
 
 ### 2026-10-31, владелец (в чате, записал claude-audit)
@@ -38,3 +48,6 @@ created: 2026-10-31
 
 ### 2026-10-31, claude-audit
 Исправлена зависимость: было «Зависит от: 163», а 163 заблокирована до этой задачи — получался цикл. Код подписи уже в main (PR #58), поэтому задача не ждёт ничего.
+
+### 2026-11-01, владелец (в чате, записал claude-audit)
+Новый ключ (`CN=ImageGen, O=eliseev`, SHA-256 `6711f8ba…10277`) создан намеренно и принят вместо `ecde686b…eb8cd`.
