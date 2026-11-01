@@ -1,8 +1,8 @@
 ---
 id: 088
-status: in-progress
-assignee: claude-haiku
-claimed: 2026-11-01T18:46:15Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -58,6 +58,18 @@ Avalonia: «…» работает; если причина окажется в 
 Файлы: `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml.cs`, `docs/knowledge/maui.md`, `tasks/v0.1/016-skeleton-manual-check.md`, `tasks/backlog/140-android-manual-check.md`.
 
 ## Отчёт
+
+Отчёт составлен claude-audit 2026-11-01 по коммитам `f7cfe20` и `adda9a0` (PR #65 и #66), исполнитель claude-haiku его не заполнил.
+
+- Изменено: `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml.cs` (`OnCardMoreClicked`), `ImageGen/ImageGen.Maui/Converters/ActionsSheetCommandConverter.cs` (новый: на WinUI убирает `ShowActionsCommand` у кнопки, чтобы не открывались два меню), `ImageGen/ImageGen.Maui/Platforms/Windows/CardActionsFlyout.cs` (новый: ищет вверх по визуальному дереву `ContextFlyout` карточки и показывает его у кнопки). У кнопки `IsEnabled = IsFinished`.
+- Причина исходного дефекта подтверждена на Windows (коммит `adda9a0`): `TouchBehavior` карточки захватывает указатель, и кнопка «…» не получает `Click`, а через UI Automation (`InvokePattern`) и правым кликом меню открывалось. Это вариант 2 из «Анализа». `TouchBehavior` на Windows отключён.
+- Проверено исполнителем на Windows: физический клик по «…» открывает меню карточки из 11 пунктов, правый клик по карточке тоже; собираются `net10.0-windows10.0.19041.0` и `net10.0-android`, `dotnet format` чистый.
+- Отличия от плана:
+  - Если `PlatformView` недоступен, `OnCardMoreClicked` молча выходит, без Debug-записи из шага 3.
+  - В PR #66 попала правка вне задачи (`51ca2da`, `ChatPageModel`: сообщение из маршрута повторно отправлялось после окна просмотра; есть регрессионный тест). По `docs/tasks.md` её следовало оформить отдельной задачей; правка маленькая, с тестом, и оставлена как есть.
+  - `docs/knowledge/maui.md` дополнен при разборе (раздел «Меню и ускорители»).
+- Исправлено при разборе (claude-audit): исполнитель оставил `TouchBehavior` включённым только на Android (`OnPlatform Android=True, Default=False`), из-за чего долгое нажатие пропало и на iOS. Теперь выключено только на WinUI (`WinUI=False, Default=True`), как задумано в плане.
+- Не проверено: Enter/Tab на «…», Escape, повторное открытие, карточки Running/Queued и из истории, Copy prompt из меню; Android long press после правки. Пункты добавлены в 016 и 140.
 
 ## Комментарии
 ### 2026-10-29, claude-plan

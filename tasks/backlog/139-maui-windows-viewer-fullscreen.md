@@ -1,8 +1,8 @@
 ---
 id: 139
-status: in-progress
-assignee: claude-haiku
-claimed: 2026-11-01T19:05:47Z
+status: done
+assignee:
+claimed:
 created: 2026-10-29
 ---
 
@@ -48,3 +48,6 @@ Windows-часть исходной137: использовать WinUI AppWindow
 
 ### 2026-11-01, claude-audit — сверка Windows-задач с кодом
 Зависимость 137 выполнена, задачу можно занимать на Windows. Контракт `IMauiFullScreenController.Enter(Window) → IDisposable` совпадает с кодом. Поправка к шагу 4: отдельной регистрации no-op для Windows нет, в `MauiProgram.cs` (строки 86–90) стоит `#if ANDROID … #else NoOpFullScreenController`, и в `#else` попадают ещё iOS и Mac Catalyst. Нужно добавить ветку `#elif WINDOWS` с `WindowsFullScreenController`, а `#else` с NoOp оставить. По шагу 5: если второго монитора нет, так и записать в отчёт.
+
+### 2026-11-01, claude-audit — разбор после слияния (PR #65)
+Код в main, ветки задачи нет, исполнитель claude-haiku не закрыл задачу. Сверено с кодом: `WindowsFullScreenController` берёт `AppWindow` из окна viewer, сохраняет presenter, положение, размер и состояние; `Dispose` идемпотентен; регистрация через `#elif WINDOWS`, NoOp остаётся для iOS и Mac Catalyst. Сборка `net10.0-windows10.0.19041.0` и `net10.0-android` 2026-11-01 без ошибок. Не сделано по плану: шаг 6 (уточнение F6.2 в `docs/specs/image-client.md` и ручные пункты 016) и шаг 7 (снятие занятости). Ручные пункты дописаны в 016; задача закрыта по `docs/tasks.md`, «Завершение», п. 4 (осталась только ручная проверка Windows). F6.2 в спецификации не правился: какие платформы получили настоящий fullscreen, станет ясно после ручной проверки 016.

@@ -130,6 +130,7 @@
 - Буквенные ускорители без модификатора не ставим: они перехватывают ввод в поле чата (поэтому R, E и Ctrl+C без ускорителя).
 - Выбранная карточка — `ChatPageModel.SelectedCard`: тап по карточке (`TapGestureRecognizer` с `x:Reference Page`) вызывает `SelectCardCommand`; пункты меню «Card» привязаны к `SelectedCard.<Команда>`.
 - **Не проверено:** поведение строки меню и ускорителей под Windows и Mac Catalyst (нужны Windows и macOS, пункт в задаче 016); на телефонах `MenuBarItems` не показываются.
+- **Windows: `TouchBehavior` и кнопки внутри карточки** (задача 088, проверено на Windows 2026-11-01): `TouchBehavior` CommunityToolkit.Maui на родительском `Border` захватывает указатель, и вложенная `Button` не получает `Click` при клике мышью; UI Automation (`InvokePattern`) и правый клик при этом работают. Поэтому у карточки чата `TouchBehavior` выключен на WinUI (`IsEnabled="{OnPlatform WinUI=False, Default=True}"`), а «…» открывает `ContextFlyout` карточки из кода (`CardActionsFlyout`).
 
 ## Публикация MAUI под Windows с RID
 - Для многоцелевого MAUI-проекта `dotnet publish -f net10.0-windows10.0.19041.0 -r <rid>` задаёт RID при restore всех target frameworks; при restore Android может завершиться `NU1102` для `Mono.win-x64`. `-p:TargetFrameworks=net10.0-windows10.0.19041.0` сужает restore приложения, но глобальное MSBuild-свойство попадает и в project references: в запуске 10 это привело к `NETSDK1005` — Core, Data и Presentation ожидали отсутствующий `net10.0`.
