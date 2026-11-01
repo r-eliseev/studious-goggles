@@ -137,10 +137,20 @@ internal sealed class MauiImageViewerPage : ContentPage
 
     private void OnWindowsKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs args)
     {
-        if (args.Key == Windows.System.VirtualKey.Escape)
+        switch (args.Key)
         {
-            Close();
-            args.Handled = true;
+            case Windows.System.VirtualKey.Escape:
+                Close();
+                args.Handled = true;
+                break;
+            case Windows.System.VirtualKey.Left:
+                Navigate(-1);
+                args.Handled = true;
+                break;
+            case Windows.System.VirtualKey.Right:
+                Navigate(1);
+                args.Handled = true;
+                break;
         }
     }
 #endif

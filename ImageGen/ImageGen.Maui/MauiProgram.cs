@@ -85,6 +85,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<IImageViewerService, MauiImageViewerService>();
 #if ANDROID
         builder.Services.AddSingleton<IMauiFullScreenController, ImageGen.Maui.Platforms.Android.AndroidFullScreenController>();
+#elif WINDOWS
+        builder.Services.AddSingleton<IMauiFullScreenController, ImageGen.Maui.Platforms.Windows.WindowsFullScreenController>();
 #else
         builder.Services.AddSingleton<IMauiFullScreenController, NoOpFullScreenController>();
 #endif

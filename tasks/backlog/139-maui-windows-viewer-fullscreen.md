@@ -36,6 +36,11 @@ Windows-часть исходной137: использовать WinUI AppWindow
 
 ## Отчёт
 
+- Изменено: `ImageGen/ImageGen.Maui/Platforms/Windows/WindowsFullScreenController.cs` (новый), `ImageGen/ImageGen.Maui/MauiProgram.cs` (ветка `#elif WINDOWS`; Android и остальные платформы без изменений).
+- Контроллер берёт `AppWindow` из `window.Handler.PlatformView` того окна, где открыт viewer. Перед `FullScreen` сохраняются presenter, положение, размер и состояние (normal/maximized/minimized). `Dispose` восстанавливает их; при уничтоженном окне `COMException` подавляется.
+- Проверено: сборка `net10.0-windows10.0.19041.0` без ошибок; `dotnet format --verify-no-changes` по ImageGen.Maui чистый.
+- Не проверено вручную: fullscreen в запущенном приложении, восстановление normal/maximized, несколько мониторов, пять открытий/закрытий, закрытие основного окна во время viewer.
+
 ## Комментарии
 
 ### 2026-10-29, codex-review
