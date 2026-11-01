@@ -5,6 +5,7 @@ using ImageGen.Data;
 using ImageGen.Web;
 using ImageGen.Web.Api;
 using ImageGen.Web.Auth;
+using ImageGen.Web.Events;
 using ImageGen.Web.Secrets;
 using ImageGen.Web.Settings;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -69,6 +70,7 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 builder.Services.AddSingleton<ISecretStore, DataProtectionSecretStore>();
+builder.Services.AddSingleton<EventHub>();
 builder.Services.AddSingleton<ImageGen.Core.Services.IDefaultAssistantModel, WebDefaultAssistantModel>();
 builder.Services.AddImageGenCore();
 builder.Services.AddImageGenData();
@@ -87,6 +89,7 @@ app.UseAuthorization();
 app.UseAntiforgery();
 app.MapAuthEndpoints(password);
 app.MapWebApiEndpoints();
+app.MapEventsEndpoint();
 app.Run();
 
 public partial class Program;
