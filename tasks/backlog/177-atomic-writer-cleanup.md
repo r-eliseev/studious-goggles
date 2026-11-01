@@ -41,3 +41,6 @@ created: 2026-11-01
 
 ### 2026-11-01, владелец (в чате, записал claude-audit)
 Завести задачу на мелочи 141 (выбрано в вопросе).
+
+### 2026-11-01, claude-audit — ревью PR #62
+Та же атомарная запись есть в `DefaultAssistantModelFile.SaveAsync` (172, `ImageGen/ImageGen.Presentation/Settings/DefaultAssistantModelFile.cs:47`), но там наоборот ловится только `IOException`: `UnauthorizedAccessException` при удалении временного файла выйдет из `finally` и заменит исходную ошибку записи. Предлагаю привести к тому же правилу (ловить `IOException` и `UnauthorizedAccessException`, Warning) и учесть `defaults.json.*.tmp` при очистке осиротевших файлов. Это ещё один файл задачи.
