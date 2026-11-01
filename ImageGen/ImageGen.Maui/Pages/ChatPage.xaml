@@ -16,6 +16,7 @@
     <ContentPage.Resources>
         <ResourceDictionary>
             <converters:FilePathToImageSourceConverter x:Key="FilePathToImageSource" />
+            <converters:ActionsSheetCommandConverter x:Key="ActionsSheetCommand" />
             <toolkit:IsNotNullConverter x:Key="IsNotNull" />
 
             <pmui:ChatItemTemplateSelector x:Key="ChatItemSelector">
@@ -292,8 +293,11 @@
                                                                 IsVisible="{Binding IsFailedOrFiltered}"
                                                                 HorizontalOptions="Start"
                                                                 SemanticProperties.Description="{x:Static strings:AppResources.Repeat}" />
+                                                        <!-- Windows: the click opens the card's context menu (OnCardMoreClicked); the sheet command is left out there. -->
                                                         <Button StyleClass="ghost,icon" Text="{x:Static appearance:IconGlyphs.More}" FontFamily="LucideIcons"
-                                                                Command="{Binding ShowActionsCommand}"
+                                                                Command="{Binding ShowActionsCommand, Converter={StaticResource ActionsSheetCommand}}"
+                                                                IsEnabled="{Binding IsFinished}"
+                                                                Clicked="OnCardMoreClicked"
                                                                 SemanticProperties.Description="{x:Static strings:AppResources.More}" />
                                                     </HorizontalStackLayout>
                                                 </VerticalStackLayout>

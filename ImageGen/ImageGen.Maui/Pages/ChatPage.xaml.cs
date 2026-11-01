@@ -156,6 +156,17 @@ public partial class ChatPage : ContentPage, IQueryAttributable
         Transcript.ScrollTo(_model.Items.Count - 1, position: ScrollToPosition.End, animate: false);
     }
 
+    /// <summary>Windows: the card's "…" button opens the card's context menu, as a right click does (task 088).</summary>
+    private void OnCardMoreClicked(object? sender, EventArgs e)
+    {
+#if WINDOWS
+        if (sender is Button { Handler.PlatformView: Microsoft.UI.Xaml.FrameworkElement button })
+        {
+            ImageGen.Maui.Platforms.Windows.CardActionsFlyout.ShowFor(button);
+        }
+#endif
+    }
+
     private void OnTranscriptRowSizeChanged(object? sender, EventArgs e)
     {
         if (_active && _follower.ContentChanged())
