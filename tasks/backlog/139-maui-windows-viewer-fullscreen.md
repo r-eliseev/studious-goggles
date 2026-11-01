@@ -1,8 +1,8 @@
 ---
 id: 139
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: claude-haiku
+claimed: 2026-11-01T19:05:47Z
 created: 2026-10-29
 ---
 
