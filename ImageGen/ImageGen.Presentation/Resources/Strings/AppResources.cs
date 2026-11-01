@@ -420,6 +420,18 @@ public static class AppResources
 
     public static string ModelPickerTitle => Get(nameof(ModelPickerTitle));
 
+    public static string FirstRunProviderPrompt => Get(nameof(FirstRunProviderPrompt));
+
+    public static string FirstRunAssistantModelPrompt => Get(nameof(FirstRunAssistantModelPrompt));
+
+    public static string NoAssistantModelsConfigured => Get(nameof(NoAssistantModelsConfigured));
+
+    public static string UseAssistantModel => Get(nameof(UseAssistantModel));
+
+    public static string SettingsDefaultAssistantModel => Get(nameof(SettingsDefaultAssistantModel));
+
+    public static string SettingsSaveAssistantModel => Get(nameof(SettingsSaveAssistantModel));
+
     private static string Get(string name) =>
         ResourceManager.GetString(name, CultureInfo.CurrentUICulture)
         ?? throw new InvalidOperationException($"Missing string resource '{name}'.");

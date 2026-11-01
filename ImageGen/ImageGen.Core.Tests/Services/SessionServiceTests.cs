@@ -5,6 +5,7 @@ using ImageGen.Core.Domain.Sessions;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
+using ImageGen.Core.Tests.TestDoubles;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Core.Tests.Services;
@@ -27,7 +28,7 @@ public class SessionServiceTests
     {
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
-        _service = new SessionService(_sessions, _messages, _runs, _files, Catalog(AssistantWithTools), time, _summaries, _changes, _generationCoordinator);
+        _service = new SessionService(_sessions, _messages, _runs, _files, Catalog(AssistantWithTools), time, _summaries, _changes, _generationCoordinator, DefaultAssistantModels.Create());
     }
 
     private static readonly ChatModel AssistantWithTools = new(
@@ -60,6 +61,18 @@ public class SessionServiceTests
         Assert.Equal(Now, session.CreatedAt);
         Assert.Equal([new ModelRef(ProviderIds.OpenRouter, SessionSettings.DefaultImageModelId)], session.Settings.ImageModels);
         await _sessions.Received(1).AddAsync(session, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateAsync_UsesConfiguredDefaultAssistantModel()
+    {
+        var assistant = new ModelRef("claude", "vendor/assistant");
+        var service = new SessionService(_sessions, _messages, _runs, _files, Catalog(AssistantWithTools), TimeProvider.System,
+            _summaries, _changes, _generationCoordinator, DefaultAssistantModels.Create(assistant));
+
+        var session = await service.CreateAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(assistant, session.Settings.AssistantModel);
     }
 
     [Fact]
@@ -124,7 +137,7 @@ public class SessionServiceTests
         var service = new SessionService(
             _sessions, _messages, _runs, _files,
             Catalog(new ChatModel("vendor/plain", "Plain", SupportsImageInput: false, ContextLength: 1000)),
-            TimeProvider.System, Substitute.For<IConversationSummaryRepository>(), _changes, _generationCoordinator);
+            TimeProvider.System, Substitute.For<IConversationSummaryRepository>(), _changes, _generationCoordinator, DefaultAssistantModels.Create());
         var settings = new SessionSettings
         {
             ImageModels = session.Settings.ImageModels,
@@ -162,7 +175,7 @@ public class SessionServiceTests
         var catalog = Catalog();
         _chat.ListChatModelsAsync(Arg.Any<CancellationToken>())
             .Returns<Task<IReadOnlyList<ChatModel>>>(_ => throw new ProviderException(ErrorKind.Network, "down"));
-        var service = new SessionService(_sessions, _messages, _runs, _files, catalog, TimeProvider.System, Substitute.For<IConversationSummaryRepository>(), _changes, _generationCoordinator);
+        var service = new SessionService(_sessions, _messages, _runs, _files, catalog, TimeProvider.System, Substitute.For<IConversationSummaryRepository>(), _changes, _generationCoordinator, DefaultAssistantModels.Create());
         var settings = new SessionSettings
         {
             ImageModels = session.Settings.ImageModels,

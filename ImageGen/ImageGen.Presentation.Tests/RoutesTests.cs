@@ -8,6 +8,7 @@ public class RoutesTests
     public void ApiKeyFor_ProviderId_EscapesQueryValue()
     {
         Assert.Equal("apikey?providerId=together%20ai%2Fv1", Routes.ApiKeyFor("together ai/v1"));
+        Assert.Equal("apikey?providerId=together%20ai%2Fv1&firstRun=true", Routes.ApiKeyFor("together ai/v1", firstRun: true));
     }
 
     [Fact]

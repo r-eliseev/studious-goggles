@@ -15,7 +15,8 @@ public sealed class SessionService(
     TimeProvider timeProvider,
     IConversationSummaryRepository summaries,
     SessionChangeNotifier changes,
-    ISessionGenerationCoordinator generationCoordinator)
+    ISessionGenerationCoordinator generationCoordinator,
+    IDefaultAssistantModel defaultAssistantModel)
 {
     public async Task<Session> CreateAsync(CancellationToken cancellationToken)
     {
@@ -26,7 +27,7 @@ public sealed class SessionService(
             Title = Session.NewSessionTitle,
             CreatedAt = now,
             UpdatedAt = now,
-            Settings = SessionSettings.CreateDefault(),
+            Settings = SessionSettings.CreateDefault(defaultAssistantModel.Current),
         };
         await sessions.AddAsync(session, cancellationToken);
         changes.Notify(session.Id);

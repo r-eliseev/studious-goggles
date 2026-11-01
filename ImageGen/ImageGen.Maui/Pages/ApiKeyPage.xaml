@@ -18,6 +18,15 @@
                 <Label StyleClass="heading" Text="{Binding ProviderTitle}" LineBreakMode="WordWrap" />
                 <Label StyleClass="muted" Text="{Binding ProviderDescription}" LineBreakMode="WordWrap" />
 
+                <VerticalStackLayout Spacing="6" IsVisible="{Binding IsFirstRun}">
+                    <Label Text="{x:Static strings:AppResources.FirstRunProviderPrompt}" />
+                    <Picker ItemsSource="{Binding ChatProviders}"
+                            ItemDisplayBinding="{Binding DisplayName}"
+                            SelectedItem="{Binding SelectedChatProvider, Mode=TwoWay}"
+                            Title="{x:Static strings:AppResources.FirstRunProviderPrompt}"
+                            SemanticProperties.Description="{x:Static strings:AppResources.FirstRunProviderPrompt}" />
+                </VerticalStackLayout>
+
                 <Entry Text="{Binding ApiKey}"
                        Placeholder="{x:Static strings:AppResources.ProviderKeyPlaceholder}"
                        IsPassword="True"
@@ -29,6 +38,20 @@
                         Command="{Binding SaveCommand}"
                         HorizontalOptions="Fill"
                         SemanticProperties.Description="{x:Static strings:AppResources.ApiKeySave}" />
+
+                <VerticalStackLayout Spacing="6" IsVisible="{Binding IsChoosingAssistantModel}">
+                    <Label Text="{x:Static strings:AppResources.FirstRunAssistantModelPrompt}" />
+                    <Picker ItemsSource="{Binding AssistantModels}"
+                            ItemDisplayBinding="{Binding DisplayName}"
+                            SelectedItem="{Binding SelectedAssistantModel, Mode=TwoWay}"
+                            Title="{x:Static strings:AppResources.FirstRunAssistantModelPrompt}"
+                            SemanticProperties.Description="{x:Static strings:AppResources.FirstRunAssistantModelPrompt}" />
+                    <Button StyleClass="primary"
+                            Text="{x:Static strings:AppResources.UseAssistantModel}"
+                            Command="{Binding UseSelectedAssistantModelCommand}"
+                            IsEnabled="{Binding HasAssistantModels}"
+                            SemanticProperties.Description="{x:Static strings:AppResources.UseAssistantModel}" />
+                </VerticalStackLayout>
 
                 <ActivityIndicator IsRunning="{Binding IsBusy}"
                                    IsVisible="{Binding IsBusy}"

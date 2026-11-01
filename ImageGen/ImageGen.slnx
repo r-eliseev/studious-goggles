@@ -1,6 +1,8 @@
 <Solution>
   <Project Path="ImageGen.Core/ImageGen.Core.csproj" />
   <Project Path="ImageGen.Core.Tests/ImageGen.Core.Tests.csproj" />
+  <Project Path="ImageGen.LiveCheck/ImageGen.LiveCheck.csproj" />
+  <Project Path="ImageGen.LiveCheck.Tests/ImageGen.LiveCheck.Tests.csproj" />
   <Project Path="ImageGen.Data/ImageGen.Data.csproj" />
   <Project Path="ImageGen.Data.Tests/ImageGen.Data.Tests.csproj" />
   <Project Path="ImageGen.Presentation/ImageGen.Presentation.csproj" />

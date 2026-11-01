@@ -3,7 +3,7 @@ using Tmds.DBus;
 namespace ImageGen.Avalonia.Services.Secrets;
 
 // D-Bus interfaces of the freedesktop Secret Service (org.freedesktop.secrets). Verified on Linux with gnome-keyring
-// (poc/backlog/040-avalonia-secret-store). Only the members that SecretServiceBackend uses are declared.
+// (docs/decisions/0008-desktop-secret-storage.md). Only the members that SecretServiceBackend uses are declared.
 
 [DBusInterface("org.freedesktop.Secret.Service")]
 public interface ISecretService : IDBusObject

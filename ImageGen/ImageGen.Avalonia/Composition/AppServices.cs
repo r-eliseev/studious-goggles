@@ -9,11 +9,13 @@ using ImageGen.Core;
 using ImageGen.Core.Diagnostics;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
+using ImageGen.Core.Services;
 using ImageGen.Data;
 using ImageGen.Presentation;
 using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Services;
+using ImageGen.Presentation.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -71,6 +73,8 @@ public static class AppServices
             sp.GetRequiredService<IDialogService>()));
         services.AddSingleton<ICurrentSessionTracker, CurrentSessionTracker>();
         services.AddSingleton<ErrorAlert>();
+        services.AddSingleton<DefaultAssistantModelFile>();
+        services.AddSingleton<IDefaultAssistantModel>(sp => sp.GetRequiredService<DefaultAssistantModelFile>());
 
         services.AddSingleton(sp => new PageRoutes()
             .Add(Routes.Sessions, _ => new SessionsView { DataContext = sp.GetRequiredService<SessionsPageModel>() })

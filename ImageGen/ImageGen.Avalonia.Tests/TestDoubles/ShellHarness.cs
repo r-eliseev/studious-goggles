@@ -7,6 +7,7 @@ using ImageGen.Avalonia.Services.Secrets;
 using ImageGen.Avalonia.Views;
 using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.Services;
+using ImageGen.Core.Storage;
 using ImageGen.Presentation;
 using ImageGen.Presentation.Logging;
 using ImageGen.Presentation.PageModels;
@@ -24,6 +25,7 @@ namespace ImageGen.Avalonia.Tests.TestDoubles;
 public sealed class ShellHarness : IDisposable
 {
     private readonly GenerationService _generations;
+    private readonly IImageFileStore _imageFiles;
 
     /// <param name="fileLogging">Writes the log to the data folder at Debug, as the app does in a debug build.</param>
     public ShellHarness(
@@ -48,6 +50,7 @@ public sealed class ShellHarness : IDisposable
         Navigation.AttachHost(Window.PageArea);
         Window.ConfigureShortcuts(Provider.GetRequiredService<SessionsPageModel>(), Navigation);
         _generations = Provider.GetRequiredService<GenerationService>();
+        _imageFiles = Provider.GetRequiredService<IImageFileStore>();
     }
 
     public TempAppPaths Paths { get; }
@@ -119,11 +122,19 @@ public sealed class ShellHarness : IDisposable
         // Taken in the constructor: some tests dispose the container themselves before the harness.
         var idle = _generations.WhenIdleAsync();
         var deadline = DateTime.UtcNow.AddSeconds(10);
+        WaitForIdle(idle, deadline, "Фоновые генерации теста не завершились за 10 секунд.");
+        Dispatcher.UIThread.RunJobs();
+        var imageReadsIdle = _imageFiles.WhenIdleAsync();
+        WaitForIdle(imageReadsIdle, deadline, "Фоновые чтения размеров картинок теста не завершились за 10 секунд.");
+    }
+
+    private static void WaitForIdle(Task idle, DateTime deadline, string timeoutMessage)
+    {
         while (!idle.Wait(10))
         {
             if (DateTime.UtcNow > deadline)
             {
-                throw new TimeoutException("Фоновые генерации теста не завершились за 10 секунд.");
+                throw new TimeoutException(timeoutMessage);
             }
 
             Dispatcher.UIThread.RunJobs();

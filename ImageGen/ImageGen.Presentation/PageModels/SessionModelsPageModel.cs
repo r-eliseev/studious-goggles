@@ -8,7 +8,6 @@ using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Presentation.PageModels;
 
@@ -24,10 +23,9 @@ public sealed partial class SessionModelsPageModel(
     ChatModelCatalogService chatModels,
     ProviderRegistry providers,
     INavigationService navigation,
-    IDialogService dialogs,
-    ErrorAlert? errorAlert = null) : ObservableObject
+    ErrorAlert errorAlert) : ObservableObject
 {
-    private readonly ErrorAlert _errorAlert = errorAlert ?? new ErrorAlert(dialogs, NullLogger<ErrorAlert>.Instance);
+    private readonly ErrorAlert _errorAlert = errorAlert;
     private readonly List<ModelOptionViewModel> _all = [];
     private readonly List<AssistantModelOptionViewModel> _assistants = [];
     private readonly Dictionary<string, bool> _imageGroupExpanded = new(StringComparer.Ordinal);
@@ -226,7 +224,7 @@ public sealed partial class SessionModelsPageModel(
             }
             OnPropertyChanged(nameof(SelectedCountText));
 
-            var assistants = await chatModels.ListAllAssistantModelsAsync(CancellationToken.None);
+            var assistants = await chatModels.ListAllAssistantModelsAsync(forceRefresh, CancellationToken.None);
             _assistants.Clear();
             _assistants.AddRange(assistants.Select(item =>
             {

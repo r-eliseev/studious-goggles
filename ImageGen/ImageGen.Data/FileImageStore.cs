@@ -13,10 +13,29 @@ using ImageMetadataReader = MetadataExtractor.ImageMetadataReader;
 namespace ImageGen.Data;
 
 /// <summary>Stores images as files under <c>{DataDirectory}/images/{sessionId}/{generationId}.{ext}</c>.</summary>
-public sealed class FileImageStore(IAppPaths appPaths, ILogger<FileImageStore> logger) : IImageFileStore
+public sealed class FileImageStore : IImageFileStore
 {
+    private readonly IAppPaths appPaths;
+    private readonly ILogger<FileImageStore> logger;
+    private readonly Func<string, ImageDimensions?> readDimensions;
     public const string ImagesFolder = "images";
+    private readonly AtomicImageFileWriter atomicWriter = new();
     private readonly SemaphoreSlim _metadataReadGate = new(2, 2);
+    private readonly object dimensionReadLock = new();
+    private TaskCompletionSource dimensionReadsIdle = CompletedSource();
+    private int activeDimensionReads;
+
+    public FileImageStore(IAppPaths appPaths, ILogger<FileImageStore> logger)
+        : this(appPaths, logger, ReadDimensions)
+    {
+    }
+
+    internal FileImageStore(IAppPaths appPaths, ILogger<FileImageStore> logger, Func<string, ImageDimensions?> readDimensions)
+    {
+        this.appPaths = appPaths;
+        this.logger = logger;
+        this.readDimensions = readDimensions;
+    }
 
     public async Task<string> SaveAsync(
         Guid sessionId,
@@ -32,8 +51,8 @@ public sealed class FileImageStore(IAppPaths appPaths, ILogger<FileImageStore> l
         var relativePath = $"{ImagesFolder}/{sessionId:N}/{generationId:N}{GetExtension(mediaType)}";
         var fullPath = GetFullPath(relativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        await File.WriteAllBytesAsync(fullPath, content, cancellationToken);
-        logger.LogDebug("Image saved: {Path} ({Bytes} bytes, {MediaType}).", relativePath, content.Length, mediaType);
+        await atomicWriter.WriteAsync(fullPath, content, cancellationToken);
+        LogSavedSafely(logger, relativePath, content.Length, mediaType);
         return relativePath;
     }
 
@@ -50,7 +69,7 @@ public sealed class FileImageStore(IAppPaths appPaths, ILogger<FileImageStore> l
         var relativePath = $"{ImagesFolder}/{sessionId:N}/attachments/{attachmentId:N}{GetExtension(mediaType)}";
         var fullPath = GetFullPath(relativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        await File.WriteAllBytesAsync(fullPath, content, cancellationToken);
+        await atomicWriter.WriteAsync(fullPath, content, cancellationToken);
         return relativePath;
     }
 
@@ -80,49 +99,95 @@ public sealed class FileImageStore(IAppPaths appPaths, ILogger<FileImageStore> l
     public async Task<ImageDimensions?> TryReadDimensionsAsync(string relativePath, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
-        await _metadataReadGate.WaitAsync(cancellationToken);
+        BeginDimensionRead();
         try
         {
-            var fullPath = GetFullPath(relativePath);
-            return await Task.Run(() =>
+            await _metadataReadGate.WaitAsync(cancellationToken);
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                try
+                var fullPath = GetFullPath(relativePath);
+                return await Task.Run(() =>
                 {
-                    var directories = ImageMetadataReader.ReadMetadata(fullPath);
-                    var jpeg = directories.OfType<JpegDirectory>().FirstOrDefault();
-                    if (jpeg is not null && TryGetDimensions(jpeg, JpegDirectory.TagImageWidth, JpegDirectory.TagImageHeight, out var dimensions))
-                        return dimensions;
+                    cancellationToken.ThrowIfCancellationRequested();
+                    try
+                    {
+                        return readDimensions(fullPath);
+                    }
+                    catch (Exception exception) when (exception is IOException
+                        or UnauthorizedAccessException
+                        or MetadataException
+                        or ImageProcessingException
+                        or RiffProcessingException)
+                    {
+                        logger.LogDebug(exception, "Could not read image dimensions from {Path}.", relativePath);
+                    }
 
-                    var png = directories.OfType<PngDirectory>().FirstOrDefault();
-                    if (png is not null && TryGetDimensions(png, PngDirectory.TagImageWidth, PngDirectory.TagImageHeight, out dimensions))
-                        return dimensions;
-
-                    var webp = directories.OfType<WebPDirectory>().FirstOrDefault();
-                    if (webp is not null && TryGetDimensions(webp, WebPDirectory.TagImageWidth, WebPDirectory.TagImageHeight, out dimensions))
-                        return dimensions;
-
-                    var gif = directories.OfType<GifHeaderDirectory>().FirstOrDefault();
-                    if (gif is not null && TryGetDimensions(gif, GifHeaderDirectory.TagImageWidth, GifHeaderDirectory.TagImageHeight, out dimensions))
-                        return dimensions;
-                }
-                catch (Exception exception) when (exception is IOException
-                    or UnauthorizedAccessException
-                    or MetadataException
-                    or ImageProcessingException
-                    or RiffProcessingException)
-                {
-                    logger.LogDebug(exception, "Could not read image dimensions from {Path}.", relativePath);
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-                return (ImageDimensions?)null;
-            }, CancellationToken.None);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return (ImageDimensions?)null;
+                }, CancellationToken.None);
+            }
+            finally
+            {
+                _metadataReadGate.Release();
+            }
         }
         finally
         {
-            _metadataReadGate.Release();
+            EndDimensionRead();
         }
+    }
+
+    public Task WhenIdleAsync()
+    {
+        lock (dimensionReadLock)
+        {
+            return activeDimensionReads == 0 ? Task.CompletedTask : dimensionReadsIdle.Task;
+        }
+    }
+
+    private void BeginDimensionRead()
+    {
+        lock (dimensionReadLock)
+        {
+            if (activeDimensionReads++ == 0)
+            {
+                dimensionReadsIdle = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+        }
+    }
+
+    private void EndDimensionRead()
+    {
+        TaskCompletionSource? completed = null;
+        lock (dimensionReadLock)
+        {
+            if (--activeDimensionReads == 0)
+            {
+                completed = dimensionReadsIdle;
+            }
+        }
+
+        completed?.TrySetResult();
+    }
+
+    private static TaskCompletionSource CompletedSource()
+    {
+        var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        source.SetResult();
+        return source;
+    }
+
+    private static ImageDimensions? ReadDimensions(string fullPath)
+    {
+        var directories = ImageMetadataReader.ReadMetadata(fullPath);
+        var jpeg = directories.OfType<JpegDirectory>().FirstOrDefault();
+        if (jpeg is not null && TryGetDimensions(jpeg, JpegDirectory.TagImageWidth, JpegDirectory.TagImageHeight, out var dimensions)) return dimensions;
+        var png = directories.OfType<PngDirectory>().FirstOrDefault();
+        if (png is not null && TryGetDimensions(png, PngDirectory.TagImageWidth, PngDirectory.TagImageHeight, out dimensions)) return dimensions;
+        var webp = directories.OfType<WebPDirectory>().FirstOrDefault();
+        if (webp is not null && TryGetDimensions(webp, WebPDirectory.TagImageWidth, WebPDirectory.TagImageHeight, out dimensions)) return dimensions;
+        var gif = directories.OfType<GifHeaderDirectory>().FirstOrDefault();
+        return gif is not null && TryGetDimensions(gif, GifHeaderDirectory.TagImageWidth, GifHeaderDirectory.TagImageHeight, out dimensions) ? dimensions : null;
     }
 
     private static bool TryGetDimensions(MetadataExtractor.Directory directory, int widthTag, int heightTag, out ImageDimensions dimensions)
@@ -173,4 +238,16 @@ public sealed class FileImageStore(IAppPaths appPaths, ILogger<FileImageStore> l
         "image/gif" => ".gif",
         _ => ".bin",
     };
+
+    private static void LogSavedSafely(ILogger logger, string relativePath, int byteCount, string mediaType)
+    {
+        try
+        {
+            logger.LogDebug("Image saved: {Path} ({Bytes} bytes, {MediaType}).", relativePath, byteCount, mediaType);
+        }
+        catch
+        {
+            // Diagnostics cannot change the result after the file has been committed.
+        }
+    }
 }

@@ -1,6 +1,6 @@
 ---
 id: 141
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-29
@@ -41,6 +41,10 @@ FileImageStore.SaveAsync и SaveAttachmentAsync пишут сразу в кон�
 Файлы: `ImageGen/ImageGen.Data/AtomicImageFileWriter.cs` (новый), `ImageGen/ImageGen.Data/FileImageStore.cs`, `ImageGen/ImageGen.Data.Tests/AtomicImageFileWriterTests.cs` (новый), `ImageGen/ImageGen.Data.Tests/FileImageStoreTests.cs`.
 
 ## Отчёт
+
+`FileImageStore.SaveAsync` и `SaveAttachmentAsync` используют общий `AtomicImageFileWriter`: временный файл создаётся через `CreateNew` рядом с итоговым, полностью записывается и закрывается, затем последняя проверка отмены предшествует единственному commit через `File.Move(..., overwrite: true)`. До commit итоговый файл не меняется; cleanup владеет только успешно созданным temporary path и не подменяет исходную ошибку. Отмена после последней проверки не откатывает успешный move. Debug-лог после commit не меняет результат сохранения.
+
+Добавлены проверки writer: успех и cleanup, частичная запись при существующем final, пред-отмена, отмена после записи перед commit, collision `CreateNew`, ошибка cleanup при сохранении исходной ошибки и overwrite; public store проверяет замену изображений и вложений без временных файлов. Команды: `dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj` (105/105), Core.Tests (696/696), `dotnet format` для Data и Data.Tests (`--verify-no-changes --no-restore`), `scripts/check.sh` — все прошли. Гарантия ограничена атомарной публикацией и обработанными ошибками процесса/записи; это не гарантия от потери питания или повреждения файловой системы и не замена компенсации 122.
 
 ## Комментарии
 

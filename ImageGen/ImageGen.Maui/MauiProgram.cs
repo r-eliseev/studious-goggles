@@ -1,6 +1,7 @@
 using CommunityToolkit.Maui;
 using ImageGen.Core;
 using ImageGen.Core.Platform;
+using ImageGen.Core.Services;
 using ImageGen.Data;
 using ImageGen.Maui.Pages;
 using ImageGen.Maui.Services;
@@ -9,6 +10,7 @@ using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.Logging;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Services;
+using ImageGen.Presentation.Settings;
 using ImageGen.Presentation.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -88,6 +90,8 @@ public static class MauiProgram
 #endif
         builder.Services.AddSingleton<ICurrentSessionTracker, CurrentSessionTracker>();
         builder.Services.AddSingleton<ErrorAlert>();
+        builder.Services.AddSingleton<DefaultAssistantModelFile>();
+        builder.Services.AddSingleton<IDefaultAssistantModel>(sp => sp.GetRequiredService<DefaultAssistantModelFile>());
 
         // Pages and page models
         builder.Services.AddSingleton<SessionsPageModel>();

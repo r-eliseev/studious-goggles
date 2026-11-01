@@ -38,6 +38,19 @@
             </VerticalStackLayout>
 
             <VerticalStackLayout Spacing="8">
+                <Label StyleClass="section" Text="{x:Static strings:AppResources.SettingsDefaultAssistantModel}" />
+                <Picker ItemsSource="{Binding AssistantModels}"
+                        ItemDisplayBinding="{Binding DisplayName}"
+                        SelectedItem="{Binding SelectedAssistantModel, Mode=TwoWay}"
+                        Title="{x:Static strings:AppResources.SettingsDefaultAssistantModel}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.SettingsDefaultAssistantModel}" />
+                <Button StyleClass="ghost"
+                        Text="{x:Static strings:AppResources.SettingsSaveAssistantModel}"
+                        Command="{Binding SaveDefaultAssistantModelCommand}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.SettingsSaveAssistantModel}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="8">
                 <Label StyleClass="section" Text="{x:Static strings:AppResources.SettingsAppearance}" />
                 <Label Text="{x:Static strings:AppResources.SettingsStyle}" />
                 <VerticalStackLayout BindableLayout.ItemsSource="{Binding Styles}" Spacing="8">

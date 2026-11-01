@@ -14,9 +14,10 @@ public static class Routes
     public const string GenerationIdParameter = "generationId";
     public const string MessageParameter = "message";
     public const string ProviderIdParameter = "providerId";
+    public const string FirstRunParameter = "firstRun";
 
-    public static string ApiKeyFor(string providerId) =>
-        $"{ApiKey}?{ProviderIdParameter}={Uri.EscapeDataString(providerId)}";
+    public static string ApiKeyFor(string providerId, bool firstRun = false) =>
+        $"{ApiKey}?{ProviderIdParameter}={Uri.EscapeDataString(providerId)}" + (firstRun ? $"&{FirstRunParameter}=true" : "");
 
     public static string ChatFor(Guid sessionId) => $"{Chat}?{SessionIdParameter}={sessionId:D}";
 

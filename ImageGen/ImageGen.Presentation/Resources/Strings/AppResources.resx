@@ -603,4 +603,10 @@
   <data name="ImageViewerNext" xml:space="preserve"><value>Next</value></data>
   <data name="ImageViewerPositionFormat" xml:space="preserve"><value>{0} of {1}</value></data>
   <data name="ImageViewerUnreadable" xml:space="preserve"><value>This image is missing or unreadable.</value></data>
+  <data name="FirstRunProviderPrompt" xml:space="preserve"><value>Choose an assistant provider</value></data>
+  <data name="FirstRunAssistantModelPrompt" xml:space="preserve"><value>Choose the assistant model for new sessions</value></data>
+  <data name="NoAssistantModelsConfigured" xml:space="preserve"><value>No assistant models are configured for this provider. Add chatModels to providers.json.</value></data>
+  <data name="UseAssistantModel" xml:space="preserve"><value>Use this model</value></data>
+  <data name="SettingsDefaultAssistantModel" xml:space="preserve"><value>Default assistant model for new sessions</value></data>
+  <data name="SettingsSaveAssistantModel" xml:space="preserve"><value>Save default model</value></data>
 </root>

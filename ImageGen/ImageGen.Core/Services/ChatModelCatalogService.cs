@@ -39,8 +39,19 @@ public sealed class ChatModelCatalogService(IProviderRouter providers, ILogger<C
     }
 
     /// <summary>Assistant models across configured chat providers, with a provider id for each model.</summary>
-    public async Task<IReadOnlyList<(string ProviderId, ChatModel Model)>> ListAllAssistantModelsAsync(CancellationToken cancellationToken)
+    public Task<IReadOnlyList<(string ProviderId, ChatModel Model)>> ListAllAssistantModelsAsync(CancellationToken cancellationToken) =>
+        ListAllAssistantModelsAsync(forceRefresh: false, cancellationToken);
+
+    public async Task<IReadOnlyList<(string ProviderId, ChatModel Model)>> ListAllAssistantModelsAsync(bool forceRefresh, CancellationToken cancellationToken)
     {
+        if (forceRefresh)
+        {
+            foreach (var providerId in providers.ChatProviderIds)
+            {
+                _byProvider.TryRemove(providerId, out _);
+            }
+        }
+
         var result = new List<(string ProviderId, ChatModel Model)>();
         foreach (var providerId in providers.ChatProviderIds)
         {

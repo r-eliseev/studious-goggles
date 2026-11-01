@@ -1,8 +1,8 @@
 ---
 id: 172
-status: approved
-assignee:
-claimed:
+status: done
+assignee: 
+claimed: 
 created: 2026-10-31
 ---
 
@@ -39,6 +39,12 @@ created: 2026-10-31
 Файлы: `ImageGen/ImageGen.Core/Domain/Sessions/SessionSettings.cs`, `ImageGen/ImageGen.Core/Services/SessionService.cs`, `ImageGen/ImageGen.Core/Services/IDefaultAssistantModel.cs` (новый), `ImageGen/ImageGen.Core/Services/ChatModelCatalogService.cs`, `ImageGen/ImageGen.Presentation/Settings/DefaultAssistantModelFile.cs` (новый), `ImageGen/ImageGen.Presentation/PageModels/SessionsPageModel.cs`, `ApiKeyPageModel.cs`, `SettingsPageModel.cs`, `SessionModelsPageModel.cs`, `AppResources.resx/.cs`, `ImageGen/ImageGen.Avalonia/Views/ApiKeyView.axaml`, `SettingsView.axaml`, `Composition/AppServices.cs`, `ImageGen/ImageGen.Maui/Pages/ApiKeyPage.xaml`, `SettingsPage.xaml`, `MauiProgram.cs`, тесты Core/Presentation/Avalonia, документы.
 
 ## Отчёт
+
+- Добавлен `IDefaultAssistantModel` и атомарное хранение выбранной модели в `defaults.json`; при отсутствующем или повреждённом файле используется встроенная модель OpenRouter Haiku. Новые сессии получают выбранную модель; существующие сессии не меняются.
+- First-run проверяет ключ провайдера модели по умолчанию. На обеих оболочках можно выбрать другого chat-провайдера, сохранить ключ, выбрать модель его каталога и сделать её значением по умолчанию. Settings позволяет менять модель для новых сессий.
+- `Refresh` экрана моделей обновляет кэш чатов; сбой отдельного каталога не мешает получить модели остальных провайдеров. Обновлена спецификация `docs/specs/chat-sessions.md`.
+- Проверено: Core.Tests 699/699; Presentation.Tests 433/433; Avalonia.Tests 149 passed, 2 пропущены (DPAPI/Secret Service недоступны в Linux-среде); сборки Avalonia и MAUI Android успешны; форматирование затронутых Core, Core.Tests, Presentation, Presentation.Tests и Avalonia проектов; `scripts/check.sh` прошёл.
+- Windows-запуск оболочки не выполнялся в Linux-среде; сборка MAUI Android и обе shell-сборки успешны.
 
 ## Комментарии
 

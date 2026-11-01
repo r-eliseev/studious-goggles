@@ -23,7 +23,7 @@ public class StartFlowTests
         await shell.StartAsync();
 
         await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ApiKeyView, "страница ключа");
-        Assert.Equal(Routes.ApiKeyFor("openrouter"), shell.Navigation.CurrentRoute);
+        Assert.Equal(Routes.ApiKeyFor("openrouter", firstRun: true), shell.Navigation.CurrentRoute);
     }
 
     [AvaloniaFact]
@@ -85,7 +85,7 @@ public class StartFlowTests
         Assert.Null(await shell.Secrets.GetAsync(ImageGen.Core.Domain.Keys.SecretNames.OpenRouterApiKey, TestContext.Current.CancellationToken));
         await shell.Navigation.GoBackAsync();
         await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ApiKeyView, "повторный запрос ключа");
-        Assert.Equal(Routes.ApiKeyFor("openrouter"), shell.Navigation.CurrentRoute);
+        Assert.Equal(Routes.ApiKeyFor("openrouter", firstRun: true), shell.Navigation.CurrentRoute);
     }
 
     [AvaloniaFact]

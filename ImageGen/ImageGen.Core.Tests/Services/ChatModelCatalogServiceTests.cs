@@ -110,4 +110,14 @@ public class ChatModelCatalogServiceTests
 
         await _chat.Received(1).ListChatModelsAsync(Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task ListAllAssistantModelsAsync_ForceRefresh_ReloadsCachedCatalog()
+    {
+        _providers.ChatProviderIds.Returns([ProviderIds.OpenRouter]);
+        await _service.ListAllAssistantModelsAsync(forceRefresh: false, TestContext.Current.CancellationToken);
+        await _service.ListAllAssistantModelsAsync(forceRefresh: true, TestContext.Current.CancellationToken);
+
+        await _chat.Received(2).ListChatModelsAsync(Arg.Any<CancellationToken>());
+    }
 }
