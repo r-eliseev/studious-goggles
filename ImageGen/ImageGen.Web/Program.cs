@@ -3,8 +3,10 @@ using ImageGen.Core;
 using ImageGen.Core.Platform;
 using ImageGen.Data;
 using ImageGen.Web;
+using ImageGen.Web.Api;
 using ImageGen.Web.Auth;
 using ImageGen.Web.Secrets;
+using ImageGen.Web.Settings;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.RateLimiting;
@@ -67,17 +69,24 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 builder.Services.AddSingleton<ISecretStore, DataProtectionSecretStore>();
+builder.Services.AddSingleton<ImageGen.Core.Services.IDefaultAssistantModel, WebDefaultAssistantModel>();
 builder.Services.AddImageGenCore();
 builder.Services.AddImageGenData();
 builder.Services.AddHostedService<StartupInitializer>();
 
 var app = builder.Build();
+app.UseExceptionHandler(handler => handler.Run(async context =>
+{
+    context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+    await context.Response.WriteAsJsonAsync(new { error = "unknown" });
+}));
 app.MapGet("/api/health", () => Results.Json(new { status = "ok" })).AllowAnonymous();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 app.MapAuthEndpoints(password);
+app.MapWebApiEndpoints();
 app.Run();
 
 public partial class Program;
