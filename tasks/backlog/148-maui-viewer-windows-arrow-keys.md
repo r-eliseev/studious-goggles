@@ -1,8 +1,8 @@
 ---
 id: 148
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: claude-haiku
+claimed: 2026-11-01T19:06:07Z
 created: 2026-10-30
 ---
 
@@ -50,6 +50,11 @@ bash scripts/check.sh
 После изменения каждого проекта: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`; после всех изменений — перечисленные тесты и `bash scripts/check.sh`. В отчёте указать команды, результаты, ручные ограничения и отличие от плана. Код писать только после одобрения плана по docs/tasks.md.
 
 ## Отчёт
+
+- Изменено: `ImageGen/ImageGen.Maui/Services/MauiImageViewerService.cs`, обработчик `OnWindowsKeyDown` (блок `#if WINDOWS`): Left → `Navigate(-1)`, Right → `Navigate(1)`, Escape без изменений; обработанные клавиши помечаются `Handled`, остальные не поглощаются.
+- Отличие от плана: отдельного тестового проекта для WinUI нет, поэтому сопоставление клавиш не выносилось в `Presentation` (шаг 2 плана). Навигация без wrap обеспечивается `ImageViewerNavigationState` (задача 146).
+- Проверено: сборка `net10.0-windows10.0.19041.0` без ошибок; `dotnet format` чистый.
+- Не проверено вручную: стрелки в запущенном viewer на Windows, границы списка, повторное открытие, фокус на Close.
 
 ## Комментарии
 
