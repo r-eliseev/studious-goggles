@@ -1,8 +1,8 @@
 ---
 id: 176
 status: done
-assignee: codex-gpt6
-claimed: 2026-11-01T00:00:00Z
+assignee:
+claimed:
 created: 2026-11-01
 ---
 
