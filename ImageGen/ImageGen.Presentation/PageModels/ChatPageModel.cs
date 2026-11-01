@@ -42,6 +42,7 @@ public sealed partial class ChatPageModel(
     private bool _imageConsentGiven;
     private Guid _sessionId;
     private string? _pendingMessage;
+    private Guid? _sentMessageSessionId;
     private bool _subscribed;
     private CancellationTokenSource _imageDimensionsCancellation = new();
     private readonly Dictionary<(Guid Id, string Path), Task<ImageDimensions?>> _imageDimensionsReads = [];
@@ -163,7 +164,9 @@ public sealed partial class ChatPageModel(
             CancelImageDimensionsReads();
             _sessionId = sessionId;
         }
-        _pendingMessage = query.TryGetValue(Routes.MessageParameter, out var message) && message is string encoded
+        // The same route comes back when the page reappears after a modal (the image viewer): its message was sent already.
+        var alreadySent = _sentMessageSessionId == sessionId;
+        _pendingMessage = !alreadySent && query.TryGetValue(Routes.MessageParameter, out var message) && message is string encoded
             ? Uri.UnescapeDataString(encoded)
             : null;
     }
@@ -180,6 +183,7 @@ public sealed partial class ChatPageModel(
         if (_pendingMessage is { Length: > 0 } pending)
         {
             _pendingMessage = null;
+            _sentMessageSessionId = _sessionId;
             InputText = pending;
             await SendCommand.ExecuteAsync(null);
         }
