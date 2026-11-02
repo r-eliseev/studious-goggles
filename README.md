@@ -59,6 +59,10 @@ dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation
 dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj
 ```
 
+### Запуск Web-хоста в Docker
+
+С установленным Docker Compose задайте `IMAGEGEN_WEB_PASSWORD` и запустите `docker compose up -d --build`. Сервис доступен на `http://127.0.0.1:8080`; данные сохраняются в именованном томе `imagegen-data`. Инструкции по резервному копированию, bind mounts и смене пароля — в [`docs/knowledge/docker.md`](docs/knowledge/docker.md).
+
 Для запуска Avalonia нужен графический сеанс:
 
 ```sh
