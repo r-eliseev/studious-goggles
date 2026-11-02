@@ -52,9 +52,9 @@ created: 2026-10-27
 
 Добавлены multi-stage `Dockerfile` (Node/Vue → .NET publish → ASP.NET runtime), `.dockerignore`, Compose-сервис с обязательным `IMAGEGEN_WEB_PASSWORD`, localhost-only port mapping и именованным `/data`, а также инструкции запуска и резервного копирования. Runtime image не содержит Node и .NET SDK, работает под UID 1654 и сохраняет базу, изображения, защищённые ключи и Data Protection key ring в `/data`. `docker/smoke.sh` создаёт изолированный Compose-проект с локальным OpenAI-compatible stub, выполняет вход, сохранение ключа и генерацию, пересоздаёт контейнер и проверяет cookie, ключ, картинку, timeline и отсутствие повторного provider submit.
 
-Проверено: `docker/smoke.sh` (сборка и полный restart/persistence сценарий прошли), `docker compose config --no-interpolate`, `bash -n docker/smoke.sh`, `git diff --check`, проверки содержимого образа/UID/runtime, Docker 29.9.2, Compose 5.6.1, Linux x86_64. Образы .NET 10 Debian, указанные в первоначальном плане, в официальном registry отсутствуют; использованы конкретные официальные patch-теги Ubuntu Noble (`sdk:10.0.403-noble`, `aspnet:10.0.12-noble`), которые успешно собраны и проверены SQLite smoke-сценарием. CI workflow не менялся: план требует отдельного согласования проверки образа в CI, а AGENTS.md запрещает править workflows без явной просьбы.
+Проверено: `docker/smoke.sh` (сборка и полный restart/persistence сценарий прошли), `docker compose config --no-interpolate`, `bash -n docker/smoke.sh`, `git diff --check`, проверки содержимого образа/UID/runtime, Docker 29.9.2, Compose 5.6.1, Linux x86_64. Образы .NET 10 Debian, указанные в первоначальном плане, в официальном registry отсутствуют; использованы конкретные официальные patch-теги Ubuntu Noble (`sdk:10.0.403-noble`, `aspnet:10.0.12-noble`), которые успешно собраны и проверены SQLite smoke-сценарием. После отдельного разрешения владельца добавлен job `docker-smoke` в `.github/workflows/build.yml`; он на Ubuntu запускает `bash docker/smoke.sh`.
 
-Статус: реализация Docker и локальная проверка завершены. Включение build job в CI остаётся отдельной согласуемой частью по плану задачи.
+Осталось дождаться результата нового CI job вместе с остальными checks PR.
 
 ## Комментарии
 
@@ -72,3 +72,6 @@ created: 2026-10-27
 
 ### 2026-11-02, codex-gpt6
 План уточнён по фактической доступности официальных .NET 10 образов: Debian-теги не опубликованы, поэтому выбраны конкретные Ubuntu Noble tags. CI workflow не редактировал; задача предписывает согласовать эту часть отдельно.
+
+### 2026-11-02, владелец (в чате)
+Разрешено добавить в текущий PR Docker smoke job на `ubuntu-latest`, запускающий `docker/smoke.sh`.
