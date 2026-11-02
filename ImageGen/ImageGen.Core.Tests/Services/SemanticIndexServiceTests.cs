@@ -96,6 +96,31 @@ public class SemanticIndexServiceTests
     }
 
     [Fact]
+    public async Task IndexAsync_ManyBatches_DoesNotReloadAllSourcesPerBatch()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var setup = Create(Enumerable.Range(0, 200).Select(index => Source(SearchTextKind.Prompt, $"source {index}")).ToArray());
+        var readsAtReady = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        setup.Service.StatusChanged += (_, status) =>
+        {
+            if (status.State == SemanticIndexState.Ready)
+            {
+                readsAtReady.TrySetResult(setup.Sources.ListSourcesAsyncCalls);
+            }
+        };
+        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(call => Task.FromResult(Result(call.Arg<IReadOnlyList<string>>().Count)));
+
+        await setup.Service.EnableAsync(ct);
+        var reads = await readsAtReady.Task.WaitAsync(TimeSpan.FromSeconds(5), ct);
+        var status = setup.Service.GetStatusSnapshot();
+
+        Assert.Equal(200, status.Indexed);
+        Assert.InRange(reads, 1, 3);
+        await setup.Service.DisposeAsync();
+    }
+
+    [Fact]
     public async Task IndexAsync_NetworkFailure_RetriesTwiceWithPlannedDelays()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -367,12 +392,22 @@ public class SemanticIndexServiceTests
     private sealed class MemorySources(IReadOnlyList<SearchSource> items) : ISearchTextSource
     {
         public IReadOnlyList<SearchSource> Items { get; set; } = items;
+        public int ListSourcesAsyncCalls { get; private set; }
 
         public Task<IReadOnlyList<SearchText>> ListAllAsync(CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<SearchText>>([]);
 
-        public Task<IReadOnlyList<SearchSource>> ListSourcesAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(Items);
+        public Task<IReadOnlyList<SearchSource>> ListSourcesAsync(CancellationToken cancellationToken)
+        {
+            ListSourcesAsyncCalls++;
+            return Task.FromResult(Items);
+        }
+
+        public Task<IReadOnlyList<SearchSource>> ListSourcesByKeysAsync(IReadOnlyCollection<string> sourceKeys, CancellationToken cancellationToken)
+        {
+            var keys = sourceKeys.ToHashSet(StringComparer.Ordinal);
+            return Task.FromResult<IReadOnlyList<SearchSource>>(Items.Where(item => keys.Contains(item.SourceKey)).ToArray());
+        }
 
         public Task<int> CountSourcesAsync(CancellationToken cancellationToken) => Task.FromResult(Items.Count);
     }

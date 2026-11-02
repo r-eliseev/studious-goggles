@@ -69,4 +69,27 @@ public class SearchTextSourceTests
         Assert.Contains(sources, source => source.SourceKey == $"desc:{description.Id:D}" && source.SessionId == session.Id && source.Kind == SearchTextKind.Description && source.Text == "a fox sitting on a rock");
         Assert.Equal(3, await new SearchTextSource(test.Database).CountSourcesAsync(ct));
     }
+
+    [Fact]
+    public async Task ListSourcesByKeysAsync_ReturnsOnlyRequestedExistingKeys()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var session = TestData.Session();
+        session.Title = "Fox title";
+        await new SessionRepository(test.Database).AddAsync(session, ct);
+        var run = TestData.Run(session.Id, TestData.BaseTime);
+        run.Prompt = "red fox in snow";
+        await new RunRepository(test.Database).AddRunAsync(run, [TestData.Generation(run, 0)], ct);
+        var source = new SearchTextSource(test.Database);
+
+        var sources = await source.ListSourcesByKeysAsync(
+            [$"title:{session.Id:D}", $"prompt:{run.Id:D}", "prompt:missing"], ct);
+        var empty = await source.ListSourcesByKeysAsync([], ct);
+
+        Assert.Equal(2, sources.Count);
+        Assert.Contains(sources, item => item.SourceKey == $"title:{session.Id:D}" && item.Text == "Fox title");
+        Assert.Contains(sources, item => item.SourceKey == $"prompt:{run.Id:D}" && item.Text == "red fox in snow");
+        Assert.Empty(empty);
+    }
 }
