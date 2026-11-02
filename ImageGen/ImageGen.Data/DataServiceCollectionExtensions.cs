@@ -22,6 +22,7 @@ public static class DataServiceCollectionExtensions
         services.AddSingleton<ISearchTextSource, SearchTextSource>();
         services.AddSingleton<IConversationSummaryRepository, ConversationSummaryRepository>();
         services.AddSingleton<IExpenseRepository, ExpenseRepository>();
+        services.AddSingleton<IGalleryRepository, GalleryRepository>();
         return services;
     }
 }

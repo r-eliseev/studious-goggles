@@ -123,14 +123,16 @@
             </VerticalStackLayout>
         </ScrollView>
 
-        <Button Grid.Row="3"
-                StyleClass="ghost"
-                Command="{Binding OpenSettingsCommand}"
-                HorizontalOptions="Start"
-                SemanticProperties.Description="{x:Static strings:AppResources.SettingsTitle}">
-            <Button.ImageSource>
-                <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Settings}" Color="{DynamicResource IgMutedColor}" Size="16" />
-            </Button.ImageSource>
-        </Button>
+        <HorizontalStackLayout Grid.Row="3" Spacing="8">
+            <Button StyleClass="ghost" Command="{Binding OpenSettingsCommand}" HorizontalOptions="Start"
+                    SemanticProperties.Description="{x:Static strings:AppResources.SettingsTitle}">
+                <Button.ImageSource>
+                    <FontImageSource FontFamily="LucideIcons" Glyph="{x:Static appearance:IconGlyphs.Settings}" Color="{DynamicResource IgMutedColor}" Size="16" />
+                </Button.ImageSource>
+            </Button>
+            <Button StyleClass="ghost" Text="{x:Static strings:AppResources.SessionsGallery}"
+                    Command="{Binding OpenGalleryCommand}"
+                    SemanticProperties.Description="{x:Static strings:AppResources.SessionsGallery}" />
+        </HorizontalStackLayout>
     </Grid>
 </ContentView>

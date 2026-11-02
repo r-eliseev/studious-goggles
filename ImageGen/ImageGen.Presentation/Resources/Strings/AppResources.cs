@@ -292,6 +292,19 @@ public static class AppResources
     public static string SpendingInvalidAmount => Get(nameof(SpendingInvalidAmount));
     public static string SettingsSpending => Get(nameof(SettingsSpending));
 
+    public static string GalleryTitle => Get(nameof(GalleryTitle));
+    public static string GalleryAllModels => Get(nameof(GalleryAllModels));
+    public static string GalleryAllTime => Get(nameof(GalleryAllTime));
+    public static string GalleryLast7Days => Get(nameof(GalleryLast7Days));
+    public static string GalleryLast30Days => Get(nameof(GalleryLast30Days));
+    public static string GalleryUnavailableMessage => Get(nameof(GalleryUnavailableMessage));
+    public static string GalleryLoadMore => Get(nameof(GalleryLoadMore));
+    public static string GalleryOpen => Get(nameof(GalleryOpen));
+    public static string SessionsGallery => Get(nameof(SessionsGallery));
+    public static string GalleryPeriod => Get(nameof(GalleryPeriod));
+    public static string GalleryModel => Get(nameof(GalleryModel));
+    public static string GalleryLoadFailed => Get(nameof(GalleryLoadFailed));
+
     public static string ImagePricePerImageFormat => Get(nameof(ImagePricePerImageFormat));
 
     public static string ImagePricePerMegapixelFormat => Get(nameof(ImagePricePerMegapixelFormat));

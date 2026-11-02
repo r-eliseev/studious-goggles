@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:markup="clr-namespace:ImageGen.Avalonia.Markup"
+             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels;assembly=ImageGen.Presentation"
+             xmlns:converters="clr-namespace:ImageGen.Avalonia.Converters"
+             x:Class="ImageGen.Avalonia.Views.GalleryView"
+             x:DataType="pm:GalleryPageModel">
+    <UserControl.Resources>
+        <converters:ThumbnailConverter x:Key="ThumbnailConverter" />
+    </UserControl.Resources>
+    <Grid RowDefinitions="Auto,Auto,*" Margin="16" RowSpacing="8">
+        <StackPanel Spacing="4">
+            <TextBlock Classes="heading" Text="{markup:Res GalleryTitle}" />
+            <TextBlock Classes="danger" Text="{Binding ErrorText}" />
+        </StackPanel>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+            <ComboBox ItemsSource="{Binding PeriodOptions}" SelectedItem="{Binding SelectedPeriodLabel, Mode=TwoWay}"
+                      SelectionChanged="OnFilterChanged" AutomationProperties.Name="{markup:Res GalleryPeriod}" />
+            <ComboBox ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel, Mode=TwoWay}"
+                      SelectionChanged="OnFilterChanged" AutomationProperties.Name="{markup:Res GalleryModel}" >
+                <ComboBox.ItemTemplate>
+                    <DataTemplate DataType="pm:GalleryModelFilter" x:DataType="pm:GalleryModelFilter">
+                        <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </StackPanel>
+        <ListBox Grid.Row="2" ItemsSource="{Binding Items}" ScrollViewer.ScrollChanged="OnScrollChanged">
+            <ListBox.ItemTemplate>
+                <DataTemplate DataType="pm:GalleryItemViewModel" x:DataType="pm:GalleryItemViewModel">
+                    <Button Classes="ghost" Padding="0" Command="{Binding $parent[ListBox].((pm:GalleryPageModel)DataContext).OpenCommand}"
+                            CommandParameter="{Binding}" Margin="4" AutomationProperties.Name="{Binding SessionTitle}">
+                    <Border Classes="card" Padding="8">
+                            <StackPanel Spacing="4" Width="210">
+                                <Image Source="{Binding ImagePath, Converter={StaticResource ThumbnailConverter}}" Width="194" Height="150" Stretch="UniformToFill" />
+                                <TextBlock FontWeight="SemiBold" Text="{Binding SessionTitle}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Classes="meta" Text="{Binding ModelText}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Classes="meta" Text="{Binding Prompt}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Classes="meta" Text="{Binding CostText}" />
+                                <TextBlock Classes="danger" Text="{Binding StatusText}" IsVisible="{Binding IsUnavailable}" />
+                            </StackPanel>
+                    </Border>
+                    </Button>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        <ProgressBar Grid.Row="2" VerticalAlignment="Top" IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+    </Grid>
+</UserControl>

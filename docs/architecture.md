@@ -25,10 +25,11 @@ ImageGen/
     Domain/Keys/                   ApiKeyStatus, SecretNames (ключ по провайдеру)
     Domain/Models/                 ImageModel, ChatModel, ImageModelPrice, ImagePriceUnit (цена из каталога), ModelRef (ссылка «провайдер:модель»), ModelParameter, ParameterKind
     Domain/Descriptions/           описания картинок (ADR 0013)
+    Domain/Gallery/                GalleryItem, GalleryQuery, GalleryCursor, GalleryPage
     Platform/                      ISecretStore, IAppPaths
     Storage/                       ISessionRepository, IChatMessageRepository, IRunRepository, IConversationSummaryRepository,
                                    IImageModelRepository (кэш по провайдеру), IImageFileStore, IChatAttachmentRepository,
-                                   IImageDescriptionRepository
+                                   IImageDescriptionRepository, IGalleryRepository
     Providers/                     ProviderIds, ProviderResponseLimits, BoundedHttpContentReader, BoundedBase64ImageDecoder, ProviderConfig, ProviderKind, ConfiguredImageModel, ConfiguredChatModel, ProviderConfigLoader (встроенный
                                    builtin-providers.json и providers.json в DataDirectory), ProviderRegistry (проверка),
                                    IProviderRouter / ProviderRouter (клиент по id провайдера), ProviderClientBase (HTTP,
@@ -57,7 +58,7 @@ ImageGen/
                                    TokenCorrection (поправка по usage), SummaryPlanner и SummaryPlan (когда и что сводить, C3)
     Serialization/                 CoreJsonContext
     CoreServiceCollectionExtensions.cs   AddImageGenCore()
-  ImageGen.Data/                   net10.0, Microsoft.Data.Sqlite, MetadataExtractor (ADR 0021): SqliteDatabase, Migrations,
+  ImageGen.Data/                   net10.0, Microsoft.Data.Sqlite, MetadataExtractor (ADR 0021): SqliteDatabase, Migrations (индекс и keyset-запрос галереи),
                                    репозитории, FileImageStore (чтение размеров из заголовков файла в ограниченном фоне),
                                    DataServiceCollectionExtensions (AddImageGenData())
   ImageGen.Core.Tests/             xUnit v3 + NSubstitute
@@ -65,18 +66,18 @@ ImageGen/
   ImageGen.Presentation/           net10.0, CommunityToolkit.Mvvm: PageModels/, Services/ (INavigationService, IDialogService, IImageViewerService, ImageViewerNavigationState, ImageViewerHitTest, IFolderLauncher, ICurrentSessionTracker, CurrentSessionTracker,
                                    IMainThread, ISecretPersistence, AppInitializer, буфер обмена, выбор файлов, сохранение картинок), Routes,
                                    Utilities/, Resources/Strings/ (AppResources.resx), Appearance/ (стиль и тема, AppearanceService),
-                                   Logging/ (файловый журнал, FileDebugTrace)
+                                   Logging/ (файловый журнал, FileDebugTrace); PageModels/ включает галерею и расходы
   ImageGen.Presentation.Tests/     xUnit v3 + NSubstitute: модели страниц, маршруты, строки, архитектурный тест
   ImageGen.Avalonia/               десктоп (Avalonia 12.1, WinExe): App, Views/ (MainWindow, SessionsView, SessionsListView,
-                                   ApiKeyView, ChatView, SessionModelsView, SessionParametersView, ModelPickerView, SettingsView,
-                                   StarterExamples), Themes/ (стили по макетам), Composition/AppServices, Converters/ (FilePathToBitmap),
+                                   ApiKeyView, ChatView, SessionModelsView, SessionParametersView, ModelPickerView, SettingsView, GalleryView, SpendingView,
+                                   StarterExamples), Themes/ (стили по макетам), Composition/AppServices, Converters/ (FilePathToBitmap, ThumbnailConverter),
                                    Markup/ (расширение строк), Platform/ (DesktopAppPaths, InMemorySecretStore), Services/
                                    (AvaloniaMainThread, AvaloniaDialogService, буфер, выбор файлов, сохранение картинок,
                                    AvaloniaAppearanceApplier, AvaloniaImageViewerService, AvaloniaFullScreenController, AvaloniaFolderLauncher, Logging/, Navigation/ — стек страниц и маршруты),
                                    Services/Secrets/ (DesktopSecretStore и бэкенды: SecretServiceBackend для Linux,
                                    DpapiSecretBackend для Windows, KeychainSecretBackend для macOS; ADR 0008)
   ImageGen.Avalonia.Tests/         headless (Avalonia.Headless.XUnit), xunit.v3 3.2.2 (ADR 0007)
-  ImageGen.Maui/                   MAUI: Pages/, Controls/ (SessionsListView, StarterExamples, ChatEditor, SessionModelsView — общий экран моделей страницы и панели), PageModels/ (только
+  ImageGen.Maui/                   MAUI: Pages/ (включая GalleryPage и SpendingPage), Controls/ (SessionsListView, StarterExamples, ChatEditor, SessionModelsView — общий экран моделей страницы и панели), PageModels/ (только
                                    ChatItemTemplateSelector), Services/ (MauiSecretStore, MauiAppPaths, MauiMainThread,
                                    Shell-реализации, буфер, выбор файлов, MauiImageSaver, MauiAppearanceApplier, MauiImageViewerService, MauiFullScreenController, MauiFolderLauncher, MauiSecretPersistence), Converters/,
                                    Platforms/

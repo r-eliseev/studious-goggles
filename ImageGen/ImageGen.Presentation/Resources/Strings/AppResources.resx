@@ -418,6 +418,18 @@
   <data name="SpendingBack" xml:space="preserve"><value>Back</value></data>
   <data name="SpendingInvalidAmount" xml:space="preserve"><value>Enter a non-negative amount or leave the field blank.</value></data>
   <data name="SettingsSpending" xml:space="preserve"><value>Spending and limits</value></data>
+  <data name="GalleryTitle" xml:space="preserve"><value>Gallery</value></data>
+  <data name="GalleryAllModels" xml:space="preserve"><value>All models</value></data>
+  <data name="GalleryAllTime" xml:space="preserve"><value>All time</value></data>
+  <data name="GalleryLast7Days" xml:space="preserve"><value>Last 7 days</value></data>
+  <data name="GalleryLast30Days" xml:space="preserve"><value>Last 30 days</value></data>
+  <data name="GalleryUnavailableMessage" xml:space="preserve"><value>This image or its session is no longer available.</value></data>
+  <data name="GalleryLoadMore" xml:space="preserve"><value>Load more</value></data>
+  <data name="GalleryOpen" xml:space="preserve"><value>Open session</value></data>
+  <data name="SessionsGallery" xml:space="preserve"><value>Gallery</value></data>
+  <data name="GalleryPeriod" xml:space="preserve"><value>Period</value></data>
+  <data name="GalleryModel" xml:space="preserve"><value>Model</value></data>
+  <data name="GalleryLoadFailed" xml:space="preserve"><value>The gallery could not be loaded. Try again.</value></data>
   <data name="ImagePricePerImageFormat" xml:space="preserve">
     <value>${0} / image</value>
   </data>

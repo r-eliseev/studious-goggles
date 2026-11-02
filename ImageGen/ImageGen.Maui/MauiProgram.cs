@@ -108,6 +108,7 @@ public static class MauiProgram
         builder.Services.AddTransientWithShellRoute<ModelPickerPage, ModelPickerPageModel>(Routes.ModelPicker);
         builder.Services.AddTransientWithShellRoute<SettingsPage, SettingsPageModel>(Routes.Settings);
         builder.Services.AddTransientWithShellRoute<SpendingPage, SpendingPageModel>(Routes.Spending);
+        builder.Services.AddTransientWithShellRoute<GalleryPage, GalleryPageModel>(Routes.Gallery);
         // The chat side pane (wide window) creates a fresh page model each time it opens.
         builder.Services.AddSingleton<Func<SessionModelsPageModel>>(sp => sp.GetRequiredService<SessionModelsPageModel>);
         builder.Services.AddSingleton<Func<SessionParametersPageModel>>(sp => sp.GetRequiredService<SessionParametersPageModel>);
