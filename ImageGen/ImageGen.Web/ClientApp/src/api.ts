@@ -1,6 +1,6 @@
 export type SessionSettings = {
-  imageModelIds: { providerId: string; id: string }[];
-  assistantModelId: { providerId: string; id: string };
+  imageModelIds: string[];
+  assistantModelId: string;
   runsPerModel: number;
   parameters: { aspectRatio: string | null; resolution: string | null; outputFormat: string | null; quality: string | null };
 };
@@ -86,7 +86,7 @@ export class WebApiClient {
   async editGeneration(id: string, prompt: string): Promise<unknown> {
     return this.request(`/api/generations/${encodeURIComponent(id)}/edit`, { method: 'POST', body: JSON.stringify({ prompt }), headers: { 'Content-Type': 'application/json' } }, true);
   }
-  async otherModel(id: string, model: { providerId: string; id: string }): Promise<unknown> {
+  async otherModel(id: string, model: string): Promise<unknown> {
     return this.request(`/api/generations/${encodeURIComponent(id)}/other-model`, { method: 'POST', body: JSON.stringify({ model }), headers: { 'Content-Type': 'application/json' } }, true);
   }
 

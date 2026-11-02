@@ -68,7 +68,7 @@ function selectModel(model: ImageModel) { return `${model.providerId}/${model.id
 async function useOtherModel(generationId: string) {
   const selected = otherModelIds.value[generationId];
   const model = imageModels.value.find(item => selectModel(item) === selected);
-  if (model) await generationAction(() => api.otherModel(generationId, { providerId: model.providerId, id: model.id }));
+  if (model) await generationAction(() => api.otherModel(generationId, selectModel(model)));
 }
 function copyPrompt(prompt: string) { void navigator.clipboard.writeText(prompt); }
 

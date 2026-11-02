@@ -18,6 +18,25 @@ describe('WebApiClient', () => {
     expect(new Headers(fetcher.mock.calls[1]?.[1]?.headers).get('X-CSRF-TOKEN')).toBe('csrf-token');
   });
 
+  it('serializes model references as the API string form when saving settings', async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(Response.json({ token: 'csrf-token' }))
+      .mockResolvedValueOnce(Response.json({ id: 'session-id' }));
+    const client = new WebApiClient(fetcher);
+
+    await client.updateSettings('session-id', {
+      imageModelIds: ['openrouter:flux'],
+      assistantModelId: 'openrouter:assistant',
+      runsPerModel: 1,
+      parameters: { aspectRatio: null, resolution: null, outputFormat: null, quality: null },
+    });
+
+    expect(JSON.parse(String(fetcher.mock.calls[1]?.[1]?.body))).toMatchObject({
+      imageModelIds: ['openrouter:flux'],
+      assistantModelId: 'openrouter:assistant',
+    });
+  });
+
   it('reports 401 through the login handler and does not retry a paid POST', async () => {
     const onUnauthorized = vi.fn();
     const fetcher = vi.fn()

@@ -7,7 +7,7 @@ const session = {
   updatedAt: '2026-11-02T00:00:00Z',
   settings: {
     imageModelIds: [],
-    assistantModelId: { providerId: 'openrouter', id: 'assistant' },
+    assistantModelId: 'openrouter:assistant',
     runsPerModel: 1,
     parameters: {},
   },

@@ -17,7 +17,7 @@ async function load() {
   images.value = imageCatalog;
   assistants.value = assistantCatalog;
 }
-function imageKey(model: { providerId: string; id: string }) { return `${model.providerId}/${model.id}`; }
+function imageKey(model: { providerId: string; id: string }) { return `${model.providerId}:${model.id}`; }
 async function save() {
   if (!session.value) return;
   error.value = '';
@@ -42,7 +42,7 @@ onMounted(() => { void load().catch(() => { error.value = 'Could not load model 
       <section>
         <h2>Image models</h2>
         <label v-for="model in images" :key="imageKey(model)" class="choice-row">
-          <input v-model="session.settings.imageModelIds" type="checkbox" :value="{ providerId: model.providerId, id: model.id }" />
+          <input v-model="session.settings.imageModelIds" type="checkbox" :value="imageKey(model)" />
           <span><strong>{{ model.name }}</strong><small>{{ model.providerId }} · {{ model.prices.length ? model.prices.map(price => `$${price.costUsd}/${price.unit}`).join(', ') : 'Price unknown' }}</small></span>
         </label>
       </section>
@@ -50,7 +50,7 @@ onMounted(() => { void load().catch(() => { error.value = 'Could not load model 
         <h2>Assistant model</h2>
         <label for="assistant-model">Choose assistant model</label>
         <select id="assistant-model" v-model="session.settings.assistantModelId">
-          <option v-for="model in assistants" :key="imageKey(model)" :value="{ providerId: model.providerId, id: model.id }">{{ model.name }} ({{ model.providerId }})</option>
+          <option v-for="model in assistants" :key="imageKey(model)" :value="imageKey(model)">{{ model.name }} ({{ model.providerId }})</option>
         </select>
       </section>
       <button type="button" @click="save">Save model settings</button>
