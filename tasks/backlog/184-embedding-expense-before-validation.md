@@ -1,6 +1,6 @@
 ---
 id: 184
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-11-02
@@ -50,3 +50,6 @@ bash scripts/check.sh
 
 ### 2026-11-02, claude-audit
 Создано по код-ревью PR #67/#70 по поручению владельца; план для Luna. Ждёт одобрения.
+
+### 2026-11-02, владелец (в чате, записал claude-audit)
+План одобрен: «таски заапрувлены».
