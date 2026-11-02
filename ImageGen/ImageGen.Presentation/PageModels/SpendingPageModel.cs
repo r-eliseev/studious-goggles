@@ -68,7 +68,8 @@ public sealed partial class SpendingPageModel(
         {
             Groups.Add(new SpendingGroup(group.Key.ProviderId, group.Key.ModelId, group.Sum(item => item.CostUsd), group.Count()));
         }
-        TotalText = rows.Sum(row => row.CostUsd).ToString("C", CultureInfo.CurrentCulture);
+        var total = rows.Sum(row => row.CostUsd).ToString("0.####", CultureInfo.InvariantCulture);
+        TotalText = string.Format(CultureInfo.InvariantCulture, AppResources.CostFormat, total);
         var unknown = await expenses.CountUnknownAsync(from, to, CancellationToken.None);
         UnknownOperationsText = string.Format(CultureInfo.CurrentCulture, AppResources.SpendingUnknownOperationsFormat, unknown);
         ErrorText = "";
