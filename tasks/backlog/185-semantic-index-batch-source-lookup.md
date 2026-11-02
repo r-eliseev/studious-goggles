@@ -60,6 +60,8 @@ bash scripts/check.sh
 
 Проверки: data regression сначала падал на пустом запросе (вернулся полный список); индексный тест на 200 источниках фиксировал 9 полных чтений при прежнем цикле. После фикса Data.Tests — 123/123, Core.Tests — 742/742, Presentation.Tests — 464/464; форматирование Core/Core.Tests/Data/Data.Tests; `scripts/check.sh` — пройден.
 
+После CI падения 2026-11-02 дополнительно синхронизирован тестовый `MemoryEmbeddings`: status polling читал `Dictionary.Values` параллельно с добавлением batch, из-за чего stress-тест был недетерминированным. С lock вокруг снимка и операций записи Core.Tests Release — 743/743; production поведение не менялось.
+
 ## Комментарии
 
 ### 2026-11-02, claude-audit

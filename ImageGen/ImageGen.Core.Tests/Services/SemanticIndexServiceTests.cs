@@ -431,23 +431,32 @@ public class SemanticIndexServiceTests
 
     private sealed class MemoryEmbeddings : ITextEmbeddingRepository
     {
+        private readonly object _gate = new();
         public Dictionary<string, TextEmbedding> Items { get; } = new(StringComparer.Ordinal);
 
         public List<Expense> Expenses { get; } = [];
 
-        public Task<IReadOnlyList<TextEmbedding>> ListAllAsync(CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<TextEmbedding>>(Items.Values.ToArray());
+        public Task<IReadOnlyList<TextEmbedding>> ListAllAsync(CancellationToken cancellationToken)
+        {
+            lock (_gate)
+            {
+                return Task.FromResult<IReadOnlyList<TextEmbedding>>(Items.Values.ToArray());
+            }
+        }
 
         public Task UpsertBatchAsync(IReadOnlyList<TextEmbedding> embeddings, Expense? expense, CancellationToken cancellationToken)
         {
-            foreach (var embedding in embeddings)
+            lock (_gate)
             {
-                Items[embedding.SourceKey] = embedding;
-            }
+                foreach (var embedding in embeddings)
+                {
+                    Items[embedding.SourceKey] = embedding;
+                }
 
-            if (expense is not null)
-            {
-                Expenses.Add(expense);
+                if (expense is not null)
+                {
+                    Expenses.Add(expense);
+                }
             }
 
             return Task.CompletedTask;
@@ -455,9 +464,12 @@ public class SemanticIndexServiceTests
 
         public Task DeleteBySourceKeysAsync(IReadOnlyCollection<string> sourceKeys, CancellationToken cancellationToken)
         {
-            foreach (var key in sourceKeys)
+            lock (_gate)
             {
-                Items.Remove(key);
+                foreach (var key in sourceKeys)
+                {
+                    Items.Remove(key);
+                }
             }
 
             return Task.CompletedTask;
@@ -465,7 +477,10 @@ public class SemanticIndexServiceTests
 
         public Task DeleteAllAsync(CancellationToken cancellationToken)
         {
-            Items.Clear();
+            lock (_gate)
+            {
+                Items.Clear();
+            }
             return Task.CompletedTask;
         }
     }
