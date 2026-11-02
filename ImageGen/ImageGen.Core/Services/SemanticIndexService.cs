@@ -345,8 +345,6 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
             var batch = pending.Skip(offset).Take(BatchSize).ToArray();
             var texts = batch.Select(source => NormalizeText(source.Text)).ToArray();
             var result = await EmbedWithRetryAsync(texts, cancellationToken).ConfigureAwait(false);
-            ValidateResult(result, batch.Length);
-
             var expense = result.CostUsd is decimal cost
                 ? new Expense
                 {
@@ -358,6 +356,20 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
                     OccurredAt = _timeProvider.GetUtcNow(),
                 }
                 : null;
+            try
+            {
+                ValidateResult(result, batch.Length);
+            }
+            catch
+            {
+                if (expense is not null)
+                {
+                    await _embeddings.UpsertBatchAsync([], expense, cancellationToken).ConfigureAwait(false);
+                }
+
+                throw;
+            }
+
             if (expectedDimensions is int expected && expected != result.Dimensions)
             {
                 await _embeddings.UpsertBatchAsync([], expense, cancellationToken).ConfigureAwait(false);

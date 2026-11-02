@@ -245,6 +245,23 @@ public class SemanticIndexServiceTests
     }
 
     [Fact]
+    public async Task IndexAsync_InvalidResponse_StillRecordsPaidExpense()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var setup = Create([Source(SearchTextKind.Title, "finite only")]);
+        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(new EmbeddingResult([[float.NaN, 1f]], "baai/bge-m3", 2, 0.001m));
+
+        await setup.Service.EnableAsync(ct);
+        var status = await WaitForStateAsync(setup.Service, SemanticIndexState.Failed, ct);
+
+        Assert.Equal("Unknown", status.ErrorCode);
+        Assert.Empty(setup.Repository.Items);
+        Assert.Equal(0.001m, Assert.Single(setup.Repository.Expenses).CostUsd);
+        await setup.Service.DisposeAsync();
+    }
+
+    [Fact]
     public async Task IndexAsync_ChangedVectorDimensionClearsMixedIndexAndCanBeRetried()
     {
         var ct = TestContext.Current.CancellationToken;
