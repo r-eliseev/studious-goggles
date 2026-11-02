@@ -9,6 +9,7 @@ public static class Routes
     public const string SessionModels = "models";
     public const string SessionParameters = "parameters";
     public const string Settings = "settings";
+    public const string Spending = "spending";
     public const string ModelPicker = "modelpicker";
     public const string SessionIdParameter = "sessionId";
     public const string GenerationIdParameter = "generationId";

@@ -98,6 +98,9 @@ public sealed partial class SettingsPageModel(
     private Task OpenLogsAsync() => folders.OpenAsync(LogsFolder, CancellationToken.None);
 
     [RelayCommand]
+    private Task OpenSpendingAsync() => navigation.GoToAsync(Routes.Spending);
+
+    [RelayCommand]
     private async Task SaveDefaultAssistantModelAsync()
     {
         var selected = SelectedAssistantModel;

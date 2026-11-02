@@ -9,6 +9,9 @@
              Title="{x:Static strings:AppResources.SettingsTitle}">
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="20">
+            <Button StyleClass="ghost" Text="{x:Static strings:AppResources.SettingsSpending}"
+                    Command="{Binding OpenSpendingCommand}"
+                    SemanticProperties.Description="{x:Static strings:AppResources.SettingsSpending}" />
             <VerticalStackLayout Spacing="8">
                 <Label StyleClass="section" Text="{x:Static strings:AppResources.SettingsProviders}" />
                 <VerticalStackLayout BindableLayout.ItemsSource="{Binding ProviderKeys}" Spacing="8">

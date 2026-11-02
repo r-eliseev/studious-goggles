@@ -403,6 +403,10 @@
                         </DataTemplate>
                     </ItemsControl.DataTemplates>
                 </ItemsControl>
+                <TextBlock Classes="meta"
+                           IsVisible="{Binding HasNextRunEstimate}"
+                           Text="{Binding NextRunEstimateText}"
+                           AutomationProperties.Name="{Binding NextRunEstimateText}" />
                 <TextBox Name="Input"
                          Text="{Binding InputText, Mode=TwoWay}"
                          AcceptsReturn="True"

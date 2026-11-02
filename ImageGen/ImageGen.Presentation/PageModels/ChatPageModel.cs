@@ -5,10 +5,12 @@ using CommunityToolkit.Mvvm.Input;
 using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Descriptions;
 using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using ImageGen.Presentation.Spending;
 using AppTaskExtensions = ImageGen.Presentation.Utilities.TaskExtensions;
 
 namespace ImageGen.Presentation.PageModels;
@@ -35,9 +37,13 @@ public sealed partial class ChatPageModel(
     Func<SessionModelsPageModel> modelsPaneFactory,
     Func<SessionParametersPageModel> parametersPaneFactory,
     IImageViewerService imageViewer,
-    ErrorAlert errorAlert) : ObservableObject
+    ErrorAlert errorAlert,
+    CostEstimator? costEstimator = null,
+    SpendingService? spendingService = null) : ObservableObject
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
+    private readonly CostEstimator? _costEstimator = costEstimator;
+    private readonly SpendingService? _spendingService = spendingService;
     private readonly Dictionary<Guid, GenerationItemViewModel> _cards = [];
     private bool _imageConsentGiven;
     private Guid _sessionId;
@@ -63,6 +69,12 @@ public sealed partial class ChatPageModel(
     /// <summary>The assistant model of the session, shown next to the models button.</summary>
     [ObservableProperty]
     public partial string AssistantText { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string NextRunEstimateText { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool HasNextRunEstimate { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SendCommand))]
@@ -212,6 +224,7 @@ public sealed partial class ChatPageModel(
                 settings.ImageModels.Count,
                 settings.RunsPerModel);
             AssistantText = string.Format(CultureInfo.CurrentCulture, AppResources.AssistantLabelFormat, settings.AssistantModel.ModelId);
+            await UpdateNextRunEstimateAsync(settings.ImageModels, settings.RunsPerModel, settings.Parameters);
 
             Items.Clear();
             _cards.Clear();
@@ -339,6 +352,16 @@ public sealed partial class ChatPageModel(
     {
         var text = InputText;
         var pending = PendingAttachments.ToList();
+        if (_costEstimator is not null && _spendingService is not null)
+        {
+            var estimate = await EstimateAsync(_sessionId, CancellationToken.None);
+            if (estimate is not null
+                && await _spendingService.CheckAsync(estimate, CancellationToken.None) == SpendingWarning.MonthlyLimitReached)
+            {
+                await dialogs.AlertAsync(AppResources.SpendingWarningTitle, AppResources.SpendingMonthlyLimitMessage);
+            }
+        }
+
         InputText = "";
         PendingAttachments.Clear();
         RefreshAttachments();
@@ -510,10 +533,22 @@ public sealed partial class ChatPageModel(
     private void OnPaneCloseRequested(object? sender, EventArgs e) => ClosePane();
 
     private Task RepeatCardAsync(GenerationItemViewModel card) =>
-        RunAndReloadAsync(() => generations.RepeatAsync(card.Id, CancellationToken.None));
+        RunAndReloadAsync(async () =>
+        {
+            if (await ConfirmEstimatedRunAsync(card, null))
+            {
+                await generations.RepeatAsync(card.Id, CancellationToken.None);
+            }
+        });
 
     private Task NewSeedCardAsync(GenerationItemViewModel card) =>
-        RunAndReloadAsync(() => generations.NewSeedAsync(card.Id, CancellationToken.None));
+        RunAndReloadAsync(async () =>
+        {
+            if (await ConfirmEstimatedRunAsync(card, null))
+            {
+                await generations.NewSeedAsync(card.Id, CancellationToken.None);
+            }
+        });
 
     private Task EditCardAsync(GenerationItemViewModel card) =>
         RunAndReloadAsync(async () =>
@@ -526,9 +561,96 @@ public sealed partial class ChatPageModel(
                 card.Prompt);
             if (!string.IsNullOrWhiteSpace(text))
             {
-                await generations.EditAsync(card.Id, text.Trim(), CancellationToken.None);
+                if (await ConfirmEstimatedRunAsync(card, null))
+                {
+                    await generations.EditAsync(card.Id, text.Trim(), CancellationToken.None);
+                }
             }
         });
+
+    private async Task<bool> ConfirmEstimatedRunAsync(GenerationItemViewModel card, ModelRef? targetModel)
+    {
+        if (_costEstimator is null || _spendingService is null)
+        {
+            return true;
+        }
+
+        var run = Items.OfType<RunItemViewModel>().FirstOrDefault(item => item.Generations.Contains(card));
+        if (run is null)
+        {
+            return true;
+        }
+
+        var models = targetModel is { } target
+            ? new[] { target }
+            : [new ModelRef(card.ProviderId, card.ModelId)];
+        var estimate = await _costEstimator.EstimateAsync(models, 1, run.Parameters, CancellationToken.None);
+        if (await _spendingService.CheckAsync(estimate, CancellationToken.None) == SpendingWarning.None)
+        {
+            return true;
+        }
+
+        var message = string.Format(
+            CultureInfo.CurrentCulture,
+            AppResources.SpendingConfirmationFormat,
+            FormatEstimate(estimate));
+        return await dialogs.ConfirmAsync(AppResources.SpendingWarningTitle, message, AppResources.Generate, AppResources.Cancel);
+    }
+
+    private async Task<CostEstimate?> EstimateAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        if (_costEstimator is null)
+        {
+            return null;
+        }
+
+        var session = await sessions.GetAsync(sessionId, cancellationToken);
+        return session is null
+            ? null
+            : await _costEstimator.EstimateAsync(session.Settings.ImageModels, session.Settings.RunsPerModel, session.Settings.Parameters, cancellationToken);
+    }
+
+    private async Task UpdateNextRunEstimateAsync(
+        IReadOnlyList<ModelRef> models,
+        int runsPerModel,
+        ImageGen.Core.Domain.Sessions.GenerationParameters parameters)
+    {
+        if (_costEstimator is null)
+        {
+            HasNextRunEstimate = false;
+            NextRunEstimateText = "";
+            return;
+        }
+
+        try
+        {
+            var estimate = await _costEstimator.EstimateAsync(models, runsPerModel, parameters, CancellationToken.None);
+            NextRunEstimateText = string.Format(
+                CultureInfo.CurrentCulture,
+                AppResources.NextRunEstimateFormat,
+                FormatEstimate(estimate));
+            HasNextRunEstimate = true;
+        }
+        catch (Exception)
+        {
+            NextRunEstimateText = AppResources.AssistantPriceUnknown;
+            HasNextRunEstimate = true;
+        }
+    }
+
+    private static string FormatEstimate(CostEstimate estimate)
+    {
+        var price = estimate.KnownUsd.ToString("0.####", CultureInfo.InvariantCulture);
+        var amount = string.Format(CultureInfo.InvariantCulture, "${0}", price);
+        if (estimate.IsApproximate)
+        {
+            amount = "≈" + amount;
+        }
+
+        return estimate.UnknownModels.Count == 0
+            ? amount
+            : string.Format(CultureInfo.CurrentCulture, AppResources.CostEstimateWithUnknownFormat, amount, estimate.UnknownModels.Count);
+    }
 
     private async Task RunAndReloadAsync(Func<Task> action)
     {

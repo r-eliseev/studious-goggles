@@ -268,6 +268,30 @@ public static class AppResources
 
     public static string AssistantPriceUnknown => Get(nameof(AssistantPriceUnknown));
 
+    public static string NextRunEstimateFormat => Get(nameof(NextRunEstimateFormat));
+
+    public static string CostEstimateWithUnknownFormat => Get(nameof(CostEstimateWithUnknownFormat));
+
+    public static string SpendingWarningTitle => Get(nameof(SpendingWarningTitle));
+
+    public static string SpendingMonthlyLimitMessage => Get(nameof(SpendingMonthlyLimitMessage));
+
+    public static string SpendingConfirmationFormat => Get(nameof(SpendingConfirmationFormat));
+
+    public static string SpendingTitle => Get(nameof(SpendingTitle));
+    public static string SpendingPeriod => Get(nameof(SpendingPeriod));
+    public static string SpendingDay => Get(nameof(SpendingDay));
+    public static string SpendingWeek => Get(nameof(SpendingWeek));
+    public static string SpendingMonth => Get(nameof(SpendingMonth));
+    public static string SpendingTotal => Get(nameof(SpendingTotal));
+    public static string SpendingUnknownOperationsFormat => Get(nameof(SpendingUnknownOperationsFormat));
+    public static string SpendingMonthlyLimit => Get(nameof(SpendingMonthlyLimit));
+    public static string SpendingExpensiveThreshold => Get(nameof(SpendingExpensiveThreshold));
+    public static string SpendingSave => Get(nameof(SpendingSave));
+    public static string SpendingBack => Get(nameof(SpendingBack));
+    public static string SpendingInvalidAmount => Get(nameof(SpendingInvalidAmount));
+    public static string SettingsSpending => Get(nameof(SettingsSpending));
+
     public static string ImagePricePerImageFormat => Get(nameof(ImagePricePerImageFormat));
 
     public static string ImagePricePerMegapixelFormat => Get(nameof(ImagePricePerMegapixelFormat));

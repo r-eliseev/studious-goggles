@@ -59,11 +59,17 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         _describe = describe;
         _otherModel = otherModel;
         Id = generation.Id;
+        ProviderId = generation.ProviderId;
+        ModelId = generation.ModelId;
         Prompt = generation.Prompt;
         Update(generation);
     }
 
     public Guid Id { get; }
+
+    public string ProviderId { get; }
+
+    public string ModelId { get; }
 
     /// <summary>Exact prompt sent to the model.</summary>
     public string Prompt { get; }

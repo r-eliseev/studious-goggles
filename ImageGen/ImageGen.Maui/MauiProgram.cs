@@ -11,6 +11,7 @@ using ImageGen.Presentation.Logging;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Services;
 using ImageGen.Presentation.Settings;
+using ImageGen.Presentation.Spending;
 using ImageGen.Presentation.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -79,6 +80,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<IMainThread, MauiMainThread>();
         builder.Services.AddSingleton<IFilePickerService, MauiFilePickerService>();
         builder.Services.AddSingleton<AppearanceService>();
+        builder.Services.AddSingleton<SpendingSettingsFile>();
+        builder.Services.AddSingleton<SpendingService>();
         builder.Services.AddSingleton<MauiAppearanceApplier>();
         builder.Services.AddSingleton<IClipboardService, MauiClipboardService>();
         builder.Services.AddSingleton<IImageSaver, MauiImageSaver>();
@@ -104,6 +107,7 @@ public static class MauiProgram
         builder.Services.AddTransientWithShellRoute<SessionParametersPage, SessionParametersPageModel>(Routes.SessionParameters);
         builder.Services.AddTransientWithShellRoute<ModelPickerPage, ModelPickerPageModel>(Routes.ModelPicker);
         builder.Services.AddTransientWithShellRoute<SettingsPage, SettingsPageModel>(Routes.Settings);
+        builder.Services.AddTransientWithShellRoute<SpendingPage, SpendingPageModel>(Routes.Spending);
         // The chat side pane (wide window) creates a fresh page model each time it opens.
         builder.Services.AddSingleton<Func<SessionModelsPageModel>>(sp => sp.GetRequiredService<SessionModelsPageModel>);
         builder.Services.AddSingleton<Func<SessionParametersPageModel>>(sp => sp.GetRequiredService<SessionParametersPageModel>);

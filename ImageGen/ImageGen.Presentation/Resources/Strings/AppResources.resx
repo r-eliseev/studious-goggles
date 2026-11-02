@@ -390,6 +390,34 @@
   <data name="AssistantPriceUnknown" xml:space="preserve">
     <value>price unknown</value>
   </data>
+  <data name="NextRunEstimateFormat" xml:space="preserve">
+    <value>Next run {0}</value>
+  </data>
+  <data name="CostEstimateWithUnknownFormat" xml:space="preserve">
+    <value>{0} (+{1} unknown)</value>
+  </data>
+  <data name="SpendingWarningTitle" xml:space="preserve">
+    <value>Spending warning</value>
+  </data>
+  <data name="SpendingMonthlyLimitMessage" xml:space="preserve">
+    <value>This run may bring this month's known spending to or above your limit. You can still continue.</value>
+  </data>
+  <data name="SpendingConfirmationFormat" xml:space="preserve">
+    <value>Estimated known cost: {0}. Unknown model prices are not included. Continue?</value>
+  </data>
+  <data name="SpendingTitle" xml:space="preserve"><value>Spending</value></data>
+  <data name="SpendingPeriod" xml:space="preserve"><value>Period</value></data>
+  <data name="SpendingDay" xml:space="preserve"><value>Day</value></data>
+  <data name="SpendingWeek" xml:space="preserve"><value>Week</value></data>
+  <data name="SpendingMonth" xml:space="preserve"><value>Month</value></data>
+  <data name="SpendingTotal" xml:space="preserve"><value>Total</value></data>
+  <data name="SpendingUnknownOperationsFormat" xml:space="preserve"><value>Unknown price: {0} operations in existing sessions</value></data>
+  <data name="SpendingMonthlyLimit" xml:space="preserve"><value>Monthly limit (USD, blank disables)</value></data>
+  <data name="SpendingExpensiveThreshold" xml:space="preserve"><value>Expensive run threshold (USD, blank disables)</value></data>
+  <data name="SpendingSave" xml:space="preserve"><value>Save limits</value></data>
+  <data name="SpendingBack" xml:space="preserve"><value>Back</value></data>
+  <data name="SpendingInvalidAmount" xml:space="preserve"><value>Enter a non-negative amount or leave the field blank.</value></data>
+  <data name="SettingsSpending" xml:space="preserve"><value>Spending and limits</value></data>
   <data name="ImagePricePerImageFormat" xml:space="preserve">
     <value>${0} / image</value>
   </data>

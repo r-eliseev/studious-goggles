@@ -15,6 +15,7 @@ public sealed partial class RunItemViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(run);
         ArgumentNullException.ThrowIfNull(generations);
         Id = run.Id;
+        Parameters = run.Parameters;
         PromptText = string.Format(CultureInfo.CurrentCulture, AppResources.RunPromptFormat, run.Prompt);
         Generations = generations;
         HeaderText = HeaderOf(generations);
@@ -26,6 +27,8 @@ public sealed partial class RunItemViewModel : ObservableObject
     }
 
     public Guid Id { get; }
+
+    public ImageGen.Core.Domain.Sessions.GenerationParameters Parameters { get; }
 
     public string PromptText { get; }
 

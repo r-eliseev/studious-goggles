@@ -3,6 +3,7 @@ using ImageGen.Core.Domain.Descriptions;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
+using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
@@ -10,6 +11,7 @@ using ImageGen.Presentation;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using ImageGen.Presentation.Spending;
 using ImageGen.Presentation.Tests.TestDoubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute.ExceptionExtensions;
@@ -225,7 +227,7 @@ public class ChatPageModelTests
     private SessionParametersPageModel NewParametersPane() =>
         new(_sessionService, Catalog, _navigation, ErrorAlerts.Create(_dialogs));
 
-    private ChatPageModel CreateModel(Guid sessionId)
+    private ChatPageModel CreateModel(Guid sessionId, CostEstimator? costEstimator = null, SpendingService? spendingService = null)
     {
         var model = new ChatPageModel(
             _sessionService,
@@ -244,7 +246,7 @@ public class ChatPageModelTests
             NewModelsPane,
             NewParametersPane,
             _imageViewer,
-            ErrorAlerts.Create(_dialogs));
+            ErrorAlerts.Create(_dialogs), costEstimator, spendingService);
         model.ApplyQueryAttributes(new Dictionary<string, object>
         {
             [Routes.SessionIdParameter] = sessionId.ToString("D"),
@@ -1150,6 +1152,43 @@ public class ChatPageModelTests
     }
 
     [Fact]
+    public async Task RepeatCommand_SpendingWarningDeclined_DoesNotStartRun()
+    {
+        var source = NewRun(_session.Id, "red fox");
+        StoreRun(source, NewGeneration(source, 5));
+        var directory = Path.Combine(Path.GetTempPath(), "spending-chat-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var settingsFile = new SpendingSettingsFile(new TestPaths(directory), NullLogger<SpendingSettingsFile>.Instance);
+            await settingsFile.SaveAsync(new SpendingSettings(null, 0m), TestContext.Current.CancellationToken);
+            var expenses = Substitute.For<IExpenseRepository>();
+            expenses.ListAsync(Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult<IReadOnlyList<ImageGen.Core.Domain.Expenses.Expense>>([]));
+            var spending = new SpendingService(expenses, settingsFile, TimeProvider.System, TimeZoneInfo.Utc);
+            var model = CreateModel(_session.Id, new CostEstimator(Catalog), spending);
+            _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+            await model.OnAppearingAsync();
+
+            await Assert.Single(model.Items.OfType<RunItemViewModel>().SelectMany(run => run.Generations)).RepeatCommand.ExecuteAsync(null);
+
+            Assert.Single(StoredRuns);
+            await _dialogs.Received(1).ConfirmAsync(
+                AppResources.SpendingWarningTitle,
+                Arg.Any<string>(),
+                AppResources.Generate,
+                AppResources.Cancel);
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task NewSeedCommand_StartsRunWithSamePromptAndNewSeed()
     {
         var source = NewRun(_session.Id, "red fox");
@@ -1317,4 +1356,6 @@ public class ChatPageModelTests
             Arg.Is<Session>(s => s.Id == _session.Id && s.Settings.RunsPerModel == 5),
             Arg.Any<CancellationToken>());
     }
+
+    private sealed record TestPaths(string DataDirectory) : IAppPaths;
 }

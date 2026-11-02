@@ -16,6 +16,8 @@
     <ScrollViewer>
         <StackPanel Margin="16" Spacing="20" MaxWidth="640" HorizontalAlignment="Stretch">
             <TextBlock Classes="heading" Text="{markup:Res SettingsTitle}" />
+            <Button Classes="ghost" Content="{markup:Res SettingsSpending}" Command="{Binding OpenSpendingCommand}"
+                    AutomationProperties.Name="{markup:Res SettingsSpending}" />
 
             <StackPanel Spacing="8">
                 <TextBlock Classes="section" Text="{markup:Res SettingsProviders}" />

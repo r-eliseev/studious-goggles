@@ -407,6 +407,10 @@
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
                 </CollectionView>
+                <Label StyleClass="meta"
+                       IsVisible="{Binding HasNextRunEstimate}"
+                       Text="{Binding NextRunEstimateText}"
+                       SemanticProperties.Description="{Binding NextRunEstimateText}" />
                 <controls:ChatEditor Text="{Binding InputText}"
                         SendCommand="{Binding SendCommand}"
                         Placeholder="{x:Static strings:AppResources.ChatPlaceholder}"

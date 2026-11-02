@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:markup="clr-namespace:ImageGen.Avalonia.Markup"
+             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels;assembly=ImageGen.Presentation"
+             x:Class="ImageGen.Avalonia.Views.SpendingView"
+             x:DataType="pm:SpendingPageModel">
+    <ScrollViewer>
+        <StackPanel Margin="16" Spacing="12" MaxWidth="720" HorizontalAlignment="Stretch">
+            <TextBlock Classes="heading" Text="{markup:Res SpendingTitle}" />
+            <TextBlock Classes="section" Text="{markup:Res SpendingPeriod}" />
+            <ComboBox ItemsSource="{Binding Periods}" SelectedItem="{Binding SelectedPeriod, Mode=TwoWay}"
+                      AutomationProperties.Name="{markup:Res SpendingPeriod}"
+                      SelectionChanged="OnPeriodChanged" />
+            <TextBlock Classes="section" Text="{markup:Res SpendingTotal}" />
+            <TextBlock FontSize="24" Text="{Binding TotalText}" />
+            <TextBlock Classes="meta" Text="{Binding UnknownOperationsText}" />
+            <ItemsControl ItemsSource="{Binding Groups}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="pm:SpendingGroup" x:DataType="pm:SpendingGroup">
+                        <Border Classes="card" Padding="12" Margin="0,0,0,6">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                                <TextBlock Text="{Binding ProviderId}" FontWeight="SemiBold" />
+                                <TextBlock Grid.Column="1" Text="{Binding TotalUsd, StringFormat='{}{0:C}'}" />
+                                <TextBlock Grid.Row="1" Classes="meta" Text="{Binding ModelId}" />
+                                <TextBlock Grid.Row="1" Grid.Column="1" Classes="meta" Text="{Binding Operations}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Classes="section" Text="{markup:Res SpendingMonthlyLimit}" />
+            <TextBox Text="{Binding MonthlyLimitText, Mode=TwoWay}" PlaceholderText="USD" AutomationProperties.Name="{markup:Res SpendingMonthlyLimit}" />
+            <TextBlock Classes="section" Text="{markup:Res SpendingExpensiveThreshold}" />
+            <TextBox Text="{Binding ExpensiveRunThresholdText, Mode=TwoWay}" PlaceholderText="USD" AutomationProperties.Name="{markup:Res SpendingExpensiveThreshold}" />
+            <TextBlock Classes="danger" Text="{Binding ErrorText}" />
+            <Button Classes="primary" Content="{markup:Res SpendingSave}" Command="{Binding SaveSettingsCommand}" />
+            <Button Classes="ghost" Content="{markup:Res SpendingBack}" Command="{Binding BackCommand}" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
