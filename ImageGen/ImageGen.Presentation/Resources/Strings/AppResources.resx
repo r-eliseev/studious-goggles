@@ -81,6 +81,23 @@
   <data name="SearchSessions" xml:space="preserve">
     <value>Search sessions</value>
   </data>
+  <data name="SemanticSearchTitle" xml:space="preserve"><value>Semantic search</value></data>
+  <data name="SemanticSearchOff" xml:space="preserve"><value>Off. Word search remains available.</value></data>
+  <data name="SemanticSearchProgressFormat" xml:space="preserve"><value>Indexed {0} of {1}</value></data>
+  <data name="SemanticSearchReadyFormat" xml:space="preserve"><value>Ready: {0} texts indexed.</value></data>
+  <data name="SemanticSearchUnavailable" xml:space="preserve"><value>Unavailable. Check the OpenRouter key and network.</value></data>
+  <data name="SemanticSearchFailed" xml:space="preserve"><value>Indexing failed. Word search remains available.</value></data>
+  <data name="SemanticSearchStopped" xml:space="preserve"><value>Indexing stopped. Start indexing again to continue.</value></data>
+  <data name="SemanticSearchEnablePromptFormat" xml:space="preserve"><value>{0} of {1} titles, prompts and image descriptions will be sent to OpenRouter (baai/bge-m3). This is a paid request. Continue?</value></data>
+  <data name="SemanticSearchDisablePrompt" xml:space="preserve"><value>Turn off semantic search and delete its local index?</value></data>
+  <data name="SemanticSearchEnable" xml:space="preserve"><value>Enable</value></data>
+  <data name="SemanticSearchDisable" xml:space="preserve"><value>Turn off</value></data>
+  <data name="SemanticSearchRetry" xml:space="preserve"><value>Retry indexing</value></data>
+  <data name="SemanticSearchLimitWarning" xml:space="preserve"><value>Only the 10,000 most recent texts are indexed.</value></data>
+  <data name="Stop" xml:space="preserve"><value>Stop</value></data>
+  <data name="SemanticSearchWords" xml:space="preserve"><value>Words</value></data>
+  <data name="SemanticSearchMeaning" xml:space="preserve"><value>Meaning</value></data>
+  <data name="SemanticSearchMeaningUnavailable" xml:space="preserve"><value>Enable semantic search and finish indexing to search by meaning.</value></data>
   <data name="ClearSearch" xml:space="preserve">
     <value>Clear search</value>
   </data>

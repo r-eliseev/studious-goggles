@@ -13,6 +13,19 @@
                     Command="{Binding OpenSpendingCommand}"
                     SemanticProperties.Description="{x:Static strings:AppResources.SettingsSpending}" />
             <VerticalStackLayout Spacing="8">
+                <Label StyleClass="section" Text="{x:Static strings:AppResources.SemanticSearchTitle}" />
+                <Label StyleClass="meta" Text="{Binding SemanticSearchStatusText}" />
+                <HorizontalStackLayout Spacing="8">
+                    <Button StyleClass="ghost" Text="{Binding SemanticSearchToggleText}"
+                            Command="{Binding ToggleSemanticSearchCommand}"
+                            SemanticProperties.Description="{x:Static strings:AppResources.SemanticSearchTitle}" />
+                    <Button StyleClass="ghost" Text="{x:Static strings:AppResources.Stop}"
+                            Command="{Binding StopSemanticIndexCommand}"
+                            IsVisible="{Binding IsSemanticIndexing}"
+                            SemanticProperties.Description="{x:Static strings:AppResources.Stop}" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+            <VerticalStackLayout Spacing="8">
                 <Label StyleClass="section" Text="{x:Static strings:AppResources.SettingsProviders}" />
                 <VerticalStackLayout BindableLayout.ItemsSource="{Binding ProviderKeys}" Spacing="8">
                     <BindableLayout.ItemTemplate>

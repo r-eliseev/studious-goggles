@@ -20,6 +20,7 @@ public static class DataServiceCollectionExtensions
         services.AddSingleton<IChatAttachmentRepository, ChatAttachmentRepository>();
         services.AddSingleton<IImageDescriptionRepository, ImageDescriptionRepository>();
         services.AddSingleton<ISearchTextSource, SearchTextSource>();
+        services.AddSingleton<ITextEmbeddingRepository, TextEmbeddingRepository>();
         services.AddSingleton<IConversationSummaryRepository, ConversationSummaryRepository>();
         services.AddSingleton<IExpenseRepository, ExpenseRepository>();
         services.AddSingleton<IGalleryRepository, GalleryRepository>();

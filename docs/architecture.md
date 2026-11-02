@@ -52,18 +52,20 @@ ImageGen/
                                    ConversationSummaryService (сводка старой истории в фоне; одна задача на сессию),
                                    AttachmentService (вложения, ADR 0012), ImageDescriptionService (ADR 0013),
                                    ChatModelCatalogService (модели ассистента), GenerationParameterPlanner (ADR 0011)
-    Search/                        SessionSearchService (поиск по названиям, промптам и описаниям), FuzzyMatcher (нечёткие
-                                   совпадения слов), ISearchTextSource (тексты всех сессий; реализация в Data)
+    Search/                        SessionSearchService (поиск по названиям, промптам и описаниям), SemanticSearchService
+                                   (cosine ranking), SemanticIndexService (opt-in, progress and refresh), FuzzyMatcher,
+                                   ISearchTextSource, SearchSource, ITextEmbeddingRepository
     Context/                       ContextBudget (бюджет истории), ContextBuilder (выбор сообщений), TokenEstimator,
                                    TokenCorrection (поправка по usage), SummaryPlanner и SummaryPlan (когда и что сводить, C3)
     Serialization/                 CoreJsonContext
     CoreServiceCollectionExtensions.cs   AddImageGenCore()
   ImageGen.Data/                   net10.0, Microsoft.Data.Sqlite, MetadataExtractor (ADR 0021): SqliteDatabase, Migrations (индекс и keyset-запрос галереи),
-                                   репозитории, FileImageStore (чтение размеров из заголовков файла в ограниченном фоне),
+                                   репозитории, включая SQLite BLOB хранилище text embeddings,
+                                   FileImageStore (чтение размеров из заголовков файла в ограниченном фоне),
                                    DataServiceCollectionExtensions (AddImageGenData())
   ImageGen.Core.Tests/             xUnit v3 + NSubstitute
   ImageGen.Data.Tests/             xUnit v3, временная БД в файле
-  ImageGen.Presentation/           net10.0, CommunityToolkit.Mvvm: PageModels/, Services/ (INavigationService, IDialogService, IImageViewerService, IImageComparisonService, ImageViewerNavigationState, ImageViewerHitTest, IFolderLauncher, ICurrentSessionTracker, CurrentSessionTracker,
+  ImageGen.Presentation/           net10.0, CommunityToolkit.Mvvm: PageModels/, Search/SearchSettingsFile (opt-in в search.json), Services/ (INavigationService, IDialogService, IImageViewerService, IImageComparisonService, ImageViewerNavigationState, ImageViewerHitTest, IFolderLauncher, ICurrentSessionTracker, CurrentSessionTracker,
                                    IMainThread, ISecretPersistence, AppInitializer, буфер обмена, выбор файлов, сохранение картинок), Routes,
                                    Utilities/, Resources/Strings/ (AppResources.resx), Appearance/ (стиль и тема, AppearanceService),
                                    Logging/ (файловый журнал, FileDebugTrace); PageModels/ включает галерею и расходы

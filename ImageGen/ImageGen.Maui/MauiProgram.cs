@@ -1,6 +1,7 @@
 using CommunityToolkit.Maui;
 using ImageGen.Core;
 using ImageGen.Core.Platform;
+using ImageGen.Core.Search;
 using ImageGen.Core.Services;
 using ImageGen.Data;
 using ImageGen.Maui.Pages;
@@ -9,6 +10,7 @@ using ImageGen.Presentation;
 using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.Logging;
 using ImageGen.Presentation.PageModels;
+using ImageGen.Presentation.Search;
 using ImageGen.Presentation.Services;
 using ImageGen.Presentation.Settings;
 using ImageGen.Presentation.Spending;
@@ -82,6 +84,12 @@ public static class MauiProgram
         builder.Services.AddSingleton<AppearanceService>();
         builder.Services.AddSingleton<SpendingSettingsFile>();
         builder.Services.AddSingleton<SpendingService>();
+        builder.Services.AddSingleton<SearchSettingsFile>();
+        builder.Services.AddSingleton<ImageGen.Core.Search.ISemanticSearchSettingsStore>(sp => sp.GetRequiredService<SearchSettingsFile>());
+        builder.Services.AddSingleton<SemanticIndexService>();
+        builder.Services.AddSingleton<SemanticSearchService>();
+        builder.Services.AddSingleton<ISemanticIndexStatusProvider>(sp => sp.GetRequiredService<SemanticIndexService>());
+        builder.Services.AddSingleton<ISemanticIndexController>(sp => sp.GetRequiredService<SemanticIndexService>());
         builder.Services.AddSingleton<MauiAppearanceApplier>();
         builder.Services.AddSingleton<IClipboardService, MauiClipboardService>();
         builder.Services.AddSingleton<IImageSaver, MauiImageSaver>();

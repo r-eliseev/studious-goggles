@@ -67,6 +67,40 @@ public static class AppResources
 
     public static string SearchInDescription => Get(nameof(SearchInDescription));
 
+    public static string SemanticSearchTitle => Get(nameof(SemanticSearchTitle));
+
+    public static string SemanticSearchOff => Get(nameof(SemanticSearchOff));
+
+    public static string SemanticSearchProgressFormat => Get(nameof(SemanticSearchProgressFormat));
+
+    public static string SemanticSearchReadyFormat => Get(nameof(SemanticSearchReadyFormat));
+
+    public static string SemanticSearchUnavailable => Get(nameof(SemanticSearchUnavailable));
+
+    public static string SemanticSearchFailed => Get(nameof(SemanticSearchFailed));
+
+    public static string SemanticSearchStopped => Get(nameof(SemanticSearchStopped));
+
+    public static string SemanticSearchEnablePromptFormat => Get(nameof(SemanticSearchEnablePromptFormat));
+
+    public static string SemanticSearchDisablePrompt => Get(nameof(SemanticSearchDisablePrompt));
+
+    public static string SemanticSearchEnable => Get(nameof(SemanticSearchEnable));
+
+    public static string SemanticSearchDisable => Get(nameof(SemanticSearchDisable));
+
+    public static string SemanticSearchRetry => Get(nameof(SemanticSearchRetry));
+
+    public static string SemanticSearchLimitWarning => Get(nameof(SemanticSearchLimitWarning));
+
+    public static string SemanticSearchWords => Get(nameof(SemanticSearchWords));
+
+    public static string SemanticSearchMeaning => Get(nameof(SemanticSearchMeaning));
+
+    public static string SemanticSearchMeaningUnavailable => Get(nameof(SemanticSearchMeaningUnavailable));
+
+    public static string Stop => Get(nameof(Stop));
+
     public static string Saved => Get(nameof(Saved));
 
     public static string SavePermissionDenied => Get(nameof(SavePermissionDenied));

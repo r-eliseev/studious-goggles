@@ -75,6 +75,19 @@
                        Text="{Binding SearchText, Mode=TwoWay}"
                        Placeholder="{x:Static strings:AppResources.SearchSessions}"
                        SemanticProperties.Description="{x:Static strings:AppResources.SearchSessions}" />
+            <HorizontalStackLayout Spacing="8">
+                <Button StyleClass="ghost" Text="{x:Static strings:AppResources.SemanticSearchWords}"
+                        Command="{Binding SelectWordSearchCommand}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.SemanticSearchWords}" />
+                <Button StyleClass="ghost" Text="{x:Static strings:AppResources.SemanticSearchMeaning}"
+                        Command="{Binding SelectSemanticSearchCommand}"
+                        IsEnabled="{Binding CanUseSemanticSearch}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.SemanticSearchMeaning}" />
+            </HorizontalStackLayout>
+            <Label StyleClass="meta" Text="{Binding SemanticSearchUnavailableText}"
+                   IsVisible="{Binding IsSemanticMeaningUnavailable}" />
+            <Label StyleClass="meta" Text="{x:Static strings:AppResources.SemanticSearchUnavailable}"
+                   IsVisible="{Binding HasSemanticQueryError}" />
         </VerticalStackLayout>
 
         <ActivityIndicator Grid.Row="1"

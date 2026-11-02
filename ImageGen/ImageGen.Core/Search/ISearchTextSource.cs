@@ -4,4 +4,8 @@ namespace ImageGen.Core.Search;
 public interface ISearchTextSource
 {
     Task<IReadOnlyList<SearchText>> ListAllAsync(CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<SearchSource>> ListSourcesAsync(CancellationToken cancellationToken);
+
+    Task<int> CountSourcesAsync(CancellationToken cancellationToken);
 }
