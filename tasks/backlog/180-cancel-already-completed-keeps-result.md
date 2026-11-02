@@ -1,8 +1,8 @@
 ---
 id: 180
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-02T17:43:44Z
+status: done
+assignee:
+claimed:
 created: 2026-11-02
 ---
 
@@ -56,6 +56,10 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+`GenerationService` при `CancelOutcome.AlreadyCompleted` оставляет watcher активным, не меняет статус генерации и возвращает `NotActive`; обычное наблюдение сохраняет терминальный результат, изображение и цену. Добавлен тест, проверяющий сохранение результата и один вызов хранилища. В S3.5.1 спецификации и комментарии задачи 024 уточнено значение outcome.
+
+Проверки: новый тест сначала падал с `Expected: NotActive, Actual: Cancelled`, после фикса прошёл; Core.Tests — 741/741; форматирование Core и Core.Tests; `scripts/check.sh` — пройден.
 
 ## Комментарии
 
