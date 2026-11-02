@@ -1,6 +1,8 @@
 using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Models;
+using ImageGen.Core.Domain.Sessions;
+using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
@@ -8,6 +10,7 @@ using ImageGen.Presentation;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using ImageGen.Presentation.Spending;
 using ImageGen.Presentation.Tests.TestDoubles;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -178,4 +181,75 @@ public class ModelPickerPageModelTests
         await _navigation.DidNotReceive().GoBackAsync();
         await _runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task Pick_ApproximateEstimate_ShowsApproximationInSpendingConfirmation()
+    {
+        var approximateModel = TestModels.Model("vendor/approximate", "Approximate");
+        approximateModel.Prices = [new ImageModelPrice("output_image", ImagePriceUnit.Megapixel, 0.01m, null)];
+        _modelRepository.ListAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns([Alpha, Beta, Gamma, approximateModel]);
+        _provider.ListImageModelsAsync(Arg.Any<CancellationToken>()).Returns([Alpha, Beta, Gamma, approximateModel]);
+        var directory = Path.Combine(Path.GetTempPath(), "spending-picker-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var settingsFile = new SpendingSettingsFile(new TestPaths(directory), NullLogger<SpendingSettingsFile>.Instance);
+            await settingsFile.SaveAsync(new SpendingSettings(null, 0m), TestContext.Current.CancellationToken);
+            var expenses = Substitute.For<IExpenseRepository>();
+            expenses.ListAsync(Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult<IReadOnlyList<ImageGen.Core.Domain.Expenses.Expense>>([]));
+            var spending = new SpendingService(expenses, settingsFile, TimeProvider.System, TimeZoneInfo.Utc);
+            var estimator = new CostEstimator(_catalog);
+            var model = CreateModel(estimator, spending);
+            await model.OnAppearingAsync();
+
+            await model.PickCommand.ExecuteAsync(model.AllModels.Single(option => option.Id == approximateModel.Id));
+
+            await _dialogs.Received(1).ConfirmAsync(
+                AppResources.SpendingWarningTitle,
+                Arg.Is<string>(message => message.Contains("≈", StringComparison.Ordinal)),
+                AppResources.Generate,
+                AppResources.Cancel);
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void FormatEstimate_ApproximatePriceAndUnknownModel_ShowsBothIndicators()
+    {
+        var estimate = new CostEstimate(0.0105m, [Ref("vendor/unknown")], true);
+
+        var formatted = SpendingConfirmation.FormatEstimate(estimate);
+
+        Assert.Contains("≈$0.0105", formatted, StringComparison.Ordinal);
+        Assert.Contains("(+1 unknown)", formatted, StringComparison.Ordinal);
+    }
+
+    private ModelPickerPageModel CreateModel(CostEstimator estimator, SpendingService spending)
+    {
+        var model = new ModelPickerPageModel(
+            _runs,
+            _catalog,
+            _generations,
+            ProviderDoubles.BuiltInRegistry(),
+            _navigation,
+            ErrorAlerts.Create(_dialogs),
+            _dialogs,
+            estimator,
+            spending);
+        model.ApplyQueryAttributes(new Dictionary<string, object>
+        {
+            [Routes.SessionIdParameter] = SessionId.ToString("D"),
+            [Routes.GenerationIdParameter] = _source.Id.ToString("D"),
+        });
+        return model;
+    }
+
+    private sealed record TestPaths(string DataDirectory) : IAppPaths;
 }

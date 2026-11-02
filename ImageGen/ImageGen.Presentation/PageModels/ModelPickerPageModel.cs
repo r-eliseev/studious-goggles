@@ -1,12 +1,10 @@
 using System.Collections.ObjectModel;
-using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
-using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
 using ImageGen.Presentation.Spending;
 
@@ -141,24 +139,16 @@ public sealed partial class ModelPickerPageModel(
                 var source = await runs.GetGenerationAsync(_generationId, CancellationToken.None)
                     ?? throw new InvalidOperationException($"Generation {_generationId} not found.");
                 var sourceRun = await runs.GetRunAsync(source.RunId, CancellationToken.None);
-                var estimate = await costEstimator.EstimateAsync(
+                var shouldContinue = await SpendingConfirmation.ConfirmAsync(
+                    costEstimator,
+                    spendingService,
+                    dialogs,
                     [model.Reference],
-                    1,
                     sourceRun?.Parameters ?? ImageGen.Core.Domain.Sessions.GenerationParameters.Empty,
                     CancellationToken.None);
-                if (await spendingService.CheckAsync(estimate, CancellationToken.None) != SpendingWarning.None)
+                if (!shouldContinue)
                 {
-                    var amount = estimate.KnownUsd.ToString("0.####", CultureInfo.InvariantCulture);
-                    var confirmation = string.Format(CultureInfo.CurrentCulture, AppResources.SpendingConfirmationFormat, $"${amount}");
-                    var accepted = await dialogs.ConfirmAsync(
-                        AppResources.SpendingWarningTitle,
-                        confirmation,
-                        AppResources.Generate,
-                        AppResources.Cancel);
-                    if (!accepted)
-                    {
-                        return;
-                    }
+                    return;
                 }
             }
 
