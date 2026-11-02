@@ -177,7 +177,7 @@ public sealed class AssistantService(
 
             return string.IsNullOrWhiteSpace(reply.Text)
                 ? new AcceptedTurnOutcome(null, string.Empty, ErrorKind.EmptyResponse, messageCount, toolCallCount)
-                : new AcceptedTurnOutcome(null, reply.Text.Trim(), null, messageCount, toolCallCount);
+                : new AcceptedTurnOutcome(null, reply.Text.Trim(), null, messageCount, toolCallCount, reply.CostUsd);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -218,6 +218,9 @@ public sealed class AssistantService(
         assistantMessage.RunId = outcome.Run?.Id;
         assistantMessage.IsError = outcome.ErrorKind is not null;
         assistantMessage.ErrorKind = outcome.ErrorKind;
+        assistantMessage.CostUsd = outcome.CostUsd;
+        assistantMessage.ProviderId = session.Settings.AssistantModel.ProviderId;
+        assistantMessage.ModelId = session.Settings.AssistantModel.ModelId;
         await messages.AddAsync(assistantMessage, cancellationToken);
 
         try
@@ -308,7 +311,13 @@ public sealed class AssistantService(
     /// <summary>The request and its estimated size before the correction (for <see cref="TokenCorrection"/>).</summary>
     private sealed record BuiltRequest(AssistantChatRequest Request, int EstimatedTokens);
 
-    private sealed record AcceptedTurnOutcome(Run? Run, string Text, ErrorKind? ErrorKind, int MessageCount, int ToolCallCount);
+    private sealed record AcceptedTurnOutcome(
+        Run? Run,
+        string Text,
+        ErrorKind? ErrorKind,
+        int MessageCount,
+        int ToolCallCount,
+        decimal? CostUsd = null);
 
     private async Task<BuiltRequest> BuildRequestAsync(Session session, IReadOnlyList<string> userImages, CancellationToken cancellationToken)
     {

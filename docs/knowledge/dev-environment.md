@@ -36,6 +36,12 @@ dotnet run --project ImageGen/ImageGen.LiveCheck -- --budget-usd 1 --max-request
 - Сборка всего решения (`dotnet build ImageGen/ImageGen.slnx`) и `dotnet format ImageGen/ImageGen.slnx` на Linux не запускаются, потому что решение включает MAUI-проект, а без нагрузки MAUI он не загружается. Форматирование и сборка по отдельным проектам: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`.
 - В CI на ubuntu-latest установка нагрузки `maui-android` падала с «Disk quota exceeded», поэтому Android в CI собирается на Windows (`.github/workflows/build.yml`, задача `maui`). В облачной сессии Android-сборка проверена, но CI на ней не настроен.
 
+## Web-хост
+
+`ImageGen.Web` запускается на .NET 10. Для старта требуется непустой `IMAGEGEN_WEB_PASSWORD`; папка данных задаётся `IMAGEGEN_DATA_DIR` (по умолчанию `/data`) и содержит базу SQLite, зашифрованные секреты и ключи ASP.NET Core Data Protection.
+
+Локальный запуск: `IMAGEGEN_WEB_PASSWORD=test dotnet run --project ImageGen/ImageGen.Web/ImageGen.Web.csproj`. Health endpoint: `GET /api/health`. Интеграционные тесты: `dotnet test ImageGen/ImageGen.Web.Tests/ImageGen.Web.Tests.csproj`.
+
 ## Строка «Среда» в задаче
 У каждой задачи в «Описании» есть строка «Среда». Правило в `docs/tasks.md`: агент, у которого нет нужной среды, задачу не занимает.
 

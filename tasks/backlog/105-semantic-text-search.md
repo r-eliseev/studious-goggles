@@ -1,8 +1,8 @@
 ---
 id: 105
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: codex-gpt6
+claimed: 2026-11-01T20:04:09Z
 created: 2026-10-29
 ---
 
@@ -64,6 +64,12 @@ created: 2026-10-29
 Файлы: `ImageGen/ImageGen.Core/Providers/ITextEmbeddingClient.cs`, `EmbeddingResult.cs` (новые), `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Search/SearchSource.cs`, `ISearchTextSource.cs`, `SemanticIndexService.cs`, `SemanticSearchService.cs`, `SemanticIndexStatus.cs`, `Storage/ITextEmbeddingRepository.cs` (новые), `CoreServiceCollectionExtensions.cs`; `ImageGen/ImageGen.Data/Migrations/NNNN_text_embeddings.sql`, `Repositories/TextEmbeddingRepository.cs` (новые), `Repositories/SearchTextSource.cs`, `DataServiceCollectionExtensions.cs`; `ImageGen/ImageGen.Presentation/PageModels/SettingsPageModel.cs`, `SessionsPageModel.cs`, `Search/SearchSettingsFile.cs` (новый), `AppResources.resx/.cs`; `ImageGen/ImageGen.Avalonia/Views/SettingsView.axaml`, `SessionsListView.axaml`; `ImageGen/ImageGen.Maui/Pages/SettingsPage.xaml`, `Controls/SessionsListView.xaml`; тесты Core/Data/Presentation/Avalonia; `docs/decisions/0016-semantic-search.md`.
 
 ## Отчёт
+
+**Этап 1 — клиент эмбеддингов.** Добавлены `ITextEmbeddingClient` и `EmbeddingResult`; `OpenRouterClient` отправляет тексты моделью `baai/bge-m3` на `/embeddings`, проверяет число векторов, их индексы, размерность и конечность чисел. `ProviderRouter` предоставляет embedding client только для OpenRouter; неподдерживаемый провайдер даёт `ModelUnavailable`. Тестами проверены payload без дополнительных данных, сортировка по `index`, некорректные и неполные ответы, размерность, переполнение float, ошибки 401/429/5xx, отсутствие ключа и отмена.
+
+Поле `usage.cost` намеренно не преобразуется в `CostUsd`: единица для embeddings не подтверждена. Размерность реального `baai/bge-m3` не измерялась без платного живого вызова.
+
+Проверки: Core.Tests — 713/713; `dotnet format` Core и Core.Tests (`--verify-no-changes`); `scripts/check.sh`.
 
 ## Комментарии
 

@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../ImageGen.Core/ImageGen.Core.csproj" />
+    <ProjectReference Include="../ImageGen.Data/ImageGen.Data.csproj" />
+  </ItemGroup>
+</Project>

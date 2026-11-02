@@ -16,4 +16,6 @@ public interface IProviderRouter
     IModelProvider GetImageProvider(string providerId);
 
     IAssistantChatClient GetChatClient(string providerId);
+
+    ITextEmbeddingClient GetTextEmbeddingClient(string providerId);
 }

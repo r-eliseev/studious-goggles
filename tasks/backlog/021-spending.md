@@ -1,8 +1,8 @@
 ---
 id: 021
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: codex-gpt6
+claimed: 2026-11-01T19:35:51Z
 created: 2026-10-27
 ---
 
@@ -66,6 +66,10 @@ created: 2026-10-27
 Файлы: этап A — `ImageGen/ImageGen.Core/Domain/Expenses/Expense.cs`, `ExpenseKind.cs` (новые), `ImageGen/ImageGen.Core/Storage/IExpenseRepository.cs` (новый), `ImageGen/ImageGen.Core/Domain/Chat/ChatMessage.cs`, `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Data/Migrations/NNNN_expenses.sql` (новый), `ImageGen/ImageGen.Data/Repositories/ExpenseRepository.cs` (новый), `RunRepository.cs`, `ChatMessageRepository.cs`, `ImageDescriptionRepository.cs`, `ConversationSummaryRepository.cs`, `ImageGen/ImageGen.Data/DataServiceCollectionExtensions.cs`, тесты Data/Core. Этап B — `ImageGen/ImageGen.Core/Services/CostEstimator.cs`, `CostEstimate.cs`, `ImageGen/ImageGen.Presentation/Spending/SpendingSettings.cs`, `SpendingSettingsFile.cs`, `SpendingService.cs` (новые), `ChatPageModel.cs`, `GenerationItemViewModel.cs`, `ModelPickerPageModel.cs`, `AppResources.resx/.cs`, обе разметки чата. Этап C — `ImageGen/ImageGen.Presentation/PageModels/SpendingPageModel.cs`, `Routes.cs`, `SettingsPageModel.cs`, `ImageGen/ImageGen.Avalonia/Views/SpendingView.axaml(.cs)`, `ImageGen/ImageGen.Maui/Pages/SpendingPage.xaml(.cs)`, регистрация в `AppServices.cs`/`MauiProgram.cs`, документы.
 
 ## Отчёт
+
+Этап A: добавлен независимый SQLite ledger расходов без FK к сессиям и генерациям. Миграция переносит известные цены генераций, описаний и текущих сводок; добавлена цена ответа ассистента в `ChatMessage`. Запись для генерации, описания, сводки и ответа ассистента выполняется транзакционно с исходной записью и идемпотентным `operation_id`; `null` не учитывается, `0` сохраняется. Этапы B и C не входят в этот PR.
+
+Проверки: Data.Tests 109/109; Core.Tests 699/699; `dotnet format --verify-no-changes` для Core, Core.Tests, Data, Data.Tests; `scripts/check.sh`. Отличие от плана: для миграционного backfill тест создаёт схему версии 9 и legacy-строку вручную, чтобы проверить реальную миграцию без отдельного старого бинарного fixture.
 
 ## Комментарии
 

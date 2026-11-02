@@ -4,10 +4,11 @@ using ImageGen.Core.Domain.Models;
 namespace ImageGen.Core.Providers;
 
 /// <summary>Combines one synchronous image/chat client with a prepared in-memory queued adapter.</summary>
-public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelProvider, IAssistantChatClient, IQueuedImageProvider
+public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelProvider, IAssistantChatClient, IQueuedImageProvider, ITextEmbeddingClient
 {
     private readonly IModelProvider _imageProvider;
     private readonly IAssistantChatClient _chatClient;
+    private readonly ITextEmbeddingClient? _textEmbeddingClient;
     private readonly InMemoryQueuedImageProvider _queuedImages;
 
     public InMemoryQueuedImageConnection(
@@ -25,6 +26,7 @@ public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelP
 
         _imageProvider = imageProvider;
         _chatClient = chatClient;
+        _textEmbeddingClient = imageProvider as ITextEmbeddingClient ?? chatClient as ITextEmbeddingClient;
         _queuedImages = new InMemoryQueuedImageProvider(transport, providerId, timeProvider);
     }
 
@@ -48,4 +50,10 @@ public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelP
 
     public Task<IReadOnlyList<ChatModel>> ListChatModelsAsync(CancellationToken cancellationToken) =>
         _chatClient.ListChatModelsAsync(cancellationToken);
+
+    public Task<EmbeddingResult> EmbedAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken) =>
+        (_textEmbeddingClient ?? throw new ProviderException(
+            ImageGen.Core.Domain.Generations.ErrorKind.ModelUnavailable,
+            "This provider does not support text embeddings."))
+        .EmbedAsync(texts, cancellationToken);
 }

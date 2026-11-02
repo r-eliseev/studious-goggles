@@ -1,6 +1,6 @@
 # Архитектура
 
-Основной сценарий — сессии с ассистентом (`docs/specs/chat-sessions.md`, ADR 0004). Первый релиз v0.1 — ходячий скелет: только OpenRouter, только MAUI. Поверх скелета вынесен общий слой представления и добавлена оболочка Avalonia (ADR 0006): они входят в раздел «Текущая раскладка». Вместе с fal и OpenRouter встроен Together AI для генерации изображений; Web остаётся целевой раскладкой (раздел «Целевая раскладка»). Together не предлагается как модель ассистента.
+Основной сценарий — сессии с ассистентом (`docs/specs/chat-sessions.md`, ADR 0004). Первый релиз v0.1 — ходячий скелет: только OpenRouter, только MAUI. Поверх скелета вынесен общий слой представления и добавлена оболочка Avalonia (ADR 0006): они входят в раздел «Текущая раскладка». Вместе с fal и OpenRouter встроен Together AI для генерации изображений; Web-хост добавлен, браузерный интерфейс остаётся целевой частью раскладки. Together не предлагается как модель ассистента.
 
 Документ описывает задуманное устройство, а не ход работ: что уже сделано, видно по статусам задач. Правится, только когда код разошёлся с описанием (`AGENTS.md`, «Когда что обновлять»).
 
@@ -14,6 +14,8 @@ ImageGen/
   ImageGen.slnx
   ImageGen.LiveCheck/               net10.0 CLI для ограниченной по бюджету проверки живых API; использует клиентов Core и безопасный debug trace
   ImageGen.LiveCheck.Tests/         xUnit v3: аргументы, лимиты бюджета, отказ записи секретов
+  ImageGen.Web/                     ASP.NET Core minimal API host; отдельная Web-композиция Core/Data
+  ImageGen.Web.Tests/               xUnit v3 integration tests через WebApplicationFactory
   Directory.Build.props            Nullable, ImplicitUsings, TreatWarningsAsErrors
   Directory.Packages.props         все версии пакетов
   ImageGen.Core/                   net10.0, без UI и без SQLite
