@@ -107,8 +107,9 @@ dotnet run --project ImageGen/ImageGen.LiveCheck -- --budget-usd 1 --max-request
 - **MAUI, цель Android:** `dotnet build -f net10.0-android` собирает APK на свежем шаблоне `dotnet new maui`. Нужна платформа Android API 36.
 - **Android SDK:** command-line tools ставятся с `dl.google.com`, лицензии принимаются через `yes | sdkmanager --licenses`.
 - **JDK 21:** установлен, подходит для MAUI Android.
-- **Chromium через Playwright:** `require('playwright').chromium.launch()` работает без установки. Не запускать `playwright install`.
-- **Node 22, npm, Python 3.13, git 2.43, curl:** установлены; `registry.npmjs.org` и `pypi.org` доступны.
+- **Chromium через Playwright:** установленная браузерная версия зависит от образа сессии. Не запускать `playwright install`.
+- **Node/npm:** Node.js 22.12+ требуется для Vite 8 и Vitest 5; `registry.npmjs.org` доступен. В этой рабочей сессии (2026-11-02) `/usr/bin/node` был v18.19.0, поэтому Node 22.23.4 временно установлен в `tmp/node22` внутри репозитория для проверок. Бинарник браузера Playwright в `/root/.cache/ms-playwright` и `/opt` не найден, поэтому E2E нельзя запустить в этой сессии без установки браузера; проектная инструкция запрещает `playwright install`.
+- **Python 3.13, git 2.43, curl:** установлены; `pypi.org` доступен.
 - **GitHub через MCP** (`mcp__github__*`): чтение PR, check runs, комментарии, создание PR и ответы в тредах.
 - **Харнес:** `scripts/check.sh` проходит.
 

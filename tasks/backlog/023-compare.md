@@ -1,6 +1,6 @@
 ---
 id: 023
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-27
@@ -45,6 +45,14 @@ created: 2026-10-27
 Файлы: `ImageGen/ImageGen.Presentation/PageModels/ComparisonPageModel.cs`, `ComparisonMode.cs`, `ImageGen/ImageGen.Presentation/Services/IImageComparisonService.cs`, `ComparisonViewport.cs` (новые), `GenerationItemViewModel.cs`, `ChatPageModel.cs`, `AppResources.resx/.cs`; `ImageGen/ImageGen.Avalonia/Services/AvaloniaImageComparisonService.cs`, `Views/ComparisonView.axaml(.cs)` (новые), `Views/ChatView.axaml`, `Composition/AppServices.cs`; `ImageGen/ImageGen.Maui/Services/MauiImageComparisonService.cs`, `Pages/ComparisonPage.xaml(.cs)` (новые), `Pages/ChatPage.xaml`, `MauiProgram.cs`; тесты Presentation и Avalonia; `tasks/backlog/046-desktop-manual-check.md`, `tasks/backlog/140-android-manual-check.md`, `tasks/v0.1/016-skeleton-manual-check.md`.
 
 ## Отчёт
+
+Добавлен выбор второго успешного результата текущей сессии из меню карточки. Перед показом сравнения записи повторно загружаются и проверяются на существование сессии и обоих файлов; недоступность показывает сообщение и не открывает окно. Общая Presentation-модель хранит две картинки с моделью/seed/ценой, side-by-side/overlay, slider и нормализованные zoom/pan; `ComparisonViewport` сохраняет пропорции и одинаково интерпретирует сдвиг.
+
+Сравнение подключено как отдельные modal оболочки. Avalonia загружает и освобождает оба bitmap, поддерживает колесо, drag, slider и стрелки. MAUI отображает aspect-fit изображения в двух режимах, синхронно применяет pinch/pan и клипует overlay slider. Добавлены headless-тесты открытия, двух bitmap, shared zoom, переключения режима, закрытия/освобождения и ошибки отсутствующей картинки; тесты Presentation проверяют выбор только других успешных картинок и отказ при удалённом файле.
+
+Документы F6.3 и архитектура обновлены; сценарии ручной проверки добавлены в 046 (Linux/Windows desktop), 140 (Android) и 016 (MAUI Windows). Отступление от плана: визуальные элементы обеих оболочек собраны программно рядом с сервисами вместо отдельных `Views/ComparisonView.axaml` и `Pages/ComparisonPage.xaml`; это позволило держать modal lifecycle, загрузку и очистку рядом с существующими viewer services. Полный ручной прогон на устройствах здесь недоступен.
+
+Проверки: Presentation.Tests 452/452; Avalonia.Tests 152 passed, 2 skipped (DPAPI/Secret Service недоступны на Linux); Avalonia build; MAUI Android build; `dotnet format --verify-no-changes` для Presentation, Presentation.Tests, Avalonia, Avalonia.Tests и MAUI; `scripts/check.sh`. Дополнительное исправление CI задачи 021: полный timeline строится до ожидания оценки цены; целевой `ChatPageModelTests` 65/65 проходит и прежний падавший Windows `Repeat_AfterFinish_StartsSecondRun` проверен локально.
 
 ## Комментарии
 

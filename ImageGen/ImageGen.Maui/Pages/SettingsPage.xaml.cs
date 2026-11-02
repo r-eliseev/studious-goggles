@@ -21,6 +21,12 @@ public partial class SettingsPage : ContentPage
         _model.LoadCommand.ExecuteAsync(null).FireAndForgetSafeAsync();
     }
 
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        _model.OnDisappearing();
+    }
+
     /// <summary>Radio buttons have no command in MAUI: the checked one sends its theme to the page model.</summary>
     private void OnThemeChecked(object? sender, CheckedChangedEventArgs e)
     {

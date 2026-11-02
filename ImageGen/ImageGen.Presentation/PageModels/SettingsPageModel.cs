@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
+using ImageGen.Core.Search;
 using ImageGen.Core.Services;
 using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.Logging;
@@ -26,9 +27,12 @@ public sealed partial class SettingsPageModel(
     IDialogService dialogs,
     ErrorAlert errorAlert,
     ChatModelCatalogService chatModels,
-    IDefaultAssistantModel defaultAssistantModel) : ObservableObject
+    IDefaultAssistantModel defaultAssistantModel,
+    ISemanticIndexController semanticIndex,
+    IMainThread mainThread) : ObservableObject, IDisposable
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
+    private bool _listeningForSemanticStatus;
     /// <summary>The style cards; built on the first <see cref="LoadCommand"/>, because they refer to this page model.</summary>
     public ObservableCollection<StyleOptionViewModel> Styles { get; } = [];
 
@@ -39,6 +43,37 @@ public sealed partial class SettingsPageModel(
 
     [ObservableProperty]
     public partial AssistantModelOption? SelectedAssistantModel { get; set; }
+
+    [ObservableProperty]
+    public partial SemanticIndexStatus SemanticIndexStatus { get; set; } = new(false, 0, 0, SemanticIndexState.Off);
+
+    public bool IsSemanticSearchEnabled => SemanticIndexStatus.Enabled;
+
+    public bool IsSemanticIndexing => SemanticIndexStatus.State == SemanticIndexState.Indexing;
+
+    public string SemanticSearchToggleText => !IsSemanticSearchEnabled
+        ? AppResources.SemanticSearchEnable
+        : SemanticIndexStatus.State is SemanticIndexState.Failed or SemanticIndexState.Unavailable
+            ? AppResources.SemanticSearchRetry
+            : AppResources.SemanticSearchDisable;
+
+    public string SemanticSearchStatusText
+    {
+        get
+        {
+            var message = SemanticIndexStatus.State switch
+            {
+                SemanticIndexState.Off => AppResources.SemanticSearchOff,
+                SemanticIndexState.Indexing => string.Format(AppResources.SemanticSearchProgressFormat, SemanticIndexStatus.Indexed, SemanticIndexStatus.Indexed + SemanticIndexStatus.Pending),
+                SemanticIndexState.Ready => string.Format(AppResources.SemanticSearchReadyFormat, SemanticIndexStatus.Indexed),
+                SemanticIndexState.Unavailable => AppResources.SemanticSearchUnavailable,
+                _ => SemanticIndexStatus.ErrorCode == "stopped" ? AppResources.SemanticSearchStopped : AppResources.SemanticSearchFailed,
+            };
+            return SemanticIndexStatus.WarningCode == "limit_reached"
+                ? $"{message} {AppResources.SemanticSearchLimitWarning}"
+                : message;
+        }
+    }
 
 
     /// <summary>The theme in effect; the radio buttons show it. Changed through <see cref="SelectThemeCommand"/>.</summary>
@@ -59,6 +94,13 @@ public sealed partial class SettingsPageModel(
     [RelayCommand]
     private async Task LoadAsync()
     {
+        if (!_listeningForSemanticStatus)
+        {
+            semanticIndex.StatusChanged += OnSemanticIndexStatusChanged;
+            _listeningForSemanticStatus = true;
+        }
+
+        UpdateSemanticStatus(await semanticIndex.GetStatusAsync(CancellationToken.None));
         if (Styles.Count == 0)
         {
             Styles.Add(new StyleOptionViewModel(AppearanceStyle.Quiet, AppResources.StyleQuiet, AppResources.StyleQuietHint, SelectStyleAsync));
@@ -96,6 +138,89 @@ public sealed partial class SettingsPageModel(
 
     [RelayCommand]
     private Task OpenLogsAsync() => folders.OpenAsync(LogsFolder, CancellationToken.None);
+
+    [RelayCommand]
+    private Task OpenSpendingAsync() => navigation.GoToAsync(Routes.Spending);
+
+    [RelayCommand]
+    private async Task ToggleSemanticSearchAsync()
+    {
+        try
+        {
+            if (SemanticIndexStatus.Enabled
+                && SemanticIndexStatus.State is (SemanticIndexState.Failed or SemanticIndexState.Unavailable))
+            {
+                await semanticIndex.EnableAsync(CancellationToken.None);
+            }
+            else if (SemanticIndexStatus.Enabled)
+            {
+                var disable = await dialogs.ConfirmAsync(AppResources.SemanticSearchTitle, AppResources.SemanticSearchDisablePrompt,
+                    AppResources.SemanticSearchDisable, AppResources.Cancel, destructive: true);
+                if (disable)
+                {
+                    await semanticIndex.DisableAsync(CancellationToken.None);
+                }
+            }
+            else
+            {
+                var count = await semanticIndex.GetSourceCountAsync(CancellationToken.None);
+                var message = string.Format(AppResources.SemanticSearchEnablePromptFormat,
+                    Math.Min(count, SemanticIndexService.MaximumIndexedSources), count);
+                var enable = await dialogs.ConfirmAsync(AppResources.SemanticSearchTitle, message,
+                    AppResources.SemanticSearchEnable, AppResources.Cancel);
+                if (enable)
+                {
+                    await semanticIndex.EnableAsync(CancellationToken.None);
+                }
+            }
+
+            UpdateSemanticStatus(await semanticIndex.GetStatusAsync(CancellationToken.None));
+        }
+        catch (Exception exception)
+        {
+            await _errorAlert.ShowAsync(exception);
+        }
+    }
+
+    [RelayCommand]
+    private async Task StopSemanticIndexAsync()
+    {
+        try
+        {
+            await semanticIndex.StopAsync(CancellationToken.None);
+            UpdateSemanticStatus(await semanticIndex.GetStatusAsync(CancellationToken.None));
+        }
+        catch (Exception exception)
+        {
+            await _errorAlert.ShowAsync(exception);
+        }
+    }
+
+    private void OnSemanticIndexStatusChanged(object? sender, SemanticIndexStatus status) =>
+        mainThread.BeginInvokeOnMainThread(() => UpdateSemanticStatus(status));
+
+    private void UpdateSemanticStatus(SemanticIndexStatus status)
+    {
+        SemanticIndexStatus = status;
+        OnPropertyChanged(nameof(IsSemanticSearchEnabled));
+        OnPropertyChanged(nameof(IsSemanticIndexing));
+        OnPropertyChanged(nameof(SemanticSearchStatusText));
+        OnPropertyChanged(nameof(SemanticSearchToggleText));
+    }
+
+    public void Dispose()
+    {
+        OnDisappearing();
+    }
+
+    public void OnDisappearing()
+    {
+        if (_listeningForSemanticStatus)
+        {
+            semanticIndex.StatusChanged -= OnSemanticIndexStatusChanged;
+            _listeningForSemanticStatus = false;
+        }
+    }
 
     [RelayCommand]
     private async Task SaveDefaultAssistantModelAsync()

@@ -2,6 +2,7 @@ using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
+using ImageGen.Core.Search;
 using ImageGen.Core.Services;
 using ImageGen.Presentation;
 using ImageGen.Presentation.Appearance;
@@ -24,6 +25,8 @@ public sealed class SettingsPageModelTests : IDisposable
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly IProviderRouter _router = Substitute.For<IProviderRouter>();
     private readonly IDefaultAssistantModel _defaultAssistantModel = DefaultAssistantModels.Create();
+    private readonly ISemanticIndexController _semanticIndex = Substitute.For<ISemanticIndexController>();
+    private readonly IMainThread _mainThread = Substitute.For<IMainThread>();
     private readonly ProviderRegistry _registry = new([
         new ProviderConfig(ProviderIds.OpenRouter, ProviderKind.OpenRouter, "OpenRouter", new Uri("https://openrouter.ai/api/v1/"), TimeSpan.FromSeconds(10), []),
         new ProviderConfig(ProviderIds.Fal, ProviderKind.Fal, "fal.ai", new Uri("https://queue.fal.run/"), TimeSpan.FromSeconds(10), []),
@@ -37,6 +40,9 @@ public sealed class SettingsPageModelTests : IDisposable
         Directory.CreateDirectory(_directory);
         _keyService = new ApiKeyService(_router, _secrets, NullLogger<ApiKeyService>.Instance);
         _appearance = new AppearanceService(new TestPaths(_directory), NullLogger<AppearanceService>.Instance);
+        _semanticIndex.GetStatusAsync(Arg.Any<CancellationToken>()).Returns(new SemanticIndexStatus(false, 0, 0, SemanticIndexState.Off));
+        _semanticIndex.GetSourceCountAsync(Arg.Any<CancellationToken>()).Returns(0);
+        _mainThread.When(thread => thread.BeginInvokeOnMainThread(Arg.Any<Action>())).Do(call => call.Arg<Action>().Invoke());
     }
 
     public void Dispose()
@@ -139,6 +145,23 @@ public sealed class SettingsPageModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ToggleSemanticSearch_ConfirmsTextCountBeforeEnabling()
+    {
+        _semanticIndex.GetSourceCountAsync(Arg.Any<CancellationToken>()).Returns(13);
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+        var model = CreateModel();
+
+        await model.ToggleSemanticSearchCommand.ExecuteAsync(null);
+
+        await _semanticIndex.Received(1).EnableAsync(Arg.Any<CancellationToken>());
+        await _dialogs.Received(1).ConfirmAsync(
+            AppResources.SemanticSearchTitle,
+            Arg.Is<string>(message => message.Contains("13 of 13", StringComparison.Ordinal) && message.Contains("paid", StringComparison.Ordinal)),
+            AppResources.SemanticSearchEnable,
+            AppResources.Cancel);
+    }
+
+    [Fact]
     public async Task ProviderChangeCommand_NavigatesWithProviderId()
     {
         var model = CreateModel();
@@ -220,7 +243,8 @@ public sealed class SettingsPageModelTests : IDisposable
     }
 
     private SettingsPageModel CreateModel() => new(_appearance, _keyService, _registry, _navigation, _folders, new TestPaths(_directory), _dialogs,
-        ErrorAlerts.Create(_dialogs), new ChatModelCatalogService(_router, NullLogger<ChatModelCatalogService>.Instance), _defaultAssistantModel);
+        ErrorAlerts.Create(_dialogs), new ChatModelCatalogService(_router, NullLogger<ChatModelCatalogService>.Instance), _defaultAssistantModel,
+        _semanticIndex, _mainThread);
 
     private sealed record TestPaths(string DataDirectory) : IAppPaths;
 }

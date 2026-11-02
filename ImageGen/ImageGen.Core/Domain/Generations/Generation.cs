@@ -39,6 +39,9 @@ public sealed class Generation
 
     public DateTimeOffset? CompletedAt { get; set; }
 
+    /// <summary>When the user requested remote cancellation that the provider cannot yet confirm.</summary>
+    public DateTimeOffset? CancelRequestedAt { get; set; }
+
     /// <summary>Order inside the run, starting at 0.</summary>
     public required int SortOrder { get; set; }
 

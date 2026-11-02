@@ -55,7 +55,8 @@ public class ChatViewStyleTests
 
         var runBorder = view.GetVisualDescendants().OfType<Border>()
             .First(border => border.Child is StackPanel panel
-                && panel.Children.OfType<TextBlock>().Any(text => text.Text?.Contains("done", StringComparison.Ordinal) == true));
+                && panel.Children.OfType<StackPanel>().Any(header => header.Children.OfType<TextBlock>()
+                    .Any(text => text.Text?.Contains("done", StringComparison.Ordinal) == true)));
 
         Assert.True(runBorder.BorderThickness.Top > 0);
     }

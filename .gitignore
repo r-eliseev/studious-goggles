@@ -8,6 +8,10 @@
 bin/
 obj/
 .vs/
+**/node_modules/
+**/test-results/
+**/playwright-report/
+ImageGen/ImageGen.Web/wwwroot/
 
 # Временные файлы агентов и людей
 /tmp/

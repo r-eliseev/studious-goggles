@@ -25,6 +25,8 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     private readonly Func<GenerationItemViewModel, Task> _edit;
     private readonly Func<GenerationItemViewModel, DescriptionMode, Task> _describe;
     private readonly Func<GenerationItemViewModel, Task> _otherModel;
+    private readonly Func<GenerationItemViewModel, Task>? _compare;
+    private readonly Func<GenerationItemViewModel, Task>? _cancel;
     private string _mediaType = "image/png";
     private string _generationImagePath = "";
 
@@ -38,7 +40,9 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         Func<GenerationItemViewModel, Task> newSeed,
         Func<GenerationItemViewModel, Task> edit,
         Func<GenerationItemViewModel, DescriptionMode, Task> describe,
-        Func<GenerationItemViewModel, Task> otherModel)
+        Func<GenerationItemViewModel, Task> otherModel,
+        Func<GenerationItemViewModel, Task>? compare = null,
+        Func<GenerationItemViewModel, Task>? cancel = null)
     {
         ArgumentNullException.ThrowIfNull(generation);
         ArgumentNullException.ThrowIfNull(files);
@@ -58,12 +62,20 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         _edit = edit;
         _describe = describe;
         _otherModel = otherModel;
+        _compare = compare;
+        _cancel = cancel;
         Id = generation.Id;
+        ProviderId = generation.ProviderId;
+        ModelId = generation.ModelId;
         Prompt = generation.Prompt;
         Update(generation);
     }
 
     public Guid Id { get; }
+
+    public string ProviderId { get; }
+
+    public string ModelId { get; }
 
     /// <summary>Exact prompt sent to the model.</summary>
     public string Prompt { get; }
@@ -73,6 +85,12 @@ public sealed partial class GenerationItemViewModel : ObservableObject
 
     [ObservableProperty]
     public partial string StatusText { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string CancellationStatusText { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool HasCancellationStatus { get; set; }
 
     /// <summary>Model, seed (or "seed not supported") and price when known.</summary>
     [ObservableProperty]
@@ -157,6 +175,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CompareCommand))]
     public partial bool HasImage { get; set; }
 
     /// <summary>Caption of the save action in this shell (task 080).</summary>
@@ -180,7 +199,12 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     public partial bool IsFailedOrFiltered { get; set; }
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CancelCommand))]
     public partial bool IsRunning { get; set; }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CancelCommand))]
+    public partial bool IsCancelRequested { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RepeatCommand))]
@@ -218,6 +242,20 @@ public sealed partial class GenerationItemViewModel : ObservableObject
                 await _dialogs.AlertAsync(AppResources.ErrorTitle, AppResources.SaveFailed);
                 break;
         }
+    }
+
+    [RelayCommand(CanExecute = nameof(HasImage))]
+    private Task CompareAsync() => _compare?.Invoke(this) ?? Task.CompletedTask;
+
+    [RelayCommand(CanExecute = nameof(CanCancel))]
+    private Task CancelAsync() => _cancel?.Invoke(this) ?? Task.CompletedTask;
+
+    private bool CanCancel() => IsRunning && !IsCancelRequested;
+
+    public void SetCancellationFailed()
+    {
+        CancellationStatusText = AppResources.CancelFailed;
+        HasCancellationStatus = true;
     }
 
     /// <summary>Describes this picture (task 019): the text is shown, and it goes into the input field only on the user's action.</summary>
@@ -261,6 +299,10 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         if (HasImage)
         {
             actions.Add((SaveLabel, card => card.SaveAsync()));
+            if (_compare is not null)
+            {
+                actions.Add((AppResources.Compare, card => card._compare!(card)));
+            }
         }
 
         if (IsFailedOrFiltered)
@@ -333,6 +375,17 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         ImageFilePath = HasImage ? _files.GetFullPath(generation.ImagePath!) : "";
         _mediaType = generation.MediaType ?? "image/png";
         IsRunning = generation.Status is GenerationStatus.Queued or GenerationStatus.Running;
+        IsCancelRequested = IsRunning && generation.CancelRequestedAt is not null;
+        if (generation.IsFinished || (!IsCancelRequested && CancellationStatusText != AppResources.CancelFailed))
+        {
+            CancellationStatusText = "";
+            HasCancellationStatus = false;
+        }
+        else if (IsCancelRequested)
+        {
+            CancellationStatusText = AppResources.CancelRequested;
+            HasCancellationStatus = true;
+        }
         IsFinished = generation.IsFinished;
         UpdateSummaryText();
     }

@@ -121,7 +121,11 @@
                                 CornerRadius="{DynamicResource IgRadiusMd}"
                                 Margin="0,4">
                             <StackPanel Spacing="8">
-                                <TextBlock Classes="meta" Text="{Binding HeaderText}" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Classes="meta" Text="{Binding HeaderText}" VerticalAlignment="Center" />
+                                    <Button Classes="ghost small" Content="{markup:Res CancelRun}" Command="{Binding CancelRunCommand}"
+                                            IsVisible="{Binding HasActiveGenerations}" AutomationProperties.Name="{markup:Res CancelRun}" />
+                                </StackPanel>
                                 <Border Background="{DynamicResource IgPromptBackgroundBrush}"
                                         Padding="{DynamicResource IgPromptPadding}"
                                         CornerRadius="{DynamicResource IgRadiusSm}">
@@ -163,6 +167,7 @@
                                                         <MenuItem Header="{markup:Res ActionPromptFromImage}" Command="{Binding DescribePromptCommand}" />
                                                         <MenuItem Header="{markup:Res CopyPrompt}" Command="{Binding CopyPromptCommand}" InputGesture="Ctrl+C" />
                                                         <MenuItem Header="{markup:Res SaveImageAs}" Command="{Binding SaveCommand}" IsVisible="{Binding HasImage}" InputGesture="Ctrl+S" />
+                                                        <MenuItem Header="{markup:Res Compare}" Command="{Binding CompareCommand}" IsVisible="{Binding HasImage}" />
                                                         <MenuItem Header="{markup:Res OtherModel}" Command="{Binding OtherModelCommand}" IsVisible="{Binding IsFailedOrFiltered}" />
                                                         <MenuItem Header="{markup:Res ErrorDetailsTitle}" Command="{Binding DetailsCommand}" IsVisible="{Binding IsFailed}" />
                                                     </ContextMenu>
@@ -265,6 +270,11 @@
                                                             HorizontalAlignment="Left">
                                                         <TextBlock Classes="meta" Text="{Binding StatusText}" Foreground="{DynamicResource IgFgBrush}" />
                                                     </Border>
+                                                    <Button Classes="ghost small" Content="{markup:Res Cancel}" Command="{Binding CancelCommand}"
+                                                            IsVisible="{Binding IsRunning}" HorizontalAlignment="Left"
+                                                            AutomationProperties.Name="{markup:Res Cancel}" />
+                                                    <TextBlock Classes="meta" Text="{Binding CancellationStatusText}" IsVisible="{Binding HasCancellationStatus}"
+                                                               TextWrapping="Wrap" AutomationProperties.Name="{Binding CancellationStatusText}" />
 
                                                     <!-- Full meta block (model, seed, cost, time). -->
                                                     <StackPanel Spacing="2" IsVisible="{DynamicResource IgCardShowFullMeta}">
@@ -403,6 +413,10 @@
                         </DataTemplate>
                     </ItemsControl.DataTemplates>
                 </ItemsControl>
+                <TextBlock Classes="meta"
+                           IsVisible="{Binding HasNextRunEstimate}"
+                           Text="{Binding NextRunEstimateText}"
+                           AutomationProperties.Name="{Binding NextRunEstimateText}" />
                 <TextBox Name="Input"
                          Text="{Binding InputText, Mode=TwoWay}"
                          AcceptsReturn="True"

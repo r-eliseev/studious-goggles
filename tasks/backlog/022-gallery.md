@@ -1,6 +1,6 @@
 ---
 id: 022
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-10-27
@@ -54,6 +54,12 @@ UI надо делать в двух оболочках через общую Pa
 Файлы: `ImageGen/ImageGen.Core/Storage/IGalleryRepository.cs`, `ImageGen/ImageGen.Core/Domain/Gallery/GalleryQuery.cs`, `GalleryPage.cs`, `GalleryItem.cs`, `GalleryCursor.cs` (новые); `ImageGen/ImageGen.Data/Migrations/NNNN_gallery_index.sql`, `ImageGen/ImageGen.Data/Repositories/GalleryRepository.cs` (новые), `DataServiceCollectionExtensions.cs`; `ImageGen/ImageGen.Presentation/PageModels/GalleryPageModel.cs`, `GalleryItemViewModel.cs` (новые), `Routes.cs`, `SessionsPageModel.cs`, `AppResources.resx/.cs`; `ImageGen/ImageGen.Avalonia/Views/GalleryView.axaml(.cs)`, `Converters/ThumbnailConverter.cs`, `Services/Navigation/PageRoutes.cs`, `Views/SessionsListView.axaml`, `Composition/AppServices.cs`; `ImageGen/ImageGen.Maui/Pages/GalleryPage.xaml(.cs)`, `Controls/SessionsListView.xaml`, `MauiProgram.cs`; тесты Data/Presentation/Avalonia.
 
 ## Отчёт
+
+Добавлен глобальный репозиторий галереи с keyset-пагинацией по `(completed_at, id)`, фильтрами модели и дат, индексом SQLite и выборкой только успешных генераций с файлом. PageModel сбрасывает курсор и игнорирует устаревшие ответы при смене фильтров, догружает страницы и показывает понятное состояние для отсутствующей картинки или удалённой сессии. Добавлены виртуализированная галерея MAUI (`CollectionView`) и Avalonia (`ListBox` с ограниченным декодированием миниатюр), переход из списка сессий и открытие исходной сессии.
+
+Проверки: Data.Tests 115/115; Presentation.Tests 445/445; Avalonia.Tests 150 passed, 2 skipped (платформенные хранилища секретов недоступны в Linux); Avalonia и MAUI Android builds; `dotnet format --verify-no-changes` по изменённым проектам; `scripts/check.sh`. Однократный полный Avalonia-прогон локально упал на несвязанном ChatFlow test; повторный полный прогон прошёл. Windows UI и ручной MAUI просмотр недоступны в текущей Linux-среде.
+
+Этапы A и B сведены в общий PR по прямому указанию владельца собрать задачи в одном PR; отдельный промежуточный PR для данных не создавался.
 
 ## Комментарии
 

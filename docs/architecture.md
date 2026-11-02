@@ -25,10 +25,11 @@ ImageGen/
     Domain/Keys/                   ApiKeyStatus, SecretNames (ключ по провайдеру)
     Domain/Models/                 ImageModel, ChatModel, ImageModelPrice, ImagePriceUnit (цена из каталога), ModelRef (ссылка «провайдер:модель»), ModelParameter, ParameterKind
     Domain/Descriptions/           описания картинок (ADR 0013)
+    Domain/Gallery/                GalleryItem, GalleryQuery, GalleryCursor, GalleryPage
     Platform/                      ISecretStore, IAppPaths
     Storage/                       ISessionRepository, IChatMessageRepository, IRunRepository, IConversationSummaryRepository,
                                    IImageModelRepository (кэш по провайдеру), IImageFileStore, IChatAttachmentRepository,
-                                   IImageDescriptionRepository
+                                   IImageDescriptionRepository, IGalleryRepository
     Providers/                     ProviderIds, ProviderResponseLimits, BoundedHttpContentReader, BoundedBase64ImageDecoder, ProviderConfig, ProviderKind, ConfiguredImageModel, ConfiguredChatModel, ProviderConfigLoader (встроенный
                                    builtin-providers.json и providers.json в DataDirectory), ProviderRegistry (проверка),
                                    IProviderRouter / ProviderRouter (клиент по id провайдера), ProviderClientBase (HTTP,
@@ -51,34 +52,36 @@ ImageGen/
                                    ConversationSummaryService (сводка старой истории в фоне; одна задача на сессию),
                                    AttachmentService (вложения, ADR 0012), ImageDescriptionService (ADR 0013),
                                    ChatModelCatalogService (модели ассистента), GenerationParameterPlanner (ADR 0011)
-    Search/                        SessionSearchService (поиск по названиям, промптам и описаниям), FuzzyMatcher (нечёткие
-                                   совпадения слов), ISearchTextSource (тексты всех сессий; реализация в Data)
+    Search/                        SessionSearchService (поиск по названиям, промптам и описаниям), SemanticSearchService
+                                   (cosine ranking), SemanticIndexService (opt-in, progress and refresh), FuzzyMatcher,
+                                   ISearchTextSource, SearchSource, ITextEmbeddingRepository
     Context/                       ContextBudget (бюджет истории), ContextBuilder (выбор сообщений), TokenEstimator,
                                    TokenCorrection (поправка по usage), SummaryPlanner и SummaryPlan (когда и что сводить, C3)
     Serialization/                 CoreJsonContext
     CoreServiceCollectionExtensions.cs   AddImageGenCore()
-  ImageGen.Data/                   net10.0, Microsoft.Data.Sqlite, MetadataExtractor (ADR 0021): SqliteDatabase, Migrations,
-                                   репозитории, FileImageStore (чтение размеров из заголовков файла в ограниченном фоне),
+  ImageGen.Data/                   net10.0, Microsoft.Data.Sqlite, MetadataExtractor (ADR 0021): SqliteDatabase, Migrations (индекс и keyset-запрос галереи),
+                                   репозитории, включая SQLite BLOB хранилище text embeddings,
+                                   FileImageStore (чтение размеров из заголовков файла в ограниченном фоне),
                                    DataServiceCollectionExtensions (AddImageGenData())
   ImageGen.Core.Tests/             xUnit v3 + NSubstitute
   ImageGen.Data.Tests/             xUnit v3, временная БД в файле
-  ImageGen.Presentation/           net10.0, CommunityToolkit.Mvvm: PageModels/, Services/ (INavigationService, IDialogService, IImageViewerService, ImageViewerNavigationState, ImageViewerHitTest, IFolderLauncher, ICurrentSessionTracker, CurrentSessionTracker,
+  ImageGen.Presentation/           net10.0, CommunityToolkit.Mvvm: PageModels/, Search/SearchSettingsFile (opt-in в search.json), Services/ (INavigationService, IDialogService, IImageViewerService, IImageComparisonService, ImageViewerNavigationState, ImageViewerHitTest, IFolderLauncher, ICurrentSessionTracker, CurrentSessionTracker,
                                    IMainThread, ISecretPersistence, AppInitializer, буфер обмена, выбор файлов, сохранение картинок), Routes,
                                    Utilities/, Resources/Strings/ (AppResources.resx), Appearance/ (стиль и тема, AppearanceService),
-                                   Logging/ (файловый журнал, FileDebugTrace)
+                                   Logging/ (файловый журнал, FileDebugTrace); PageModels/ включает галерею и расходы
   ImageGen.Presentation.Tests/     xUnit v3 + NSubstitute: модели страниц, маршруты, строки, архитектурный тест
   ImageGen.Avalonia/               десктоп (Avalonia 12.1, WinExe): App, Views/ (MainWindow, SessionsView, SessionsListView,
-                                   ApiKeyView, ChatView, SessionModelsView, SessionParametersView, ModelPickerView, SettingsView,
-                                   StarterExamples), Themes/ (стили по макетам), Composition/AppServices, Converters/ (FilePathToBitmap),
+                                   ApiKeyView, ChatView, SessionModelsView, SessionParametersView, ModelPickerView, SettingsView, GalleryView, SpendingView,
+                                   StarterExamples), Themes/ (стили по макетам), Composition/AppServices, Converters/ (FilePathToBitmap, ThumbnailConverter),
                                    Markup/ (расширение строк), Platform/ (DesktopAppPaths, InMemorySecretStore), Services/
                                    (AvaloniaMainThread, AvaloniaDialogService, буфер, выбор файлов, сохранение картинок,
-                                   AvaloniaAppearanceApplier, AvaloniaImageViewerService, AvaloniaFullScreenController, AvaloniaFolderLauncher, Logging/, Navigation/ — стек страниц и маршруты),
+                                   AvaloniaAppearanceApplier, AvaloniaImageViewerService, AvaloniaImageComparisonService, AvaloniaFullScreenController, AvaloniaFolderLauncher, Logging/, Navigation/ — стек страниц и маршруты),
                                    Services/Secrets/ (DesktopSecretStore и бэкенды: SecretServiceBackend для Linux,
                                    DpapiSecretBackend для Windows, KeychainSecretBackend для macOS; ADR 0008)
   ImageGen.Avalonia.Tests/         headless (Avalonia.Headless.XUnit), xunit.v3 3.2.2 (ADR 0007)
-  ImageGen.Maui/                   MAUI: Pages/, Controls/ (SessionsListView, StarterExamples, ChatEditor, SessionModelsView — общий экран моделей страницы и панели), PageModels/ (только
+  ImageGen.Maui/                   MAUI: Pages/ (включая GalleryPage и SpendingPage), Controls/ (SessionsListView, StarterExamples, ChatEditor, SessionModelsView — общий экран моделей страницы и панели), PageModels/ (только
                                    ChatItemTemplateSelector), Services/ (MauiSecretStore, MauiAppPaths, MauiMainThread,
-                                   Shell-реализации, буфер, выбор файлов, MauiImageSaver, MauiAppearanceApplier, MauiImageViewerService, MauiFullScreenController, MauiFolderLauncher, MauiSecretPersistence), Converters/,
+                                   Shell-реализации, буфер, выбор файлов, MauiImageSaver, MauiAppearanceApplier, MauiImageViewerService, MauiImageComparisonService, MauiFullScreenController, MauiFolderLauncher, MauiSecretPersistence), Converters/,
                                    Platforms/
 ```
 
@@ -98,6 +101,8 @@ ImageGen/
 
 **Прогон.** `GenerationService` берёт модели и N из настроек сессии, выбирает N сидов (`ISeedSource`), создаёт генерации «модель × сид» в статусе «в очереди» одной транзакцией и запускает их параллельно: не более 4 локально отслеживаемых jobs на provider id. Provider A не блокирует provider B. Все провайдеры проходят общий путь: `IQueuedImageProvider.SubmitAsync` → сохранённый в БД хэндл → `ProviderJobPoller` → терминальное состояние → файл через `IImageFileStore`, запись в БД и событие `GenerationUpdated`. Fal хранит удалённый хэндл и продолжает polling после перезапуска. OpenRouter и OpenAI-совместимые клиенты выполняют синхронный HTTP transport (`ISynchronousImageTransport`) внутри `InMemoryQueuedImageProvider`; их handle живёт только в памяти процесса, поэтому после перезапуска генерация прерывается без повторного submit. Локальный адаптер быстро опрашивается (50–250 мс), native provider — с интервалом 1–5 секунд. Лимит provider slot удерживается до terminal status; при удалении сессии локальный adapter также ожидает завершения отменённого transport. Если remote cancel не удался, лимит гарантирует только локально отслеживаемую работу, а не остановку удалённой операции. Ошибка polling завершает генерацию: «Moderated» — «отфильтровано», остальные ошибки провайдера — «ошибка» с его кодом. Ошибка записи результата в файл завершает генерацию с кодом `ImageSaveFailed`; ошибка записи terminal state в БД не подменяется этим кодом и остаётся ошибкой persistence. Отказ модерации (403 с `metadata.reasons`) → «отфильтровано».
 
+**Пользовательская отмена.** `GenerationService` адресует активные задачи из того же реестра `_running`, ждёт завершения submit, затем отправляет один remote cancel с отдельным timeout. Отказ до submit прекращает локальное выполнение без запроса провайдеру. Подтверждённая отмена сериализуется с polling/сохранением результата: побеждает первый записанный terminal state. `CancellationRequested` сохраняется в `cancel_requested_at`, оставляет watcher и слот активными до результата; отметка остаётся в записи при последующем успехе. UI позволяет отменить карточку или все активные карточки прогона и показывает незавершённый запрос и ошибки отмены.
+
 **Обновление экрана.** `ChatPageModel` после каждого своего действия перечитывает ленту сессии (`SessionService.GetTimelineAsync`), а событие `GenerationUpdated` обновляет одну карточку в UI-потоке (`IMainThread.BeginInvokeOnMainThread`; реализации `MauiMainThread` и `AvaloniaMainThread`). `SessionService` и `GenerationService` сообщают об изменении сессии через `SessionChangeNotifier`, и `SessionsPageModel` перечитывает одну сессию и обновляет её строку в UI-потоке.
 
 **Удаление сессии.** `SessionService` вызывает `ISessionGenerationCoordinator` до удаления записей и файлов; в production этот интерфейс и `GenerationService` разрешаются одним singleton instance. До начала остановки проверяется cancellation caller-а. Остановка отменяет локальные tokens и ждёт submit phases; для уже известных queued jobs запрашивается remote cancel с timeout провайдера. Remote cancel является best effort: при ошибке провайдерская операция может продолжиться. После остановки локальные записи гарантированно прекращены, затем удаляются строки БД и каталог файлов и отправляется уведомление об изменении сессии. Cleanup выполняется с `CancellationToken.None`; ошибка шага останавливает цепочку, повторное удаление может продолжить идемпотентную очистку. Задача, которую процесс ещё не зарегистрировал, этим механизмом не отменяется.
@@ -105,7 +110,7 @@ ImageGen/
 ## Скелет v0.1: хранение
 SQLite-файл `imagegen.db` в `IAppPaths.DataDirectory`, схема в `ImageGen.Data/Migrations/NNNN_имя.sql` — встроенные ресурсы, применяются по номеру без списка в коде (`Migrations.cs`, ADR 0002). Картинки: `images/<sessionId>/<generationId>.<ext>` в той же папке; в БД хранится относительный путь. Вложения сообщений (картинки, которые пользователь прикрепил в чате, ADR 0012) лежат в `images/<sessionId>/attachments/<attachmentId>.<ext>`, строки в `chat_attachments`. Ключи провайдеров хранятся только за `ISecretStore` (`SecretNames.ForProvider`) и в открытом виде не попадают ни в БД, ни в настройки, ни в файлы: в MAUI — `SecureStorage` (`MauiSecretStore`), в Avalonia — `DesktopSecretStore` (Secret Service на Linux, DPAPI на Windows, Keychain на macOS; без них — только в памяти до выхода, ADR 0008).
 
-Известное упрощение скелета: удаление сессии удаляет её генерации вместе с ценами. Правило ADR 0002 «удаление картинки не удаляет запись о расходах» вводится вместе с учётом расходов (backlog).
+Расходы хранятся в независимом ledger `expenses` без внешнего ключа на сессию или генерацию. Операция имеет стабильный `operation_id` и записывается в транзакции вместе с исходными данными; повторное сохранение обновляет ту же запись. Известные цены суммируются, неизвестные остаются неизвестными и считаются по ещё существующим исходным строкам. Поэтому удаление сессии или картинки не меняет журнал, но удаление исходных строк ограничивает доступность статистики по неизвестным ценам.
 
 ## Целевая раскладка (после скелета)
 ```
@@ -119,6 +124,7 @@ ImageGen.Web/ClientApp   Vue 3 + Vite + TypeScript
 ImageGen.Web.Tests
 Dockerfile, docker-compose.yml   том /data
 ```
+- Vue-клиент обращается только к same-origin `/api`: `WebApiClient` добавляет antiforgery token к изменяющим запросам, а provider key остаётся только в памяти формы до отправки. `vue-router` ведёт список сессий, чат, модели и настройки; SSE-события сливаются по id генерации, `resync` и переподключение перечитывают timeline.
 - Provider connections retain catalog/key/chat responsibilities; synchronous image HTTP calls are transport-only and wrapped by `InMemoryQueuedImageProvider` before orchestration sees them. ADR 0020 replaces ADR 0005's proposed OpenRouter-specific runner with this shared adapter for OpenRouter and OpenAI-compatible clients.
 - События: для Web подписка через `Channel` вместо события .NET.
 - Web: однопользовательский, пароль из переменной окружения, cookie-сессия; секреты в файле под Data Protection; ключи шифрования и данные в томе Docker.

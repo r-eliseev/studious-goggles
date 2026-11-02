@@ -1,6 +1,7 @@
 using CommunityToolkit.Maui;
 using ImageGen.Core;
 using ImageGen.Core.Platform;
+using ImageGen.Core.Search;
 using ImageGen.Core.Services;
 using ImageGen.Data;
 using ImageGen.Maui.Pages;
@@ -9,8 +10,10 @@ using ImageGen.Presentation;
 using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.Logging;
 using ImageGen.Presentation.PageModels;
+using ImageGen.Presentation.Search;
 using ImageGen.Presentation.Services;
 using ImageGen.Presentation.Settings;
+using ImageGen.Presentation.Spending;
 using ImageGen.Presentation.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -79,10 +82,19 @@ public static class MauiProgram
         builder.Services.AddSingleton<IMainThread, MauiMainThread>();
         builder.Services.AddSingleton<IFilePickerService, MauiFilePickerService>();
         builder.Services.AddSingleton<AppearanceService>();
+        builder.Services.AddSingleton<SpendingSettingsFile>();
+        builder.Services.AddSingleton<SpendingService>();
+        builder.Services.AddSingleton<SearchSettingsFile>();
+        builder.Services.AddSingleton<ImageGen.Core.Search.ISemanticSearchSettingsStore>(sp => sp.GetRequiredService<SearchSettingsFile>());
+        builder.Services.AddSingleton<SemanticIndexService>();
+        builder.Services.AddSingleton<SemanticSearchService>();
+        builder.Services.AddSingleton<ISemanticIndexStatusProvider>(sp => sp.GetRequiredService<SemanticIndexService>());
+        builder.Services.AddSingleton<ISemanticIndexController>(sp => sp.GetRequiredService<SemanticIndexService>());
         builder.Services.AddSingleton<MauiAppearanceApplier>();
         builder.Services.AddSingleton<IClipboardService, MauiClipboardService>();
         builder.Services.AddSingleton<IImageSaver, MauiImageSaver>();
         builder.Services.AddSingleton<IImageViewerService, MauiImageViewerService>();
+        builder.Services.AddSingleton<IImageComparisonService, MauiImageComparisonService>();
 #if ANDROID
         builder.Services.AddSingleton<IMauiFullScreenController, ImageGen.Maui.Platforms.Android.AndroidFullScreenController>();
 #elif WINDOWS
@@ -104,6 +116,8 @@ public static class MauiProgram
         builder.Services.AddTransientWithShellRoute<SessionParametersPage, SessionParametersPageModel>(Routes.SessionParameters);
         builder.Services.AddTransientWithShellRoute<ModelPickerPage, ModelPickerPageModel>(Routes.ModelPicker);
         builder.Services.AddTransientWithShellRoute<SettingsPage, SettingsPageModel>(Routes.Settings);
+        builder.Services.AddTransientWithShellRoute<SpendingPage, SpendingPageModel>(Routes.Spending);
+        builder.Services.AddTransientWithShellRoute<GalleryPage, GalleryPageModel>(Routes.Gallery);
         // The chat side pane (wide window) creates a fresh page model each time it opens.
         builder.Services.AddSingleton<Func<SessionModelsPageModel>>(sp => sp.GetRequiredService<SessionModelsPageModel>);
         builder.Services.AddSingleton<Func<SessionParametersPageModel>>(sp => sp.GetRequiredService<SessionParametersPageModel>);

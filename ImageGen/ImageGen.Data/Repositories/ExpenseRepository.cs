@@ -6,6 +6,22 @@ namespace ImageGen.Data.Repositories;
 
 public sealed class ExpenseRepository(SqliteDatabase database) : IExpenseRepository
 {
+    public async Task<int> CountUnknownAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken)
+    {
+        await using var connection = await database.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT
+                (SELECT COUNT(*) FROM generations WHERE cost_usd IS NULL AND created_at >= @from AND created_at < @to) +
+                (SELECT COUNT(*) FROM chat_messages WHERE role = 1 AND provider_id IS NOT NULL AND cost_usd IS NULL AND created_at >= @from AND created_at < @to) +
+                (SELECT COUNT(*) FROM image_descriptions WHERE cost_usd IS NULL AND created_at >= @from AND created_at < @to) +
+                (SELECT COUNT(*) FROM conversation_summaries WHERE cost_usd IS NULL AND created_at >= @from AND created_at < @to);
+            """;
+        command.Parameters.AddWithValue("@from", SqliteValues.FromDate(from));
+        command.Parameters.AddWithValue("@to", SqliteValues.FromDate(to));
+        return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken), System.Globalization.CultureInfo.InvariantCulture);
+    }
+
     public async Task<IReadOnlyList<Expense>> ListAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken)
     {
         await using var connection = await database.OpenAsync(cancellationToken);

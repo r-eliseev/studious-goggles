@@ -1,0 +1,18 @@
+services:
+  imagegen:
+    image: imagegen-web:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      IMAGEGEN_DATA_DIR: /data
+      IMAGEGEN_WEB_PASSWORD: ${IMAGEGEN_WEB_PASSWORD:?Set IMAGEGEN_WEB_PASSWORD before starting}
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - imagegen-data:/data
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+volumes:
+  imagegen-data:

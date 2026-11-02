@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels"
+             xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
+             x:Class="ImageGen.Maui.Pages.SpendingPage"
+             x:DataType="pm:SpendingPageModel"
+             SafeAreaEdges="All"
+             Title="{x:Static strings:AppResources.SpendingTitle}">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+            <Label StyleClass="section" Text="{x:Static strings:AppResources.SpendingPeriod}" />
+            <Picker ItemsSource="{Binding Periods}" SelectedItem="{Binding SelectedPeriod, Mode=TwoWay}"
+                    SemanticProperties.Description="{x:Static strings:AppResources.SpendingPeriod}"
+                    SelectedIndexChanged="OnPeriodChanged" />
+            <Label StyleClass="section" Text="{x:Static strings:AppResources.SpendingTotal}" />
+            <Label FontSize="24" Text="{Binding TotalText}" />
+            <Label StyleClass="meta" Text="{Binding UnknownOperationsText}" />
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Groups}" Spacing="6">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="pm:SpendingGroup">
+                        <Border StyleClass="card" Padding="12" StrokeThickness="1">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                                <Label Text="{Binding ProviderId}" FontAttributes="Bold" />
+                                <Label Grid.Column="1" Text="{Binding TotalUsd, StringFormat='{0:C}'}" />
+                                <Label Grid.Row="1" StyleClass="meta" Text="{Binding ModelId}" />
+                                <Label Grid.Row="1" Grid.Column="1" StyleClass="meta" Text="{Binding Operations}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+            <Label StyleClass="section" Text="{x:Static strings:AppResources.SpendingMonthlyLimit}" />
+            <Entry Text="{Binding MonthlyLimitText}" Keyboard="Numeric" SemanticProperties.Description="{x:Static strings:AppResources.SpendingMonthlyLimit}" />
+            <Label StyleClass="section" Text="{x:Static strings:AppResources.SpendingExpensiveThreshold}" />
+            <Entry Text="{Binding ExpensiveRunThresholdText}" Keyboard="Numeric" SemanticProperties.Description="{x:Static strings:AppResources.SpendingExpensiveThreshold}" />
+            <Label StyleClass="danger" Text="{Binding ErrorText}" />
+            <Button StyleClass="primary" Text="{x:Static strings:AppResources.SpendingSave}" Command="{Binding SaveSettingsCommand}" />
+            <Button StyleClass="ghost" Text="{x:Static strings:AppResources.SpendingBack}" Command="{Binding BackCommand}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

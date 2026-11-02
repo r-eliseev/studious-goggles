@@ -30,6 +30,9 @@ public class SessionsPageModelTests : IDisposable
     private readonly INavigationService _navigation = Substitute.For<INavigationService>();
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly ISearchTextSource _searchTexts = Substitute.For<ISearchTextSource>();
+    private readonly ITextEmbeddingRepository _textEmbeddings = Substitute.For<ITextEmbeddingRepository>();
+    private readonly IProviderRouter _providerRouter = Substitute.For<IProviderRouter>();
+    private readonly ISemanticIndexController _semanticIndex = Substitute.For<ISemanticIndexController>();
     private readonly IMainThread _mainThread = Substitute.For<IMainThread>();
     private readonly SessionChangeNotifier _changes = new(NullLogger<SessionChangeNotifier>.Instance);
 
@@ -40,6 +43,8 @@ public class SessionsPageModelTests : IDisposable
             .Returns(Task.FromResult(0));
         _secrets.GetAsync(SecretNames.OpenRouterApiKey, Arg.Any<CancellationToken>()).Returns("sk-or-saved");
         _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([]);
+        _semanticIndex.GetStatusAsync(Arg.Any<CancellationToken>()).Returns(new SemanticIndexStatus(false, 0, 0, SemanticIndexState.Off));
+        _semanticIndex.GetStatusSnapshot().Returns(new SemanticIndexStatus(false, 0, 0, SemanticIndexState.Off));
         _mainThread.When(thread => thread.BeginInvokeOnMainThread(Arg.Any<Action>()))
             .Do(call => call.Arg<Action>().Invoke());
     }
@@ -588,7 +593,11 @@ public class SessionsPageModelTests : IDisposable
         var catalog = new ChatModelCatalogService(ProviderDoubles.Router(), NullLogger<ChatModelCatalogService>.Instance);
         var sessions = new SessionService(_sessionRepository, Substitute.For<IChatMessageRepository>(), _runs, _files, catalog, TimeProvider.System, Substitute.For<IConversationSummaryRepository>(), _changes, Substitute.For<ISessionGenerationCoordinator>(), DefaultAssistantModels.Create());
         var apiKeys = new ApiKeyService(ProviderDoubles.Router(_provider), _secrets, NullLogger<ApiKeyService>.Instance);
-        return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs, time ?? TimeProvider.System, _tracker, new SessionSearchService(_searchTexts), _changes, _mainThread, ErrorAlerts.Create(_dialogs), DefaultAssistantModels.Create(defaultAssistant));
+        var semanticSearch = new SemanticSearchService(_searchTexts, _textEmbeddings, _providerRouter, _semanticIndex,
+            TimeProvider.System, NullLogger<SemanticSearchService>.Instance);
+        return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs, time ?? TimeProvider.System,
+            _tracker, new SessionSearchService(_searchTexts), semanticSearch, _semanticIndex, _changes, _mainThread,
+            ErrorAlerts.Create(_dialogs), DefaultAssistantModels.Create(defaultAssistant));
     }
 
     [Fact]
@@ -602,6 +611,22 @@ public class SessionsPageModelTests : IDisposable
 
         await _navigation.Received(1).GoToAsync(Routes.ApiKeyFor("claude", firstRun: true));
         await _sessionRepository.DidNotReceive().ListAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SelectSemanticSearch_RequiresReadyOptedInIndex()
+    {
+        var model = CreateModel();
+
+        model.SelectSemanticSearchCommand.Execute(null);
+        Assert.False(model.IsSemanticSearchMode);
+        Assert.True(model.IsSemanticMeaningUnavailable);
+
+        model.SemanticIndexStatus = new SemanticIndexStatus(true, 4, 0, SemanticIndexState.Ready);
+        model.SelectSemanticSearchCommand.Execute(null);
+
+        Assert.True(model.IsSemanticSearchMode);
+        Assert.False(model.IsSemanticMeaningUnavailable);
     }
 
     private static Session NewSession(string title, DateTimeOffset updatedAt) => new()

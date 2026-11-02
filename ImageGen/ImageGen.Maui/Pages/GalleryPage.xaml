@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels"
+             xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
+             x:Class="ImageGen.Maui.Pages.GalleryPage"
+             x:DataType="pm:GalleryPageModel"
+             SafeAreaEdges="All"
+             Title="{x:Static strings:AppResources.GalleryTitle}">
+    <Grid RowDefinitions="Auto,*" Padding="16" RowSpacing="8">
+        <VerticalStackLayout Spacing="4">
+        <Label StyleClass="danger" Text="{Binding ErrorText}" />
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+            <Picker ItemsSource="{Binding PeriodOptions}" SelectedItem="{Binding SelectedPeriodLabel, Mode=TwoWay}"
+                    SemanticProperties.Description="{x:Static strings:AppResources.GalleryPeriod}"
+                    SelectedIndexChanged="OnFilterChanged" />
+            <Picker Grid.Column="1" ItemsSource="{Binding Models}" ItemDisplayBinding="{Binding Label}"
+                    SelectedItem="{Binding SelectedModel, Mode=TwoWay}"
+                    SemanticProperties.Description="{x:Static strings:AppResources.GalleryModel}"
+                    SelectedIndexChanged="OnFilterChanged" />
+        </Grid>
+        </VerticalStackLayout>
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Items}" SelectionMode="Single"
+                        SelectionChanged="OnItemSelected" RemainingItemsThreshold="8"
+                        RemainingItemsThresholdReached="OnRemainingItemsThresholdReached">
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout Orientation="Vertical" Span="2" HorizontalItemSpacing="8" VerticalItemSpacing="8" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="pm:GalleryItemViewModel">
+                    <Border StyleClass="card" Padding="8" StrokeThickness="1">
+                        <VerticalStackLayout Spacing="4">
+                            <Image Source="{Binding ImagePath}" HeightRequest="180" Aspect="AspectFill" />
+                            <Label FontAttributes="Bold" Text="{Binding SessionTitle}" LineBreakMode="TailTruncation" />
+                            <Label StyleClass="meta" Text="{Binding ModelText}" LineBreakMode="TailTruncation" />
+                            <Label StyleClass="meta" Text="{Binding Prompt}" LineBreakMode="TailTruncation" />
+                            <Label StyleClass="meta" Text="{Binding CostText}" />
+                            <Label StyleClass="danger" Text="{Binding StatusText}" IsVisible="{Binding IsUnavailable}" />
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+        <ActivityIndicator Grid.Row="1" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                           VerticalOptions="Start" HorizontalOptions="Center" />
+    </Grid>
+</ContentPage>

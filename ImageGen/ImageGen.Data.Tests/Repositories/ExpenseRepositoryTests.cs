@@ -55,6 +55,23 @@ public class ExpenseRepositoryTests
     }
 
     [Fact]
+    public async Task CountUnknownAsync_CountsOnlyOperationsInsidePeriod()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var session = TestData.Session();
+        await new SessionRepository(test.Database).AddAsync(session, ct);
+        var runs = new RunRepository(test.Database);
+        var currentRun = TestData.Run(session.Id, TestData.BaseTime);
+        var outsideRun = TestData.Run(session.Id, TestData.BaseTime.AddDays(-2));
+        await runs.AddRunAsync(currentRun, [TestData.Generation(currentRun, 0)], ct);
+        await runs.AddRunAsync(outsideRun, [TestData.Generation(outsideRun, 0)], ct);
+
+        var expenses = new ExpenseRepository(test.Database);
+        Assert.Equal(1, await expenses.CountUnknownAsync(TestData.BaseTime.AddDays(-1), TestData.BaseTime.AddDays(1), ct));
+    }
+
+    [Fact]
     public async Task ExpenseRepository_MigrationBackfillsExistingGenerationAndIsIdempotent()
     {
         var ct = TestContext.Current.CancellationToken;

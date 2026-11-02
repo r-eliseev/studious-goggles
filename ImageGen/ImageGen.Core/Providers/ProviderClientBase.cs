@@ -173,7 +173,7 @@ public abstract class ProviderClientBase(
                 ? messageText
                 : $"{Config.DisplayName} returned HTTP {statusCode}.";
             var hasReasons = error?["metadata"]?["reasons"] is JsonArray;
-            throw new ProviderException(MapErrorKind(code, hasReasons), message);
+            throw new ProviderException(MapErrorKind(code, hasReasons), message, statusCode: statusCode);
         }
 
         return root ?? throw new ProviderException(ErrorKind.EmptyResponse, $"{Config.DisplayName} returned an empty response.");

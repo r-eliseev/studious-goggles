@@ -67,6 +67,40 @@ public static class AppResources
 
     public static string SearchInDescription => Get(nameof(SearchInDescription));
 
+    public static string SemanticSearchTitle => Get(nameof(SemanticSearchTitle));
+
+    public static string SemanticSearchOff => Get(nameof(SemanticSearchOff));
+
+    public static string SemanticSearchProgressFormat => Get(nameof(SemanticSearchProgressFormat));
+
+    public static string SemanticSearchReadyFormat => Get(nameof(SemanticSearchReadyFormat));
+
+    public static string SemanticSearchUnavailable => Get(nameof(SemanticSearchUnavailable));
+
+    public static string SemanticSearchFailed => Get(nameof(SemanticSearchFailed));
+
+    public static string SemanticSearchStopped => Get(nameof(SemanticSearchStopped));
+
+    public static string SemanticSearchEnablePromptFormat => Get(nameof(SemanticSearchEnablePromptFormat));
+
+    public static string SemanticSearchDisablePrompt => Get(nameof(SemanticSearchDisablePrompt));
+
+    public static string SemanticSearchEnable => Get(nameof(SemanticSearchEnable));
+
+    public static string SemanticSearchDisable => Get(nameof(SemanticSearchDisable));
+
+    public static string SemanticSearchRetry => Get(nameof(SemanticSearchRetry));
+
+    public static string SemanticSearchLimitWarning => Get(nameof(SemanticSearchLimitWarning));
+
+    public static string SemanticSearchWords => Get(nameof(SemanticSearchWords));
+
+    public static string SemanticSearchMeaning => Get(nameof(SemanticSearchMeaning));
+
+    public static string SemanticSearchMeaningUnavailable => Get(nameof(SemanticSearchMeaningUnavailable));
+
+    public static string Stop => Get(nameof(Stop));
+
     public static string Saved => Get(nameof(Saved));
 
     public static string SavePermissionDenied => Get(nameof(SavePermissionDenied));
@@ -268,6 +302,43 @@ public static class AppResources
 
     public static string AssistantPriceUnknown => Get(nameof(AssistantPriceUnknown));
 
+    public static string NextRunEstimateFormat => Get(nameof(NextRunEstimateFormat));
+
+    public static string CostEstimateWithUnknownFormat => Get(nameof(CostEstimateWithUnknownFormat));
+
+    public static string SpendingWarningTitle => Get(nameof(SpendingWarningTitle));
+
+    public static string SpendingMonthlyLimitMessage => Get(nameof(SpendingMonthlyLimitMessage));
+
+    public static string SpendingConfirmationFormat => Get(nameof(SpendingConfirmationFormat));
+
+    public static string SpendingTitle => Get(nameof(SpendingTitle));
+    public static string SpendingPeriod => Get(nameof(SpendingPeriod));
+    public static string SpendingDay => Get(nameof(SpendingDay));
+    public static string SpendingWeek => Get(nameof(SpendingWeek));
+    public static string SpendingMonth => Get(nameof(SpendingMonth));
+    public static string SpendingTotal => Get(nameof(SpendingTotal));
+    public static string SpendingUnknownOperationsFormat => Get(nameof(SpendingUnknownOperationsFormat));
+    public static string SpendingMonthlyLimit => Get(nameof(SpendingMonthlyLimit));
+    public static string SpendingExpensiveThreshold => Get(nameof(SpendingExpensiveThreshold));
+    public static string SpendingSave => Get(nameof(SpendingSave));
+    public static string SpendingBack => Get(nameof(SpendingBack));
+    public static string SpendingInvalidAmount => Get(nameof(SpendingInvalidAmount));
+    public static string SettingsSpending => Get(nameof(SettingsSpending));
+
+    public static string GalleryTitle => Get(nameof(GalleryTitle));
+    public static string GalleryAllModels => Get(nameof(GalleryAllModels));
+    public static string GalleryAllTime => Get(nameof(GalleryAllTime));
+    public static string GalleryLast7Days => Get(nameof(GalleryLast7Days));
+    public static string GalleryLast30Days => Get(nameof(GalleryLast30Days));
+    public static string GalleryUnavailableMessage => Get(nameof(GalleryUnavailableMessage));
+    public static string GalleryLoadMore => Get(nameof(GalleryLoadMore));
+    public static string GalleryOpen => Get(nameof(GalleryOpen));
+    public static string SessionsGallery => Get(nameof(SessionsGallery));
+    public static string GalleryPeriod => Get(nameof(GalleryPeriod));
+    public static string GalleryModel => Get(nameof(GalleryModel));
+    public static string GalleryLoadFailed => Get(nameof(GalleryLoadFailed));
+
     public static string ImagePricePerImageFormat => Get(nameof(ImagePricePerImageFormat));
 
     public static string ImagePricePerMegapixelFormat => Get(nameof(ImagePricePerMegapixelFormat));
@@ -413,6 +484,34 @@ public static class AppResources
     public static string OtherModel => Get(nameof(OtherModel));
 
     public static string CopyPrompt => Get(nameof(CopyPrompt));
+
+    public static string Compare => Get(nameof(Compare));
+
+    public static string ComparisonTitle => Get(nameof(ComparisonTitle));
+
+    public static string ComparisonClose => Get(nameof(ComparisonClose));
+
+    public static string ComparisonFirstImage => Get(nameof(ComparisonFirstImage));
+
+    public static string ComparisonSecondImage => Get(nameof(ComparisonSecondImage));
+
+    public static string ComparisonCandidateFormat => Get(nameof(ComparisonCandidateFormat));
+
+    public static string ComparisonNoCandidates => Get(nameof(ComparisonNoCandidates));
+
+    public static string ComparisonUnavailable => Get(nameof(ComparisonUnavailable));
+
+    public static string ComparisonSideBySide => Get(nameof(ComparisonSideBySide));
+
+    public static string ComparisonOverlay => Get(nameof(ComparisonOverlay));
+
+    public static string ComparisonZoom => Get(nameof(ComparisonZoom));
+
+    public static string CancelRun => Get(nameof(CancelRun));
+
+    public static string CancelRequested => Get(nameof(CancelRequested));
+
+    public static string CancelFailed => Get(nameof(CancelFailed));
 
     public static string UsedInSession => Get(nameof(UsedInSession));
 

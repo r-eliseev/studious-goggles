@@ -26,4 +26,24 @@ public sealed class BudgetGuard(decimal budgetUsd, int maxRequests)
         SpentUsd += estimatedCostUsd;
         return true;
     }
+
+    public void Settle(decimal reservedEstimateUsd, decimal actualCostUsd)
+    {
+        if (reservedEstimateUsd < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(reservedEstimateUsd));
+        }
+
+        if (actualCostUsd < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(actualCostUsd));
+        }
+
+        if (reservedEstimateUsd > SpentUsd)
+        {
+            throw new InvalidOperationException("Actual cost cannot settle an estimate that was not reserved.");
+        }
+
+        SpentUsd = SpentUsd - reservedEstimateUsd + actualCostUsd;
+    }
 }

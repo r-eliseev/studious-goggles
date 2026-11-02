@@ -101,7 +101,7 @@ public sealed class LiveCheckRunner(LiveCheckOptions options, TimeProvider timeP
                 return;
             }
 
-            var price = FindEstimatedImageCost(imageModels.First(model => model.Id == imageModel));
+            var price = LiveCheckEstimates.FindImageCost(imageModels.First(model => model.Id == imageModel));
             foreach (var (name, value) in new[]
             {
                 ("aspect_ratio", "1:1"), ("resolution 512", "512"), ("resolution 768", "768"), ("resolution 1K", "1K"),
@@ -118,17 +118,16 @@ public sealed class LiveCheckRunner(LiveCheckOptions options, TimeProvider timeP
 
             foreach (var referenceCount in new[] { 1, 2 })
             {
-                var refs = Enumerable.Repeat("data:image/png;base64,AQID", referenceCount).ToArray();
                 if (!Reserve(provider, price, imageModel, $"reference images {referenceCount}")) break;
-                await TryImageAsync(provider, (ISynchronousImageTransport)router.GetConnection(provider), new ImageGenerationRequest(imageModel, Prompt, null, ReferenceImageDataUrls: refs), imageModel, $"input_references x{referenceCount}", price, cancellationToken);
+                await TryImageAsync(provider, (ISynchronousImageTransport)router.GetConnection(provider), LiveCheckAssets.CreateReferenceImageRequest(imageModel, Prompt, referenceCount), imageModel, $"input_references x{referenceCount}", price, cancellationToken);
             }
 
             var visionModel = chatModels.FirstOrDefault(model => model.SupportsImageInput);
-            if (visionModel is not null && Reserve(provider, 0.01m, visionModel.Id, "image description"))
+            const decimal chatEstimate = 0.01m;
+            if (visionModel is not null && Reserve(provider, chatEstimate, visionModel.Id, "image description"))
             {
-                await TryChatAsync(provider, client, new AssistantChatRequest(visionModel.Id,
-                    [AssistantChatMessage.User("Describe this image in one sentence.") with { ImageDataUrls = ["data:image/png;base64,AQID"] }], []),
-                    "image description from attached image", visionModel.Id, cancellationToken);
+                await TryChatAsync(provider, client, LiveCheckAssets.CreateDescriptionRequest(visionModel.Id),
+                    "image description from attached image", visionModel.Id, chatEstimate, cancellationToken);
             }
             else
             {
@@ -136,17 +135,17 @@ public sealed class LiveCheckRunner(LiveCheckOptions options, TimeProvider timeP
             }
 
             var toolModel = SelectModel(chatModels.Select(model => model.Id), modelOverride.GetValueOrDefault("openrouter-chat"));
-            if (toolModel is not null && Reserve(provider, 0.01m, toolModel, "tool chat"))
+            if (toolModel is not null && Reserve(provider, chatEstimate, toolModel, "tool chat"))
             {
                 await TryChatAsync(provider, client, new AssistantChatRequest(toolModel,
                     [AssistantChatMessage.User("Create an image of a red circle using generate_images.")],
                     [new AssistantTool("generate_images", "Generate an image.", "{\"type\":\"object\",\"properties\":{\"prompt\":{\"type\":\"string\"}},\"required\":[\"prompt\"]}")]),
-                    "chat tool generate_images", toolModel, cancellationToken);
-                if (Reserve(provider, 0.01m, toolModel, "failed chat charge"))
+                    "chat tool generate_images", toolModel, chatEstimate, cancellationToken);
+                if (Reserve(provider, chatEstimate, toolModel, "failed chat charge"))
                 {
                     await TryChatAsync(provider, client, new AssistantChatRequest(toolModel,
                         [AssistantChatMessage.User("Return a concise response for this API behavior check.")], []),
-                        "chat completion charge observation", toolModel, cancellationToken);
+                        "chat completion charge observation", toolModel, chatEstimate, cancellationToken);
                 }
             }
             else
@@ -179,7 +178,13 @@ public sealed class LiveCheckRunner(LiveCheckOptions options, TimeProvider timeP
                     update = await client.PollAsync(handle, cancellationToken);
                 }
 
-                Add(provider, "submit/poll/result", "completed image", update.State.ToString(), update.State == JobState.Succeeded ? "compare trace with stub" : "differs or failed; inspect trace", model, "estimated $0.04");
+                if (update.State == JobState.Succeeded && update.Result?.CostUsd is decimal actualCost)
+                {
+                    budget.Settle(0.04m, actualCost);
+                }
+
+                Add(provider, "submit/poll/result", "completed image", update.State.ToString(), update.State == JobState.Succeeded ? "compare trace with stub" : "differs or failed; inspect trace", model,
+                    update.Result?.CostUsd is decimal actual ? $"actual ${actual.ToString("0.####", CultureInfo.InvariantCulture)}" : "estimated $0.04");
             }
             catch (Exception ex) when (ex is ProviderException or HttpRequestException)
             {
@@ -272,10 +277,11 @@ public sealed class LiveCheckRunner(LiveCheckOptions options, TimeProvider timeP
             var budget = budgets[config.Id] = new BudgetGuard(options.BudgetUsd, options.MaxRequests);
             var chats = await router.GetChatClient(config.Id).ListChatModelsAsync(cancellationToken);
             Add(config.Id, "configured chat models", "configured catalog", $"{chats.Count} chat models", "catalog derives from config", null, "not billable");
-            if (config.Kind == ProviderKind.AnthropicCompatible && chats.Count > 0 && budget.TryReserve(0.01m))
+            const decimal chatEstimate = 0.01m;
+            if (config.Kind == ProviderKind.AnthropicCompatible && chats.Count > 0 && budget.TryReserve(chatEstimate))
             {
                 var chat = router.GetChatClient(config.Id);
-                var reply = await TryChatAsync(config.Id, chat, new AssistantChatRequest(chats[0].Id, [AssistantChatMessage.User("Reply with the word ready.")], []), "Anthropic Messages chat", chats[0].Id, cancellationToken);
+                var reply = await TryChatAsync(config.Id, chat, new AssistantChatRequest(chats[0].Id, [AssistantChatMessage.User("Reply with the word ready.")], []), "Anthropic Messages chat", chats[0].Id, chatEstimate, cancellationToken);
                 Add(config.Id, "Anthropic API version", "anthropic-version: 2023-06-01", "request completed; inspect safe trace headers", "compare trace with expected", chats[0].Id, "estimated $0.01");
                 if (reply is not null)
                 {
@@ -302,6 +308,11 @@ public sealed class LiveCheckRunner(LiveCheckOptions options, TimeProvider timeP
         try
         {
             var result = await client.GenerateAsync(request, cancellationToken);
+            if (result.CostUsd is decimal actualCost)
+            {
+                budgets[provider].Settle(estimatedCost, actualCost);
+            }
+
             Add(provider, scenario, "one generated image", $"{result.Content.Length} bytes, {result.MediaType}", "inspect trace and compare stub", model,
                 result.CostUsd is { } actual ? $"actual ${actual.ToString("0.####", CultureInfo.InvariantCulture)}" : Estimate(estimatedCost));
         }
@@ -311,26 +322,29 @@ public sealed class LiveCheckRunner(LiveCheckOptions options, TimeProvider timeP
         }
     }
 
-    private async Task<AssistantChatResult?> TryChatAsync(string provider, IAssistantChatClient client, AssistantChatRequest request, string scenario, string model, CancellationToken cancellationToken)
+    private async Task<AssistantChatResult?> TryChatAsync(string provider, IAssistantChatClient client, AssistantChatRequest request, string scenario, string model, decimal reservedEstimate, CancellationToken cancellationToken)
     {
         try
         {
             var result = await client.CompleteChatAsync(request, cancellationToken);
+            if (result.CostUsd is decimal actualCost)
+            {
+                budgets[provider].Settle(reservedEstimate, actualCost);
+            }
+
             Add(provider, scenario, "chat response", $"text={(result.Text is null ? "none" : "present")}; tool calls={result.ToolCalls.Count}; prompt tokens={result.PromptTokens?.ToString(CultureInfo.InvariantCulture) ?? "unknown"}", "inspect trace and compare stub", model,
-                result.CostUsd is { } cost ? $"actual ${cost.ToString("0.####", CultureInfo.InvariantCulture)}" : "estimated $0.01");
+                result.CostUsd is { } cost ? $"actual ${cost.ToString("0.####", CultureInfo.InvariantCulture)}" : Estimate(reservedEstimate));
             return result;
         }
         catch (ProviderException ex)
         {
-            Add(provider, scenario, "chat response", ex.Kind.ToString(), "differs or failed; inspect trace", model, "estimated $0.01");
+            Add(provider, scenario, "chat response", ex.Kind.ToString(), "differs or failed; inspect trace", model, Estimate(reservedEstimate));
             return null;
         }
     }
 
     private static string? SelectModel(IEnumerable<string> models, string? requested) =>
         requested is not null ? models.FirstOrDefault(model => model.Equals(requested, StringComparison.Ordinal)) : models.FirstOrDefault();
-
-    private static decimal FindEstimatedImageCost(ImageModel model) => model.Prices.Count == 0 ? 0.04m : model.Prices.Min(price => price.CostUsd);
 
     private static decimal TogetherEstimate(string model) => model.Contains("FLUX.1.1-pro", StringComparison.OrdinalIgnoreCase) ? 0.04m
         : model.Contains("FLUX.2-dev", StringComparison.OrdinalIgnoreCase) ? 0.0154m

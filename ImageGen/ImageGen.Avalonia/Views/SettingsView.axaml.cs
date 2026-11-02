@@ -7,7 +7,7 @@ using ImageGen.Presentation.Utilities;
 namespace ImageGen.Avalonia.Views;
 
 /// <summary>Settings: the OpenRouter key (last four characters), the appearance and the logs folder.</summary>
-public partial class SettingsView : UserControl, IAppearing
+public partial class SettingsView : UserControl, IAppearing, IDisappearing
 {
     public SettingsView()
     {
@@ -15,4 +15,6 @@ public partial class SettingsView : UserControl, IAppearing
     }
 
     public void OnAppearing() => (DataContext as SettingsPageModel)?.LoadCommand.ExecuteAsync(null).FireAndForgetSafeAsync();
+
+    public void OnDisappearing() => (DataContext as SettingsPageModel)?.OnDisappearing();
 }

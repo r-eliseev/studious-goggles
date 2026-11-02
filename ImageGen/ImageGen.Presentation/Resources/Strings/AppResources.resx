@@ -81,6 +81,23 @@
   <data name="SearchSessions" xml:space="preserve">
     <value>Search sessions</value>
   </data>
+  <data name="SemanticSearchTitle" xml:space="preserve"><value>Semantic search</value></data>
+  <data name="SemanticSearchOff" xml:space="preserve"><value>Off. Word search remains available.</value></data>
+  <data name="SemanticSearchProgressFormat" xml:space="preserve"><value>Indexed {0} of {1}</value></data>
+  <data name="SemanticSearchReadyFormat" xml:space="preserve"><value>Ready: {0} texts indexed.</value></data>
+  <data name="SemanticSearchUnavailable" xml:space="preserve"><value>Unavailable. Check the OpenRouter key and network.</value></data>
+  <data name="SemanticSearchFailed" xml:space="preserve"><value>Indexing failed. Word search remains available.</value></data>
+  <data name="SemanticSearchStopped" xml:space="preserve"><value>Indexing stopped. Start indexing again to continue.</value></data>
+  <data name="SemanticSearchEnablePromptFormat" xml:space="preserve"><value>{0} of {1} titles, prompts and image descriptions will be sent to OpenRouter (baai/bge-m3). This is a paid request. Continue?</value></data>
+  <data name="SemanticSearchDisablePrompt" xml:space="preserve"><value>Turn off semantic search and delete its local index?</value></data>
+  <data name="SemanticSearchEnable" xml:space="preserve"><value>Enable</value></data>
+  <data name="SemanticSearchDisable" xml:space="preserve"><value>Turn off</value></data>
+  <data name="SemanticSearchRetry" xml:space="preserve"><value>Retry indexing</value></data>
+  <data name="SemanticSearchLimitWarning" xml:space="preserve"><value>Only the 10,000 most recent texts are indexed.</value></data>
+  <data name="Stop" xml:space="preserve"><value>Stop</value></data>
+  <data name="SemanticSearchWords" xml:space="preserve"><value>Words</value></data>
+  <data name="SemanticSearchMeaning" xml:space="preserve"><value>Meaning</value></data>
+  <data name="SemanticSearchMeaningUnavailable" xml:space="preserve"><value>Enable semantic search and finish indexing to search by meaning.</value></data>
   <data name="ClearSearch" xml:space="preserve">
     <value>Clear search</value>
   </data>
@@ -390,6 +407,46 @@
   <data name="AssistantPriceUnknown" xml:space="preserve">
     <value>price unknown</value>
   </data>
+  <data name="NextRunEstimateFormat" xml:space="preserve">
+    <value>Next run {0}</value>
+  </data>
+  <data name="CostEstimateWithUnknownFormat" xml:space="preserve">
+    <value>{0} (+{1} unknown)</value>
+  </data>
+  <data name="SpendingWarningTitle" xml:space="preserve">
+    <value>Spending warning</value>
+  </data>
+  <data name="SpendingMonthlyLimitMessage" xml:space="preserve">
+    <value>This run may bring this month's known spending to or above your limit. You can still continue.</value>
+  </data>
+  <data name="SpendingConfirmationFormat" xml:space="preserve">
+    <value>Estimated known cost: {0}. Unknown model prices are not included. Continue?</value>
+  </data>
+  <data name="SpendingTitle" xml:space="preserve"><value>Spending</value></data>
+  <data name="SpendingPeriod" xml:space="preserve"><value>Period</value></data>
+  <data name="SpendingDay" xml:space="preserve"><value>Day</value></data>
+  <data name="SpendingWeek" xml:space="preserve"><value>Week</value></data>
+  <data name="SpendingMonth" xml:space="preserve"><value>Month</value></data>
+  <data name="SpendingTotal" xml:space="preserve"><value>Total</value></data>
+  <data name="SpendingUnknownOperationsFormat" xml:space="preserve"><value>Unknown price: {0} operations in existing sessions</value></data>
+  <data name="SpendingMonthlyLimit" xml:space="preserve"><value>Monthly limit (USD, blank disables)</value></data>
+  <data name="SpendingExpensiveThreshold" xml:space="preserve"><value>Expensive run threshold (USD, blank disables)</value></data>
+  <data name="SpendingSave" xml:space="preserve"><value>Save limits</value></data>
+  <data name="SpendingBack" xml:space="preserve"><value>Back</value></data>
+  <data name="SpendingInvalidAmount" xml:space="preserve"><value>Enter a non-negative amount or leave the field blank.</value></data>
+  <data name="SettingsSpending" xml:space="preserve"><value>Spending and limits</value></data>
+  <data name="GalleryTitle" xml:space="preserve"><value>Gallery</value></data>
+  <data name="GalleryAllModels" xml:space="preserve"><value>All models</value></data>
+  <data name="GalleryAllTime" xml:space="preserve"><value>All time</value></data>
+  <data name="GalleryLast7Days" xml:space="preserve"><value>Last 7 days</value></data>
+  <data name="GalleryLast30Days" xml:space="preserve"><value>Last 30 days</value></data>
+  <data name="GalleryUnavailableMessage" xml:space="preserve"><value>This image or its session is no longer available.</value></data>
+  <data name="GalleryLoadMore" xml:space="preserve"><value>Load more</value></data>
+  <data name="GalleryOpen" xml:space="preserve"><value>Open session</value></data>
+  <data name="SessionsGallery" xml:space="preserve"><value>Gallery</value></data>
+  <data name="GalleryPeriod" xml:space="preserve"><value>Period</value></data>
+  <data name="GalleryModel" xml:space="preserve"><value>Model</value></data>
+  <data name="GalleryLoadFailed" xml:space="preserve"><value>The gallery could not be loaded. Try again.</value></data>
   <data name="ImagePricePerImageFormat" xml:space="preserve">
     <value>${0} / image</value>
   </data>
@@ -534,6 +591,36 @@
   <data name="CopyPrompt" xml:space="preserve">
     <value>Copy prompt</value>
   </data>
+  <data name="Compare" xml:space="preserve">
+    <value>Compare…</value>
+  </data>
+  <data name="ComparisonTitle" xml:space="preserve">
+    <value>Compare images</value>
+  </data>
+  <data name="ComparisonClose" xml:space="preserve"><value>Close comparison</value></data>
+  <data name="ComparisonFirstImage" xml:space="preserve"><value>First image</value></data>
+  <data name="ComparisonSecondImage" xml:space="preserve"><value>Second image</value></data>
+  <data name="ComparisonCandidateFormat" xml:space="preserve">
+    <value>{0} · {1} · {2} · {3}</value>
+  </data>
+  <data name="ComparisonNoCandidates" xml:space="preserve">
+    <value>There are no other successful images in this session.</value>
+  </data>
+  <data name="ComparisonUnavailable" xml:space="preserve">
+    <value>The session or one of the images is no longer available.</value>
+  </data>
+  <data name="ComparisonSideBySide" xml:space="preserve">
+    <value>Side by side</value>
+  </data>
+  <data name="ComparisonOverlay" xml:space="preserve">
+    <value>Overlay</value>
+  </data>
+  <data name="ComparisonZoom" xml:space="preserve">
+    <value>Zoom</value>
+  </data>
+  <data name="CancelRun" xml:space="preserve"><value>Cancel run</value></data>
+  <data name="CancelRequested" xml:space="preserve"><value>Cancellation requested; the provider may still finish and charge.</value></data>
+  <data name="CancelFailed" xml:space="preserve"><value>Could not cancel. The generation may still finish and charge.</value></data>
   <data name="UsedInSession" xml:space="preserve">
     <value>Used in this session</value>
   </data>

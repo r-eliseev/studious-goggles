@@ -20,6 +20,8 @@ public sealed partial class SessionsPageModel(
     TimeProvider timeProvider,
     ICurrentSessionTracker tracker,
     SessionSearchService searchService,
+    SemanticSearchService semanticSearchService,
+    ISemanticIndexController semanticIndex,
     SessionChangeNotifier changes,
     IMainThread mainThread,
     ErrorAlert errorAlert,
@@ -27,7 +29,7 @@ public sealed partial class SessionsPageModel(
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
     /// <summary>Pause after the last keystroke before the search runs.</summary>
-    public static readonly TimeSpan SearchDebounce = TimeSpan.FromMilliseconds(250);
+    public static readonly TimeSpan SearchDebounce = TimeSpan.FromMilliseconds(400);
 
     public ObservableCollection<SessionItemViewModel> Sessions { get; } = [];
 
@@ -84,6 +86,29 @@ public sealed partial class SessionsPageModel(
     [ObservableProperty]
     public partial bool HasNoResults { get; set; }
 
+    [ObservableProperty]
+    public partial bool IsSemanticSearchMode { get; set; }
+
+    [ObservableProperty]
+    public partial SemanticIndexStatus SemanticIndexStatus { get; set; } = new(false, 0, 0, SemanticIndexState.Off);
+
+    public bool CanUseSemanticSearch => SemanticIndexStatus.Enabled && SemanticIndexStatus.State == SemanticIndexState.Ready;
+
+    public bool IsSemanticMeaningUnavailable => !CanUseSemanticSearch;
+
+    [ObservableProperty]
+    public partial string? SemanticQueryErrorCode { get; set; }
+
+    public bool HasSemanticQueryError => IsSemanticSearchMode && SemanticQueryErrorCode is not null;
+
+    public string SemanticSearchUnavailableText => SemanticIndexStatus.State switch
+    {
+        SemanticIndexState.Unavailable => AppResources.SemanticSearchUnavailable,
+        SemanticIndexState.Failed when SemanticIndexStatus.ErrorCode == "stopped" => AppResources.SemanticSearchStopped,
+        SemanticIndexState.Failed => AppResources.SemanticSearchFailed,
+        _ => AppResources.SemanticSearchMeaningUnavailable,
+    };
+
     /// <summary>True while the query is not blank: the list then shows the search results instead of the groups.</summary>
     public bool IsSearchActive => !string.IsNullOrWhiteSpace(SearchText);
 
@@ -94,10 +119,21 @@ public sealed partial class SessionsPageModel(
     {
         OnPropertyChanged(nameof(IsSearchActive));
         OnPropertyChanged(nameof(IsSearchInactive));
+        ScheduleSearch(value);
+    }
+
+    partial void OnIsSemanticSearchModeChanged(bool value)
+    {
+        OnPropertyChanged(nameof(HasSemanticQueryError));
+        ScheduleSearch(SearchText);
+    }
+
+    private void ScheduleSearch(string query)
+    {
         _searchCancellation?.Cancel();
         _searchCancellation?.Dispose();
         var cancellation = _searchCancellation = new CancellationTokenSource();
-        SearchAfterDelayAsync(value, cancellation.Token).FireAndForgetSafeAsync();
+        SearchAfterDelayAsync(query, cancellation.Token).FireAndForgetSafeAsync();
     }
 
     [RelayCommand]
@@ -115,17 +151,48 @@ public sealed partial class SessionsPageModel(
         }
     }
 
+    [RelayCommand]
+    private void SelectWordSearch() => IsSemanticSearchMode = false;
+
+    [RelayCommand]
+    private void SelectSemanticSearch()
+    {
+        if (CanUseSemanticSearch)
+        {
+            IsSemanticSearchMode = true;
+        }
+    }
+
+    private void OnSemanticIndexStatusChanged(object? sender, SemanticIndexStatus status) =>
+        mainThread.BeginInvokeOnMainThread(() => UpdateSemanticIndexStatus(status));
+
+    private void UpdateSemanticIndexStatus(SemanticIndexStatus status)
+    {
+        SemanticIndexStatus = status;
+        OnPropertyChanged(nameof(CanUseSemanticSearch));
+        OnPropertyChanged(nameof(IsSemanticMeaningUnavailable));
+        OnPropertyChanged(nameof(SemanticSearchUnavailableText));
+        OnPropertyChanged(nameof(HasSemanticQueryError));
+        if (!CanUseSemanticSearch)
+        {
+            IsSemanticSearchMode = false;
+        }
+    }
+
     /// <summary>Called by the page on every appearance: initializes the app once, then lists the sessions.</summary>
     public async Task OnAppearingAsync()
     {
         tracker.Changed -= OnCurrentSessionChanged;
         tracker.Changed += OnCurrentSessionChanged;
+        semanticIndex.StatusChanged -= OnSemanticIndexStatusChanged;
+        semanticIndex.StatusChanged += OnSemanticIndexStatusChanged;
         changes.SessionChanged -= OnSessionChanged;
         changes.SessionChanged += OnSessionChanged;
         IsBusy = true;
         try
         {
             await initializer.EnsureInitializedAsync();
+            UpdateSemanticIndexStatus(await semanticIndex.GetStatusAsync(CancellationToken.None));
             if (!await apiKeyService.HasKeyAsync(defaultAssistantModel.Current.ProviderId, CancellationToken.None))
             {
                 await navigation.GoToAsync(Routes.ApiKeyFor(defaultAssistantModel.Current.ProviderId, firstRun: true));
@@ -293,6 +360,9 @@ public sealed partial class SessionsPageModel(
     private Task OpenSettingsAsync() => navigation.GoToAsync(Routes.Settings);
 
     [RelayCommand]
+    private Task OpenGalleryAsync() => navigation.GoToAsync(Routes.Gallery);
+
+    [RelayCommand]
     private async Task NewSessionAsync()
     {
         try
@@ -353,8 +423,12 @@ public sealed partial class SessionsPageModel(
         IsSearching = true;
         try
         {
-            var hits = await searchService.SearchAsync(query, cancellationToken);
+            var hits = IsSemanticSearchMode
+                ? await semanticSearchService.SearchAsync(query, cancellationToken)
+                : await searchService.SearchAsync(query, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
+            SemanticQueryErrorCode = IsSemanticSearchMode ? semanticSearchService.LastErrorCode : null;
+            OnPropertyChanged(nameof(HasSemanticQueryError));
             var rows = hits
                 .Join(Sessions, hit => hit.SessionId, item => item.Id, (hit, item) => (Hit: hit, Item: item))
                 .OrderByDescending(row => row.Hit.Score)

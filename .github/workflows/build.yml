@@ -5,6 +5,12 @@ on:
   pull_request:
 
 jobs:
+  docker-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash docker/smoke.sh
+
   core:
     runs-on: ubuntu-latest
     # Единая UTF-8 локаль для всех Linux-задач: под C.UTF-8 инструменты, работающие

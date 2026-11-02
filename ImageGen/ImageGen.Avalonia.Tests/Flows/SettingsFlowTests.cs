@@ -3,12 +3,14 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.VisualTree;
 using ImageGen.Avalonia.Services;
 using ImageGen.Avalonia.Tests.TestDoubles;
 using ImageGen.Avalonia.Views;
 using ImageGen.Presentation;
 using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.PageModels;
+using ImageGen.Presentation.Resources.Strings;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ImageGen.Avalonia.Tests.Flows;
@@ -27,6 +29,27 @@ public class SettingsFlowTests
         await shell.Provider.GetRequiredService<SessionsPageModel>().OpenSettingsCommand.ExecuteAsync(null);
 
         Assert.IsType<SettingsView>(shell.Window.PageArea.Content);
+    }
+
+    [AvaloniaFact]
+    public async Task SemanticSearch_IsVisibleInSettings_AndMeaningStartsUnavailable()
+    {
+        using var shell = new ShellHarness();
+        await shell.SaveKeyAsync("sk-or-test");
+        await shell.InitializeDatabaseAsync();
+        var sessions = shell.Provider.GetRequiredService<SessionsPageModel>();
+        var sessionList = new SessionsListView { DataContext = sessions };
+        shell.Window.PageArea.Content = sessionList;
+        shell.Window.UpdateLayout();
+        Assert.True(sessionList.FindControl<Button>("WordSearchButton")!.IsEnabled);
+        Assert.False(sessionList.FindControl<Button>("MeaningSearchButton")!.IsEnabled);
+
+        await sessions.OpenSettingsCommand.ExecuteAsync(null);
+        shell.Window.UpdateLayout();
+
+        var settings = Assert.IsType<SettingsView>(shell.Window.PageArea.Content);
+        Assert.Equal(AppResources.SemanticSearchEnable,
+            settings.FindControl<Button>("SemanticSearchToggleButton")!.Content);
     }
 
     [AvaloniaFact]
