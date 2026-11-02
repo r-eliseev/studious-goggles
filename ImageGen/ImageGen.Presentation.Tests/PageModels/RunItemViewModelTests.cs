@@ -45,6 +45,38 @@ public class RunItemViewModelTests
         new(Substitute.For<IClipboardService>(), Substitute.For<IMainThread>(), "text");
 
     [Fact]
+    public async Task CancelRunCommand_VisibleOnlyWhileThereAreCancellableCards()
+    {
+        var card = Card("vendor/a", GenerationStatus.Queued, null);
+        var calls = 0;
+        var item = new RunItemViewModel(MakeRun(), [card], Copy(), _ => { calls++; return Task.CompletedTask; });
+
+        Assert.True(item.HasActiveGenerations);
+        Assert.True(item.CancelRunCommand.CanExecute(null));
+        await item.CancelRunCommand.ExecuteAsync(null);
+        Assert.Equal(1, calls);
+
+        card.Update(new Generation
+        {
+            Id = card.Id,
+            RunId = Guid.NewGuid(),
+            SessionId = Guid.NewGuid(),
+            ProviderId = "openrouter",
+            ModelId = "vendor/a",
+            Prompt = "red fox",
+            Seed = 1,
+            SeedApplied = true,
+            Status = GenerationStatus.Running,
+            CancelRequestedAt = Now,
+            CreatedAt = Now,
+            SortOrder = 0,
+        });
+
+        Assert.False(item.HasActiveGenerations);
+        Assert.False(item.CancelRunCommand.CanExecute(null));
+    }
+
+    [Fact]
     public void HeaderText_CountsDoneAndCost()
     {
         var cards = new[]

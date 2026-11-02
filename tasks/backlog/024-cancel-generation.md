@@ -1,8 +1,8 @@
 ---
 id: 024
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-02T05:23:44Z
+status: done
+assignee:
+claimed:
 created: 2026-10-27
 ---
 
@@ -55,6 +55,10 @@ created: 2026-10-27
 Файлы: `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `GenerationCancelResult.cs` (новый), `ImageGen/ImageGen.Core/Domain/Generations/Generation.cs`, `ImageGen/ImageGen.Data/Migrations/NNNN_generation_cancel_requested.sql` (новый), `ImageGen/ImageGen.Data/Repositories/RunRepository.cs`, `ImageGen/ImageGen.Presentation/PageModels/GenerationItemViewModel.cs`, `RunItemViewModel.cs`, `ChatPageModel.cs`, `AppResources.resx/.cs`, `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, тесты Core/Data/Presentation/Avalonia.
 
 ## Отчёт
+
+2026-11-02: Реализованы отмена одной генерации и параллельная отмена активных генераций прогона в `GenerationService`; единый процесс submit/watch используется без отдельного реестра. До submit отменяется локальная задача; во время submit ожидается handle и затем отправляется remote cancel. Вызов ограничен таймаутом и однократен. `CancellationRequested` записывает `CancelRequestedAt`, продолжает polling и не скрывает возможную последующую цену/результат. Результат и подтверждённая отмена сериализованы одним state gate: сохранённый первым результат остаётся успешным, а подтверждённая первой отмена блокирует позднее сохранение результата. Добавлены миграция 0012, отображение и команды в MAUI/Avalonia, сообщения ошибок/ожидания. Спецификации чата и архитектура дополнены описанием поведения.
+
+Проверки: Core.Tests (725), Data.Tests (116), Presentation.Tests (455), Avalonia.Tests (152 passed, 2 пропущены из-за платформы); сборки Avalonia и MAUI Android прошли без предупреждений. `dotnet format --verify-no-changes` прошёл для изменённых проектов; `scripts/check.sh` запускается отдельно перед обновлением PR. Ручные проверки оболочек остаются в задачах 016/046/140 и выполняются человеком у соответствующего устройства.
 
 ## Комментарии
 

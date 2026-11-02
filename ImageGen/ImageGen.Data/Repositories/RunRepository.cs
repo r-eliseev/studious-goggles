@@ -9,7 +9,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
     private const string GenerationColumns = """
         g.id, g.run_id, g.session_id, g.provider_id, g.model_id, g.prompt, g.seed, g.seed_applied, g.status,
         g.image_path, g.media_type, g.cost_usd, g.error_kind, g.error_message, g.created_at, g.completed_at, g.sort_order, g.outcomes_json,
-        g.reference_attachment_ids_json, g.job_json
+        g.reference_attachment_ids_json, g.job_json, g.cancel_requested_at
         """;
 
     public async Task AddRunAsync(Run run, IReadOnlyList<Generation> generations, CancellationToken cancellationToken)
@@ -42,10 +42,10 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
             command.CommandText = """
                 INSERT INTO generations (id, run_id, session_id, provider_id, model_id, prompt, seed, seed_applied, status,
                     image_path, media_type, cost_usd, error_kind, error_message, created_at, completed_at, sort_order, outcomes_json,
-                    reference_attachment_ids_json, job_json)
+                    reference_attachment_ids_json, job_json, cancel_requested_at)
                 VALUES (@id, @run_id, @session_id, @provider_id, @model_id, @prompt, @seed, @seed_applied, @status,
                     @image_path, @media_type, @cost_usd, @error_kind, @error_message, @created_at, @completed_at, @sort_order, @outcomes_json,
-                    @reference_attachment_ids_json, @job_json);
+                    @reference_attachment_ids_json, @job_json, @cancel_requested_at);
                 """;
             AddGenerationParameters(command, generation);
             await command.ExecuteNonQueryAsync(cancellationToken);
@@ -148,7 +148,8 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
                     seed_applied = @seed_applied, status = @status, image_path = @image_path, media_type = @media_type,
                     cost_usd = @cost_usd, error_kind = @error_kind, error_message = @error_message,
                     created_at = @created_at, completed_at = @completed_at, sort_order = @sort_order, outcomes_json = @outcomes_json,
-                    reference_attachment_ids_json = @reference_attachment_ids_json, job_json = @job_json
+                    reference_attachment_ids_json = @reference_attachment_ids_json, job_json = @job_json,
+                    cancel_requested_at = @cancel_requested_at
                 WHERE id = @id;
                 """;
                 AddGenerationParameters(command, generation);
@@ -252,6 +253,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
         command.Parameters.AddWithValue("@outcomes_json", ParameterJson.Outcomes(generation.Outcomes));
         command.Parameters.AddWithValue("@reference_attachment_ids_json", ParameterJson.References(generation.ReferenceAttachmentIds));
         command.Parameters.AddWithValue("@job_json", (object?)generation.JobJson ?? DBNull.Value);
+        command.Parameters.AddWithValue("@cancel_requested_at", SqliteValues.FromNullableDate(generation.CancelRequestedAt));
     }
 
     private static Run ReadRun(SqliteDataReader reader) => new()
@@ -284,6 +286,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
             ErrorKind = errorKind.HasValue ? (ErrorKind)errorKind.Value : null,
             ErrorMessage = SqliteValues.GetNullableString(reader, "error_message"),
             JobJson = SqliteValues.GetNullableString(reader, "job_json"),
+            CancelRequestedAt = SqliteValues.GetNullableDate(reader, "cancel_requested_at"),
             CreatedAt = SqliteValues.GetDate(reader, "created_at"),
             CompletedAt = SqliteValues.GetNullableDate(reader, "completed_at"),
             SortOrder = SqliteValues.GetInt32(reader, "sort_order"),

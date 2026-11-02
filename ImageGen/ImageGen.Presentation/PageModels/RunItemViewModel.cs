@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Presentation.Resources.Strings;
 
@@ -9,8 +10,10 @@ namespace ImageGen.Presentation.PageModels;
 /// <summary>One run row: the prompt followed by the cards of its generations.</summary>
 public sealed partial class RunItemViewModel : ObservableObject
 {
+    private readonly Func<Guid, Task>? _cancelRun;
+
     /// <param name="copy">Copies the prompt of the run (without the «Prompt:» label).</param>
-    public RunItemViewModel(Run run, IReadOnlyList<GenerationItemViewModel> generations, CopyTextAction copy)
+    public RunItemViewModel(Run run, IReadOnlyList<GenerationItemViewModel> generations, CopyTextAction copy, Func<Guid, Task>? cancelRun = null)
     {
         ArgumentNullException.ThrowIfNull(run);
         ArgumentNullException.ThrowIfNull(generations);
@@ -18,6 +21,7 @@ public sealed partial class RunItemViewModel : ObservableObject
         Parameters = run.Parameters;
         PromptText = string.Format(CultureInfo.CurrentCulture, AppResources.RunPromptFormat, run.Prompt);
         Generations = generations;
+        _cancelRun = cancelRun;
         HeaderText = HeaderOf(generations);
         foreach (var generation in generations)
         {
@@ -38,6 +42,12 @@ public sealed partial class RunItemViewModel : ObservableObject
 
     private void OnCardPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName is nameof(GenerationItemViewModel.IsRunning) or nameof(GenerationItemViewModel.IsCancelRequested))
+        {
+            OnPropertyChanged(nameof(HasActiveGenerations));
+            CancelRunCommand.NotifyCanExecuteChanged();
+        }
+
         if (e.PropertyName == nameof(GenerationItemViewModel.StatusKind))
         {
             HeaderText = HeaderOf(Generations);
@@ -66,4 +76,9 @@ public sealed partial class RunItemViewModel : ObservableObject
     public IReadOnlyList<GenerationItemViewModel> Generations { get; }
 
     public CopyTextAction Copy { get; }
+
+    public bool HasActiveGenerations => Generations.Any(generation => generation.IsRunning && !generation.IsCancelRequested);
+
+    [RelayCommand(CanExecute = nameof(HasActiveGenerations))]
+    private Task CancelRunAsync() => _cancelRun?.Invoke(Id) ?? Task.CompletedTask;
 }

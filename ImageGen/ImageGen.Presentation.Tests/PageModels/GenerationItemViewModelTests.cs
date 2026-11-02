@@ -14,6 +14,31 @@ public class GenerationItemViewModelTests
     private static readonly DateTimeOffset Now = new(2026, 10, 28, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
+    public async Task CancelCommand_ActiveGeneration_InvokesOwnerAndDisablesAfterRequest()
+    {
+        var generation = BaseGeneration();
+        generation.Status = GenerationStatus.Running;
+        var calls = 0;
+        var card = CardOf(generation, cancel: _ => { calls++; return Task.CompletedTask; });
+
+        Assert.True(card.CancelCommand.CanExecute(null));
+        await card.CancelCommand.ExecuteAsync(null);
+        Assert.Equal(1, calls);
+
+        generation.CancelRequestedAt = Now;
+        card.Update(generation);
+        Assert.False(card.CancelCommand.CanExecute(null));
+        Assert.True(card.HasCancellationStatus);
+        Assert.Equal(AppResources.CancelRequested, card.CancellationStatusText);
+    }
+
+    [Fact]
+    public void CancelCommand_FinishedGeneration_CannotExecute()
+    {
+        Assert.False(CardOf(BaseGeneration()).CancelCommand.CanExecute(null));
+    }
+
+    [Fact]
     public async Task ShowActions_ChoosesRepeat_RunsRepeat()
     {
         var repeated = false;
@@ -445,7 +470,8 @@ public class GenerationItemViewModelTests
     private static GenerationItemViewModel CardOf(
         Generation generation,
         IDialogService? dialogs = null,
-        IClipboardService? clipboard = null) => new(
+        IClipboardService? clipboard = null,
+        Func<GenerationItemViewModel, Task>? cancel = null) => new(
         generation,
         Substitute.For<IImageFileStore>(),
         dialogs ?? Substitute.For<IDialogService>(),
@@ -455,7 +481,9 @@ public class GenerationItemViewModelTests
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,
         (_, _) => Task.CompletedTask,
-        _ => Task.CompletedTask);
+        _ => Task.CompletedTask,
+        null,
+        cancel);
 
     private static GenerationItemViewModel Card(params ParameterOutcome[] outcomes) => Card(outcomes, 0);
 

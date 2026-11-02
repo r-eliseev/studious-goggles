@@ -96,6 +96,27 @@ public class RunRepositoryTests
     }
 
     [Fact]
+    public async Task UpdateGenerationAsync_PersistsCancelRequestTimestamp()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var session = TestData.Session();
+        await new SessionRepository(test.Database).AddAsync(session, ct);
+        var repository = new RunRepository(test.Database);
+        var run = TestData.Run(session.Id, TestData.BaseTime);
+        var generation = TestData.Generation(run, 0);
+        await repository.AddRunAsync(run, [generation], ct);
+        generation.CancelRequestedAt = TestData.BaseTime.AddMinutes(2);
+        generation.Status = GenerationStatus.Running;
+        await repository.UpdateGenerationAsync(generation, ct);
+
+        var loaded = await repository.GetGenerationAsync(generation.Id, ct);
+
+        Assert.Equal(generation.CancelRequestedAt, loaded!.CancelRequestedAt);
+        Assert.Equal(GenerationStatus.Running, loaded.Status);
+    }
+
+    [Fact]
     public async Task UpdateGenerationAsync_MissingGeneration_ThrowsNonTransientStorageWriteException()
     {
         var ct = TestContext.Current.CancellationToken;

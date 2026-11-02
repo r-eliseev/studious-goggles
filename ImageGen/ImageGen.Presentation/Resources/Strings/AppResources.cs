@@ -473,6 +473,12 @@ public static class AppResources
 
     public static string ComparisonZoom => Get(nameof(ComparisonZoom));
 
+    public static string CancelRun => Get(nameof(CancelRun));
+
+    public static string CancelRequested => Get(nameof(CancelRequested));
+
+    public static string CancelFailed => Get(nameof(CancelFailed));
+
     public static string UsedInSession => Get(nameof(UsedInSession));
 
     public static string AllModels => Get(nameof(AllModels));

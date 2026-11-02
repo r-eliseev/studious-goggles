@@ -601,6 +601,9 @@
   <data name="ComparisonZoom" xml:space="preserve">
     <value>Zoom</value>
   </data>
+  <data name="CancelRun" xml:space="preserve"><value>Cancel run</value></data>
+  <data name="CancelRequested" xml:space="preserve"><value>Cancellation requested; the provider may still finish and charge.</value></data>
+  <data name="CancelFailed" xml:space="preserve"><value>Could not cancel. The generation may still finish and charge.</value></data>
   <data name="UsedInSession" xml:space="preserve">
     <value>Used in this session</value>
   </data>

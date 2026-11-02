@@ -252,7 +252,7 @@ public sealed partial class ChatPageModel(
                 else if (entry.Run is { } run)
                 {
                     var cards = entry.Generations.Select(CreateCard).ToList();
-                    Items.Add(new RunItemViewModel(run, cards, new CopyTextAction(clipboard, mainThread, run.Prompt)));
+                    Items.Add(new RunItemViewModel(run, cards, new CopyTextAction(clipboard, mainThread, run.Prompt), CancelRunAsync));
                     foreach (var generation in entry.Generations)
                     {
                         if (_cards.TryGetValue(generation.Id, out var card))
@@ -673,6 +673,24 @@ public sealed partial class ChatPageModel(
     private Task OtherModelCardAsync(GenerationItemViewModel card) =>
         navigation.GoToAsync(Routes.ModelPickerFor(_sessionId, card.Id));
 
+    private async Task CancelCardAsync(GenerationItemViewModel card)
+    {
+        var result = await generations.CancelGenerationAsync(card.Id, CancellationToken.None);
+        if (result == GenerationCancelResult.CancelFailed)
+        {
+            card.SetCancellationFailed();
+        }
+    }
+
+    private async Task CancelRunAsync(Guid runId)
+    {
+        var results = await generations.CancelRunAsync(runId, CancellationToken.None);
+        foreach (var result in results.Where(item => item.Result == GenerationCancelResult.CancelFailed))
+        {
+            if (_cards.TryGetValue(result.GenerationId, out var card)) card.SetCancellationFailed();
+        }
+    }
+
     private async Task CompareCardAsync(GenerationItemViewModel card)
     {
         if (_imageComparison is null)
@@ -733,7 +751,7 @@ public sealed partial class ChatPageModel(
     private GenerationItemViewModel CreateCard(Generation generation)
     {
         var card = new GenerationItemViewModel(
-            generation, files, dialogs, clipboard, imageSaver, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync, OtherModelCardAsync, CompareCardAsync);
+            generation, files, dialogs, clipboard, imageSaver, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync, OtherModelCardAsync, CompareCardAsync, CancelCardAsync);
         _cards[generation.Id] = card;
         return card;
     }
