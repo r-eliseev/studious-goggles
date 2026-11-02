@@ -1,8 +1,6 @@
 ---
 id: 186
-status: in-progress
-assignee:
-claimed:
+status: done
 created: 2026-11-02
 ---
 
