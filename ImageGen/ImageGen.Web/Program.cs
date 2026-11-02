@@ -71,6 +71,7 @@ builder.Services.AddRateLimiter(options =>
 });
 builder.Services.AddSingleton<ISecretStore, DataProtectionSecretStore>();
 builder.Services.AddSingleton<EventHub>();
+builder.Services.AddSingleton(new EventStreamOptions());
 builder.Services.AddSingleton<ImageGen.Core.Services.IDefaultAssistantModel, WebDefaultAssistantModel>();
 builder.Services.AddImageGenCore();
 builder.Services.AddImageGenData();
