@@ -218,8 +218,10 @@ public class GenerationServiceTests
     public async Task CancelRunAsync_CancelsActiveGenerationsAndReturnsEachOutcome()
     {
         var handles = new[] { Handle(), Handle() with { RequestId = "req-2" } };
-        var cancelRequested = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondPollsEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseSecondPoll = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var pollCounts = new ConcurrentDictionary<string, int>(StringComparer.Ordinal);
+        var secondPollCount = 0;
         var queued = Substitute.For<IQueuedImageProvider>();
         _session.Settings.ImageModels = [new ModelRef("fal", "flux")];
         _session.Settings.RunsPerModel = 2;
@@ -238,19 +240,28 @@ public class GenerationServiceTests
             var handle = call.Arg<ProviderJobHandle>();
             if (pollCounts.AddOrUpdate(handle.RequestId, 1, (_, current) => current + 1) == 1)
                 return new JobUpdate(JobState.Queued);
-            if (handle.RequestId == "req-2") await cancelRequested.Task.WaitAsync(call.Arg<CancellationToken>());
+            if (Interlocked.Increment(ref secondPollCount) == 2) secondPollsEntered.TrySetResult();
+            await releaseSecondPoll.Task.WaitAsync(call.Arg<CancellationToken>());
             return new JobUpdate(JobState.Cancelled);
         });
         queued.CancelAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>()).Returns(call =>
         {
             var requestId = call.Arg<ProviderJobHandle>().RequestId;
-            if (requestId == "req-2") cancelRequested.TrySetResult();
             return Task.FromResult(requestId == "req-2" ? CancelOutcome.CancellationRequested : CancelOutcome.Cancelled);
         });
         await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
         var run = Assert.Single(_savedRuns.Values);
         var persisted = Assert.Single(_added, item => item.SortOrder == 0);
-        var outcomes = await _service.CancelRunAsync(run.Id, TestContext.Current.CancellationToken);
+        await secondPollsEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        IReadOnlyList<GenerationCancelItem> outcomes;
+        try
+        {
+            outcomes = await _service.CancelRunAsync(run.Id, TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            releaseSecondPoll.TrySetResult();
+        }
 
         Assert.Equal(2, outcomes.Count);
         Assert.Equal(1, outcomes.Count(item => item.Result == GenerationCancelResult.Cancelled));
