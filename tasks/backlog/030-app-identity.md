@@ -40,6 +40,12 @@ created: 2026-10-27
 
 ## Отчёт
 
+### 2026-11-02 — частичная брендинговая реализация по прямому запросу владельца
+
+Имя Omnilite, приложенный image reference, новая векторная MAUI icon/splash и ранее утверждённый `com.eliseev.imagegen` применены ко всем target frameworks MAUI. Android id не менялся относительно релизов после задачи 164; Windows/iOS/Mac Catalyst теперь используют общий id. Старые данные не удалялись и не переносились. Проверено: Presentation tests 466/466; MAUI Android build 0 warnings/errors; Avalonia build 0 warnings/errors; `dotnet format` двух изменённых .NET проектов и `scripts/check.sh` прошли. Фактические Windows data/secret paths не проверялись.
+
+Задача остаётся заблокированной для полного завершения: точные `Publisher` и `PublisherDisplayName` не предоставлены и не были придуманы; на Windows нужно проверить влияние смены id для unpackaged data/secret paths и зафиксировать, как пользоваться старым профилем/ключами.
+
 ## Комментарии
 
 ### 2026-10-28, владелец (ответы в чате, записал ревью)
@@ -53,3 +59,6 @@ created: 2026-10-27
 
 ### 2026-10-31, claude-audit
 Android-часть `ApplicationId` выполнена задачей 164 (условное свойство только для Android, без переноса данных — решение владельца 2026-10-31). Здесь остаются Windows (`ApplicationId`, Publisher, папка данных и секреты, миграция), iOS/Mac Catalyst, иконка и заставка.
+
+### 2026-11-02, codex-gpt6
+Владелец предоставил image reference и попросил имя Omnilite и сменить все MAUI ApplicationId. Выполнена общая брендовая часть; см. частичный отчёт выше. Publisher и Windows data/secret path остаются открытыми, поэтому задача пока не закрыта.

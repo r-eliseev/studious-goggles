@@ -5,18 +5,16 @@ namespace ImageGen.Presentation.Tests.Design;
 public class MauiProjectTests
 {
     [Fact]
-    public void ApplicationId_OnAndroid_IsApprovedPackageNameAndOtherPlatformsKeepTheirs()
+    public void ApplicationId_AllMauiPlatforms_UseApprovedPackageName()
     {
-        // Android moves to the approved id together with the release signing key (task 164); Windows keeps its id until
-        // the data and secret migration of task 030.
         var project = XDocument.Load(Path.Combine(MauiRoot(), "ImageGen.Maui.csproj"));
         var ids = project.Descendants().Where(element => element.Name.LocalName == "ApplicationId").ToList();
 
-        var android = Assert.Single(ids, id => ((string?)id.Attribute("Condition"))?.Contains("'android'", StringComparison.Ordinal) == true);
-        Assert.Equal("com.eliseev.imagegen", android.Value);
-        var common = Assert.Single(ids, id => id.Attribute("Condition") is null);
-        Assert.Equal("com.companyname.imagegen.maui", common.Value);
-        Assert.True(ids.IndexOf(common) < ids.IndexOf(android), "The Android id must come after the common one to override it.");
+        Assert.Single(ids);
+        Assert.Equal("com.eliseev.imagegen", ids[0].Value);
+
+        var title = project.Descendants().Single(element => element.Name.LocalName == "ApplicationTitle");
+        Assert.Equal("Omnilite", title.Value);
     }
 
     private static string MauiRoot()

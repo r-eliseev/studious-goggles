@@ -33,9 +33,9 @@ public class AppResourcesTests
     }
 
     [Fact]
-    public void AppTitle_IsImageGen()
+    public void AppTitle_IsOmnilite()
     {
-        Assert.Equal("ImageGen", AppResources.AppTitle);
+        Assert.Equal("Omnilite", AppResources.AppTitle);
     }
 
     private static List<string> ReadResourceKeys()
