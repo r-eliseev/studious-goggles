@@ -1,8 +1,8 @@
 ---
 id: 033
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-02T06:00:59Z
+status: done
+assignee:
+claimed:
 created: 2026-10-27
 ---
 
