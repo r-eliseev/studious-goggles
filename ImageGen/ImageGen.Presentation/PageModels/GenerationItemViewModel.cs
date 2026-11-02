@@ -25,6 +25,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     private readonly Func<GenerationItemViewModel, Task> _edit;
     private readonly Func<GenerationItemViewModel, DescriptionMode, Task> _describe;
     private readonly Func<GenerationItemViewModel, Task> _otherModel;
+    private readonly Func<GenerationItemViewModel, Task>? _compare;
     private string _mediaType = "image/png";
     private string _generationImagePath = "";
 
@@ -38,7 +39,8 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         Func<GenerationItemViewModel, Task> newSeed,
         Func<GenerationItemViewModel, Task> edit,
         Func<GenerationItemViewModel, DescriptionMode, Task> describe,
-        Func<GenerationItemViewModel, Task> otherModel)
+        Func<GenerationItemViewModel, Task> otherModel,
+        Func<GenerationItemViewModel, Task>? compare = null)
     {
         ArgumentNullException.ThrowIfNull(generation);
         ArgumentNullException.ThrowIfNull(files);
@@ -58,6 +60,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         _edit = edit;
         _describe = describe;
         _otherModel = otherModel;
+        _compare = compare;
         Id = generation.Id;
         ProviderId = generation.ProviderId;
         ModelId = generation.ModelId;
@@ -163,6 +166,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CompareCommand))]
     public partial bool HasImage { get; set; }
 
     /// <summary>Caption of the save action in this shell (task 080).</summary>
@@ -226,6 +230,9 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         }
     }
 
+    [RelayCommand(CanExecute = nameof(HasImage))]
+    private Task CompareAsync() => _compare?.Invoke(this) ?? Task.CompletedTask;
+
     /// <summary>Describes this picture (task 019): the text is shown, and it goes into the input field only on the user's action.</summary>
     [RelayCommand(CanExecute = nameof(IsFinished))]
     private Task DescribeAsync() => _describe(this, DescriptionMode.Description);
@@ -267,6 +274,10 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         if (HasImage)
         {
             actions.Add((SaveLabel, card => card.SaveAsync()));
+            if (_compare is not null)
+            {
+                actions.Add((AppResources.Compare, card => card._compare!(card)));
+            }
         }
 
         if (IsFailedOrFiltered)

@@ -78,6 +78,8 @@ created: 2026-10-27
 
 Проверки продолжения: Core.Tests 717/717; Data.Tests 110/110; Presentation.Tests 441/441; Avalonia.Tests 149 passed, 2 skipped (DPAPI/Secret Service недоступны в Linux-среде); MAUI Android build; Avalonia build; `dotnet format --verify-no-changes` по изменённым проектам; `scripts/check.sh`. MAUI Windows UI и ручной запуск оболочек не проверялись в Linux.
 
+Дополнение после CI PR #70: `ChatPageModel.ReloadAsync` теперь строит timeline до ожидания оценки цены, чтобы `ModelsButtonText` не позволял открыть чат до появления строк. Добавлен regression-тест с задержанным каталогом. Presentation `ChatPageModelTests`: 65/65; ранее падавший Windows `ChatFlowTests.Repeat_AfterFinish_StartsSecondRun` локально проходит.
+
 ## Комментарии
 
 ### 2026-10-29, claude-536f

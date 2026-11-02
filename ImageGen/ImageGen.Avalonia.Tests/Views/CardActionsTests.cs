@@ -75,6 +75,7 @@ public class CardActionsTests
                 AppResources.ActionPromptFromImage,
                 AppResources.CopyPrompt,
                 AppResources.SaveImageAs,
+                AppResources.Compare,
                 AppResources.OtherModel,
                 AppResources.ErrorDetailsTitle,
             },

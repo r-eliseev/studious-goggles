@@ -24,6 +24,7 @@ public sealed partial class ChatPageModel(
     SessionService sessions,
     AssistantService assistant,
     GenerationService generations,
+    IRunRepository runs,
     IImageFileStore files,
     INavigationService navigation,
     IDialogService dialogs,
@@ -39,11 +40,13 @@ public sealed partial class ChatPageModel(
     IImageViewerService imageViewer,
     ErrorAlert errorAlert,
     CostEstimator? costEstimator = null,
-    SpendingService? spendingService = null) : ObservableObject
+    SpendingService? spendingService = null,
+    IImageComparisonService? imageComparison = null) : ObservableObject
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
     private readonly CostEstimator? _costEstimator = costEstimator;
     private readonly SpendingService? _spendingService = spendingService;
+    private readonly IImageComparisonService? _imageComparison = imageComparison;
     private readonly Dictionary<Guid, GenerationItemViewModel> _cards = [];
     private bool _imageConsentGiven;
     private Guid _sessionId;
@@ -224,7 +227,6 @@ public sealed partial class ChatPageModel(
                 settings.ImageModels.Count,
                 settings.RunsPerModel);
             AssistantText = string.Format(CultureInfo.CurrentCulture, AppResources.AssistantLabelFormat, settings.AssistantModel.ModelId);
-            await UpdateNextRunEstimateAsync(settings.ImageModels, settings.RunsPerModel, settings.Parameters);
 
             Items.Clear();
             _cards.Clear();
@@ -268,6 +270,7 @@ public sealed partial class ChatPageModel(
             }
 
             UpdateRetry();
+            await UpdateNextRunEstimateAsync(settings.ImageModels, settings.RunsPerModel, settings.Parameters);
         }
         catch (Exception ex)
         {
@@ -670,10 +673,67 @@ public sealed partial class ChatPageModel(
     private Task OtherModelCardAsync(GenerationItemViewModel card) =>
         navigation.GoToAsync(Routes.ModelPickerFor(_sessionId, card.Id));
 
+    private async Task CompareCardAsync(GenerationItemViewModel card)
+    {
+        if (_imageComparison is null)
+        {
+            return;
+        }
+
+        var rows = await runs.ListGenerationsBySessionAsync(_sessionId, CancellationToken.None);
+        var candidates = rows.Where(row => row.Id != card.Id
+                && row.SessionId == _sessionId
+                && row.Status == GenerationStatus.Succeeded
+                && !string.IsNullOrWhiteSpace(row.ImagePath))
+            .ToList();
+        if (candidates.Count == 0)
+        {
+            await dialogs.AlertAsync(AppResources.ComparisonTitle, AppResources.ComparisonNoCandidates);
+            return;
+        }
+
+        var options = candidates.Select(row => string.Format(
+            CultureInfo.CurrentCulture,
+            AppResources.ComparisonCandidateFormat,
+            row.ModelId,
+            row.SeedApplied ? row.Seed.ToString(CultureInfo.CurrentCulture) : AppResources.SeedNotSupported,
+            row.CostUsd is { } cost ? "$" + cost.ToString("0.####", CultureInfo.CurrentCulture) : AppResources.DescriptionCostUnknown,
+            row.Id.ToString("N")[..8])).ToList();
+        var selected = await dialogs.ChooseAsync(AppResources.ComparisonTitle, AppResources.Cancel, options);
+        var selectedIndex = selected is null ? -1 : options.IndexOf(selected);
+        if (selectedIndex < 0)
+        {
+            return;
+        }
+
+        var source = await runs.GetGenerationAsync(card.Id, CancellationToken.None);
+        var other = await runs.GetGenerationAsync(candidates[selectedIndex].Id, CancellationToken.None);
+        if (source is null || other is null
+            || source.SessionId != _sessionId || other.SessionId != _sessionId
+            || source.Status != GenerationStatus.Succeeded || other.Status != GenerationStatus.Succeeded
+            || string.IsNullOrWhiteSpace(source.ImagePath) || string.IsNullOrWhiteSpace(other.ImagePath)
+            || await sessions.GetAsync(_sessionId, CancellationToken.None) is null
+            || !File.Exists(files.GetFullPath(source.ImagePath))
+            || !File.Exists(files.GetFullPath(other.ImagePath)))
+        {
+            await dialogs.AlertAsync(AppResources.ErrorTitle, AppResources.ComparisonUnavailable);
+            return;
+        }
+
+        await _imageComparison.ShowAsync(new ComparisonPageModel(ToComparisonImage(source), ToComparisonImage(other)), CancellationToken.None);
+    }
+
+    private ComparisonImage ToComparisonImage(Generation generation) => new(
+        generation.Id,
+        files.GetFullPath(generation.ImagePath!),
+        generation.ModelId,
+        generation.SeedApplied ? generation.Seed.ToString(CultureInfo.CurrentCulture) : AppResources.SeedNotSupported,
+        generation.CostUsd is { } cost ? "$" + cost.ToString("0.####", CultureInfo.CurrentCulture) : AppResources.DescriptionCostUnknown);
+
     private GenerationItemViewModel CreateCard(Generation generation)
     {
         var card = new GenerationItemViewModel(
-            generation, files, dialogs, clipboard, imageSaver, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync, OtherModelCardAsync);
+            generation, files, dialogs, clipboard, imageSaver, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync, OtherModelCardAsync, CompareCardAsync);
         _cards[generation.Id] = card;
         return card;
     }

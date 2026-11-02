@@ -574,6 +574,33 @@
   <data name="CopyPrompt" xml:space="preserve">
     <value>Copy prompt</value>
   </data>
+  <data name="Compare" xml:space="preserve">
+    <value>Compare…</value>
+  </data>
+  <data name="ComparisonTitle" xml:space="preserve">
+    <value>Compare images</value>
+  </data>
+  <data name="ComparisonClose" xml:space="preserve"><value>Close comparison</value></data>
+  <data name="ComparisonFirstImage" xml:space="preserve"><value>First image</value></data>
+  <data name="ComparisonSecondImage" xml:space="preserve"><value>Second image</value></data>
+  <data name="ComparisonCandidateFormat" xml:space="preserve">
+    <value>{0} · {1} · {2} · {3}</value>
+  </data>
+  <data name="ComparisonNoCandidates" xml:space="preserve">
+    <value>There are no other successful images in this session.</value>
+  </data>
+  <data name="ComparisonUnavailable" xml:space="preserve">
+    <value>The session or one of the images is no longer available.</value>
+  </data>
+  <data name="ComparisonSideBySide" xml:space="preserve">
+    <value>Side by side</value>
+  </data>
+  <data name="ComparisonOverlay" xml:space="preserve">
+    <value>Overlay</value>
+  </data>
+  <data name="ComparisonZoom" xml:space="preserve">
+    <value>Zoom</value>
+  </data>
   <data name="UsedInSession" xml:space="preserve">
     <value>Used in this session</value>
   </data>

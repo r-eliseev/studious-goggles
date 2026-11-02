@@ -451,6 +451,28 @@ public static class AppResources
 
     public static string CopyPrompt => Get(nameof(CopyPrompt));
 
+    public static string Compare => Get(nameof(Compare));
+
+    public static string ComparisonTitle => Get(nameof(ComparisonTitle));
+
+    public static string ComparisonClose => Get(nameof(ComparisonClose));
+
+    public static string ComparisonFirstImage => Get(nameof(ComparisonFirstImage));
+
+    public static string ComparisonSecondImage => Get(nameof(ComparisonSecondImage));
+
+    public static string ComparisonCandidateFormat => Get(nameof(ComparisonCandidateFormat));
+
+    public static string ComparisonNoCandidates => Get(nameof(ComparisonNoCandidates));
+
+    public static string ComparisonUnavailable => Get(nameof(ComparisonUnavailable));
+
+    public static string ComparisonSideBySide => Get(nameof(ComparisonSideBySide));
+
+    public static string ComparisonOverlay => Get(nameof(ComparisonOverlay));
+
+    public static string ComparisonZoom => Get(nameof(ComparisonZoom));
+
     public static string UsedInSession => Get(nameof(UsedInSession));
 
     public static string AllModels => Get(nameof(AllModels));

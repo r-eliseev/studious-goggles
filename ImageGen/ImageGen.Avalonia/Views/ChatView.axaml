@@ -163,6 +163,7 @@
                                                         <MenuItem Header="{markup:Res ActionPromptFromImage}" Command="{Binding DescribePromptCommand}" />
                                                         <MenuItem Header="{markup:Res CopyPrompt}" Command="{Binding CopyPromptCommand}" InputGesture="Ctrl+C" />
                                                         <MenuItem Header="{markup:Res SaveImageAs}" Command="{Binding SaveCommand}" IsVisible="{Binding HasImage}" InputGesture="Ctrl+S" />
+                                                        <MenuItem Header="{markup:Res Compare}" Command="{Binding CompareCommand}" IsVisible="{Binding HasImage}" />
                                                         <MenuItem Header="{markup:Res OtherModel}" Command="{Binding OtherModelCommand}" IsVisible="{Binding IsFailedOrFiltered}" />
                                                         <MenuItem Header="{markup:Res ErrorDetailsTitle}" Command="{Binding DetailsCommand}" IsVisible="{Binding IsFailed}" />
                                                     </ContextMenu>

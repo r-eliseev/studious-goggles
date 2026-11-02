@@ -39,6 +39,7 @@ public class ChatPageModelTests
     private readonly IMainThread _mainThread = Substitute.For<IMainThread>();
     private readonly IClipboardService _clipboard = Substitute.For<IClipboardService>();
     private readonly IImageViewerService _imageViewer = Substitute.For<IImageViewerService>();
+    private readonly IImageComparisonService _imageComparison = Substitute.For<IImageComparisonService>();
     private readonly IFilePickerService _filePicker = Substitute.For<IFilePickerService>();
     private readonly IChatAttachmentRepository _chatAttachments = Substitute.For<IChatAttachmentRepository>();
     private Action? _onMainThreadCallback;
@@ -227,12 +228,13 @@ public class ChatPageModelTests
     private SessionParametersPageModel NewParametersPane() =>
         new(_sessionService, Catalog, _navigation, ErrorAlerts.Create(_dialogs));
 
-    private ChatPageModel CreateModel(Guid sessionId, CostEstimator? costEstimator = null, SpendingService? spendingService = null)
+    private ChatPageModel CreateModel(Guid sessionId, CostEstimator? costEstimator = null, SpendingService? spendingService = null, IImageComparisonService? imageComparison = null)
     {
         var model = new ChatPageModel(
             _sessionService,
             _assistant,
             _generationService,
+            _runRepository,
             _files,
             _navigation,
             _dialogs,
@@ -246,7 +248,7 @@ public class ChatPageModelTests
             NewModelsPane,
             NewParametersPane,
             _imageViewer,
-            ErrorAlerts.Create(_dialogs), costEstimator, spendingService);
+            ErrorAlerts.Create(_dialogs), costEstimator, spendingService, imageComparison);
         model.ApplyQueryAttributes(new Dictionary<string, object>
         {
             [Routes.SessionIdParameter] = sessionId.ToString("D"),
@@ -317,6 +319,75 @@ public class ChatPageModelTests
         CreatedAt = Now,
         SortOrder = 0,
     };
+
+    [Fact]
+    public async Task CompareCommand_OffersOnlyOtherSuccessfulImagesFromSameSession()
+    {
+        var run = NewRun(_session.Id, "red fox");
+        var first = NewGeneration(run, 5);
+        var second = NewGeneration(run, 6);
+        var failed = NewGeneration(run, 7, GenerationStatus.Failed);
+        _files.GetFullPath(Arg.Any<string>()).Returns(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../docs/index.md")));
+        StoreRun(run, first, second, failed);
+        _dialogs.ChooseAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>())
+            .Returns(call => call.Arg<IReadOnlyList<string>>()[0]);
+        var model = CreateModel(_session.Id, imageComparison: _imageComparison);
+        await model.OnAppearingAsync();
+
+        var cards = model.Items.OfType<RunItemViewModel>().Single().Generations;
+        await cards[0].CompareCommand.ExecuteAsync(null);
+
+        var offered = _dialogs.ReceivedCalls()
+            .Where(call => call.GetMethodInfo().Name == nameof(IDialogService.ChooseAsync))
+            .Select(call => (IReadOnlyList<string>)call.GetArguments()[2]!)
+            .Single();
+        Assert.Single(offered);
+        Assert.True(offered[0].ToString().Contains("6", StringComparison.Ordinal));
+        await _imageComparison.Received(1).ShowAsync(Arg.Is<ComparisonPageModel>(page =>
+            page.First.GenerationId == first.Id && page.Second.GenerationId == second.Id), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CompareCommand_ShowsUnavailableWhenSelectedImageWasRemoved()
+    {
+        var run = NewRun(_session.Id, "red fox");
+        var source = NewGeneration(run, 5);
+        var second = NewGeneration(run, 6);
+        StoreRun(run, source, second);
+        _dialogs.ChooseAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>())
+            .Returns(call => call.Arg<IReadOnlyList<string>>()[0]);
+        _files.GetFullPath(Arg.Any<string>()).Returns("/definitely-missing/" + Guid.NewGuid().ToString("N"));
+        var model = CreateModel(_session.Id, imageComparison: _imageComparison);
+        await model.OnAppearingAsync();
+
+        await model.Items.OfType<RunItemViewModel>().Single().Generations[0].CompareCommand.ExecuteAsync(null);
+
+        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, AppResources.ComparisonUnavailable);
+        await _imageComparison.DidNotReceive().ShowAsync(Arg.Any<ComparisonPageModel>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_LoadsTimelineBeforePriceEstimateCompletes()
+    {
+        var run = NewRun(_session.Id, "red fox");
+        StoreRun(run, NewGeneration(run, 5));
+        var catalogStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var catalogResult = new TaskCompletionSource<IReadOnlyList<ImageModel>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            catalogStarted.TrySetResult();
+            return catalogResult.Task;
+        });
+        var model = CreateModel(_session.Id, new CostEstimator(Catalog));
+
+        var appearing = model.OnAppearingAsync();
+        await catalogStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        Assert.Single(model.Items.OfType<RunItemViewModel>());
+        Assert.False(appearing.IsCompleted);
+        catalogResult.SetResult([TestModels.Model(ImageModel, "Image")]);
+        await appearing;
+    }
 
     [Fact]
     public async Task OnAppearingAsync_EmptySession_ShowsTitleModelsButtonAndNoItems()
@@ -698,7 +769,7 @@ public class ChatPageModelTests
     public void ApplyQueryAttributes_MissingSessionId_Throws()
     {
         var model = new ChatPageModel(
-            _sessionService, _assistant, _generationService, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard, Substitute.For<IImageSaver>(), _tracker, NewModelsPane, NewParametersPane, _imageViewer, ErrorAlerts.Create(_dialogs));
+            _sessionService, _assistant, _generationService, _runRepository, _files, _navigation, _dialogs, _mainThread, _attachments, _filePicker, _descriptions, _clipboard, Substitute.For<IImageSaver>(), _tracker, NewModelsPane, NewParametersPane, _imageViewer, ErrorAlerts.Create(_dialogs));
 
         Assert.Throws<ArgumentException>(() => model.ApplyQueryAttributes(new Dictionary<string, object>()));
     }

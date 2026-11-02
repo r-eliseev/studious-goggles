@@ -74,6 +74,7 @@ public static class AppServices
             MainWindowOwner,
             sp.GetRequiredService<AvaloniaFullScreenController>(),
             sp.GetRequiredService<IDialogService>()));
+        services.AddSingleton<IImageComparisonService>(sp => new AvaloniaImageComparisonService(MainWindowOwner, sp.GetRequiredService<IDialogService>()));
         services.AddSingleton<ICurrentSessionTracker, CurrentSessionTracker>();
         services.AddSingleton<ErrorAlert>();
         services.AddSingleton<DefaultAssistantModelFile>();
