@@ -1,6 +1,6 @@
 # ImageGen
 
-Клиент для генерации изображений из одного промпта в нескольких моделях. Результаты и история сессий хранятся на устройстве. Источник написан на C# / .NET 10; доступны оболочки MAUI и Avalonia.
+Клиент для генерации изображений из одного промпта в нескольких моделях. Результаты и история сессий хранятся локально. Источник написан на C# / .NET 10; доступны оболочки MAUI, Avalonia и Web с Vue-интерфейсом.
 
 ## Сейчас в исходном коде
 
@@ -9,7 +9,7 @@
 - Каталог Together содержит FLUX.1.1 Pro, FLUX.2 Dev, FLUX.2 Flex и FLUX.2 Pro. Живая генерация и фактическое списание Together пока не проверялись; фактическая стоимость остаётся неизвестной.
 - fal.ai встроен как провайдер генерации, но его настройка не является обязательным шагом первого запуска.
 
-Эти возможности описывают текущую ветку исходного кода. Последний опубликованный релиз v0.1.4 предшествует поддержке Together и общему экрану ключей провайдеров.
+Эти возможности описывают текущую ветку исходного кода. Последний опубликованный релиз v0.1.4 предшествует поддержке Together, общему экрану ключей провайдеров и Web-оболочке.
 
 ## Скачать
 
@@ -46,6 +46,8 @@ Release workflow публикует Avalonia self-contained archives, Windows MA
 
 Нужен .NET 10 SDK. На Linux MAUI Windows target и всё решение целиком не собираются; подробности по средам и платформам — в [`docs/knowledge/dev-environment.md`](docs/knowledge/dev-environment.md).
 
+Для Web-клиента также нужен Node.js 22.12+ и npm. Из `ImageGen/ImageGen.Web/ClientApp` выполните `npm ci`, `npm run typecheck`, `npm run lint`, `npm test` и `npm run build`. Сборка записывает Vue assets в `ImageGen/ImageGen.Web/wwwroot`. Для разработки задайте `IMAGEGEN_WEB_PASSWORD` и `IMAGEGEN_DATA_DIR`, запустите `ASPNETCORE_URLS=http://localhost:5080 dotnet run --project ImageGen/ImageGen.Web/ImageGen.Web.csproj`, а в другой консоли — `npm run dev` из `ClientApp`; Vite проксирует `/api` на Web-хост.
+
 Основная сборка и тесты отдельных проектов:
 
 ```sh
@@ -69,7 +71,7 @@ dotnet run --project ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj
 - [Сессии с ассистентом](docs/specs/chat-sessions.md) и [отладочный trace](docs/specs/debug-trace.md).
 - [Индекс документации](docs/index.md), [статус проекта](docs/status.md) и [архив завершённых задач](tasks/DONE.md).
 
-Web API и Vue, Docker, галерея результатов, сравнение изображений и учёт расходов остаются будущими направлениями и не включены в текущий код.
+Web API и Vue-клиент входят в текущий исходный код. Docker-образ Web-хоста пока не включён в опубликованный релиз.
 
 ## Лицензия
 

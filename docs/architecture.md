@@ -122,6 +122,7 @@ ImageGen.Web/ClientApp   Vue 3 + Vite + TypeScript
 ImageGen.Web.Tests
 Dockerfile, docker-compose.yml   том /data
 ```
+- Vue-клиент обращается только к same-origin `/api`: `WebApiClient` добавляет antiforgery token к изменяющим запросам, а provider key остаётся только в памяти формы до отправки. `vue-router` ведёт список сессий, чат, модели и настройки; SSE-события сливаются по id генерации, `resync` и переподключение перечитывают timeline.
 - Provider connections retain catalog/key/chat responsibilities; synchronous image HTTP calls are transport-only and wrapped by `InMemoryQueuedImageProvider` before orchestration sees them. ADR 0020 replaces ADR 0005's proposed OpenRouter-specific runner with this shared adapter for OpenRouter and OpenAI-compatible clients.
 - События: для Web подписка через `Channel` вместо события .NET.
 - Web: однопользовательский, пароль из переменной окружения, cookie-сессия; секреты в файле под Data Protection; ключи шифрования и данные в томе Docker.

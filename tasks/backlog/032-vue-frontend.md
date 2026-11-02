@@ -1,8 +1,8 @@
 ---
 id: 032
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-02T05:51:21Z
+status: done
+assignee:
+claimed:
 created: 2026-10-27
 ---
 
@@ -48,6 +48,11 @@ Vue 3 + Vite + TypeScript для Web API: вход, сессии, чат, выб
 
 ## Отчёт
 
+Реализован браузерный клиент в `ImageGen.Web/ClientApp`: Vue 3, Vue Router, TypeScript и Vite с точными версиями и lockfile. API-клиент использует same-origin cookies, получает CSRF token перед изменяющими запросами, отправляет действия генерации без автоматического повтора и переводит 401 на форму входа с возвратом на исходный маршрут. Добавлены список/создание/переименование/удаление сессий, чат с вложениями и действиями генераций, выбор image/assistant моделей, настройки ключей и темы. Provider key очищается из формы после ответа и не хранится в браузерном storage. SSE обновляет существующую карточку по id; `resync` и восстановление соединения перечитывают timeline. Тексты ассистента выводятся обычной интерполяцией Vue.
+
+Web-хост отдаёт собранные `wwwroot` assets и SPA fallback для прямых ссылок; неизвестный `/api/*` остаётся JSON 404. Добавлены unit/component tests, Playwright E2E сценарии с подменённым API, документация запуска и расширен ADR 0025. Все дополнительные npm-пакеты имеют MIT/Apache-2.0 лицензии; `npm audit --omit=dev` сообщает 0 уязвимостей. Полный audit отмечает 16 moderate advisory только в dev toolchain (ESLint/minimatch и Vue Test Utils/glob); npm не предлагает совместимого исправления для minimatch.
+
+Проверки: `npm ci`, `npm run typecheck`, `npm run lint`, `npm test` (5/5), `npm run build`, `npm run e2e -- --list` (2 сценария), Web.Tests (19/19), `dotnet format` Web и Web.Tests — прошли. Полный запуск Playwright E2E в этой сессии невозможен: браузер Chromium отсутствует в `/root/.cache/ms-playwright` и `/opt`, а `docs/knowledge/dev-environment.md` запрещает `playwright install`. `scripts/check.sh` запускается перед обновлением PR.
 ## Комментарии
 
 ### 2026-10-29, claude-536f

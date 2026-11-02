@@ -82,6 +82,8 @@ app.UseExceptionHandler(handler => handler.Run(async context =>
     context.Response.StatusCode = StatusCodes.Status500InternalServerError;
     await context.Response.WriteAsJsonAsync(new { error = "unknown" });
 }));
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.MapGet("/api/health", () => Results.Json(new { status = "ok" })).AllowAnonymous();
 app.UseRateLimiter();
 app.UseAuthentication();
@@ -90,6 +92,8 @@ app.UseAntiforgery();
 app.MapAuthEndpoints(password);
 app.MapWebApiEndpoints();
 app.MapEventsEndpoint();
+app.MapFallback("/api/{**path}", () => Results.NotFound(new { error = "not_found" })).AllowAnonymous();
+app.MapFallbackToFile("index.html").AllowAnonymous();
 app.Run();
 
 public partial class Program;
