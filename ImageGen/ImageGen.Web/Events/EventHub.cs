@@ -81,21 +81,14 @@ public sealed class EventHub : IDisposable
         {
             lock (subscriber)
             {
-                if (subscriber.NeedsResync)
-                {
-                    if (subscriber.Channel.Writer.TryWrite(new WebEvent("resync", "{}")))
-                    {
-                        subscriber.NeedsResync = false;
-                    }
-                }
-
                 if (!subscriber.Channel.Writer.TryWrite(new WebEvent(name, json)))
                 {
                     while (subscriber.Channel.Reader.TryRead(out _))
                     {
                     }
 
-                    subscriber.NeedsResync = true;
+                    subscriber.Channel.Writer.TryWrite(new WebEvent("resync", "{}"));
+                    subscriber.Channel.Writer.TryWrite(new WebEvent(name, json));
                 }
             }
         }
@@ -140,8 +133,6 @@ public sealed class EventHub : IDisposable
             SingleReader = true,
             SingleWriter = false,
         });
-
-        public bool NeedsResync { get; set; }
     }
 
     private sealed record GenerationEvent(Guid GenerationId, Guid SessionId, string Status);

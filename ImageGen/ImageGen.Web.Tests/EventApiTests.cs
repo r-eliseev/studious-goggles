@@ -65,6 +65,31 @@ public sealed class EventApiTests
     }
 
     [Fact]
+    public async Task FullSubscriberQueue_SendsResyncWithoutFurtherEvents()
+    {
+        using var host = new TestHost();
+        var hub = host.Factory.Services.GetRequiredService<EventHub>();
+        using var subscription = hub.Subscribe();
+        var lastSessionId = Guid.Empty;
+
+        for (var index = 0; index < 257; index++)
+        {
+            lastSessionId = Guid.NewGuid();
+            host.NotifySessionChange(lastSessionId);
+        }
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        timeout.CancelAfter(TimeSpan.FromMilliseconds(250));
+        var marker = await subscription.Reader.ReadAsync(timeout.Token);
+        Assert.Equal("resync", marker.Name);
+        Assert.Equal("{}", marker.Data);
+        var latest = await subscription.Reader.ReadAsync(timeout.Token);
+        Assert.Equal("session", latest.Name);
+        Assert.Equal($"{{\"sessionId\":\"{lastSessionId:D}\"}}", latest.Data);
+        Assert.False(subscription.Reader.TryRead(out _));
+    }
+
+    [Fact]
     public async Task Events_AfterIdleHeartbeat_StillDeliversSessionEvent()
     {
         using var host = new TestHost(TimeSpan.FromMilliseconds(100));
