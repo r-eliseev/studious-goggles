@@ -327,6 +327,47 @@ public class SemanticIndexServiceTests
         await setup.Service.DisposeAsync();
     }
 
+    [Fact]
+    public async Task GetStatusAsync_StaleSnapshotAfterIndexCompletes_ReturnsFinalStatus()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var setup = Create(Enumerable.Range(0, 128)
+            .Select(index => new SearchSource($"title:{index}", Guid.NewGuid(), SearchTextKind.Title, $"title {index}"))
+            .ToArray());
+        var firstBatchStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseFirstBatch = new TaskCompletionSource<EmbeddingResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var calls = 0;
+        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                var count = call.Arg<IReadOnlyList<string>>().Count;
+                if (Interlocked.Increment(ref calls) == 1)
+                {
+                    firstBatchStarted.TrySetResult();
+                    return releaseFirstBatch.Task;
+                }
+
+                return Task.FromResult(Result(count));
+            });
+
+        await setup.Service.EnableAsync(ct);
+        await firstBatchStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), ct);
+        var (snapshotCaptured, releaseSnapshot) = setup.Repository.BlockNextListAll();
+        var staleStatusTask = setup.Service.GetStatusAsync(ct);
+        await snapshotCaptured.WaitAsync(TimeSpan.FromSeconds(5), ct);
+
+        releaseFirstBatch.SetResult(Result(64));
+        await WaitForAsync(() => setup.Service.GetStatusSnapshot().State == SemanticIndexState.Ready, ct);
+        releaseSnapshot();
+
+        var status = await staleStatusTask;
+
+        Assert.Equal(SemanticIndexState.Ready, status.State);
+        Assert.Equal(128, status.Indexed);
+        Assert.Equal(0, status.Pending);
+        await setup.Service.DisposeAsync();
+    }
+
     private static (SemanticIndexService Service, MemorySources Sources, MemoryEmbeddings Repository, ITextEmbeddingClient Client, SessionChangeNotifier Changes, RecordingDelay Delay) Create(
         IReadOnlyList<SearchSource> sources,
         bool hasKey = true)
@@ -432,16 +473,47 @@ public class SemanticIndexServiceTests
     private sealed class MemoryEmbeddings : ITextEmbeddingRepository
     {
         private readonly object _gate = new();
+        private (TaskCompletionSource Captured, TaskCompletionSource Release)? _nextListAllBlock;
         public Dictionary<string, TextEmbedding> Items { get; } = new(StringComparer.Ordinal);
 
         public List<Expense> Expenses { get; } = [];
 
         public Task<IReadOnlyList<TextEmbedding>> ListAllAsync(CancellationToken cancellationToken)
         {
+            IReadOnlyList<TextEmbedding> snapshot;
+            (TaskCompletionSource Captured, TaskCompletionSource Release)? block;
             lock (_gate)
             {
-                return Task.FromResult<IReadOnlyList<TextEmbedding>>(Items.Values.ToArray());
+                snapshot = Items.Values.ToArray();
+                block = _nextListAllBlock;
+                _nextListAllBlock = null;
             }
+
+            return block is { } pending
+                ? WaitForSnapshotReleaseAsync(snapshot, pending.Captured, pending.Release)
+                : Task.FromResult(snapshot);
+        }
+
+        public (Task SnapshotCaptured, Action Release) BlockNextListAll()
+        {
+            var captured = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate)
+            {
+                _nextListAllBlock = (captured, release);
+            }
+
+            return (captured.Task, () => release.TrySetResult());
+        }
+
+        private static async Task<IReadOnlyList<TextEmbedding>> WaitForSnapshotReleaseAsync(
+            IReadOnlyList<TextEmbedding> snapshot,
+            TaskCompletionSource captured,
+            TaskCompletionSource release)
+        {
+            captured.TrySetResult();
+            await release.Task;
+            return snapshot;
         }
 
         public Task UpsertBatchAsync(IReadOnlyList<TextEmbedding> embeddings, Expense? expense, CancellationToken cancellationToken)
