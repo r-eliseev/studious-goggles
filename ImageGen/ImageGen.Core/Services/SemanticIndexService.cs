@@ -112,6 +112,12 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
             {
                 status = status with { State = SemanticIndexState.Indexing };
             }
+            else if (_indexTask is { IsCompleted: true } && _status.State == SemanticIndexState.Ready)
+            {
+                // The repository snapshot above may have been captured before indexing finished.
+                // Keep the completion status published by the index task instead of replacing it.
+                status = _status;
+            }
             else if (!_hasStarted && !_paused)
             {
                 StartIndexingLocked();
