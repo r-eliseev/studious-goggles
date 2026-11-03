@@ -1,3 +1,4 @@
+using System.Globalization;
 using ImageGen.Core.Domain.Expenses;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Storage;
@@ -31,6 +32,30 @@ public sealed class SpendingPageModelTests
         }
         finally
         {
+            if (Directory.Exists(fixture.Directory)) Directory.Delete(fixture.Directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task RefreshAsync_TotalUsesDollarFormatIndependentOfCulture()
+    {
+        var previousCulture = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("ru-RU");
+        var now = new DateTimeOffset(2026, 11, 2, 12, 0, 0, TimeSpan.Zero);
+        var expenses = Substitute.For<IExpenseRepository>();
+        expenses.ListAsync(Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns([NewExpense("a", "openrouter", "fox", 0.03m, now), NewExpense("b", "fal", "owl", 0.0045m, now)]);
+        expenses.CountUnknownAsync(Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>()).Returns(0);
+        var fixture = CreateModel(expenses, now);
+        try
+        {
+            await fixture.Model.RefreshCommand.ExecuteAsync(null);
+
+            Assert.Equal("$0.0345", fixture.Model.TotalText);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
             if (Directory.Exists(fixture.Directory)) Directory.Delete(fixture.Directory, recursive: true);
         }
     }

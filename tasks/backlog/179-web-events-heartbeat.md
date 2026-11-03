@@ -1,6 +1,6 @@
 ---
 id: 179
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-02
@@ -55,6 +55,10 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+Heartbeat теперь использует новый linked `CancellationTokenSource` в каждой итерации, с прежним интервалом по умолчанию 20 секунд. Добавлен `EventStreamOptions` для тестового короткого интервала и регрессионный интеграционный тест: после нескольких heartbeat событие `session` и его данные доходят до клиента.
+
+Проверки: регрессионный тест до исправления завершался таймаутом; после исправления `ImageGen.Web.Tests` — 20/20; `dotnet format` Web и Web.Tests; `scripts/check.sh` — пройден.
 
 ## Комментарии
 

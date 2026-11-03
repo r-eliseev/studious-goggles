@@ -3,7 +3,9 @@ using System.Net.Http.Json;
 using ImageGen.Web.Events;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ImageGen.Web.Tests;
 
@@ -62,17 +64,80 @@ public sealed class EventApiTests
         Assert.Equal("session", next.Name);
     }
 
+    [Fact]
+    public async Task FullSubscriberQueue_SendsResyncWithoutFurtherEvents()
+    {
+        using var host = new TestHost();
+        var hub = host.Factory.Services.GetRequiredService<EventHub>();
+        using var subscription = hub.Subscribe();
+        var lastSessionId = Guid.Empty;
+
+        for (var index = 0; index < 257; index++)
+        {
+            lastSessionId = Guid.NewGuid();
+            host.NotifySessionChange(lastSessionId);
+        }
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        timeout.CancelAfter(TimeSpan.FromMilliseconds(250));
+        var marker = await subscription.Reader.ReadAsync(timeout.Token);
+        Assert.Equal("resync", marker.Name);
+        Assert.Equal("{}", marker.Data);
+        var latest = await subscription.Reader.ReadAsync(timeout.Token);
+        Assert.Equal("session", latest.Name);
+        Assert.Equal($"{{\"sessionId\":\"{lastSessionId:D}\"}}", latest.Data);
+        Assert.False(subscription.Reader.TryRead(out _));
+    }
+
+    [Fact]
+    public async Task Events_AfterIdleHeartbeat_StillDeliversSessionEvent()
+    {
+        using var host = new TestHost(TimeSpan.FromMilliseconds(100));
+        using var client = host.Factory.CreateClient();
+        await host.LoginAsync(client);
+        using var response = await host.OpenEventsAsync(client);
+        response.EnsureSuccessStatusCode();
+        using var reader = new StreamReader(await response.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        await Task.Delay(TimeSpan.FromMilliseconds(350), TestContext.Current.CancellationToken);
+
+        var sessionId = Guid.NewGuid();
+        host.NotifySessionChange(sessionId);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(5));
+        var heartbeatCount = 0;
+        string? line;
+        while ((line = await reader.ReadLineAsync(timeout.Token)) is not null && line != "event: session")
+        {
+            if (line == ": heartbeat") heartbeatCount++;
+        }
+
+        Assert.Equal("event: session", line);
+        Assert.InRange(heartbeatCount, 3, 10);
+        Assert.Equal($"data: {{\"sessionId\":\"{sessionId:D}\"}}", await reader.ReadLineAsync(timeout.Token));
+    }
+
     private sealed class TestHost : IDisposable
     {
         private readonly string? _oldDataDirectory = Environment.GetEnvironmentVariable("IMAGEGEN_DATA_DIR");
         private readonly string? _oldPassword = Environment.GetEnvironmentVariable("IMAGEGEN_WEB_PASSWORD");
         private readonly string _directory = Path.Combine(Path.GetTempPath(), "imagegen-web-tests", Guid.NewGuid().ToString("N"));
 
-        public TestHost()
+        public TestHost(TimeSpan? heartbeatInterval = null)
         {
             Environment.SetEnvironmentVariable("IMAGEGEN_DATA_DIR", _directory);
             Environment.SetEnvironmentVariable("IMAGEGEN_WEB_PASSWORD", "test-password");
-            Factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.UseEnvironment("Testing"));
+            Factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+            {
+                builder.UseEnvironment("Testing");
+                if (heartbeatInterval is { } interval)
+                {
+                    builder.ConfigureTestServices(services =>
+                    {
+                        services.RemoveAll<EventStreamOptions>();
+                        services.AddSingleton(new EventStreamOptions { HeartbeatInterval = interval });
+                    });
+                }
+            });
         }
 
         public WebApplicationFactory<Program> Factory { get; }

@@ -305,6 +305,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
 
         var selected = allSources.Take(MaximumIndexedSources).ToArray();
         var selectedByKey = selected.ToDictionary(source => source.SourceKey, StringComparer.Ordinal);
+        var hashesByKey = selected.ToDictionary(source => source.SourceKey, source => HashText(source.Text), StringComparer.Ordinal);
         var stored = await _embeddings.ListAllAsync(cancellationToken).ConfigureAwait(false);
         var dimensions = stored.Where(embedding => embedding.Model == EmbeddingModel)
             .Select(embedding => embedding.Dimensions)
@@ -322,7 +323,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
 
         var remove = stored
             .Where(embedding => !selectedByKey.TryGetValue(embedding.SourceKey, out var source)
-                || !string.Equals(embedding.ContentHash, HashText(source.Text), StringComparison.Ordinal)
+                || !string.Equals(embedding.ContentHash, hashesByKey[source.SourceKey], StringComparison.Ordinal)
                 || !string.Equals(embedding.Model, EmbeddingModel, StringComparison.Ordinal))
             .Select(embedding => embedding.SourceKey)
             .ToArray();
@@ -344,8 +345,6 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
             var batch = pending.Skip(offset).Take(BatchSize).ToArray();
             var texts = batch.Select(source => NormalizeText(source.Text)).ToArray();
             var result = await EmbedWithRetryAsync(texts, cancellationToken).ConfigureAwait(false);
-            ValidateResult(result, batch.Length);
-
             var expense = result.CostUsd is decimal cost
                 ? new Expense
                 {
@@ -357,6 +356,20 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
                     OccurredAt = _timeProvider.GetUtcNow(),
                 }
                 : null;
+            try
+            {
+                ValidateResult(result, batch.Length);
+            }
+            catch
+            {
+                if (expense is not null)
+                {
+                    await _embeddings.UpsertBatchAsync([], expense, cancellationToken).ConfigureAwait(false);
+                }
+
+                throw;
+            }
+
             if (expectedDimensions is int expected && expected != result.Dimensions)
             {
                 await _embeddings.UpsertBatchAsync([], expense, cancellationToken).ConfigureAwait(false);
@@ -366,14 +379,14 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
 
             expectedDimensions ??= result.Dimensions;
 
-            var current = await _sources.ListSourcesAsync(cancellationToken).ConfigureAwait(false);
+            var current = await _sources.ListSourcesByKeysAsync(batch.Select(source => source.SourceKey).ToArray(), cancellationToken).ConfigureAwait(false);
             var currentByKey = current.ToDictionary(source => source.SourceKey, StringComparer.Ordinal);
             var saved = new List<TextEmbedding>(batch.Length);
             for (var index = 0; index < batch.Length; index++)
             {
                 var source = batch[index];
                 if (!currentByKey.TryGetValue(source.SourceKey, out var latest)
-                    || !string.Equals(HashText(source.Text), HashText(latest.Text), StringComparison.Ordinal))
+                    || !string.Equals(hashesByKey[source.SourceKey], HashText(latest.Text), StringComparison.Ordinal))
                 {
                     continue;
                 }
@@ -382,7 +395,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
                     source.SourceKey,
                     source.SessionId,
                     source.Kind,
-                    HashText(source.Text),
+                    hashesByKey[source.SourceKey],
                     result.Model,
                     result.Dimensions,
                     result.Vectors[index],

@@ -12,8 +12,8 @@ public sealed class ExpenseRepository(SqliteDatabase database) : IExpenseReposit
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT
-                (SELECT COUNT(*) FROM generations WHERE cost_usd IS NULL AND created_at >= @from AND created_at < @to) +
-                (SELECT COUNT(*) FROM chat_messages WHERE role = 1 AND provider_id IS NOT NULL AND cost_usd IS NULL AND created_at >= @from AND created_at < @to) +
+                (SELECT COUNT(*) FROM generations WHERE cost_usd IS NULL AND status IN (2, 5) AND created_at >= @from AND created_at < @to) +
+                (SELECT COUNT(*) FROM chat_messages WHERE role = 1 AND is_error = 0 AND provider_id IS NOT NULL AND cost_usd IS NULL AND created_at >= @from AND created_at < @to) +
                 (SELECT COUNT(*) FROM image_descriptions WHERE cost_usd IS NULL AND created_at >= @from AND created_at < @to) +
                 (SELECT COUNT(*) FROM conversation_summaries WHERE cost_usd IS NULL AND created_at >= @from AND created_at < @to);
             """;

@@ -1,3 +1,4 @@
+using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Data.Repositories;
 
@@ -64,11 +65,41 @@ public class ExpenseRepositoryTests
         var runs = new RunRepository(test.Database);
         var currentRun = TestData.Run(session.Id, TestData.BaseTime);
         var outsideRun = TestData.Run(session.Id, TestData.BaseTime.AddDays(-2));
-        await runs.AddRunAsync(currentRun, [TestData.Generation(currentRun, 0)], ct);
-        await runs.AddRunAsync(outsideRun, [TestData.Generation(outsideRun, 0)], ct);
+        await runs.AddRunAsync(currentRun, [TestData.Generation(currentRun, 0, GenerationStatus.Succeeded)], ct);
+        await runs.AddRunAsync(outsideRun, [TestData.Generation(outsideRun, 0, GenerationStatus.Succeeded)], ct);
 
         var expenses = new ExpenseRepository(test.Database);
         Assert.Equal(1, await expenses.CountUnknownAsync(TestData.BaseTime.AddDays(-1), TestData.BaseTime.AddDays(1), ct));
+    }
+
+    [Fact]
+    public async Task CountUnknownAsync_IgnoresOperationsThatCannotBeCharged()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var session = TestData.Session();
+        await new SessionRepository(test.Database).AddAsync(session, ct);
+        var runs = new RunRepository(test.Database);
+        var run = TestData.Run(session.Id, TestData.BaseTime);
+        var statuses = new[]
+        {
+            GenerationStatus.Succeeded,
+            GenerationStatus.Filtered,
+            GenerationStatus.Failed,
+            GenerationStatus.Cancelled,
+            GenerationStatus.Queued,
+            GenerationStatus.Running,
+        };
+        await runs.AddRunAsync(run, statuses.Select((status, index) => TestData.Generation(run, index, status)).ToArray(), ct);
+        var errorMessage = TestData.Message(session.Id, TestData.BaseTime, "failed assistant response");
+        errorMessage.Role = ChatRole.Assistant;
+        errorMessage.ProviderId = "openrouter";
+        errorMessage.ModelId = "model";
+        errorMessage.IsError = true;
+        await new ChatMessageRepository(test.Database).AddAsync(errorMessage, ct);
+
+        var expenses = new ExpenseRepository(test.Database);
+        Assert.Equal(2, await expenses.CountUnknownAsync(TestData.BaseTime.AddDays(-1), TestData.BaseTime.AddDays(1), ct));
     }
 
     [Fact]

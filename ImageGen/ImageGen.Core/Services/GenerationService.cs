@@ -161,7 +161,13 @@ public sealed class GenerationService(
             return GenerationCancelResult.CancellationRequested;
         }
 
-        if (outcome is CancelOutcome.AlreadyCompleted or CancelOutcome.NotFound)
+        if (outcome == CancelOutcome.AlreadyCompleted)
+        {
+            logger.LogInformation("Provider reports generation already completed; keeping watch for generation {GenerationId} in session {SessionId}.", job.GenerationId, job.SessionId);
+            return GenerationCancelResult.NotActive;
+        }
+
+        if (outcome == CancelOutcome.NotFound)
         {
             await job.StateGate.WaitAsync().ConfigureAwait(false);
             try

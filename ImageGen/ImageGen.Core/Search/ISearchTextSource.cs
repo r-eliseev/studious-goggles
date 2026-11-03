@@ -7,5 +7,7 @@ public interface ISearchTextSource
 
     Task<IReadOnlyList<SearchSource>> ListSourcesAsync(CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<SearchSource>> ListSourcesByKeysAsync(IReadOnlyCollection<string> sourceKeys, CancellationToken cancellationToken);
+
     Task<int> CountSourcesAsync(CancellationToken cancellationToken);
 }

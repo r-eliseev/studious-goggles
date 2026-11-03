@@ -1,6 +1,6 @@
 ---
 id: 182
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-02
@@ -47,6 +47,10 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+`SpendingPageModel.TotalText` теперь форматирует сумму в USD через `0.####` и `InvariantCulture`, применяя `AppResources.CostFormat`; нулевое значение показывает `$0`. Добавлен тест на культуру `ru-RU` и сумму `$0.0345`.
+
+Проверки: тест сначала показал локальную валюту (`0,03 ₽`), после фикса Presentation.Tests — 464/464; форматирование Presentation и Presentation.Tests; `scripts/check.sh` — пройден.
 
 ## Комментарии
 

@@ -96,6 +96,31 @@ public class SemanticIndexServiceTests
     }
 
     [Fact]
+    public async Task IndexAsync_ManyBatches_DoesNotReloadAllSourcesPerBatch()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var setup = Create(Enumerable.Range(0, 200).Select(index => Source(SearchTextKind.Prompt, $"source {index}")).ToArray());
+        var readsAtReady = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        setup.Service.StatusChanged += (_, status) =>
+        {
+            if (status.State == SemanticIndexState.Ready)
+            {
+                readsAtReady.TrySetResult(setup.Sources.ListSourcesAsyncCalls);
+            }
+        };
+        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(call => Task.FromResult(Result(call.Arg<IReadOnlyList<string>>().Count)));
+
+        await setup.Service.EnableAsync(ct);
+        var reads = await readsAtReady.Task.WaitAsync(TimeSpan.FromSeconds(5), ct);
+        var status = setup.Service.GetStatusSnapshot();
+
+        Assert.Equal(200, status.Indexed);
+        Assert.InRange(reads, 1, 3);
+        await setup.Service.DisposeAsync();
+    }
+
+    [Fact]
     public async Task IndexAsync_NetworkFailure_RetriesTwiceWithPlannedDelays()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -216,6 +241,23 @@ public class SemanticIndexServiceTests
 
         Assert.Equal("Unknown", status.ErrorCode);
         Assert.Empty(setup.Repository.Items);
+        await setup.Service.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task IndexAsync_InvalidResponse_StillRecordsPaidExpense()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var setup = Create([Source(SearchTextKind.Title, "finite only")]);
+        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(new EmbeddingResult([[float.NaN, 1f]], "baai/bge-m3", 2, 0.001m));
+
+        await setup.Service.EnableAsync(ct);
+        var status = await WaitForStateAsync(setup.Service, SemanticIndexState.Failed, ct);
+
+        Assert.Equal("Unknown", status.ErrorCode);
+        Assert.Empty(setup.Repository.Items);
+        Assert.Equal(0.001m, Assert.Single(setup.Repository.Expenses).CostUsd);
         await setup.Service.DisposeAsync();
     }
 
@@ -367,35 +409,54 @@ public class SemanticIndexServiceTests
     private sealed class MemorySources(IReadOnlyList<SearchSource> items) : ISearchTextSource
     {
         public IReadOnlyList<SearchSource> Items { get; set; } = items;
+        public int ListSourcesAsyncCalls { get; private set; }
 
         public Task<IReadOnlyList<SearchText>> ListAllAsync(CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<SearchText>>([]);
 
-        public Task<IReadOnlyList<SearchSource>> ListSourcesAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(Items);
+        public Task<IReadOnlyList<SearchSource>> ListSourcesAsync(CancellationToken cancellationToken)
+        {
+            ListSourcesAsyncCalls++;
+            return Task.FromResult(Items);
+        }
+
+        public Task<IReadOnlyList<SearchSource>> ListSourcesByKeysAsync(IReadOnlyCollection<string> sourceKeys, CancellationToken cancellationToken)
+        {
+            var keys = sourceKeys.ToHashSet(StringComparer.Ordinal);
+            return Task.FromResult<IReadOnlyList<SearchSource>>(Items.Where(item => keys.Contains(item.SourceKey)).ToArray());
+        }
 
         public Task<int> CountSourcesAsync(CancellationToken cancellationToken) => Task.FromResult(Items.Count);
     }
 
     private sealed class MemoryEmbeddings : ITextEmbeddingRepository
     {
+        private readonly object _gate = new();
         public Dictionary<string, TextEmbedding> Items { get; } = new(StringComparer.Ordinal);
 
         public List<Expense> Expenses { get; } = [];
 
-        public Task<IReadOnlyList<TextEmbedding>> ListAllAsync(CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<TextEmbedding>>(Items.Values.ToArray());
+        public Task<IReadOnlyList<TextEmbedding>> ListAllAsync(CancellationToken cancellationToken)
+        {
+            lock (_gate)
+            {
+                return Task.FromResult<IReadOnlyList<TextEmbedding>>(Items.Values.ToArray());
+            }
+        }
 
         public Task UpsertBatchAsync(IReadOnlyList<TextEmbedding> embeddings, Expense? expense, CancellationToken cancellationToken)
         {
-            foreach (var embedding in embeddings)
+            lock (_gate)
             {
-                Items[embedding.SourceKey] = embedding;
-            }
+                foreach (var embedding in embeddings)
+                {
+                    Items[embedding.SourceKey] = embedding;
+                }
 
-            if (expense is not null)
-            {
-                Expenses.Add(expense);
+                if (expense is not null)
+                {
+                    Expenses.Add(expense);
+                }
             }
 
             return Task.CompletedTask;
@@ -403,9 +464,12 @@ public class SemanticIndexServiceTests
 
         public Task DeleteBySourceKeysAsync(IReadOnlyCollection<string> sourceKeys, CancellationToken cancellationToken)
         {
-            foreach (var key in sourceKeys)
+            lock (_gate)
             {
-                Items.Remove(key);
+                foreach (var key in sourceKeys)
+                {
+                    Items.Remove(key);
+                }
             }
 
             return Task.CompletedTask;
@@ -413,7 +477,10 @@ public class SemanticIndexServiceTests
 
         public Task DeleteAllAsync(CancellationToken cancellationToken)
         {
-            Items.Clear();
+            lock (_gate)
+            {
+                Items.Clear();
+            }
             return Task.CompletedTask;
         }
     }

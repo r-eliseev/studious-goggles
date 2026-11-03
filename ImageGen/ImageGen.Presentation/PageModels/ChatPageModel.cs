@@ -538,7 +538,7 @@ public sealed partial class ChatPageModel(
     private Task RepeatCardAsync(GenerationItemViewModel card) =>
         RunAndReloadAsync(async () =>
         {
-            if (await ConfirmEstimatedRunAsync(card, null))
+            if (await ConfirmEstimatedRunAsync(card))
             {
                 await generations.RepeatAsync(card.Id, CancellationToken.None);
             }
@@ -547,7 +547,7 @@ public sealed partial class ChatPageModel(
     private Task NewSeedCardAsync(GenerationItemViewModel card) =>
         RunAndReloadAsync(async () =>
         {
-            if (await ConfirmEstimatedRunAsync(card, null))
+            if (await ConfirmEstimatedRunAsync(card))
             {
                 await generations.NewSeedAsync(card.Id, CancellationToken.None);
             }
@@ -564,14 +564,14 @@ public sealed partial class ChatPageModel(
                 card.Prompt);
             if (!string.IsNullOrWhiteSpace(text))
             {
-                if (await ConfirmEstimatedRunAsync(card, null))
+                if (await ConfirmEstimatedRunAsync(card))
                 {
                     await generations.EditAsync(card.Id, text.Trim(), CancellationToken.None);
                 }
             }
         });
 
-    private async Task<bool> ConfirmEstimatedRunAsync(GenerationItemViewModel card, ModelRef? targetModel)
+    private async Task<bool> ConfirmEstimatedRunAsync(GenerationItemViewModel card)
     {
         if (_costEstimator is null || _spendingService is null)
         {
@@ -584,20 +584,13 @@ public sealed partial class ChatPageModel(
             return true;
         }
 
-        var models = targetModel is { } target
-            ? new[] { target }
-            : [new ModelRef(card.ProviderId, card.ModelId)];
-        var estimate = await _costEstimator.EstimateAsync(models, 1, run.Parameters, CancellationToken.None);
-        if (await _spendingService.CheckAsync(estimate, CancellationToken.None) == SpendingWarning.None)
-        {
-            return true;
-        }
-
-        var message = string.Format(
-            CultureInfo.CurrentCulture,
-            AppResources.SpendingConfirmationFormat,
-            FormatEstimate(estimate));
-        return await dialogs.ConfirmAsync(AppResources.SpendingWarningTitle, message, AppResources.Generate, AppResources.Cancel);
+        return await SpendingConfirmation.ConfirmAsync(
+            _costEstimator,
+            _spendingService,
+            dialogs,
+            [new ModelRef(card.ProviderId, card.ModelId)],
+            run.Parameters,
+            CancellationToken.None);
     }
 
     private async Task<CostEstimate?> EstimateAsync(Guid sessionId, CancellationToken cancellationToken)
@@ -631,7 +624,7 @@ public sealed partial class ChatPageModel(
             NextRunEstimateText = string.Format(
                 CultureInfo.CurrentCulture,
                 AppResources.NextRunEstimateFormat,
-                FormatEstimate(estimate));
+                SpendingConfirmation.FormatEstimate(estimate));
             HasNextRunEstimate = true;
         }
         catch (Exception)
@@ -639,20 +632,6 @@ public sealed partial class ChatPageModel(
             NextRunEstimateText = AppResources.AssistantPriceUnknown;
             HasNextRunEstimate = true;
         }
-    }
-
-    private static string FormatEstimate(CostEstimate estimate)
-    {
-        var price = estimate.KnownUsd.ToString("0.####", CultureInfo.InvariantCulture);
-        var amount = string.Format(CultureInfo.InvariantCulture, "${0}", price);
-        if (estimate.IsApproximate)
-        {
-            amount = "≈" + amount;
-        }
-
-        return estimate.UnknownModels.Count == 0
-            ? amount
-            : string.Format(CultureInfo.CurrentCulture, AppResources.CostEstimateWithUnknownFormat, amount, estimate.UnknownModels.Count);
     }
 
     private async Task RunAndReloadAsync(Func<Task> action)
