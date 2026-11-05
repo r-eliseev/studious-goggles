@@ -103,16 +103,53 @@ public class ApiKeyPageModelTests
         Assert.True(model.IsChoosingAssistantModel);
         Assert.Equal("claude", model.ProviderId);
         Assert.Single(model.AssistantModels);
+        Assert.Same(model.AssistantModels.Single(), model.SelectedAssistantModel);
         await _navigation.DidNotReceive().GoBackAsync();
-        model.SelectedAssistantModel = model.AssistantModels.Single();
         await model.UseSelectedAssistantModelCommand.ExecuteAsync(null);
 
         await _defaults.Received(1).SaveAsync(new ModelRef("claude", "vendor/assistant"), Arg.Any<CancellationToken>());
         await _navigation.Received(1).GoBackAsync();
     }
 
+    [Fact]
+    public async Task SelectedChatProvider_ChangesDuringFirstRun_ClearsAssistantChoice()
+    {
+        _provider.CheckKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(ApiKeyStatus.Valid);
+        var model = CreatePageModel();
+        model.ApplyQueryAttributes(new Dictionary<string, object>
+        {
+            [Routes.ProviderIdParameter] = ProviderIds.OpenRouter,
+            [Routes.FirstRunParameter] = "true",
+        });
+        model.SelectedChatProvider = model.ChatProviders.Single(option => option.Id == "claude");
+        model.ApiKey = "claude-key";
+
+        await model.SaveCommand.ExecuteAsync(null);
+        model.SelectedChatProvider = model.ChatProviders.Single(option => option.Id == ProviderIds.OpenRouter);
+
+        Assert.False(model.IsChoosingAssistantModel);
+        Assert.Empty(model.AssistantModels);
+        Assert.Null(model.SelectedAssistantModel);
+        Assert.False(model.HasAssistantModels);
+    }
+
+    [Fact]
+    public void ApplyQueryAttributes_FirstRun_UsesRouterChatProviderIdsInRegistryOrder()
+    {
+        _router.ChatProviderIds.Returns([ProviderIds.OpenRouter, "together"]);
+        var model = CreatePageModel();
+
+        model.ApplyQueryAttributes(new Dictionary<string, object>
+        {
+            [Routes.ProviderIdParameter] = ProviderIds.OpenRouter,
+            [Routes.FirstRunParameter] = "true",
+        });
+
+        Assert.Equal([ProviderIds.OpenRouter, "together"], model.ChatProviders.Select(provider => provider.Id));
+    }
+
     private ApiKeyPageModel CreatePageModel() => new(
-        new ApiKeyService(_router, _secrets, NullLogger<ApiKeyService>.Instance), _registry, _navigation, _dialogs, _persistence,
+        new ApiKeyService(_router, _secrets, NullLogger<ApiKeyService>.Instance), _registry, _router, _navigation, _dialogs, _persistence,
         ErrorAlerts.Create(_dialogs), new ChatModelCatalogService(_router, NullLogger<ChatModelCatalogService>.Instance), _defaults);
 
     [Fact]

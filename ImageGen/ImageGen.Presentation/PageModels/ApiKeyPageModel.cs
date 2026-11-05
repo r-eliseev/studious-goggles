@@ -14,6 +14,7 @@ namespace ImageGen.Presentation.PageModels;
 public sealed partial class ApiKeyPageModel(
     ApiKeyService apiKeyService,
     ProviderRegistry providers,
+    IProviderRouter router,
     INavigationService navigation,
     IDialogService dialogs,
     ISecretPersistence persistence,
@@ -101,7 +102,7 @@ public sealed partial class ApiKeyPageModel(
         AssistantModels.Clear();
         IsFirstRun = ReadFirstRun(query);
         ChatProviders.Clear();
-        foreach (var chatProviderId in providers.All.Where(IsChatProvider))
+        foreach (var chatProviderId in providers.All.Where(provider => router.ChatProviderIds.Contains(provider.Id, StringComparer.Ordinal)))
         {
             ChatProviders.Add(new AssistantProviderOption(chatProviderId.Id, chatProviderId.DisplayName));
         }
@@ -130,6 +131,10 @@ public sealed partial class ApiKeyPageModel(
         ApiKey = "";
         StatusText = "";
         HasError = false;
+        IsChoosingAssistantModel = false;
+        AssistantModels.Clear();
+        SelectedAssistantModel = null;
+        OnPropertyChanged(nameof(HasAssistantModels));
     }
 
     /// <summary>Checks persistence and safely rejects a missing/unknown provider route once.</summary>
@@ -179,7 +184,8 @@ public sealed partial class ApiKeyPageModel(
                         AssistantModels.Add(new AssistantModelOption(new ModelRef(providerId, model.Id), model.Name, provider.DisplayName));
                     }
 
-                    SelectedAssistantModel = AssistantModels.FirstOrDefault(option => option.Reference == defaultAssistantModel.Current);
+                    SelectedAssistantModel = AssistantModels.FirstOrDefault(option => option.Reference == defaultAssistantModel.Current)
+                        ?? AssistantModels.FirstOrDefault();
                     IsChoosingAssistantModel = true;
                     OnPropertyChanged(nameof(HasAssistantModels));
                     if (AssistantModels.Count == 0)
@@ -229,7 +235,4 @@ public sealed partial class ApiKeyPageModel(
 
     private bool CanSave() => ProviderId is not null && !IsRouteInvalid && !IsBusy && !string.IsNullOrWhiteSpace(ApiKey);
 
-    private static bool IsChatProvider(ProviderConfig provider) =>
-        provider.Kind == ProviderKind.OpenRouter
-        || (provider.Kind is ProviderKind.OpenAiCompatible or ProviderKind.AnthropicCompatible) && provider.ChatModels is not null;
 }
