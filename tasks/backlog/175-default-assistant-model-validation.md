@@ -1,6 +1,6 @@
 ---
 id: 175
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-11-01
@@ -19,6 +19,7 @@ created: 2026-11-01
 - Первый запуск с таким файлом не зацикливается: открывается экран ключа OpenRouter (как без файла).
 - `SaveAsync` отклоняет модель неизвестного или не-чат провайдера (`ArgumentException`), файл не меняется.
 - Тесты Presentation на все случаи; существующие тесты 172 зелёные.
+- Сбой удаления временного файла `defaults.json.*.tmp` (`IOException` или `UnauthorizedAccessException`) пишется Warning и не заменяет исходную ошибку записи.
 
 ## Анализ
 - `ImageGen/ImageGen.Presentation/Settings/DefaultAssistantModelFile.cs`: `Read()` проверяет только пустоту полей; зависит от `IAppPaths` и `ILogger`.
@@ -26,13 +27,36 @@ created: 2026-11-01
 - Список чат-провайдеров — `IProviderRouter.ChatProviderIds` (156).
 
 ## План
-Сначала падающий тест (ub-mode).
-1. Тесты `DefaultAssistantModelFileTests`: файл с провайдером, которого нет в реестре → `Current` = встроенная модель + Warning; провайдер image-only (`fal`) → встроенная; валидный → из файла; `SaveAsync` неизвестного провайдера → исключение, файл прежний. `SessionsPageModelTests`: файл с неизвестным провайдером → навигация на ключ OpenRouter ровно один раз.
-2. `DefaultAssistantModelFile` получает `IProviderRouter` (или `ProviderRegistry` + router) в конструктор; проверка в `Read()` и `SaveAsync`.
-3. Регистрация в `AppServices.cs` и `MauiProgram.cs` не меняется (DI подставит новый параметр); тестовые помощники `DefaultAssistantModels` обновить.
-4. Проверки: Presentation.Tests, Avalonia.Tests, сборка MAUI Android, `dotnet format`, `scripts/check.sh`.
+Остальные находки из комментария 2026-11-01 вынесены: пп. 1–2 (экран Settings) — в 188, пп. 3–5 (экран ключа при первом запуске) — в 189. Здесь только `DefaultAssistantModelFile`.
 
-Файлы: `ImageGen/ImageGen.Presentation/Settings/DefaultAssistantModelFile.cs`, `ImageGen/ImageGen.Presentation.Tests/Settings/DefaultAssistantModelFileTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SessionsPageModelTests.cs`, `ImageGen/ImageGen.Presentation.Tests/TestDoubles/DefaultAssistantModels.cs`, `ImageGen/ImageGen.Core.Tests/TestDoubles/DefaultAssistantModels.cs` (если нужно).
+1. Падающие тесты в `ImageGen/ImageGen.Presentation.Tests/Settings/DefaultAssistantModelFileTests.cs`. Хелпер `Create()` получает заглушку `IProviderRouter` (NSubstitute), у которой `ChatProviderIds` = `["openrouter", "my-llm"]`; для теста журнала — `CapturingLogger` или аналог из тестовых двойников проекта (найти через `rg -n "class .*Logger" ImageGen/ImageGen.Presentation.Tests`).
+   - файл `{"ProviderId":"gone","ModelId":"m"}` → `Current` = встроенная модель OpenRouter (`SessionSettings.DefaultAssistantModelId`), в журнале одна Warning без текста файла;
+   - файл с `fal` (нет в `ChatProviderIds`) → встроенная модель;
+   - файл с `my-llm`/`m` → `Current` = эта модель;
+   - `SaveAsync(new ModelRef("gone","m"))` → `ArgumentException`, файл на диске прежний, `Current` прежний;
+   - удаление временного файла бросает `UnauthorizedAccessException` → наружу выходит исходная ошибка записи, а не это исключение. Если подменить удаление без правки класса нельзя — этот случай пропустить и записать в «Отчёт» (правка `catch` из шага 3 всё равно делается).
+2. Конструктор: `DefaultAssistantModelFile(IAppPaths paths, IProviderRouter router, ILogger<DefaultAssistantModelFile> logger)`. В `Read()` после проверки на пустоту: если `router.ChatProviderIds` не содержит `model.ProviderId` → Warning «defaults.json names provider that is not a chat provider; using built-in assistant model» и `BuiltIn`. В `SaveAsync` после проверок аргументов — та же проверка, при неудаче `ArgumentException` до записи файла.
+3. В `SaveAsync`, блок `finally`: `catch (IOException exception)` заменить на `catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)` (комментарий 2026-11-01 к 177).
+4. Регистрации в `MauiProgram.cs` и `AppServices.cs` не трогать: DI подставит `IProviderRouter`. Найти все прямые `new DefaultAssistantModelFile(` в тестах (`rg -n "new DefaultAssistantModelFile|DefaultAssistantModelFile\(" ImageGen`) и передать туда заглушку роутера.
+
+Файлы: `ImageGen/ImageGen.Presentation/Settings/DefaultAssistantModelFile.cs`, `ImageGen/ImageGen.Presentation.Tests/Settings/DefaultAssistantModelFileTests.cs`, при необходимости `ImageGen/ImageGen.Presentation.Tests/TestDoubles/DefaultAssistantModels.cs`.
+
+### Проверка
+```
+dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj
+dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj
+dotnet format ImageGen/ImageGen.Presentation/ImageGen.Presentation.csproj --verify-no-changes
+dotnet format ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj --verify-no-changes
+bash scripts/check.sh
+```
+
+### Порядок исполнения (для Luna)
+- Сначала прочитай только файлы из строки «Файлы» и названные тесты; сигнатуры сверяй с текущим `main`.
+- Шаги строго по порядку (ub-mode): падающий тест → запуск, убедиться, что он падает именно по описанной причине → минимальный фикс → тест зелёный.
+- Не меняй файлы вне строки «Файлы», не переименовывай существующие члены сверх плана, не чини соседние находки — они в отдельных задачах.
+- Если код расходится с планом (нет такого метода, другая сигнатура, тест уже есть), не импровизируй: остановись и запиши вопрос в «Комментарии».
+- Команды `dotnet` выполняй по одной, не параллельно. После каждого изменённого проекта — `dotnet format <проект> --verify-no-changes`.
+- В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
 
@@ -48,3 +72,9 @@ created: 2026-11-01
 3. `ApiKeyPageModel.OnSelectedChatProviderChanged` (`ApiKeyPageModel.cs:125`) не сбрасывает `IsChoosingAssistantModel` и `AssistantModels`. Если после выбора модели провайдера A переключиться на B, на экране остаётся список A, хотя `ProviderId` уже B.
 4. Там же (`:182`): модель для другого провайдера заранее выбирается по `defaultAssistantModel.Current`, а это всегда модель OpenRouter, поэтому выбор = null. Кнопка «Использовать» включена (`HasAssistantModels`), но команда молча ничего не делает (`:218`). Нужно заранее выбирать первую модель или выключать кнопку, пока модель не выбрана.
 5. `ApiKeyPageModel.IsChatProvider` (`:232`) повторяет `ProviderRouter.ChatProviderIds` по другому правилу: требует `ChatModels`, а роутер нет. Нужен один источник; это то же место, что проверка из критериев этой задачи.
+
+### 2026-11-05, claude-audit
+План переписан под Luna: только `DefaultAssistantModelFile` (+ `catch` при удалении временного файла из комментария к 177). Находки 1–2 комментария 2026-11-01 — задача 188, 3–5 — задача 189.
+
+### 2026-11-05, владелец (в чате, записал claude-audit)
+План одобрен: «убедись, что все таски распланированы для Луны» — «и заапрувь их».
