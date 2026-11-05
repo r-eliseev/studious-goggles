@@ -93,6 +93,62 @@ public sealed class SettingsPageModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Load_ShowsAppearanceBeforeAssistantCatalogLoads()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await _appearance.SaveAsync(new AppearanceSettings(AppearanceStyle.Gallery, AppearanceTheme.Dark), ct);
+        _router.ChatProviderIds.Returns([ProviderIds.OpenRouter]);
+        var catalog = new TaskCompletionSource<IReadOnlyList<ChatModel>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var chat = Substitute.For<IAssistantChatClient>();
+        chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(_ => catalog.Task);
+        _router.GetChatClient(ProviderIds.OpenRouter).Returns(chat);
+        var model = CreateModel();
+
+        var loadTask = model.LoadCommand.ExecuteAsync(null);
+        try
+        {
+            var deadline = Task.Delay(TimeSpan.FromSeconds(2), ct);
+            while (!model.Styles.Any(style => style.Style == AppearanceStyle.Gallery && style.IsSelected)
+                || model.SelectedTheme != AppearanceTheme.Dark)
+            {
+                if (loadTask.IsCompleted)
+                {
+                    await loadTask;
+                }
+
+                await Task.Delay(10, ct);
+                Assert.False(deadline.IsCompleted, "Appearance was not applied while the assistant catalog was loading.");
+            }
+        }
+        finally
+        {
+            catalog.TrySetResult([]);
+            await loadTask;
+        }
+    }
+
+    [Fact]
+    public async Task Load_DefaultModelMissingFromCatalog_AddsItToList()
+    {
+        var defaultModel = new ModelRef(ProviderIds.OpenRouter, "vendor/default");
+        _defaultAssistantModel.Current.Returns(defaultModel);
+        _router.ChatProviderIds.Returns([ProviderIds.OpenRouter]);
+        var chat = Substitute.For<IAssistantChatClient>();
+        chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns([
+            new ChatModel("vendor/first", "First", false, 100, SupportsTools: true),
+            new ChatModel("vendor/second", "Second", false, 100, SupportsTools: true),
+        ]);
+        _router.GetChatClient(ProviderIds.OpenRouter).Returns(chat);
+        var model = CreateModel();
+
+        await model.LoadCommand.ExecuteAsync(null);
+
+        Assert.Equal(3, model.AssistantModels.Count);
+        Assert.Equal(defaultModel, model.AssistantModels[0].Reference);
+        Assert.Same(model.AssistantModels[0], model.SelectedAssistantModel);
+    }
+
+    [Fact]
     public async Task SelectStyle_Gallery_SavesAndMarksSelected()
     {
         var model = CreateModel();

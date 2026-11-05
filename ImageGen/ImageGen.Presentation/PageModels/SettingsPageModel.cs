@@ -111,6 +111,8 @@ public sealed partial class SettingsPageModel(
             Styles.Add(new StyleOptionViewModel(AppearanceStyle.Notebook, AppResources.StyleNotebook, AppResources.StyleNotebookHint, SelectStyleAsync));
         }
 
+        ShowAppearance(appearance.Current);
+
         if (ProviderKeys.Count == 0)
         {
             foreach (var provider in providers.All)
@@ -132,11 +134,17 @@ public sealed partial class SettingsPageModel(
             AssistantModels.Add(new AssistantModelOption(new ModelRef(providerId, model.Id), model.Name, providerName));
         }
 
-        SelectedAssistantModel = AssistantModels.FirstOrDefault(option => option.Reference == defaultAssistantModel.Current)
-            ?? new AssistantModelOption(defaultAssistantModel.Current, defaultAssistantModel.Current.ModelId,
-                providers.TryGet(defaultAssistantModel.Current.ProviderId, out var currentProvider) ? currentProvider.DisplayName : defaultAssistantModel.Current.ProviderId);
+        var selectedAssistant = AssistantModels.FirstOrDefault(option => option.Reference == defaultAssistantModel.Current);
+        if (selectedAssistant is null)
+        {
+            var defaultModel = defaultAssistantModel.Current;
+            selectedAssistant = new AssistantModelOption(defaultModel,
+                defaultModel.ModelId,
+                providers.TryGet(defaultModel.ProviderId, out var currentProvider) ? currentProvider.DisplayName : defaultModel.ProviderId);
+            AssistantModels.Insert(0, selectedAssistant);
+        }
 
-        ShowAppearance(appearance.Current);
+        SelectedAssistantModel = selectedAssistant;
     }
 
     [RelayCommand]
