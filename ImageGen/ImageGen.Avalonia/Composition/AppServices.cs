@@ -108,6 +108,7 @@ public static class AppServices
         services.AddTransient<SpendingPageModel>();
         services.AddTransient<GalleryPageModel>();
         services.AddSingleton<IFolderLauncher>(new AvaloniaFolderLauncher(MainWindowOwner));
+        services.AddSingleton<ILogSharer>(new UnsupportedLogSharer());
         services.AddTransient<SessionModelsPageModel>();
         services.AddTransient<SessionParametersPageModel>();
         services.AddTransient<ModelPickerPageModel>();
