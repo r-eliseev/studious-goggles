@@ -19,7 +19,7 @@ public sealed class FileImageStore : IImageFileStore
     private readonly ILogger<FileImageStore> logger;
     private readonly Func<string, ImageDimensions?> readDimensions;
     public const string ImagesFolder = "images";
-    private readonly AtomicImageFileWriter atomicWriter = new();
+    private readonly AtomicImageFileWriter atomicWriter;
     private readonly SemaphoreSlim _metadataReadGate = new(2, 2);
     private readonly object dimensionReadLock = new();
     private TaskCompletionSource dimensionReadsIdle = CompletedSource();
@@ -35,6 +35,7 @@ public sealed class FileImageStore : IImageFileStore
         this.appPaths = appPaths;
         this.logger = logger;
         this.readDimensions = readDimensions;
+        atomicWriter = new AtomicImageFileWriter(logger: logger);
     }
 
     public async Task<string> SaveAsync(

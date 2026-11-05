@@ -1,5 +1,8 @@
 namespace ImageGen.Data.Tests;
 
+using ImageGen.Data.Tests.TestDoubles;
+using Microsoft.Extensions.Logging;
+
 public sealed class AtomicImageFileWriterTests
 {
     [Fact]
@@ -134,6 +137,60 @@ public sealed class AtomicImageFileWriterTests
 
             Assert.Equal("original failure", error.Message);
             Assert.False(File.Exists(final));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData(typeof(IOException))]
+    [InlineData(typeof(UnauthorizedAccessException))]
+    public async Task WriteAsync_ExpectedCleanupFailure_LogsWarningWithTemporaryFileAndContinues(Type exceptionType)
+    {
+        var directory = CreateDirectory();
+        try
+        {
+            var final = Path.Combine(directory, "image.png");
+            var temporary = Path.Combine(directory, ".image.png.0123456789abcdef0123456789abcdef.tmp");
+            var logger = new CapturingLogger<AtomicImageFileWriter>();
+            var cleanupException = (Exception)Activator.CreateInstance(exceptionType)!;
+            var writer = new AtomicImageFileWriter(_ => temporary,
+                (stream, content, _) => throw new InvalidDataException("original failure"),
+                _ => throw cleanupException,
+                logger);
+
+            await Assert.ThrowsAsync<InvalidDataException>(() => writer.WriteAsync(final, new byte[] { 1 }, TestContext.Current.CancellationToken));
+
+            var warning = Assert.Single(logger.Entries);
+            Assert.Equal(LogLevel.Warning, warning.Level);
+            Assert.Contains(Path.GetFileName(temporary), warning.Message);
+            Assert.Contains(exceptionType.Name, warning.Message);
+            Assert.Same(cleanupException, warning.Exception);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task WriteAsync_UnexpectedCleanupFailure_Propagates()
+    {
+        var directory = CreateDirectory();
+        try
+        {
+            var final = Path.Combine(directory, "image.png");
+            var temporary = Path.Combine(directory, "image.tmp");
+            var writer = new AtomicImageFileWriter(_ => temporary,
+                (stream, content, _) => throw new InvalidDataException("original failure"),
+                _ => throw new InvalidOperationException("unexpected cleanup failure"));
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                writer.WriteAsync(final, new byte[] { 1 }, TestContext.Current.CancellationToken));
+
+            Assert.Equal("unexpected cleanup failure", exception.Message);
         }
         finally
         {
