@@ -1,8 +1,8 @@
 ---
 id: 175
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-05T20:03:21Z
+status: done
+assignee:
+claimed:
 created: 2026-11-01
 ---
 
@@ -59,6 +59,12 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+`DefaultAssistantModelFile` теперь принимает модель только для провайдера из `IProviderRouter.ChatProviderIds`. При неизвестном или не-чат провайдере в `defaults.json` используется встроенная OpenRouter модель и пишется одна обобщённая Warning без содержимого файла. `SaveAsync` отклоняет такой provider до записи; очистка `.tmp` перехватывает `IOException` и `UnauthorizedAccessException`, не подменяя исходную ошибку.
+
+Фактический формат `defaults.json` — JSON-строка `"provider:model"` из `ModelRefJsonConverter`, поэтому тестовые фикстуры используют его вместо объектной формы из первоначального плана. Проверка прямого сбоя удаления `.tmp` не добавлена: для этого пришлось бы расширить production API injection seam, что план отдельно разрешает пропустить.
+
+Проверки: Presentation.Tests — 482/482; Avalonia.Tests — 153 пройдены, 2 пропущены по требованиям окружения; форматирование Presentation и Presentation.Tests; `scripts/check.sh` — пройдены.
 
 ## Комментарии
 
