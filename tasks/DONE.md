@@ -148,3 +148,31 @@
 - 162 | backlog | done | 2026-10-31 | MAUI Android: нажатие на сессию в списке открывает кнопки вместо сессии | `tasks/backlog/162-maui-android-session-row-tap.md`
 - 164 | backlog | done | 2026-10-31 | Идентификатор Android-приложения com.eliseev.imagegen | `tasks/backlog/164-android-application-id.md`
 - 028 | backlog | cancelled | 2026-10-31 | Русский язык интерфейса | `tasks/backlog/028-localization-and-themes.md`
+- 021 | backlog | done | 2026-11-02 | Оценка цены и учёт расходов | `tasks/backlog/021-spending.md`
+- 022 | backlog | done | 2026-11-02 | Галерея всех генераций | `tasks/backlog/022-gallery.md`
+- 023 | backlog | done | 2026-11-02 | Сравнение результатов | `tasks/backlog/023-compare.md`
+- 024 | backlog | done | 2026-11-02 | Отмена генерации и прогона | `tasks/backlog/024-cancel-generation.md`
+- 031 | backlog | done | 2026-11-01 | Web-оболочка: хост, вход, API | `tasks/backlog/031-web-host-and-api.md`
+- 032 | backlog | done | 2026-11-02 | Vue-фронт | `tasks/backlog/032-vue-frontend.md`
+- 033 | backlog | done | 2026-11-02 | Docker-образ Web-оболочки | `tasks/backlog/033-docker.md`
+- 088 | backlog | done | 2026-11-01 | MAUI Windows: кнопка «…» открывает действия карточки | `tasks/backlog/088-maui-card-more-button.md`
+- 105 | backlog | done | 2026-11-02 | Семантический поиск только через OpenRouter | `tasks/backlog/105-semantic-text-search.md`
+- 131 | backlog | done | 2026-11-01 | Добавить modal image viewer и перелистывание | `tasks/backlog/131-fullscreen-image-viewer.md`
+- 139 | backlog | done | 2026-11-01 | MAUI Windows: настоящий fullscreen окна viewer | `tasks/backlog/139-maui-windows-viewer-fullscreen.md`
+- 141 | backlog | done | 2026-10-31 | Атомарно сохранять картинки и вложения | `tasks/backlog/141-atomic-image-file-writes.md`
+- 148 | backlog | done | 2026-11-01 | MAUI Windows viewer: навигация стрелками клавиатуры | `tasks/backlog/148-maui-viewer-windows-arrow-keys.md`
+- 163 | backlog | done | 2026-11-01 | Постоянный ключ подписи Android APK | `tasks/backlog/163-android-release-signing-key.md`
+- 165 | backlog | done | 2026-11-01 | Добавить секреты подписи Android в GitHub | `tasks/backlog/165-android-signing-secrets.md`
+- 171 | backlog | done | 2026-10-31 | ErrorAlert — обязательная зависимость моделей страниц | `tasks/backlog/171-error-alert-required.md`
+- 172 | backlog | done | 2026-10-31 | Первый запуск: ключ провайдера выбранного ассистента; обновление списка чат-моделей | `tasks/backlog/172-first-run-assistant-provider.md`
+- 173 | backlog | done | 2026-10-31 | Avalonia-тесты на Windows: гонка удаления папки с фоновым чтением размеров картинки | `tasks/backlog/173-avalonia-tests-dimension-read-race.md`
+- 174 | backlog | done | 2026-10-31 | Убрать устаревшие документы и пробный код | `tasks/backlog/174-docs-and-poc-cleanup.md`
+- 176 | backlog | done | 2026-11-01 | Сборка и тесты LiveCheck в CI | `tasks/backlog/176-livecheck-tests-in-ci.md`
+- 179 | backlog | done | 2026-11-02 | Web: поток событий перестаёт работать после первого heartbeat | `tasks/backlog/179-web-events-heartbeat.md`
+- 180 | backlog | done | 2026-11-02 | Отмена: ответ «уже завершено» не должен выбрасывать готовую картинку | `tasks/backlog/180-cancel-already-completed-keeps-result.md`
+- 181 | backlog | done | 2026-11-02 | Web: при переполнении очереди сразу отправлять resync | `tasks/backlog/181-web-events-resync-on-overflow.md`
+- 182 | backlog | done | 2026-11-02 | Экран расходов: итог в долларах, а не в валюте системы | `tasks/backlog/182-spending-total-usd-format.md`
+- 183 | backlog | done | 2026-11-02 | Расходы: «неизвестная цена» без неудачных и отменённых операций | `tasks/backlog/183-spending-unknown-count-statuses.md`
+- 184 | backlog | done | 2026-11-02 | Семантический индекс: записывать расход до проверки ответа эмбеддингов | `tasks/backlog/184-embedding-expense-before-validation.md`
+- 185 | backlog | done | 2026-11-03 | Семантический индекс: не перечитывать все источники на каждую пачку | `tasks/backlog/185-semantic-index-batch-source-lookup.md`
+- 186 | backlog | done | 2026-11-02 | Одно подтверждение расходов для чата и выбора модели | `tasks/backlog/186-shared-spending-confirmation.md`
