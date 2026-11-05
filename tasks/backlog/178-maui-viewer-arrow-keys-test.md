@@ -1,8 +1,8 @@
 ---
 id: 178
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-05T20:20:22Z
+status: done
+assignee:
+claimed:
 created: 2026-11-01
 ---
 
@@ -52,6 +52,12 @@ Windows-цель MAUI проверяет CI.
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+- Добавлены `ImageViewerKey`, `ImageViewerKeyAction` и чистая функция `ImageViewerKeys.GetAction`; тестами покрыты Escape, Left, Right и Other.
+- MAUI Windows обработчик переводит `VirtualKey` в тип Presentation и выполняет действие; для неизвестных клавиш выходит без `Handled = true`.
+- TDD: тест до реализации упал из-за отсутствующих типов, после реализации все 4 кейса прошли.
+- Проверки: Presentation.Tests 489/489; Android MAUI build прошёл без предупреждений и ошибок; форматирование Presentation и Presentation.Tests прошло; `bash scripts/check.sh` — прошло.
+- Windows-цель локально не запускалась; её сборка выполняется CI на Windows.
 
 ## Комментарии
 
