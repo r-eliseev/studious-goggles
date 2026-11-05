@@ -1,3 +1,4 @@
+using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
@@ -41,6 +42,23 @@ public class AppInitializerTests : IDisposable
     }
 
     [Fact]
+    public async Task EnsureInitializedAsync_DeletesOldAtomicWriteTemporaryFiles()
+    {
+        var paths = Substitute.For<IAppPaths>();
+        paths.DataDirectory.Returns(_directory);
+        var files = new FileImageStore(paths, NullLogger<FileImageStore>.Instance);
+        var temporaryPath = Path.Combine(_directory, "images", "s1", ".image.png.0123456789abcdef0123456789abcdef.tmp");
+        Directory.CreateDirectory(Path.GetDirectoryName(temporaryPath)!);
+        await File.WriteAllTextAsync(temporaryPath, "temporary", TestContext.Current.CancellationToken);
+        File.SetLastWriteTimeUtc(temporaryPath, DateTime.UtcNow.AddHours(-2));
+        var initializer = CreateInitializer(files);
+
+        await initializer.EnsureInitializedAsync();
+
+        Assert.False(File.Exists(temporaryPath));
+    }
+
+    [Fact]
     public async Task EnsureInitializedAsync_CalledTwice_RunsStartupOnce()
     {
         var initializer = CreateInitializer();
@@ -70,7 +88,7 @@ public class AppInitializerTests : IDisposable
         }
     }
 
-    private AppInitializer CreateInitializer()
+    private AppInitializer CreateInitializer(IImageFileStore? files = null)
     {
         var catalog = new ModelCatalogService(ProviderDoubles.Router(), Substitute.For<IImageModelRepository>(), NullLogger<ModelCatalogService>.Instance);
         var generation = new GenerationService(
@@ -83,6 +101,6 @@ public class AppInitializerTests : IDisposable
             new AttachmentService(Substitute.For<IChatAttachmentRepository>(), Substitute.For<IImageFileStore>(), TimeProvider.System),
             TimeProvider.System,
             NullLogger<GenerationService>.Instance, new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance));
-        return new AppInitializer(_database, generation, ProviderDoubles.BuiltInRegistry());
+        return new AppInitializer(_database, generation, ProviderDoubles.BuiltInRegistry(), files ?? Substitute.For<IImageFileStore>(), TimeProvider.System);
     }
 }

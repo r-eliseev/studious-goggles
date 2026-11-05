@@ -25,4 +25,7 @@ public interface IImageFileStore
 
     /// <summary>Deletes all image files of the session. Does nothing if there are none.</summary>
     Task DeleteSessionFilesAsync(Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>Deletes temporary files from interrupted atomic writes that remain after a crash.</summary>
+    int DeleteOrphanedTemporaryFiles(TimeSpan olderThan, DateTimeOffset now);
 }

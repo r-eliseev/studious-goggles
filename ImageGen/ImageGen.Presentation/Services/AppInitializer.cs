@@ -1,5 +1,6 @@
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
+using ImageGen.Core.Storage;
 using ImageGen.Data;
 
 namespace ImageGen.Presentation.Services;
@@ -8,7 +9,12 @@ namespace ImageGen.Presentation.Services;
 /// Runs one-time startup work: creates or migrates the database and marks interrupted generations.
 /// Taking the provider registry makes an invalid provider config stop the start (see <see cref="ProviderRegistry"/>).
 /// </summary>
-public sealed class AppInitializer(SqliteDatabase database, GenerationService generationService, ProviderRegistry providers)
+public sealed class AppInitializer(
+    SqliteDatabase database,
+    GenerationService generationService,
+    ProviderRegistry providers,
+    IImageFileStore fileStore,
+    TimeProvider timeProvider)
 {
     private readonly Lock _lock = new();
     private readonly ProviderRegistry _providers = providers;
@@ -28,6 +34,7 @@ public sealed class AppInitializer(SqliteDatabase database, GenerationService ge
         // Reading the registry validates the provider config; an invalid file stops the start here.
         _ = _providers.All;
         await database.InitializeAsync(CancellationToken.None);
+        await Task.Run(() => fileStore.DeleteOrphanedTemporaryFiles(TimeSpan.FromHours(1), timeProvider.GetUtcNow()));
         await generationService.RecoverInterruptedAsync(CancellationToken.None);
     }
 }

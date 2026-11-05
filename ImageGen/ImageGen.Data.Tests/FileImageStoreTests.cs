@@ -248,4 +248,81 @@ public sealed class FileImageStoreTests : IDisposable
     {
         await _store.DeleteSessionFilesAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
     }
+
+    [Fact]
+    public void DeleteOrphanedTemporaryFiles_DeletesOnlyOldFilesWithExactPatterns()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var images = Path.Combine(_directory, FileImageStore.ImagesFolder, "s1");
+        Directory.CreateDirectory(images);
+        var oldImage = Path.Combine(images, ".a.png.0123456789abcdef0123456789abcdef.tmp");
+        var freshImage = Path.Combine(images, ".b.png.0123456789abcdef0123456789abcdef.tmp");
+        var normalImage = Path.Combine(images, "a.png");
+        var malformedImageTemp = Path.Combine(images, ".a.png.tmp");
+        var unrelatedTemp = Path.Combine(images, "note.tmp");
+        var oldDefaults = Path.Combine(_directory, "defaults.json.0123456789abcdef0123456789abcdef.tmp");
+        var defaults = Path.Combine(_directory, "defaults.json");
+        foreach (var path in new[] { oldImage, freshImage, normalImage, malformedImageTemp, unrelatedTemp, oldDefaults, defaults })
+        {
+            File.WriteAllText(path, "test");
+        }
+
+        File.SetLastWriteTimeUtc(oldImage, now.AddHours(-2).UtcDateTime);
+        File.SetLastWriteTimeUtc(freshImage, now.AddMinutes(-10).UtcDateTime);
+        File.SetLastWriteTimeUtc(oldDefaults, now.AddHours(-2).UtcDateTime);
+
+        var deleted = _store.DeleteOrphanedTemporaryFiles(TimeSpan.FromHours(1), now);
+
+        Assert.Equal(2, deleted);
+        Assert.False(File.Exists(oldImage));
+        Assert.False(File.Exists(oldDefaults));
+        Assert.True(File.Exists(freshImage));
+        Assert.True(File.Exists(normalImage));
+        Assert.True(File.Exists(malformedImageTemp));
+        Assert.True(File.Exists(unrelatedTemp));
+        Assert.True(File.Exists(defaults));
+    }
+
+    [Fact]
+    public void DeleteOrphanedTemporaryFiles_MissingImagesFolder_ReturnsZero()
+    {
+        var deleted = _store.DeleteOrphanedTemporaryFiles(TimeSpan.FromHours(1), DateTimeOffset.UtcNow);
+
+        Assert.Equal(0, deleted);
+    }
+
+    [Fact]
+    public void DeleteOrphanedTemporaryFiles_DeleteFailureLogsAndContinues()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var images = Path.Combine(_directory, FileImageStore.ImagesFolder, "s1");
+        Directory.CreateDirectory(images);
+        var failedPath = Path.Combine(images, ".a.png.0123456789abcdef0123456789abcdef.tmp");
+        var deletablePath = Path.Combine(images, ".b.png.0123456789abcdef0123456789abcdef.tmp");
+        File.WriteAllText(failedPath, "test");
+        File.WriteAllText(deletablePath, "test");
+        File.SetLastWriteTimeUtc(failedPath, now.AddHours(-2).UtcDateTime);
+        File.SetLastWriteTimeUtc(deletablePath, now.AddHours(-2).UtcDateTime);
+        var paths = Substitute.For<IAppPaths>();
+        paths.DataDirectory.Returns(_directory);
+        var store = new FileImageStore(paths, _logger, _ => null, path =>
+        {
+            if (path == failedPath)
+            {
+                throw new IOException("expected delete failure");
+            }
+
+            File.Delete(path);
+        });
+
+        var deleted = store.DeleteOrphanedTemporaryFiles(TimeSpan.FromHours(1), now);
+
+        Assert.Equal(1, deleted);
+        Assert.True(File.Exists(failedPath));
+        Assert.False(File.Exists(deletablePath));
+        var warning = Assert.Single(_logger.Entries);
+        Assert.Equal(LogLevel.Warning, warning.Level);
+        Assert.Contains(Path.Combine("images", "s1", Path.GetFileName(failedPath)), warning.Message);
+        Assert.Contains(nameof(IOException), warning.Message);
+    }
 }

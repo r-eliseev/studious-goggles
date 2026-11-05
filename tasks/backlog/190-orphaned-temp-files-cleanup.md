@@ -1,8 +1,8 @@
 ---
 id: 190
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-05T20:13:05Z
+status: done
+assignee:
+claimed:
 created: 2026-11-05
 ---
 
@@ -67,6 +67,12 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+- `FileImageStore.DeleteOrphanedTemporaryFiles` находит только скрытые image-временные файлы с GUID в имени и корневые `defaults.json.<GUID>.tmp`; удаляет старше заданного возраста и возвращает число удалений.
+- Ошибки `IOException` и `UnauthorizedAccessException` журналируются как Warning с относительным путём и типом исключения; обработка продолжает обход.
+- `AppInitializer` после инициализации базы запускает очистку в фоне с порогом 1 час и временем из `TimeProvider`. Метод добавлен в `IImageFileStore`; обновлены ручные конструкторы в тестах.
+- Проверки: Core 744/744; Data 129/129; Presentation 485/485; Avalonia 153 прошли, 2 пропущены (D-Bus недоступен и DPAPI доступен только на Windows); Android MAUI build прошёл (0 warnings/errors); форматирование Core, Data, Presentation, Data.Tests, Presentation.Tests прошло; `bash scripts/check.sh` — прошло.
+- TDD: тесты Data сначала упали, так как метода очистки не было; затем тесты выбора файлов, отсутствующего каталога, логирования сбоя удаления и продолжения обхода прошли. Добавлен тест запуска с реальным `FileImageStore`.
 
 ## Комментарии
 

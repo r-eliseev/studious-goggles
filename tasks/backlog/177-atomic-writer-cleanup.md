@@ -1,6 +1,6 @@
 ---
 id: 177
-status: completed
+status: done
 assignee:
 claimed:
 created: 2026-11-01

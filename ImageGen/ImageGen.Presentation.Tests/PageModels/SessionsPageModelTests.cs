@@ -651,6 +651,6 @@ public class SessionsPageModelTests : IDisposable
             new AttachmentService(Substitute.For<IChatAttachmentRepository>(), Substitute.For<IImageFileStore>(), TimeProvider.System),
             TimeProvider.System,
             NullLogger<GenerationService>.Instance, new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance));
-        return new AppInitializer(_database, generation, ProviderDoubles.BuiltInRegistry());
+        return new AppInitializer(_database, generation, ProviderDoubles.BuiltInRegistry(), Substitute.For<IImageFileStore>(), TimeProvider.System);
     }
 }
