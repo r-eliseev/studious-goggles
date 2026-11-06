@@ -22,7 +22,7 @@ public sealed class ImageViewerWindowTests
         var shown = viewer.ShowDialog(owner);
         Dispatcher.UIThread.RunJobs();
 
-        viewer.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
+        viewer.Panel.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
         await shown.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.Equal(WindowState.Maximized, owner.WindowState);
@@ -95,17 +95,17 @@ public sealed class ImageViewerWindowTests
             Assert.Equal(0, Volatile.Read(ref alertCount));
             var displayed = viewer.DisplayedBitmap;
 
-            viewer.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Left });
+            viewer.Panel.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Left });
             await WaitUntilAsync(() => Volatile.Read(ref alertCount) == 1);
 
             Assert.Equal(2, viewer.DisplayedIndex);
             Assert.Same(displayed, viewer.DisplayedBitmap);
             Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, AppResources.ImageViewerPositionFormat, 3, 3), viewer.PositionText);
-            viewer.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Right });
+            viewer.Panel.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Right });
             Dispatcher.UIThread.RunJobs();
             Assert.Equal(1, Volatile.Read(ref alertCount));
 
-            viewer.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Left });
+            viewer.Panel.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Left });
             await WaitUntilAsync(() => Volatile.Read(ref alertCount) == 2);
             Assert.Equal(2, viewer.DisplayedIndex);
             Assert.Same(displayed, viewer.DisplayedBitmap);
@@ -150,7 +150,7 @@ public sealed class ImageViewerWindowTests
             Assert.False(alertShown.Task.IsCompleted);
             var displayed = viewer.DisplayedBitmap;
 
-            viewer.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Right });
+            viewer.Panel.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Right });
             await alertShown.Task.WaitAsync(TimeSpan.FromSeconds(5));
             Dispatcher.UIThread.RunJobs();
 
