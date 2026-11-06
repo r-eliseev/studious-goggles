@@ -1,6 +1,6 @@
 ---
 id: 195
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-06
@@ -66,7 +66,16 @@ bash scripts/check.sh
 
 ## Отчёт
 
+Добавил проект `ImageGen.Avalonia.Android` с package id `com.eliseev.imagegen.avalonia` и названием `Omnilite Avalonia`; подключил Android workload/packages, ресурсы и общие Avalonia views, темы, сервисы и композицию `AppServices.CreateShared`. Добавил Android `MainView` с `PageHost`/`OverlayHost`, системным Back (диалог → просмотр → сравнение → навигация), отступом при открытой клавиатуре, startup/crash/file logging, папкой данных в `FilesDir`, сохранением через MediaStore и неподдерживаемым открытием папок. Секреты хранятся AES-256-GCM с ключом Android Keystore, запись выполняется через временный файл и атомарное переименование; ошибка чтения/расшифровки пишет Warning без значения и имени секрета. Удалил перенесённый POC 094. Обновил архитектуру, справочник среды, AGENTS.md, docs/index.md и добавил `docs/knowledge/avalonia-mobile.md`.
+
+Проверки: `dotnet build ... -c Debug` — 0 предупреждений/ошибок; `dotnet build ... -c Release` — 0/0; `dotnet format ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj --verify-no-changes` — без изменений; Avalonia.Tests — 180 всего, 178 пройдены, 2 пропущены (D-Bus и Windows DPAPI недоступны в Linux); `bash scripts/check.sh` — пройден. Release APK — 60,556,659 байт, подписан локальным Android debug certificate; package id, label и API 23–36 проверены по манифесту.
+
+От плана: зависимости 191–194 ещё не влиты в `main`; продолжил поверх них в общем PR по прямому поручению владельца. Запуск на Android-устройстве не выполнялся и остаётся ручной задачей 198; Release APK пока подписывается локальным debug key, CI/release signing относится к 197.
+
 ## Комментарии
+
+### 2026-11-06, codex-gpt6
+Реализация сделана поверх задач 191–194 в общем PR без ожидания merge, как поручил владелец.
 
 ### 2026-11-06, claude-audit
 Создано по поручению владельца («распланируй андроид на авалонии, с билдами»; выбрано: второе приложение рядом с MAUI, APK в каждом релизе). ADR 0026. План для Luna, ждёт одобрения.

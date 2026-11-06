@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <ApplicationId>com.eliseev.imagegen.avalonia</ApplicationId>
+    <ApplicationTitle>Omnilite Avalonia</ApplicationTitle>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+    <AssemblyName>ImageGen.Avalonia</AssemblyName>
+    <RootNamespace>ImageGen.Avalonia</RootNamespace>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <RepoRoot>$(MSBuildThisFileDirectory)../../</RepoRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Android" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Xamarin.AndroidX.Core.SplashScreen" />
+  </ItemGroup>
+  <ItemGroup>
+    <AndroidResource Include="Icon.png" Link="Resources/drawable/icon.png" />
+    <AndroidResource Include="Resources/**/*.xml" />
+    <ProjectReference Include="../ImageGen.Core/ImageGen.Core.csproj" />
+    <ProjectReference Include="../ImageGen.Data/ImageGen.Data.csproj" />
+    <ProjectReference Include="../ImageGen.Presentation/ImageGen.Presentation.csproj" />
+    <Compile Include="$(RepoRoot)ImageGen/ImageGen.Avalonia/Composition/AppServices.cs" Link="Composition/AppServices.cs" />
+    <Compile Include="$(RepoRoot)ImageGen/ImageGen.Avalonia/Views/**/*.cs" Exclude="$(RepoRoot)ImageGen/ImageGen.Avalonia/Views/MainWindow.axaml.cs" Link="Views/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="$(RepoRoot)ImageGen/ImageGen.Avalonia/Converters/**/*.cs;$(RepoRoot)ImageGen/ImageGen.Avalonia/Markup/**/*.cs;$(RepoRoot)ImageGen/ImageGen.Avalonia/Services/Navigation/**/*.cs;$(RepoRoot)ImageGen/ImageGen.Avalonia/Services/AvaloniaMainThread.cs;$(RepoRoot)ImageGen/ImageGen.Avalonia/Services/AvaloniaAppearanceApplier.cs;$(RepoRoot)ImageGen/ImageGen.Avalonia/Services/AvaloniaClipboardService.cs;$(RepoRoot)ImageGen/ImageGen.Avalonia/Services/AvaloniaFilePickerService.cs;$(RepoRoot)ImageGen/ImageGen.Avalonia/Services/AvaloniaImageSaver.cs;$(RepoRoot)ImageGen/ImageGen.Avalonia/Services/DialogLayout.cs;$(RepoRoot)ImageGen/ImageGen.Avalonia/Services/OverlayDialogService.cs;$(RepoRoot)ImageGen/ImageGen.Avalonia/Services/ImageViewerPanel.cs;$(RepoRoot)ImageGen/ImageGen.Avalonia/Services/OverlayImageViewerService.cs;$(RepoRoot)ImageGen/ImageGen.Avalonia/Services/ComparisonPanel.cs;$(RepoRoot)ImageGen/ImageGen.Avalonia/Services/OverlayImageComparisonService.cs;$(RepoRoot)ImageGen/ImageGen.Avalonia/Services/Logging/AvaloniaLogSink.cs;$(RepoRoot)ImageGen/ImageGen.Avalonia/Services/Secrets/SecretFileNames.cs" Link="%(RecursiveDir)%(Filename)%(Extension)" />
+    <AvaloniaXaml Include="$(RepoRoot)ImageGen/ImageGen.Avalonia/Views/**/*.axaml" Exclude="$(RepoRoot)ImageGen/ImageGen.Avalonia/Views/MainWindow.axaml" Link="Views/%(RecursiveDir)%(Filename)%(Extension)" />
+    <AvaloniaXaml Include="$(RepoRoot)ImageGen/ImageGen.Avalonia/Themes/**/*.axaml" Link="Themes/%(Filename)%(Extension)" />
+    <AvaloniaResource Include="$(RepoRoot)ImageGen/ImageGen.Avalonia/Assets/Fonts/**;$(RepoRoot)ImageGen/ImageGen.Avalonia/Assets/Licenses/**" Link="Assets/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

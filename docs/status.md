@@ -6,7 +6,7 @@
 
 Основной сценарий — сессии с ассистентом (`docs/specs/chat-sessions.md`, ADR 0004). Задачи: `tasks/v0.1/` — ходячий скелет на OpenRouter и MAUI; `tasks/backlog/` — дальнейшие релизы, детализируются после скелета. Где какую задачу можно выполнять: `docs/knowledge/dev-environment.md`.
 
-CI: `.github/workflows/build.yml` (задача `core` на Ubuntu: форматирование, сборка, тесты; `avalonia` на Ubuntu: сборка и headless-тесты; `windows-tests` на Windows; задача `maui` на Windows: сборка под Windows и Android), `release.yml` (пакеты релиза по тегу `v*`) и `harness.yml`/`harness-audit.yml`. Нагрузка `maui-android` на ubuntu-latest падала с «Disk quota exceeded» (при 24 ГБ свободного места, причина не выяснена), поэтому Android собирается на Windows.
+CI: `.github/workflows/build.yml` (задача `core` на Ubuntu: форматирование, сборка, тесты; `avalonia` на Ubuntu: сборка и headless-тесты; `avalonia-android` на Ubuntu: Android Release-сборка; `windows-tests` на Windows; задача `maui` на Windows: сборка под Windows и Android), `release.yml` (Avalonia Android APK, MAUI APK и остальные пакеты релиза по тегу `v*`/push в `main`) и `harness.yml`/`harness-audit.yml`. Нагрузка `maui-android` на ubuntu-latest падала с «Disk quota exceeded» (при 24 ГБ свободного места, причина не выяснена), поэтому Android собирается на Windows.
 
 ## Порядок работ
 

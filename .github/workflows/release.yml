@@ -231,13 +231,69 @@ jobs:
           name: ${{ env.ASSET }}
           path: ${{ env.ASSET }}.apk
 
+  avalonia-android:
+    needs: version
+    runs-on: windows-latest
+    env:
+      ASSET: ImageGen-Avalonia-${{ needs.version.outputs.label }}-android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet workload install android
+      - name: Restore signing key
+        id: signing
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/imagegen-release.keystore"
+            echo "keystore=$RUNNER_TEMP/imagegen-release.keystore" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Release keystore secrets are missing (ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD): the APK is signed with the debug key and does not install over another release."
+          fi
+      - name: Publish Avalonia Android (APK)
+        shell: bash
+        env:
+          KEYSTORE: ${{ steps.signing.outputs.keystore }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          signing=()
+          if [ -n "$KEYSTORE" ]; then
+            signing=(-p:AndroidKeyStore=true "-p:AndroidSigningKeyStore=$KEYSTORE" "-p:AndroidSigningKeyAlias=$KEY_ALIAS"
+              -p:AndroidSigningStorePass=env:ANDROID_KEYSTORE_PASSWORD -p:AndroidSigningKeyPass=env:ANDROID_KEY_PASSWORD)
+          fi
+          dotnet publish ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj -c Release \
+            -p:AndroidPackageFormat=apk \
+            -p:ApplicationDisplayVersion=${{ needs.version.outputs.version }} -p:ApplicationVersion=${{ github.run_number }} \
+            "${signing[@]}" \
+            -o publish/avalonia-android
+      - name: Remove signing key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/imagegen-release.keystore"
+      - name: Pack
+        shell: bash
+        run: cp publish/avalonia-android/*-Signed.apk "$ASSET.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ASSET }}
+          path: ${{ env.ASSET }}.apk
+
   # MAUI Mac Catalyst and iOS are not published (owner's decision 2026-10-29). The current maui workload
   # (Mac Catalyst SDK 27.0) needs Xcode 27.1; GitHub runners macos-latest and macos-26 have Xcode 26.x only.
   # Mac users get the Avalonia osx-x64 / osx-arm64 packages. iOS would also need an Apple certificate.
 
   publish:
     if: needs.version.outputs.release == 'true'
-    needs: [version, avalonia, maui-windows, maui-android]
+    needs: [version, avalonia, maui-windows, maui-android, avalonia-android]
     runs-on: ubuntu-latest
     env:
       TAG: ${{ needs.version.outputs.label }}

@@ -8,7 +8,7 @@
 | status.md | открытые вопросы, очередь и проблемы | в начале работы |
 | tasks.md | работа с задачами, аудит и вспомогательные агенты | перед задачами или аудитом |
 | history.md | краткая история завершённых работ | при поиске контекста |
-| knowledge/ | среда и факты .NET, MAUI, Avalonia, провайдеров | перед платформенной работой |
+| knowledge/ | среда и факты .NET, MAUI, Avalonia, провайдеров; [Avalonia Android](knowledge/avalonia-mobile.md) | перед платформенной работой |
 | knowledge/docker.md | сборка, запуск и хранение данных Web-хоста в Docker | при self-hosted запуске Web |
 | design/ | рекомендации платформ и токены дизайна (`implementation.md`, `tokens.json`) | перед вёрсткой |
 | decisions/ | ADR и шаблон `_template.md` | при спорных изменениях |

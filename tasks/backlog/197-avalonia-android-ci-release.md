@@ -1,6 +1,6 @@
 ---
 id: 197
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-06
@@ -49,6 +49,12 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+В `build.yml` добавлена job `avalonia-android` на Ubuntu: устанавливает `android` workload, проверяет форматирование и собирает Release. На PR #78 job прошла успешно без переноса на Windows. В `release.yml` добавлена job, собирающая APK на Windows с общими Android signing secrets, выпускающая артефакт `ImageGen-Avalonia-<метка>-android.apk`; `publish` ждёт эту job. README и сведения о среде обновлены для отдельного Avalonia APK со своей идентичностью приложения, данными и ключами.
+
+Проверки: YAML обоих workflow разобран Python PyYAML; `git diff --check` и `bash scripts/check.sh` прошли. В ручном запуске `release.yml` № 21 (run ID 42289010444) Avalonia Android artifact собран и загружен; `apksigner verify --print-certs` подтвердил `CN=ImageGen, O=eliseev`, SHA-256 `6711f8badc39c087512e78a04ab4d7a8313d9d00b33081bf139867fc55b10277`; `aapt dump badging` подтвердил package `com.eliseev.imagegen.avalonia`, versionCode 21, versionName 0.0.21. PR CI `avalonia-android` прошёл на Ubuntu; MAUI job ещё выполнялась в момент записи отчёта. APK на реальном устройстве не запускался — ручная проверка остаётся в задаче 198.
+
+План выполнен. Ручной `workflow_dispatch` загружает Android APK артефактами без создания GitHub Release; сертификат и package name проверены локально после скачивания.
 
 ## Комментарии
 

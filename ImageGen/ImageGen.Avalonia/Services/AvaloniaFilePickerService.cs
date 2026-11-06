@@ -6,7 +6,7 @@ using ImageGen.Presentation.Services;
 namespace ImageGen.Avalonia.Services;
 
 /// <summary>Picks one image with the system file dialog of the main window (Avalonia storage provider).</summary>
-public sealed class AvaloniaFilePickerService(Func<Window?> owner) : IFilePickerService
+public sealed class AvaloniaFilePickerService(Func<TopLevel?> owner) : IFilePickerService
 {
     private static readonly FilePickerFileType ImageFiles = new("Images")
     {
@@ -15,13 +15,13 @@ public sealed class AvaloniaFilePickerService(Func<Window?> owner) : IFilePicker
 
     public async Task<PickedImage?> PickImageAsync(CancellationToken cancellationToken)
     {
-        var window = owner();
-        if (window is null)
+        var topLevel = owner();
+        if (topLevel is null)
         {
             return null;
         }
 
-        var files = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = AppResources.AttachImageButton,
             AllowMultiple = false,
