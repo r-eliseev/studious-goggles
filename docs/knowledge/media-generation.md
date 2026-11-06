@@ -1,0 +1,29 @@
+# Генерация видео и аудио: провайдеры и воспроизведение
+
+Исследование задачи 166, 2026-11-06. Источники — публичные API и документация провайдеров на эту дату; всё, что не проверено живым платным запросом, помечено. Решения — ADR 0027.
+
+## OpenRouter: видео
+
+- Каталог: `GET https://openrouter.ai/api/v1/videos/models`, без ключа (проверено `curl` 2026-11-06): 31 модель (Google Veo 3.1 / 3.1 Fast / 3.1 Lite, Gemini Omni 1.1/1.2 Flash, Kling v3.0 Pro/Std и O1, Seedance 1.5 Pro / 2.0 / 2.0 Fast / 2.0 Mini / 2.5, Wan 2.6 / 2.7 / 3.0 / 3.0 Prime, Hailuo 2.3 / 3 / 3 Max, Runway Gen-4.5 и Aleph 2, FLUX 3 Video, Grok Imagine Video, HeyGen и др.).
+- Поля модели: `id`, `name`, `description`, `supported_durations` (целые секунды), `supported_resolutions` (`360p`…`4K`), `supported_aspect_ratios`, `supported_sizes` (`WxH`), `supported_frame_images` (`first_frame`, `last_frame`), `generate_audio` (`true`/`false`/`null`), `seed` (`true`/`false`/`null`), `pricing_skus` (словарь строка → строка-число), `allowed_passthrough_parameters`. У части моделей (`flux-video-edit`, `flux-video-upscale`, `aleph-2`, `avatar-iv`) нет длительностей: это правка/апскейл/аватар, а не генерация по тексту.
+- Единицы `pricing_skus` (по названиям ключей, 2026-11-06): `duration_seconds[_with_audio|_without_audio][_<разрешение>]` — USD за секунду; `cents_per_second_output[_<разрешение>]`, `cents_per_video_output_second_<разрешение>` — центы за секунду; `minimum_cents_per_generation` — минимум за запуск; `cents_per_image_input` — за входную картинку; `video_tokens[_without_audio|_4k]` — за «видео-токен», перевод в секунды неизвестен; `cents_per_megapixel_second_*` — для апскейла. Неизвестный ключ = цена неизвестна.
+- Генерация — асинхронная (документация OpenRouter «Video Generation», 2026-11-06): `POST /api/v1/videos` с `model`, `prompt`, `duration`, `resolution`, `aspect_ratio` или `size`, `frame_images` (`[{type, image_url, frame_type: first_frame|last_frame}]`), `input_references`, `generate_audio` (по умолчанию `true`, где поддерживается), `seed` (не гарантирован), `callback_url`, `provider`. Ответ 202: `id`, `polling_url`, `status: pending`.
+- Опрос: `GET /api/v1/videos/{id}` → `status` (`pending`, `in_progress`, `completed`, `failed`; в вебхуках ещё `cancelled`, `expired`), `unsigned_urls`, `urls` (подписанные, с `expires_at`, только если OpenRouter хранит копию), `usage.cost`, `usage.is_byok`, `error`. Документация советует опрос раз в ~30 с; генерация — от 30 с до нескольких минут.
+- Файл: `GET /api/v1/videos/{id}/content?index=0` с `Authorization`. Формат в документации не указан; пример сохраняет `video.mp4`. Срок хранения неизвестен.
+- Отмены в документации нет. Отмена в приложении может только перестать ждать; провайдер, вероятно, всё равно возьмёт плату — неизвестно.
+- Не проверено живым запросом: фактические поля ответа, `usage.cost` в USD, тип файла, размер файлов.
+
+## OpenRouter: аудио
+
+- В общем каталоге (`GET /api/v1/models`, 2026-11-06) аудио на выходе дают: `google/lyria-3-pro-preview` (описание: «$0.08 per song»), `google/lyria-3-clip-preview` («30 second duration clips are priced at $0.04 per clip»), `openai/gpt-audio`, `openai/gpt-audio-mini` (речь). Отдельного каталога `/audio/models` нет (404). Моделей звуковых эффектов нет. 38 моделей вывода `speech` (TTS) в объём не входят.
+- Аудио на выходе — через `POST /api/v1/chat/completions` с `modalities: ["text","audio"]`, `audio: {voice, format}` и обязательным `stream: true`; куски приходят в `delta.audio.data` (base64) и `delta.audio.transcript` (документация «Audio», 2026-11-06). Подходят ли эти параметры Lyria (голос, формат, длительность), в документации не сказано — нужен живой запрос (задача 208).
+
+## fal.ai и Together (не выбраны, для справки)
+
+- fal: публичный каталог `GET https://api.fal.ai/v1/models?category=text-to-audio|text-to-video|image-to-video` (без ключа) и схема каждой модели `?endpoint_id=…&expand=openapi-3.0`. У моделей разные поля (например, ElevenLabs Sound Effects v3 — `text`, `duration_seconds` 0.5–30, `loop`; MiniMax Music 2.6 — `prompt`, `lyrics`; Kling v3 — `duration` строкой); результат — `audio`/`video` с `url`, `content_type`, `file_size`. Цены — `GET /v1/models/pricing` только с ключом (401 без ключа).
+- Together: видео через SDK `client.videos.create/retrieve`, статусы `queued`…`cancelled`, результат `outputs.video_url` (ссылка истекает), `outputs.cost`; генерации аудио нет (документация «Videos overview», 2026-11-06).
+
+## Воспроизведение
+
+- MAUI: `CommunityToolkit.Maui.MediaElement` 10.0.0 (MIT, опубликован 2026-06-02), цели `net10.0`, `-android36.0` (AndroidX Media3 ExoPlayer), `-ios26.0`, `-maccatalyst26.0`, `-windows10.0.19041`; требует `Microsoft.Maui.Controls` ≥ 10.0.60 (в проекте 10.0.110).
+- Avalonia: встроенного плеера нет. `LibVLCSharp.Avalonia` 3.10.2 (LGPL-2.1-or-later, 2026-10-13) зависит от `Avalonia` ≥ 11.3.13 и собран под `net8.0`/`netstandard2.0`; работа с Avalonia 12.1.4 неизвестна (задача 206). Нативная libvlc: `VideoLAN.LibVLC.Windows` 3.0.24 (NuGet), для macOS и Android — отдельные пакеты VideoLAN; на Linux — системная libvlc.
