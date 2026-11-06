@@ -1,8 +1,8 @@
 ---
 id: 192
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-06T19:28:59Z
+status: done
+assignee:
+claimed:
 created: 2026-11-06
 ---
 
@@ -60,6 +60,12 @@ bash scripts/check.sh
 
 ## Отчёт
 
+- Добавлен `OverlayDialogService` с затемнённым блокирующим слоем, карточкой шириной до 480 пикселей, accessibility name, фокусом и обработкой Enter/Escape.
+- Реализованы Alert, Confirm (включая destructive стиль), Prompt и Choose. `SemaphoreSlim` сериализует вызовы; `TryCloseTop()` закрывает активный диалог как отмену. При отсутствующем хосте возвращается отмена и пишется Warning.
+- TDD: тесты сначала не собирались, пока `OverlayDialogService` отсутствовал; после реализации headless-проверки всех сценариев прошли.
+- Проверки: Avalonia.Tests — 167 успешно, 2 пропущены (D-Bus недоступен, DPAPI только на Windows); `dotnet format` для Avalonia и Avalonia.Tests прошло; `bash scripts/check.sh` прошло.
+- Задача 191 выполнена предыдущим коммитом этой же ветки (PR #78); продолжение без ожидания промежуточного merge — по указанию владельца.
+
 ## Комментарии
 
 ### 2026-11-06, claude-audit
@@ -67,3 +73,6 @@ bash scripts/check.sh
 
 ### 2026-11-06, владелец (в чате, записал claude-audit)
 План одобрен («Да» на вопрос об одобрении 191–198 и PR).
+
+### 2026-11-06, codex-gpt6
+Задача 191 реализована предыдущим коммитом этой ветки; продолжение последовательности выполняется по указанию владельца не ждать промежуточного merge.
