@@ -7,6 +7,8 @@ using ImageGen.Core.OpenAiCompatible;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImageGen.Core.OpenRouter;
 
@@ -15,11 +17,13 @@ public sealed class OpenRouterClient(
     ProviderConfig config,
     IHttpClientFactory httpClientFactory,
     ISecretStore secretStore,
-    TimeProvider timeProvider)
-    : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient, ISynchronousImageTransport, ITextEmbeddingClient
+    TimeProvider timeProvider,
+    ILogger<OpenRouterClient>? logger = null)
+    : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient, ISynchronousImageTransport, ITextEmbeddingClient, IVideoModelProvider
 {
     private const int PriceRequestParallelism = 4;
     private const string EmbeddingModel = "baai/bge-m3";
+    private readonly ILogger<OpenRouterClient> _logger = logger ?? NullLogger<OpenRouterClient>.Instance;
 
     protected override void Authenticate(HttpRequestMessage request, string apiKey) => AuthenticateBearer(request, apiKey);
 
@@ -71,6 +75,86 @@ public sealed class OpenRouterClient(
 
         return result;
     }
+
+    public async Task<IReadOnlyList<VideoModel>> ListVideoModelsAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var request = await CreateAuthorizedRequestAsync(HttpMethod.Get, "videos/models", null, cancellationToken);
+        var root = await SendJsonAsync(request, cancellationToken);
+        var fetchedAt = TimeProvider.GetUtcNow();
+        var result = new List<VideoModel>();
+        if (root["data"] is not JsonArray data)
+        {
+            return result;
+        }
+
+        foreach (var item in data.OfType<JsonObject>())
+        {
+            var id = ReadString(item["id"]);
+            var durations = ReadVideoIntegers(item["supported_durations"]);
+            if (string.IsNullOrWhiteSpace(id) || durations.Count == 0)
+            {
+                continue;
+            }
+
+            result.Add(new VideoModel
+            {
+                ProviderId = Config.Id,
+                Id = id,
+                Name = ReadString(item["name"]) ?? id,
+                Durations = durations,
+                Resolutions = ReadVideoStrings(item["supported_resolutions"]),
+                AspectRatios = ReadVideoStrings(item["supported_aspect_ratios"]),
+                FrameImages = ReadVideoStrings(item["supported_frame_images"]),
+                GeneratesAudio = ReadNullableBoolean(item["generate_audio"]),
+                SupportsSeed = ReadNullableBoolean(item["seed"]),
+                PriceSkus = ReadVideoPrices(item["pricing_skus"], id),
+                FetchedAt = fetchedAt,
+            });
+        }
+
+        return result;
+    }
+
+    private IReadOnlyDictionary<string, decimal> ReadVideoPrices(JsonNode? node, string modelId)
+    {
+        if (node is not JsonObject skus)
+        {
+            return new Dictionary<string, decimal>(StringComparer.Ordinal);
+        }
+
+        var prices = new Dictionary<string, decimal>(StringComparer.Ordinal);
+        foreach (var (key, value) in skus)
+        {
+            if (value is null)
+            {
+                continue;
+            }
+
+            var text = ReadString(value);
+            if (text is not null && decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var price))
+            {
+                prices[key] = price;
+            }
+            else
+            {
+                _logger.LogDebug("Skipping unparseable video price SKU {Sku} for OpenRouter model {ModelId}.", key, modelId);
+            }
+        }
+
+        return prices;
+    }
+
+    private static IReadOnlyList<int> ReadVideoIntegers(JsonNode? node) => node is JsonArray values
+        ? values.Select(ReadInt).OfType<int>().Where(value => value > 0).Distinct().Order().ToArray()
+        : [];
+
+    private static IReadOnlyList<string> ReadVideoStrings(JsonNode? node) => node is JsonArray values
+        ? values.Select(ReadString).OfType<string>().Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.Ordinal).ToArray()
+        : [];
+
+    private static bool? ReadNullableBoolean(JsonNode? node) =>
+        node is JsonValue value && value.TryGetValue<bool>(out var result) ? result : null;
 
     private async Task<IReadOnlyList<ImageModelPrice>> ReadPricesAsync(string modelId, CancellationToken cancellationToken)
     {

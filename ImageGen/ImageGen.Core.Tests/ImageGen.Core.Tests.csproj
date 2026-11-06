@@ -17,4 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="../ImageGen.Core/ImageGen.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="OpenRouter/Fixtures/video-models.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

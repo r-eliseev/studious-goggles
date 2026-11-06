@@ -95,6 +95,20 @@ public class ProviderRouterTests
     }
 
     [Fact]
+    public void GetVideoModelProvider_OpenRouter_ReturnsProviderConnection()
+    {
+        Assert.Same(_router.GetConnection("openrouter"), _router.GetVideoModelProvider("openrouter"));
+    }
+
+    [Fact]
+    public void GetVideoModelProvider_OpenAiCompatible_ThrowsModelUnavailable()
+    {
+        var error = Assert.Throws<ProviderException>(() => _router.GetVideoModelProvider("local"));
+
+        Assert.Equal(ErrorKind.ModelUnavailable, error.Kind);
+    }
+
+    [Fact]
     public async Task GetTextEmbeddingClient_OpenAiCompatible_ThrowsModelUnavailable()
     {
         var client = _router.GetTextEmbeddingClient("local");
