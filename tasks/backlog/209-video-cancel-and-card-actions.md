@@ -1,6 +1,6 @@
 ---
 id: 209
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-11-06
@@ -53,3 +53,6 @@ bash scripts/check.sh
 
 ### 2026-11-06, claude-audit
 Создано по поручению владельца («распланируй звук и видео»; выбрано: всё через OpenRouter, LibVLC в Avalonia сразу). ADR 0027, исследование — `docs/knowledge/media-generation.md`. План для Luna, ждёт одобрения.
+
+### 2026-11-06, владелец (в чате, записал claude-audit)
+План одобрен: «заапрувь все таски которые будут».
