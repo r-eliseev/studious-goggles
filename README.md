@@ -13,7 +13,7 @@
 
 ## Скачать
 
-Последний опубликованный релиз: [ImageGen v0.1.4](https://github.com/r-eliseev/studious-goggles/releases/tag/v0.1.4). Новые версии появятся на странице [Releases](https://github.com/r-eliseev/studious-goggles/releases).
+Последний опубликованный релиз: [ImageGen v0.1.4](https://github.com/r-eliseev/studious-goggles/releases/tag/v0.1.4). Новый релиз выходит автоматически после каждого изменения в `main` на странице [Releases](https://github.com/r-eliseev/studious-goggles/releases).
 
 | Оболочка | ОС / архитектура | Пакет v0.1.4 | Формат | Проверка запуска |
 |---|---|---|---|---|

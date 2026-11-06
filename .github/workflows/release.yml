@@ -1,12 +1,19 @@
 name: release
 on:
+  # Every push or merge to main publishes the next patch release (vX.Y.Z+1 after the latest stable tag).
   push:
+    branches: [main]
     tags: ['v[0-9]+.[0-9]+.[0-9]+']
-  # Manual run: builds every package as workflow artifacts without creating a GitHub release (dry run before a tag).
+  # Manual run: builds every package as workflow artifacts without creating a GitHub release (dry run).
   workflow_dispatch:
 
 permissions:
   contents: write
+
+# Releases of main run one after another, so each run sees the tag of the previous one.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   version:
@@ -14,16 +21,40 @@ jobs:
     outputs:
       version: ${{ steps.v.outputs.version }}
       label: ${{ steps.v.outputs.label }}
+      release: ${{ steps.v.outputs.release }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - id: v
         run: |
-          # Tag v1.2.3 -> version 1.2.3, label v1.2.3; manual run -> 0.0.<run>, label dev-<run>.
+          # Tag v1.2.3 -> version 1.2.3, label v1.2.3, released.
+          # Push to main -> next patch after the latest stable tag (v0.1.7 -> v0.1.8), released; skipped when the
+          # commit already carries a stable tag (that tag's own run publishes it).
+          # Manual run -> 0.0.<run>, label dev-<run>, not released.
+          stable='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
             echo "label=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          elif [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_NAME" = "main" ]; then
+            if git tag --points-at HEAD | grep -Eq "$stable"; then
+              echo "version=0.0.$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+              echo "label=dev-$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+              echo "release=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            latest=$(git tag --list 'v*' --sort=-v:refname | grep -E "$stable" | head -n 1)
+            latest=${latest:-v0.0.0}
+            IFS=. read -r major minor patch <<< "${latest#v}"
+            next="v$major.$minor.$((patch + 1))"
+            echo "version=${next#v}" >> "$GITHUB_OUTPUT"
+            echo "label=$next" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_OUTPUT"
           else
             echo "version=0.0.$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
             echo "label=dev-$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "release=false" >> "$GITHUB_OUTPUT"
           fi
 
   avalonia:
@@ -205,9 +236,11 @@ jobs:
   # Mac users get the Avalonia osx-x64 / osx-arm64 packages. iOS would also need an Apple certificate.
 
   publish:
-    if: github.ref_type == 'tag'
-    needs: [avalonia, maui-windows, maui-android]
+    if: needs.version.outputs.release == 'true'
+    needs: [version, avalonia, maui-windows, maui-android]
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.version.outputs.label }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -216,11 +249,15 @@ jobs:
         with:
           path: assets
           merge-multiple: true
+      # A push to main has no tag yet: create it locally for the notes; gh release create pushes it at this commit.
+      # Tags created with the workflow token do not start another run of this workflow.
+      - name: Local tag
+        run: git rev-parse --verify --quiet "refs/tags/$TAG" >/dev/null || git tag "$TAG" "$GITHUB_SHA"
       - name: Release notes
         run: |
           # Tasks done since the previous vX.Y.Z tag (scripts/release-notes.sh).
-          bash scripts/release-notes.sh "$GITHUB_REF_NAME" > notes.md
+          bash scripts/release-notes.sh "$TAG" > notes.md
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" assets/* --title "ImageGen $GITHUB_REF_NAME" --notes-file notes.md
+        run: gh release create "$TAG" assets/* --target "$GITHUB_SHA" --title "ImageGen $TAG" --notes-file notes.md
