@@ -110,6 +110,22 @@ public sealed class GenerationService(
 
         await job.SubmitSettled.Task.ConfigureAwait(false);
 
+        if (generation.Kind == MediaKind.Video && generation.JobJson is not null)
+        {
+            try
+            {
+                job.Source.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                return GenerationCancelResult.NotActive;
+            }
+
+            var result = await PersistUserCancellationAsync(job).ConfigureAwait(false);
+            logger.LogInformation("Video job cannot be cancelled at the provider; stopped waiting for generation {GenerationId}.", job.GenerationId);
+            return result == GenerationCancelResult.Cancelled ? GenerationCancelResult.StoppedWaiting : result;
+        }
+
         var remote = job.GetRemoteJob();
         if (remote is null)
         {
@@ -234,6 +250,18 @@ public sealed class GenerationService(
         IReadOnlyList<ModelRef> models,
         VideoParameters parameters,
         Guid? firstFrameGenerationId,
+        CancellationToken cancellationToken) =>
+        await StartVideoRunAsync(sessionId, prompt, models, parameters, firstFrameGenerationId, RunOrigin.Assistant, null, cancellationToken)
+            .ConfigureAwait(false);
+
+    private async Task<Run> StartVideoRunAsync(
+        Guid sessionId,
+        string prompt,
+        IReadOnlyList<ModelRef> models,
+        VideoParameters parameters,
+        Guid? firstFrameGenerationId,
+        RunOrigin origin,
+        long? seed,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(models);
@@ -254,7 +282,7 @@ public sealed class GenerationService(
             Id = Guid.NewGuid(),
             SessionId = sessionId,
             Prompt = text,
-            Origin = RunOrigin.Assistant,
+            Origin = origin,
             CreatedAt = now,
             VideoParameters = parameters,
             FirstFrameGenerationId = firstFrameGenerationId,
@@ -285,7 +313,7 @@ public sealed class GenerationService(
                 ProviderId = model.ProviderId,
                 ModelId = model.ModelId,
                 Prompt = text,
-                Seed = seeds.NextSeed(),
+                Seed = seed ?? seeds.NextSeed(),
                 SeedApplied = supportsSeed,
                 Status = GenerationStatus.Queued,
                 Kind = MediaKind.Video,
@@ -396,6 +424,13 @@ public sealed class GenerationService(
     public async Task<Run> RepeatAsync(Guid generationId, CancellationToken cancellationToken)
     {
         var source = await GetSourceAsync(generationId, cancellationToken);
+        if (source.Kind == MediaKind.Video)
+        {
+            var videoRun = await GetVideoRunAsync(source, cancellationToken);
+            return await StartVideoRunAsync(source.SessionId, source.Prompt, [SourceModel(source)], videoRun.VideoParameters!,
+                videoRun.FirstFrameGenerationId, RunOrigin.Repeat, source.Seed, cancellationToken);
+        }
+
         using var lease = AcquireStartLease(source.SessionId);
         var requested = await GetRunParametersAsync(source.RunId, cancellationToken);
         return await CreateRunAsync(source.SessionId, source.Prompt, RunOrigin.Repeat,
@@ -406,6 +441,13 @@ public sealed class GenerationService(
     public async Task<Run> NewSeedAsync(Guid generationId, CancellationToken cancellationToken)
     {
         var source = await GetSourceAsync(generationId, cancellationToken);
+        if (source.Kind == MediaKind.Video)
+        {
+            var videoRun = await GetVideoRunAsync(source, cancellationToken);
+            return await StartVideoRunAsync(source.SessionId, source.Prompt, [SourceModel(source)], videoRun.VideoParameters!,
+                videoRun.FirstFrameGenerationId, RunOrigin.NewSeed, null, cancellationToken);
+        }
+
         using var lease = AcquireStartLease(source.SessionId);
         var requested = await GetRunParametersAsync(source.RunId, cancellationToken);
         return await CreateRunAsync(source.SessionId, source.Prompt, RunOrigin.NewSeed,
@@ -417,6 +459,13 @@ public sealed class GenerationService(
     {
         var text = NormalizePrompt(newPrompt);
         var source = await GetSourceAsync(generationId, cancellationToken);
+        if (source.Kind == MediaKind.Video)
+        {
+            var videoRun = await GetVideoRunAsync(source, cancellationToken);
+            return await StartVideoRunAsync(source.SessionId, text, [SourceModel(source)], videoRun.VideoParameters!,
+                videoRun.FirstFrameGenerationId, RunOrigin.Edit, source.Seed, cancellationToken);
+        }
+
         using var lease = AcquireStartLease(source.SessionId);
         var requested = await GetRunParametersAsync(source.RunId, cancellationToken);
         return await CreateRunAsync(source.SessionId, text, RunOrigin.Edit,
@@ -428,6 +477,11 @@ public sealed class GenerationService(
     {
         ArgumentNullException.ThrowIfNull(model);
         var source = await GetSourceAsync(generationId, cancellationToken);
+        if (source.Kind == MediaKind.Video)
+        {
+            throw new InvalidOperationException("Run on model is not supported for video.");
+        }
+
         using var lease = AcquireStartLease(source.SessionId);
         var requested = await GetRunParametersAsync(source.RunId, cancellationToken);
         if (source.ReferenceAttachmentIds.Count > 0)
@@ -709,6 +763,18 @@ public sealed class GenerationService(
     private async Task<GenerationParameters> GetRunParametersAsync(Guid runId, CancellationToken cancellationToken) =>
         (await runs.GetRunAsync(runId, cancellationToken))?.Parameters
         ?? throw new InvalidOperationException($"Run {runId} not found.");
+
+    private async Task<Run> GetVideoRunAsync(Generation source, CancellationToken cancellationToken)
+    {
+        var run = await runs.GetRunAsync(source.RunId, cancellationToken)
+            ?? throw new InvalidOperationException($"Run {source.RunId} not found.");
+        if (run.VideoParameters is null)
+        {
+            throw new InvalidOperationException($"Run {source.RunId} has no video parameters.");
+        }
+
+        return run;
+    }
 
     private async Task<Run> CreateRunAsync(
         Guid sessionId,

@@ -190,6 +190,125 @@ public sealed class GenerationServiceVideoTests
         await fixture.VideoProvider.DidNotReceive().SubmitAsync(Arg.Any<VideoGenerationRequest>(), Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task CancelGenerationAsync_VideoJob_StopsWaitingWithoutCallingProvider()
+    {
+        var fixture = new Fixture();
+        var polling = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var pollCount = 0;
+        fixture.VideoProvider.PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            Interlocked.Increment(ref pollCount);
+            polling.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, call.Arg<CancellationToken>());
+            return new VideoJobUpdate(JobState.Running);
+        });
+        await fixture.Service.StartVideoRunAsync(fixture.Session.Id, "film", [new ModelRef("openrouter", "seeded")], VideoParameters.Default, null,
+            TestContext.Current.CancellationToken);
+        await polling.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var generation = Assert.Single(fixture.Generations);
+
+        var result = await fixture.Service.CancelGenerationAsync(generation.Id, TestContext.Current.CancellationToken);
+        await fixture.Service.WhenIdleAsync();
+
+        Assert.Equal(GenerationCancelResult.StoppedWaiting, result);
+        Assert.Equal(GenerationStatus.Cancelled, generation.Status);
+        Assert.NotNull(generation.CompletedAt);
+        Assert.Equal(1, pollCount);
+    }
+
+    [Fact]
+    public async Task CancelRunAsync_TwoVideoJobs_StopsWaitingForBoth()
+    {
+        var fixture = new Fixture();
+        var polling = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var pollCount = 0;
+        fixture.VideoProvider.PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            if (Interlocked.Increment(ref pollCount) == 2)
+            {
+                polling.TrySetResult();
+            }
+
+            await Task.Delay(Timeout.InfiniteTimeSpan, call.Arg<CancellationToken>());
+            return new VideoJobUpdate(JobState.Running);
+        });
+        var run = await fixture.Service.StartVideoRunAsync(fixture.Session.Id, "film",
+            [new ModelRef("openrouter", "seeded"), new ModelRef("openrouter", "plain")], VideoParameters.Default, null,
+            TestContext.Current.CancellationToken);
+        await polling.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        var results = await fixture.Service.CancelRunAsync(run.Id, TestContext.Current.CancellationToken);
+        await fixture.Service.WhenIdleAsync();
+
+        Assert.Equal(2, results.Count);
+        Assert.All(results, item => Assert.Equal(GenerationCancelResult.StoppedWaiting, item.Result));
+        Assert.All(fixture.Generations, generation => Assert.Equal(GenerationStatus.Cancelled, generation.Status));
+        Assert.Equal(2, pollCount);
+    }
+
+    [Fact]
+    public async Task RunOnModelAsync_VideoGeneration_ThrowsBeforeCreatingRun()
+    {
+        var fixture = new Fixture();
+        var run = await fixture.Service.StartVideoRunAsync(fixture.Session.Id, "film", [new ModelRef("openrouter", "seeded")], VideoParameters.Default, null,
+            TestContext.Current.CancellationToken);
+        await fixture.Service.WhenIdleAsync();
+        var source = Assert.Single(fixture.Generations);
+        fixture.Runs.GetGenerationAsync(source.Id, Arg.Any<CancellationToken>()).Returns(source);
+        fixture.Runs.GetRunAsync(run.Id, Arg.Any<CancellationToken>()).Returns(run);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.RunOnModelAsync(
+            source.Id, new ModelRef("openrouter", "plain"), TestContext.Current.CancellationToken));
+
+        await fixture.Runs.Received(1).AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RepeatAndNewSeedAsync_VideoGeneration_KeepVideoSettings(bool newSeed)
+    {
+        var fixture = new Fixture();
+        var parameters = new VideoParameters { DurationSeconds = 5, Resolution = "720p", GenerateAudio = false };
+        var sourceRun = await fixture.Service.StartVideoRunAsync(fixture.Session.Id, "film", [new ModelRef("openrouter", "seeded")], parameters, null,
+            TestContext.Current.CancellationToken);
+        await fixture.Service.WhenIdleAsync();
+        var source = Assert.Single(fixture.Generations);
+
+        var result = newSeed
+            ? await fixture.Service.NewSeedAsync(source.Id, TestContext.Current.CancellationToken)
+            : await fixture.Service.RepeatAsync(source.Id, TestContext.Current.CancellationToken);
+
+        var created = Assert.Single(fixture.Generations, g => g.RunId == result.Id);
+        Assert.Equal(MediaKind.Video, created.Kind);
+        Assert.Equal(source.ModelId, created.ModelId);
+        Assert.Equal(parameters, result.VideoParameters);
+        Assert.Equal(sourceRun.FirstFrameGenerationId, result.FirstFrameGenerationId);
+        Assert.Equal(newSeed ? RunOrigin.NewSeed : RunOrigin.Repeat, result.Origin);
+        Assert.Equal(newSeed ? 200L : source.Seed, created.Seed);
+    }
+
+    [Fact]
+    public async Task EditAsync_VideoGeneration_UsesNewPromptAndOriginalVideoSettings()
+    {
+        var fixture = new Fixture();
+        var parameters = new VideoParameters { DurationSeconds = 5, Resolution = "720p", GenerateAudio = false };
+        await fixture.Service.StartVideoRunAsync(fixture.Session.Id, "film", [new ModelRef("openrouter", "seeded")], parameters, null,
+            TestContext.Current.CancellationToken);
+        await fixture.Service.WhenIdleAsync();
+        var source = Assert.Single(fixture.Generations);
+
+        var result = await fixture.Service.EditAsync(source.Id, " new film ", TestContext.Current.CancellationToken);
+
+        var created = Assert.Single(fixture.Generations, g => g.RunId == result.Id);
+        Assert.Equal("new film", result.Prompt);
+        Assert.Equal(parameters, result.VideoParameters);
+        Assert.Equal(RunOrigin.Edit, result.Origin);
+        Assert.Equal(source.ModelId, created.ModelId);
+        Assert.Equal(source.Seed, created.Seed);
+    }
+
     private sealed class Fixture
     {
         public static ProviderJobHandle Handle { get; } = new("openrouter", "video-1", "https://openrouter.ai/api/v1/videos/video-1", "https://openrouter.ai/api/v1/videos/video-1/content?index=0", string.Empty);
@@ -206,6 +325,7 @@ public sealed class GenerationServiceVideoTests
         public RecordingDelay Delay { get; } = new();
         public ConcurrentQueue<Generation> Events { get; } = new();
         public List<Generation> Generations { get; private set; } = [];
+        public List<Run> CreatedRuns { get; } = [];
         public Session Session { get; } = new()
         {
             Id = Guid.NewGuid(),
@@ -221,8 +341,12 @@ public sealed class GenerationServiceVideoTests
             var time = Substitute.For<TimeProvider>();
             time.GetUtcNow().Returns(Now);
             Sessions.GetAsync(Session.Id, Arg.Any<CancellationToken>()).Returns(Session);
-            Runs.AddRunAsync(Arg.Do<Run>(_ => { }), Arg.Do<IReadOnlyList<Generation>>(items => Generations = items.ToList()), Arg.Any<CancellationToken>())
+            Runs.AddRunAsync(Arg.Do<Run>(CreatedRuns.Add), Arg.Do<IReadOnlyList<Generation>>(items => Generations.AddRange(items)), Arg.Any<CancellationToken>())
                 .Returns(Task.CompletedTask);
+            Runs.GetRunAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(call =>
+                Task.FromResult(CreatedRuns.SingleOrDefault(run => run.Id == call.Arg<Guid>())));
+            Runs.GetGenerationAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(call =>
+                Task.FromResult(Generations.SingleOrDefault(generation => generation.Id == call.Arg<Guid>())));
             Runs.UpdateGenerationAsync(Arg.Any<Generation>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
             Runs.ListResumableJobsAsync(Arg.Any<CancellationToken>()).Returns(Array.Empty<Generation>());
             Runs.MarkUnfinishedAsInterruptedAsync(Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>()).Returns(0);
