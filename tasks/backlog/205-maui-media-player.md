@@ -60,6 +60,9 @@ Windows-цель MAUI — CI.
 
 ## Комментарии
 
+### 2026-11-06, codex-gpt6
+После CI PR #80 на Ubuntu и Windows упал только `ChatDisappearing_StopsMediaPlayback`: проверка исходного текста ожидала `foreach (var player in _mediaPlayers)`, хотя код перебирает `_mediaPlayers.ToArray()` перед остановкой плееров. Исправлена проверка на актуальный безопасный снимок коллекции; поведение приложения не менялось.
+
 ### 2026-11-06, claude-audit
 Создано по поручению владельца («распланируй звук и видео»; выбрано: всё через OpenRouter, LibVLC в Avalonia сразу). ADR 0027, исследование — `docs/knowledge/media-generation.md`. План для Luna, ждёт одобрения.
 

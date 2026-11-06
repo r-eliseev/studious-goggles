@@ -103,7 +103,7 @@ public class MauiChatPageMarkupTests
         var code = File.ReadAllText(Path.Combine(MauiRoot(), "Pages", "ChatPage.xaml.cs"));
 
         Assert.Contains("protected override void OnDisappearing()", code, StringComparison.Ordinal);
-        Assert.Contains("foreach (var player in _mediaPlayers)", code, StringComparison.Ordinal);
+        Assert.Contains("foreach (var player in _mediaPlayers.ToArray())", code, StringComparison.Ordinal);
         Assert.Contains("player.Stop();", code, StringComparison.Ordinal);
     }
 
