@@ -1,8 +1,8 @@
 ---
 id: 191
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-06T19:22:26Z
+status: done
+assignee:
+claimed:
 created: 2026-11-06
 ---
 
@@ -55,6 +55,12 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+- Выделена общая композиция `AppServices.CreateShared(..., registerPlatform, ...)`; десктопная `Create(...)` сохранила сигнатуру и поведение, регистрации оконных служб и `MainWindowOwner` находятся в `AppServices.Desktop.cs`.
+- `AvaloniaClipboardService`, `AvaloniaFilePickerService`, `AvaloniaImageSaver` и `AvaloniaFolderLauncher` принимают `Func<TopLevel?>` и используют API `TopLevel` напрямую.
+- Добавлен тест с подменами всех платформенных служб, `ValidateOnBuild` и проверкой разрешения основных страниц. TDD: до выделения `CreateShared` тест не компилировался.
+- Проверки: Avalonia.Tests — 154 успешно, 2 пропущены (D-Bus/DPAPI недоступны в Linux); Avalonia desktop build — успешно, 0 предупреждений и ошибок; форматирование Avalonia и Avalonia.Tests прошло; `bash scripts/check.sh` прошло.
+- `rg -n "Window|MainWindow|DesktopSecretStore" ImageGen/ImageGen.Avalonia/Composition/AppServices.cs` не находит совпадений. Ручной запуск Android-головы не относится к этой задаче.
 
 ## Комментарии
 

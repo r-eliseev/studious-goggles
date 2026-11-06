@@ -24,26 +24,25 @@ using Microsoft.Extensions.Logging;
 
 namespace ImageGen.Avalonia.Composition;
 
-public static class AppServices
+public static partial class AppServices
 {
-    /// <summary>
-    /// Builds the container of the desktop app: core, storage, the shared presentation layer, the Avalonia pages and the
-    /// platform services. Validates the registrations at build time.
-    /// <paramref name="openRouterHandler"/> and <paramref name="dialogs"/> replace the network and the dialog windows
-    /// (tests); the app itself passes nothing. <paramref name="configureLogging"/> adds the log providers (the app adds the file log).
-    /// </summary>
-    public static ServiceProvider Create(
+    /// <summary>Builds the shared container and validates registrations at build time.</summary>
+    /// <param name="registerPlatform">Adds the platform-specific services required by the shared pages.</param>
+    /// <param name="openRouterHandler">Replaces the OpenRouter network handler in tests.</param>
+    /// <param name="configureLogging">Adds log providers; the app adds the file log.</param>
+    public static ServiceProvider CreateShared(
         IAppPaths paths,
         ISecretStore secrets,
         ISecretPersistence persistence,
+        Action<IServiceCollection> registerPlatform,
         HttpMessageHandler? openRouterHandler = null,
-        IDialogService? dialogs = null,
         Action<ILoggingBuilder>? configureLogging = null,
         IDebugTrace? debugTrace = null)
     {
         ArgumentNullException.ThrowIfNull(paths);
         ArgumentNullException.ThrowIfNull(secrets);
         ArgumentNullException.ThrowIfNull(persistence);
+        ArgumentNullException.ThrowIfNull(registerPlatform);
 
         var services = new ServiceCollection();
         services.AddSingleton(paths);
@@ -64,8 +63,6 @@ public static class AppServices
 
         services.AddSingleton<AppInitializer>();
         services.AddSingleton<IMainThread, AvaloniaMainThread>();
-        services.AddSingleton<IDialogService>(dialogs ?? new AvaloniaDialogService(MainWindowOwner));
-        services.AddSingleton<IFilePickerService>(new AvaloniaFilePickerService(MainWindowOwner));
         services.AddSingleton<AppearanceService>();
         services.AddSingleton<SpendingSettingsFile>();
         services.AddSingleton<SpendingService>();
@@ -75,14 +72,6 @@ public static class AppServices
         services.AddSingleton<SemanticSearchService>();
         services.AddSingleton<ISemanticIndexStatusProvider>(sp => sp.GetRequiredService<SemanticIndexService>());
         services.AddSingleton<ISemanticIndexController>(sp => sp.GetRequiredService<SemanticIndexService>());
-        services.AddSingleton<IClipboardService>(new AvaloniaClipboardService(MainWindowOwner));
-        services.AddSingleton<IImageSaver>(new AvaloniaImageSaver(MainWindowOwner));
-        services.AddSingleton<AvaloniaFullScreenController>();
-        services.AddSingleton<IImageViewerService>(sp => new AvaloniaImageViewerService(
-            MainWindowOwner,
-            sp.GetRequiredService<AvaloniaFullScreenController>(),
-            sp.GetRequiredService<IDialogService>()));
-        services.AddSingleton<IImageComparisonService>(sp => new AvaloniaImageComparisonService(MainWindowOwner, sp.GetRequiredService<IDialogService>()));
         services.AddSingleton<ICurrentSessionTracker, CurrentSessionTracker>();
         services.AddSingleton<ErrorAlert>();
         services.AddSingleton<DefaultAssistantModelFile>();
@@ -107,14 +96,14 @@ public static class AppServices
         services.AddTransient<SettingsPageModel>();
         services.AddTransient<SpendingPageModel>();
         services.AddTransient<GalleryPageModel>();
-        services.AddSingleton<IFolderLauncher>(new AvaloniaFolderLauncher(MainWindowOwner));
-        services.AddSingleton<ILogSharer>(new UnsupportedLogSharer());
         services.AddTransient<SessionModelsPageModel>();
         services.AddTransient<SessionParametersPageModel>();
         services.AddTransient<ModelPickerPageModel>();
         // The chat side pane (wide window) creates a fresh page model each time it opens.
         services.AddSingleton<Func<SessionModelsPageModel>>(sp => sp.GetRequiredService<SessionModelsPageModel>);
         services.AddSingleton<Func<SessionParametersPageModel>>(sp => sp.GetRequiredService<SessionParametersPageModel>);
+
+        registerPlatform(services);
 
         return services.BuildServiceProvider(new ServiceProviderOptions
         {
@@ -150,6 +139,4 @@ public static class AppServices
         return createView(model);
     }
 
-    private static Window? MainWindowOwner() =>
-        Application.Current is App app ? app.MainWindow : null;
 }

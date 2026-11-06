@@ -6,21 +6,21 @@ using ImageGen.Presentation.Services;
 namespace ImageGen.Avalonia.Services;
 
 /// <summary>Saves a picture through the system «save as» dialog of the main window (task 080).</summary>
-public sealed class AvaloniaImageSaver(Func<Window?> owner) : IImageSaver
+public sealed class AvaloniaImageSaver(Func<TopLevel?> owner) : IImageSaver
 {
     public string ActionLabel => AppResources.SaveImageAs;
 
     public async Task<ImageSaveResult> SaveAsync(
         string sourcePath, string suggestedFileName, string mediaType, CancellationToken cancellationToken)
     {
-        var window = owner();
-        if (window is null)
+        var topLevel = owner();
+        if (topLevel is null)
         {
             return ImageSaveResult.Failed;
         }
 
         var extension = ImageFileNames.Extension(mediaType);
-        var file = await window.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             SuggestedFileName = suggestedFileName,
             DefaultExtension = extension.TrimStart('.'),
