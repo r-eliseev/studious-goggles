@@ -78,6 +78,19 @@ public partial class MainView : UserControl
         }
 
         PageHost.Margin = default;
+        var services = MobileApp.Services;
+        while (services.GetRequiredService<OverlayDialogService>().TryCloseTop())
+        {
+        }
+
+        while (services.GetRequiredService<OverlayImageViewerService>().TryCloseTop())
+        {
+        }
+
+        while (services.GetRequiredService<OverlayImageComparisonService>().TryCloseTop())
+        {
+        }
+
         if (ReferenceEquals(Current, this))
         {
             Current = null;
