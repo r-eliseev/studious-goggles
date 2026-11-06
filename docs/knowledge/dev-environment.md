@@ -15,7 +15,7 @@
 | `ImageGen.Core`, `ImageGen.Core.Tests` | да | да, проверено | да, проверено (59/59 тестов) | да, проверено (356/356 тестов) |
 | `ImageGen.Presentation`, `ImageGen.Presentation.Tests` | да | да, проверено (112/112 тестов) | не проверено | да, проверено (277/277 тестов) |
 | `ImageGen.Avalonia`, `ImageGen.Avalonia.Tests` (десктоп, headless) | да, проверено 2026-10-28 (45 тестов, 1 пропущен — Secret Service; приложение запускается) | да, проверено (4/4 тестов; запуск окна без дисплея не проверен) | не проверено | да, проверено (118/120 тестов, 2 пропущены — Secret Service и DPAPI); приложение запускается под `Xvfb` |
-| Avalonia Android probe из задачи 094 (связанные экраны и сервисы) | не проверено | не проверено | не проверено | да, проверено 2026-10-30: Debug build и Release APK `android-arm64`; запуск на устройстве не проверен |
+| `ImageGen.Avalonia.Android` | не проверено | не проверено | не проверено | да, проверено 2026-11-06: Debug и Release APK; запуск на устройстве не проверен |
 | `ImageGen.Data`, `ImageGen.Data.Tests` | да | да, проверено | да, проверено (16/16 тестов) | да, проверено (70/70 тестов) |
 | `ImageGen.Maui`, цель Android (`net10.0-android`) | да | да, проверено (APK собран на шаблоне) | сборка да (не проверено на проекте); запуск/отладка нет — нет эмулятора, `adb`, `/dev/kvm` | сборка да, проверено (APK собран на проекте); запуск/отладка — только на реальном устройстве по сети через `adb connect`, эмулятор не работает (нет KVM) |
 | `ImageGen.Maui`, цель Windows (`net10.0-windows…`) | да | нет, проверено (XAML-компилятор только под Windows) | нет, проверено (как в облачной сессии) | сборка да, проверено, но через Wine и неофициально (1 ч 45 мин); запуск и отладка нет — WinUI 3 под Wine не работает |
@@ -47,6 +47,7 @@ dotnet run --project ImageGen/ImageGen.LiveCheck -- --budget-usd 1 --max-request
 
 С 2026-10-28 (решение владельца: как можно больше разработки на Linux) действует такое деление:
 - **Linux или Windows** — всё, что проверяется сборкой и тестами: ядро, хранилище, `Presentation`, Avalonia (сборка, headless-тесты, запуск окна на Linux-рабочем столе), MAUI через цель Android (сборка и `dotnet format` с Android SDK). Windows-цель MAUI для таких задач проверяет CI (задача `maui` на `windows-latest`).
+- `ImageGen.Avalonia.Android` собирается на Linux с Android SDK и workload `android`: `dotnet workload install android`, затем `dotnet build ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj -c Release`. Debug и Release проверены на VPS 2026-11-06; запуск на устройстве пока не проверен (задача 198).
 - **только Windows** — то, что нельзя проверить иначе: запуск и ручная проверка MAUI-приложения под Windows, поведение, которого нет на Linux (DPAPI, WinUI-специфика), правки `Platforms/Windows`.
 - **человек у экрана** — ручные сценарии (задачи 016, 046).
 
@@ -57,6 +58,7 @@ dotnet run --project ImageGen/ImageGen.LiveCheck -- --budget-usd 1 --max-request
 - **Avalonia, Linux:** `~/.local/share/ImageGen/logs` (проверено, `Environment.SpecialFolder.LocalApplicationData`, headless-тесты).
 - **Avalonia, Windows:** `%LOCALAPPDATA%\ImageGen\logs` (проверено 2026-10-28: первая строка запуска — версия, оболочка, ОС, папки данных и логов).
 - **Avalonia, macOS:** неизвестно, путь не проверен (нет macOS-машины).
+- **Avalonia Android:** `<FilesDir>/ImageGen/logs` (внутри закрытой папки данных приложения Android).
 - **MAUI:** папка `AppDataDirectory` приложения (`FileSystem.Current.AppDataDirectory`), подпапка `logs`. На Android передать файлы можно через Settings → Share logs: откроется системное меню «Поделиться» с копиями файлов, включая текущий открытый журнал. Папка данных APK закрыта для других приложений; `run-as` недоступен у release APK, `allowBackup=false`. Сообщения также пишутся в `Debug`-вывод (logcat). Передача и очистка ожидают ручной проверки на устройстве в задаче 140.
 - Уровень: `IMAGEGEN_LOG_LEVEL=Trace|Debug|Information|Warning|Error` или `logging.json` `{"level": "Debug"}` в папке данных; по умолчанию Debug в Debug-сборке, Information в Release.
 - Отладочный трейс (задача 085) включается отдельно от уровня: `IMAGEGEN_DEBUG_TRACE=1` или `{"debugTrace": true}` в `logging.json`. Пишет в `{папка данных}/debug/<дата>/trace.jsonl` и картинки рядом; очистки нет (неизвестно, нужна ли). Спецификация: `docs/specs/debug-trace.md`.

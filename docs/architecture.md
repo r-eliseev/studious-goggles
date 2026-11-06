@@ -79,13 +79,16 @@ ImageGen/
                                    Services/Secrets/ (DesktopSecretStore и бэкенды: SecretServiceBackend для Linux,
                                    DpapiSecretBackend для Windows, KeychainSecretBackend для macOS; ADR 0008)
   ImageGen.Avalonia.Tests/         headless (Avalonia.Headless.XUnit), xunit.v3 3.2.2 (ADR 0007)
+  ImageGen.Avalonia.Android/       Android (Avalonia 12.1): MobileApp/MainView без окна; использует AppServices.CreateShared,
+                                   общие Views, темы и сервисы Avalonia; OverlayHost для диалогов, просмотра и сравнения,
+                                   Platform/ для FilesDir, Android Keystore, сохранения в MediaStore и неподдерживаемых папок
   ImageGen.Maui/                   MAUI: Pages/ (включая GalleryPage и SpendingPage), Controls/ (SessionsListView, StarterExamples, ChatEditor, SessionModelsView — общий экран моделей страницы и панели), PageModels/ (только
                                    ChatItemTemplateSelector), Services/ (MauiSecretStore, MauiAppPaths, MauiMainThread,
                                    Shell-реализации, буфер, выбор файлов, MauiImageSaver, MauiAppearanceApplier, MauiImageViewerService, MauiImageComparisonService, MauiFullScreenController, MauiFolderLauncher, MauiSecretPersistence), Converters/,
                                    Platforms/
 ```
 
-Зависимости: `Maui → Presentation → Data → Core`; `Maui` ссылается также на `Core` и `Data` (регистрация в `MauiProgram`); `Avalonia → Presentation → Data → Core` (также ссылается на `Core` и `Data`, регистрация в `AppServices`); `Presentation → Core`.
+Зависимости: `Maui → Presentation → Data → Core`; `Maui` ссылается также на `Core` и `Data` (регистрация в `MauiProgram`); `Avalonia → Presentation → Data → Core` (также ссылается на `Core` и `Data`, регистрация в `AppServices`); `Avalonia.Android → Presentation → Data → Core` (переиспользует исходники Views и общие Avalonia-сервисы, платформенную композицию регистрирует через `AppServices.CreateShared`); `Presentation → Core`.
 
 Журнал: `Core`, `Data` и `Presentation` пишут через `ILogger<T>`. Файл `{DataDirectory}/logs/imagegen-yyyyMMdd.log` настраивает `ImageGen.Presentation/Logging` (`AddImageGenFileLogging`, Serilog; ADR 0010), оболочки его вызывают. Уровень: `IMAGEGEN_LOG_LEVEL` или `logging.json` в папке данных. Отладочный трейс (включается отдельно: `IMAGEGEN_DEBUG_TRACE` или `debugTrace` в `logging.json`) пишет вводы пользователя и HTTP-обмен с провайдерами в `debug/<дата>/` через `Core/Diagnostics/IDebugTrace`; реализация — `Presentation/Logging/FileDebugTrace`, спецификация `docs/specs/debug-trace.md`. `Core` ссылается только на `Microsoft.Extensions.Http`, `Microsoft.Extensions.Logging.Abstractions`, `Microsoft.Extensions.DependencyInjection.Abstractions`. Архитектурный тест в `ImageGen.Core.Tests` проверяет, что `Core` не ссылается на `Microsoft.Maui*`, `Microsoft.AspNetCore*`, `Microsoft.Data.Sqlite*`, `Avalonia*`; тест в `ImageGen.Presentation.Tests` проверяет, что `Presentation` не ссылается на `Microsoft.Maui*`, `Avalonia*`, `Microsoft.AspNetCore*`.
 

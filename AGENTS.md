@@ -6,10 +6,11 @@
 ## Команды
 - Папка данных Avalonia: по умолчанию `ImageGen` в локальных данных; переменная `IMAGEGEN_DATA_DIR` задаёт другую (тесты используют временную, см. задачу 048).
 - Логи приложения: `<папка данных>/logs/imagegen-<дата>.log` (14 дней). Уровень: переменная `IMAGEGEN_LOG_LEVEL` или `logging.json` в папке данных. Где папка на каждой ОС: `docs/knowledge/dev-environment.md`, раздел «Логи».
-- Среда: почти всё идёт на Linux — ядро, хранилище, `Presentation`, Avalonia (сборка, headless-тесты, окно на Linux-рабочем столе) и MAUI через цель Android; Windows-цель MAUI проверяет CI. Только Windows — запуск и ручная проверка MAUI под Windows (строка «Среда» в задаче, `docs/knowledge/dev-environment.md`)
+- Среда: почти всё идёт на Linux — ядро, хранилище, `Presentation`, Avalonia (включая Android при установленных Android SDK и workload `android`) и MAUI через цель Android; Windows-цель MAUI проверяет CI. Только Windows — запуск и ручная проверка MAUI под Windows (строка «Среда» в задаче, `docs/knowledge/dev-environment.md`)
 - Сборка ядра: `dotnet build ImageGen/ImageGen.Core/ImageGen.Core.csproj`; всё решение только на Windows с MAUI-нагрузками (долго): `dotnet build ImageGen/ImageGen.slnx`
 - Тесты: `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`, `dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj`, `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj`, `dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj` (headless, на Linux)
 - Сборка Avalonia (десктоп Linux, Windows, macOS, после задачи 039): `dotnet build ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj`; запуск: `dotnet run --project ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj` (нужен дисплей)
+- Сборка Avalonia Android (Linux с Android SDK): `dotnet workload install android`, `dotnet build ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj -c Debug` или `-c Release`
 - Сборка MAUI (Android — на Linux с Android SDK и на Windows; Windows-цель — только Windows или CI): `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0` (и `-f net10.0-android`)
 - Запуск под Windows: после сборки `ImageGen/ImageGen.Maui/bin/Debug/net10.0-windows10.0.19041.0/win-x64/ImageGen.Maui.exe`
 - Линтер/форматирование: по каждому изменённому проекту `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes` (решение целиком не форматировать: на Linux MAUI-проект не загружается)
