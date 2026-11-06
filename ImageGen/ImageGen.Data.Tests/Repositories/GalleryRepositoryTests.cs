@@ -64,6 +64,29 @@ public sealed class GalleryRepositoryTests
         Assert.Null(page.NextCursor);
     }
 
+    [Fact]
+    public async Task ListAsync_VideoGeneration_IsExcludedFromGalleryAndModels()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var session = TestData.Session();
+        await new SessionRepository(test.Database).AddAsync(session, ct);
+        var run = TestData.Run(session.Id, TestData.BaseTime);
+        var image = MakeGeneration(session.Id, "image", TestData.BaseTime, "image-model");
+        var video = MakeGeneration(session.Id, "video", TestData.BaseTime.AddMinutes(1), "video-model");
+        video.Kind = MediaKind.Video;
+        image.RunId = run.Id;
+        video.RunId = run.Id;
+        await new RunRepository(test.Database).AddRunAsync(run, [image, video], ct);
+        var gallery = new GalleryRepository(test.Database);
+
+        var page = await gallery.ListAsync(new GalleryQuery(10), ct);
+        var models = await gallery.ListModelsAsync(ct);
+
+        Assert.Equal([image.Id], page.Items.Select(item => item.GenerationId));
+        Assert.Equal([new ModelRef("openrouter", "image-model")], models);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(101)]

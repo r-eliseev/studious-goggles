@@ -9,7 +9,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
     private const string GenerationColumns = """
         g.id, g.run_id, g.session_id, g.provider_id, g.model_id, g.prompt, g.seed, g.seed_applied, g.status,
         g.image_path, g.media_type, g.cost_usd, g.error_kind, g.error_message, g.created_at, g.completed_at, g.sort_order, g.outcomes_json,
-        g.reference_attachment_ids_json, g.job_json, g.cancel_requested_at
+        g.reference_attachment_ids_json, g.job_json, g.cancel_requested_at, g.kind, g.duration_seconds
         """;
 
     public async Task AddRunAsync(Run run, IReadOnlyList<Generation> generations, CancellationToken cancellationToken)
@@ -42,10 +42,10 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
             command.CommandText = """
                 INSERT INTO generations (id, run_id, session_id, provider_id, model_id, prompt, seed, seed_applied, status,
                     image_path, media_type, cost_usd, error_kind, error_message, created_at, completed_at, sort_order, outcomes_json,
-                    reference_attachment_ids_json, job_json, cancel_requested_at)
+                    reference_attachment_ids_json, job_json, cancel_requested_at, kind, duration_seconds)
                 VALUES (@id, @run_id, @session_id, @provider_id, @model_id, @prompt, @seed, @seed_applied, @status,
                     @image_path, @media_type, @cost_usd, @error_kind, @error_message, @created_at, @completed_at, @sort_order, @outcomes_json,
-                    @reference_attachment_ids_json, @job_json, @cancel_requested_at);
+                    @reference_attachment_ids_json, @job_json, @cancel_requested_at, @kind, @duration_seconds);
                 """;
             AddGenerationParameters(command, generation);
             await command.ExecuteNonQueryAsync(cancellationToken);
@@ -149,7 +149,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
                     cost_usd = @cost_usd, error_kind = @error_kind, error_message = @error_message,
                     created_at = @created_at, completed_at = @completed_at, sort_order = @sort_order, outcomes_json = @outcomes_json,
                     reference_attachment_ids_json = @reference_attachment_ids_json, job_json = @job_json,
-                    cancel_requested_at = @cancel_requested_at
+                    cancel_requested_at = @cancel_requested_at, kind = @kind, duration_seconds = @duration_seconds
                 WHERE id = @id;
                 """;
                 AddGenerationParameters(command, generation);
@@ -167,7 +167,12 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
                 await ExpenseRepository.UpsertAsync(connection, transaction, new ImageGen.Core.Domain.Expenses.Expense
                 {
                     OperationId = $"gen:{generation.Id:D}",
-                    Kind = ImageGen.Core.Domain.Expenses.ExpenseKind.Image,
+                    Kind = generation.Kind switch
+                    {
+                        MediaKind.Video => ImageGen.Core.Domain.Expenses.ExpenseKind.Video,
+                        MediaKind.Audio => ImageGen.Core.Domain.Expenses.ExpenseKind.Music,
+                        _ => ImageGen.Core.Domain.Expenses.ExpenseKind.Image,
+                    },
                     ProviderId = generation.ProviderId,
                     ModelId = generation.ModelId,
                     CostUsd = cost,
@@ -254,6 +259,8 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
         command.Parameters.AddWithValue("@reference_attachment_ids_json", ParameterJson.References(generation.ReferenceAttachmentIds));
         command.Parameters.AddWithValue("@job_json", (object?)generation.JobJson ?? DBNull.Value);
         command.Parameters.AddWithValue("@cancel_requested_at", SqliteValues.FromNullableDate(generation.CancelRequestedAt));
+        command.Parameters.AddWithValue("@kind", (int)generation.Kind);
+        command.Parameters.AddWithValue("@duration_seconds", (object?)generation.DurationSeconds ?? DBNull.Value);
     }
 
     private static Run ReadRun(SqliteDataReader reader) => new()
@@ -282,6 +289,10 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
             Status = (GenerationStatus)SqliteValues.GetInt32(reader, "status"),
             ImagePath = SqliteValues.GetNullableString(reader, "image_path"),
             MediaType = SqliteValues.GetNullableString(reader, "media_type"),
+            Kind = (MediaKind)SqliteValues.GetInt32(reader, "kind"),
+            DurationSeconds = reader.IsDBNull(reader.GetOrdinal("duration_seconds"))
+                ? null
+                : reader.GetDouble(reader.GetOrdinal("duration_seconds")),
             CostUsd = SqliteValues.GetNullableDecimal(reader, "cost_usd"),
             ErrorKind = errorKind.HasValue ? (ErrorKind)errorKind.Value : null,
             ErrorMessage = SqliteValues.GetNullableString(reader, "error_message"),

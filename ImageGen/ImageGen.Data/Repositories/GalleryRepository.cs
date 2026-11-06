@@ -20,7 +20,8 @@ public sealed class GalleryRepository(SqliteDatabase database) : IGalleryReposit
 
         await using var connection = await database.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
-        var conditions = new List<string> { "g.status = @succeeded", "g.image_path IS NOT NULL", "g.completed_at IS NOT NULL" };
+        var conditions = new List<string> { "g.kind = @image", "g.status = @succeeded", "g.image_path IS NOT NULL", "g.completed_at IS NOT NULL" };
+        command.Parameters.AddWithValue("@image", (int)MediaKind.Image);
         command.Parameters.AddWithValue("@succeeded", (int)GenerationStatus.Succeeded);
         if (query.Cursor is { } cursor)
         {
@@ -82,9 +83,10 @@ public sealed class GalleryRepository(SqliteDatabase database) : IGalleryReposit
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT DISTINCT provider_id, model_id FROM generations
-            WHERE status = @succeeded AND image_path IS NOT NULL AND completed_at IS NOT NULL
+            WHERE kind = @image AND status = @succeeded AND image_path IS NOT NULL AND completed_at IS NOT NULL
             ORDER BY provider_id, model_id;
             """;
+        command.Parameters.AddWithValue("@image", (int)MediaKind.Image);
         command.Parameters.AddWithValue("@succeeded", (int)GenerationStatus.Succeeded);
         var models = new List<ModelRef>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);

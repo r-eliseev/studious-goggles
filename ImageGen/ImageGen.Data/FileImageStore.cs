@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
+using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Platform;
+using ImageGen.Core.Providers;
 using ImageGen.Core.Storage;
 using MetadataExtractor;
 using MetadataExtractor.Formats.Gif;
@@ -64,6 +66,92 @@ public sealed class FileImageStore : IImageFileStore
         await atomicWriter.WriteAsync(fullPath, content, cancellationToken);
         LogSavedSafely(logger, relativePath, content.Length, mediaType);
         return relativePath;
+    }
+
+    public async Task<string> SaveMediaStreamAsync(
+        Guid sessionId,
+        Guid generationId,
+        Stream content,
+        string mediaType,
+        long maxBytes,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        ArgumentException.ThrowIfNullOrWhiteSpace(mediaType);
+        ArgumentOutOfRangeException.ThrowIfNegative(maxBytes);
+
+        var extension = GetMediaExtension(mediaType);
+        var relativePath = $"{ImagesFolder}/{sessionId:N}/{generationId:N}{extension}";
+        var fullPath = GetFullPath(relativePath);
+        var directory = Path.GetDirectoryName(fullPath)!;
+        Directory.CreateDirectory(directory);
+        var temporaryPath = Path.Combine(directory, $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
+        var ownsTemporaryFile = false;
+        var committed = false;
+        long byteCount = 0;
+        try
+        {
+            await using (var destination = new FileStream(
+                temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous))
+            {
+                ownsTemporaryFile = true;
+                var buffer = new byte[81920];
+                while (true)
+                {
+                    var read = await content.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+                    if (read == 0)
+                    {
+                        break;
+                    }
+
+                    if (read > maxBytes - byteCount)
+                    {
+                        throw new ProviderException(
+                            ErrorKind.Unknown,
+                            "Media response exceeded the configured size limit.",
+                            innerException: new ProviderResponseTooLargeException(maxBytes, byteCount + read));
+                    }
+
+                    await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                    byteCount += read;
+                }
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Move(temporaryPath, fullPath, overwrite: true);
+            committed = true;
+            try
+            {
+                logger.LogDebug("Media saved: {Path} ({Bytes} bytes, {MediaType}).", relativePath, byteCount, mediaType);
+            }
+            catch
+            {
+                // Diagnostics cannot change the result after the file has been committed.
+            }
+
+            return relativePath;
+        }
+        finally
+        {
+            if (ownsTemporaryFile && !committed)
+            {
+                try
+                {
+                    if (File.Exists(temporaryPath))
+                    {
+                        File.Delete(temporaryPath);
+                    }
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    logger.LogWarning(
+                        exception,
+                        "Could not remove temporary media file {FileName} ({ExceptionType}).",
+                        Path.GetFileName(temporaryPath),
+                        exception.GetType().Name);
+                }
+            }
+        }
     }
 
     /// <summary>Writes an image the user attached, under <c>images/{sessionId}/attachments/{attachmentId}.{ext}</c>.</summary>
@@ -309,6 +397,17 @@ public sealed class FileImageStore : IImageFileStore
         "image/webp" => ".webp",
         "image/gif" => ".gif",
         _ => ".bin",
+    };
+
+    private static string GetMediaExtension(string mediaType) => mediaType.ToLowerInvariant() switch
+    {
+        "video/mp4" => ".mp4",
+        "video/webm" => ".webm",
+        "audio/mpeg" => ".mp3",
+        "audio/wav" => ".wav",
+        "audio/ogg" => ".ogg",
+        "audio/flac" => ".flac",
+        _ => throw new ArgumentException("Unsupported media type.", nameof(mediaType)),
     };
 
     private static void LogSavedSafely(ILogger logger, string relativePath, int byteCount, string mediaType)

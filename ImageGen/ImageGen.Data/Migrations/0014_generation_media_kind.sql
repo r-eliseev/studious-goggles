@@ -1,0 +1,2 @@
+ALTER TABLE generations ADD COLUMN kind INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE generations ADD COLUMN duration_seconds REAL NULL;

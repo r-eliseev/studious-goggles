@@ -1,4 +1,6 @@
 using System.Runtime.CompilerServices;
+using ImageGen.Core.Domain.Generations;
+using ImageGen.Data.Repositories;
 using Microsoft.Data.Sqlite;
 
 namespace ImageGen.Data.Tests;
@@ -167,6 +169,60 @@ public class MigrationsTests
             Assert.Equal(0L, await ScalarAsync(check, "SELECT COUNT(*) FROM image_models;", cancellationToken));
             Assert.Equal(1L, await ScalarAsync(check, "SELECT COUNT(*) FROM sessions WHERE id = 's1';", cancellationToken));
             Assert.Equal(1L, await ScalarAsync(check, "SELECT COUNT(*) FROM runs WHERE id = 'r1';", cancellationToken));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Initialize_GenerationMediaKindMigration_PreservesExistingRowsAsImages()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var directory = Path.Combine(Path.GetTempPath(), "imagegen-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, SqliteDatabase.FileName);
+        var sessionId = Guid.NewGuid();
+        var runId = Guid.NewGuid();
+        var generationId = Guid.NewGuid();
+        try
+        {
+            await using (var connection = new SqliteConnection($"Data Source={path};Foreign Keys=True"))
+            {
+                await connection.OpenAsync(ct);
+                foreach (var migration in Migrations.All.Where(migration => migration.Number <= 13))
+                {
+                    await using var apply = connection.CreateCommand();
+                    apply.CommandText = migration.Script + $"\nPRAGMA user_version = {migration.Number};";
+                    await apply.ExecuteNonQueryAsync(ct);
+                }
+
+                await using var seed = connection.CreateCommand();
+                seed.CommandText = """
+                    INSERT INTO sessions (id, title, created_at, updated_at, settings_json)
+                    VALUES (@session, 'legacy', '2026-11-06T00:00:00Z', '2026-11-06T00:00:00Z', '{}');
+                    INSERT INTO runs (id, session_id, prompt, origin, created_at)
+                    VALUES (@run, @session, 'prompt', 0, '2026-11-06T00:00:00Z');
+                    INSERT INTO generations (id, run_id, session_id, provider_id, model_id, prompt, seed,
+                        seed_applied, status, created_at, sort_order)
+                    VALUES (@generation, @run, @session, 'openrouter', 'model', 'prompt', 1, 1, 2,
+                        '2026-11-06T00:00:00Z', 0);
+                    """;
+                seed.Parameters.AddWithValue("@session", sessionId.ToString("D"));
+                seed.Parameters.AddWithValue("@run", runId.ToString("D"));
+                seed.Parameters.AddWithValue("@generation", generationId.ToString("D"));
+                await seed.ExecuteNonQueryAsync(ct);
+            }
+
+            var database = new SqliteDatabase(path);
+            await database.InitializeAsync(ct);
+            var generation = await new RunRepository(database).GetGenerationAsync(generationId, ct);
+
+            Assert.NotNull(generation);
+            Assert.Equal(MediaKind.Image, generation.Kind);
+            Assert.Null(generation.DurationSeconds);
         }
         finally
         {

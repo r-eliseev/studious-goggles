@@ -1,8 +1,8 @@
 ---
 id: 199
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-06T21:12:24Z
+status: done
+assignee:
+claimed:
 created: 2026-11-06
 ---
 
@@ -61,6 +61,12 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+Добавлены `MediaKind`, `Generation.Kind`/`DurationSeconds` и миграция 0014 с безопасными значениями по умолчанию для старых строк. RunRepository читает и сохраняет новые поля и относит расходы к Video/Music; галерея и список моделей отбирают только изображения. `IImageFileStore.SaveMediaStreamAsync` поддерживает шесть разрешённых MIME-типов, пишет через ограниченный поток во временный файл рядом с результатом и атомарно переименовывает его; превышение лимита удаляет временный файл. Добавлены лимиты видео 500 МиБ и аудио 100 МиБ. `GenerationService.Snapshot` переносит новые свойства.
+
+Проверки: Core — 745 тестов, Data — 138, Presentation — 489; все прошли. Форматирование Core, Data и Data.Tests прошло; `bash scripts/check.sh` прошёл. Миграционный тест подтвердил, что прежняя генерация после обновления читается как Image с `DurationSeconds = null`.
+
+Небольшое уточнение к плану: `ErrorKind.ResponseTooLarge` в текущем контракте отсутствует. Как и существующие клиенты для слишком больших ответов, запись потока выбрасывает `ProviderException(ErrorKind.Unknown)` с `ProviderResponseTooLargeException` во внутреннем исключении. Новые ErrorKind и UI-переводы не добавлялись.
 
 ## Комментарии
 

@@ -1,5 +1,6 @@
 using System.Reflection;
 using ImageGen.Core.Platform;
+using ImageGen.Core.Providers;
 using ImageGen.Core.Storage;
 using ImageGen.Data.Tests.TestDoubles;
 using Microsoft.Extensions.Logging;
@@ -52,6 +53,51 @@ public sealed class FileImageStoreTests : IDisposable
 
         Assert.Equal($"images/{sessionId:N}/attachments/{attachmentId:N}.webp", relativePath);
         Assert.Equal([5, 6], await _store.ReadAsync(relativePath, ct));
+    }
+
+    [Theory]
+    [InlineData("video/mp4", ".mp4")]
+    [InlineData("audio/mpeg", ".mp3")]
+    public async Task SaveMediaStreamAsync_AllowedType_WritesStreamAtomically(string mediaType, string extension)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var sessionId = Guid.NewGuid();
+        var generationId = Guid.NewGuid();
+        var bytes = Enumerable.Range(0, 1024).Select(value => (byte)(value % 256)).ToArray();
+        await using var content = new MemoryStream(bytes);
+
+        var relativePath = await _store.SaveMediaStreamAsync(sessionId, generationId, content, mediaType, 2048, ct);
+
+        Assert.Equal($"images/{sessionId:N}/{generationId:N}{extension}", relativePath);
+        Assert.Equal(bytes, await File.ReadAllBytesAsync(_store.GetFullPath(relativePath), ct));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(_store.GetFullPath(relativePath))!, ".*.tmp"));
+    }
+
+    [Fact]
+    public async Task SaveMediaStreamAsync_UnknownType_ThrowsWithoutWriting()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var content = new MemoryStream([1, 2, 3]);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _store.SaveMediaStreamAsync(
+            Guid.NewGuid(), Guid.NewGuid(), content, "text/plain", 10, ct));
+
+        Assert.False(Directory.Exists(Path.Combine(_directory, FileImageStore.ImagesFolder)));
+    }
+
+    [Fact]
+    public async Task SaveMediaStreamAsync_ExceedsLimit_RemovesTemporaryFile()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var sessionId = Guid.NewGuid();
+        var generationId = Guid.NewGuid();
+        await using var content = new MemoryStream([1, 2, 3, 4]);
+
+        await Assert.ThrowsAsync<ProviderException>(() => _store.SaveMediaStreamAsync(
+            sessionId, generationId, content, "video/mp4", 3, ct));
+
+        var sessionDirectory = Path.Combine(_directory, FileImageStore.ImagesFolder, sessionId.ToString("N"));
+        Assert.Empty(Directory.GetFiles(sessionDirectory));
     }
 
     [Fact]

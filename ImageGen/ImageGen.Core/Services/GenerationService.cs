@@ -1389,6 +1389,8 @@ public sealed class GenerationService(
         Status = g.Status,
         ImagePath = g.ImagePath,
         MediaType = g.MediaType,
+        Kind = g.Kind,
+        DurationSeconds = g.DurationSeconds,
         CostUsd = g.CostUsd,
         ErrorKind = g.ErrorKind,
         ErrorMessage = g.ErrorMessage,
