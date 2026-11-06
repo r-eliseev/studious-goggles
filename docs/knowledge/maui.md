@@ -9,6 +9,12 @@
 - Сборка iOS и Mac Catalyst требует macOS с Xcode; на Windows они в `TargetFrameworks` примера пропускаются только на Linux, поэтому на Windows без Mac-хоста их сборка может не пройти (проверить; для работы на Windows собирайте `-f net10.0-windows10.0.19041.0` или `-f net10.0-android`).
 - Нагрузки: `dotnet workload install maui` (проверить актуальность команды для .NET 10); `dotnet workload list`.
 
+### CommunityToolkit MediaElement 10.0.0 (задача 205)
+- `CommunityToolkit.Maui.MediaElement` — отдельный пакет. В `MauiProgram` достаточно `using CommunityToolkit.Maui;` и `.UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false)`; параметр соответствует README пакета 10.0.0 из NuGet. Для приложения без фонового воспроизведения оставлять `false`.
+- Элемент — `CommunityToolkit.Maui.Views.MediaElement`; локальный файл задаётся `MediaSource.FromFile(path)`. По умолчанию источник сам не начинает воспроизводиться; приложение явно задаёт `ShouldAutoPlay="False"` и `ShouldShowPlaybackControls="True"`. `Stop()` останавливает воспроизведение при уходе со страницы.
+- Пакет 10.0.0 совместим с .NET 10, но Android API 26+; `SupportedOSPlatformVersion` Android-проекта должен быть не ниже 26. На Android для Activity требуются `ResizeableActivity=true` и `LaunchMode=SingleTask` (см. [MediaElement platform setup](https://learn.microsoft.com/dotnet/communitytoolkit/maui/views/mediaelement#android)). Форматы зависят от нативных декодеров платформы.
+- Сверено 2026-11-06 по README NuGet 10.0.0 и [документации MediaElement](https://learn.microsoft.com/dotnet/communitytoolkit/maui/views/mediaelement); воспроизведение вручную проверяется задачами 016/140.
+
 ## Структура single-project
 - Один `.csproj` на все платформы, `SingleProject=true`. Платформенный код в `Platforms/<Android|iOS|MacCatalyst|Windows>/` собирается только для своей платформы автоматически.
 - Условная компиляция: `#if ANDROID`, `#if IOS`, `#if MACCATALYST`, `#if WINDOWS`; для проверки на лету — `OperatingSystem.IsAndroid()`, `DeviceInfo.Platform`.

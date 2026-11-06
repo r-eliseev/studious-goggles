@@ -16,6 +16,7 @@
     <ContentPage.Resources>
         <ResourceDictionary>
             <converters:FilePathToImageSourceConverter x:Key="FilePathToImageSource" />
+            <converters:FilePathToMediaSourceConverter x:Key="FilePathToMediaSource" />
             <converters:ActionsSheetCommandConverter x:Key="ActionsSheetCommand" />
             <toolkit:IsNotNullConverter x:Key="IsNotNull" />
 
@@ -166,13 +167,21 @@
                                                                    IsVisible="{Binding HasImage}"
                                                                    Aspect="AspectFill"
                                                                    AutomationProperties.IsInAccessibleTree="False" />
-                                                            <Grid IsVisible="{Binding IsVideo}" BackgroundColor="{DynamicResource IgSunkenColor}"
-                                                                  SemanticProperties.Description="{Binding SummaryText}">
-                                                                <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="8">
-                                                                    <Label StyleClass="icon" FontSize="32" Text="&#xE2C4;" HorizontalOptions="Center" />
-                                                                    <Label StyleClass="meta" Text="{Binding DurationText}" />
-                                                                </VerticalStackLayout>
-                                                            </Grid>
+                                                            <toolkit:MediaElement Source="{Binding MediaFilePath, Converter={StaticResource FilePathToMediaSource}}"
+                                                                                  HeightRequest="176" WidthRequest="264"
+                                                                                  ShouldAutoPlay="False" ShouldShowPlaybackControls="True"
+                                                                                  IsVisible="False" Loaded="OnMediaElementLoaded" Unloaded="OnMediaElementUnloaded"
+                                                                                  SemanticProperties.Description="{Binding SummaryText}">
+                                                                <toolkit:MediaElement.Triggers>
+                                                                    <MultiTrigger TargetType="toolkit:MediaElement">
+                                                                        <MultiTrigger.Conditions>
+                                                                            <BindingCondition Binding="{Binding IsVideo}" Value="True" />
+                                                                            <BindingCondition Binding="{Binding HasMedia}" Value="True" />
+                                                                        </MultiTrigger.Conditions>
+                                                                        <Setter Property="IsVisible" Value="True" />
+                                                                    </MultiTrigger>
+                                                                </toolkit:MediaElement.Triggers>
+                                                            </toolkit:MediaElement>
                                                             <Grid IsVisible="{Binding IsAudio}" BackgroundColor="{DynamicResource IgSunkenColor}"
                                                                   SemanticProperties.Description="{Binding SummaryText}">
                                                                 <Label StyleClass="icon" FontSize="32" Text="&#xE0C7;" HorizontalOptions="Center" VerticalOptions="Center" />
@@ -236,6 +245,20 @@
                                                             </Border>
                                                         </Grid>
                                                     </Border>
+                                                    <toolkit:MediaElement Source="{Binding MediaFilePath, Converter={StaticResource FilePathToMediaSource}}"
+                                                                          HeightRequest="64" ShouldAutoPlay="False" ShouldShowPlaybackControls="True"
+                                                                          IsVisible="False" Loaded="OnMediaElementLoaded" Unloaded="OnMediaElementUnloaded"
+                                                                          SemanticProperties.Description="{Binding SummaryText}">
+                                                        <toolkit:MediaElement.Triggers>
+                                                            <MultiTrigger TargetType="toolkit:MediaElement">
+                                                                <MultiTrigger.Conditions>
+                                                                    <BindingCondition Binding="{Binding IsAudio}" Value="True" />
+                                                                    <BindingCondition Binding="{Binding HasMedia}" Value="True" />
+                                                                </MultiTrigger.Conditions>
+                                                                <Setter Property="IsVisible" Value="True" />
+                                                            </MultiTrigger>
+                                                        </toolkit:MediaElement.Triggers>
+                                                    </toolkit:MediaElement>
                                                     <Button StyleClass="ghost,small" Text="{x:Static strings:AppResources.Cancel}" Command="{Binding CancelCommand}"
                                                             IsVisible="{Binding IsRunning}" HorizontalOptions="Start"
                                                             SemanticProperties.Description="{x:Static strings:AppResources.Cancel}" />

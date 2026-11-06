@@ -77,6 +77,37 @@ public class MauiChatPageMarkupTests
     }
 
     [Fact]
+    public void VideoPlayer_UsesLocalFileWithControlsAndNoAutoplay()
+    {
+        XNamespace toolkit = "http://schemas.microsoft.com/dotnet/2022/maui/toolkit";
+        var document = XDocument.Load(Path.Combine(MauiRoot(), "Pages", "ChatPage.xaml"));
+        var players = Assert.IsType<XElement>(document.Root).Descendants()
+            .Where(element => element.Name == toolkit + "MediaElement")
+            .ToList();
+        Assert.Equal(2, players.Count);
+        var player = Assert.Single(players, element => (string?)element.Attribute("HeightRequest") == "176");
+
+        Assert.Equal("{Binding MediaFilePath, Converter={StaticResource FilePathToMediaSource}}", (string?)player.Attribute("Source"));
+        Assert.Equal("False", (string?)player.Attribute("ShouldAutoPlay"));
+        Assert.Equal("True", (string?)player.Attribute("ShouldShowPlaybackControls"));
+        Assert.Equal("{Binding SummaryText}", (string?)player.Attribute("SemanticProperties.Description"));
+        Assert.Contains(player.Descendants(), element =>
+            element.Name.LocalName == "BindingCondition"
+            && (string?)element.Attribute("Binding") == "{Binding HasMedia}"
+            && (string?)element.Attribute("Value") == "True");
+    }
+
+    [Fact]
+    public void ChatDisappearing_StopsMediaPlayback()
+    {
+        var code = File.ReadAllText(Path.Combine(MauiRoot(), "Pages", "ChatPage.xaml.cs"));
+
+        Assert.Contains("protected override void OnDisappearing()", code, StringComparison.Ordinal);
+        Assert.Contains("foreach (var player in _mediaPlayers)", code, StringComparison.Ordinal);
+        Assert.Contains("player.Stop();", code, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TranscriptScrolled_UserGesture_DoesNotStartProgrammaticScroll()
     {
         // A run taller than the transcript is always the visible last row: scrolling to it on every gesture threw the
