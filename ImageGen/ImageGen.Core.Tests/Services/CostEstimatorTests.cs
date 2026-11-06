@@ -67,6 +67,34 @@ public sealed class CostEstimatorTests
         Assert.False(estimate.IsApproximate);
     }
 
+    [Fact]
+    public async Task EstimateVideoAsync_VeoDurationRate_ReturnsExactEstimate()
+    {
+        var estimator = CreateVideoEstimator(
+            Video("google/veo", new Dictionary<string, decimal> { ["duration_seconds_with_audio_1080p"] = 0.1m }));
+
+        var estimate = await estimator.EstimateVideoAsync(
+            [Ref("google/veo")], new VideoParameters { DurationSeconds = 8, Resolution = "1080p", GenerateAudio = true },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(0.8m, estimate.KnownUsd);
+        Assert.Empty(estimate.UnknownModels);
+        Assert.False(estimate.IsApproximate);
+    }
+
+    [Fact]
+    public async Task EstimateVideoAsync_UnknownPrice_ListsModelAsUnknown()
+    {
+        var estimator = CreateVideoEstimator(Video("seedance", new Dictionary<string, decimal> { ["video_tokens"] = 0.01m }));
+
+        var estimate = await estimator.EstimateVideoAsync(
+            [Ref("seedance")], VideoParameters.Default, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0m, estimate.KnownUsd);
+        Assert.Equal([Ref("seedance")], estimate.UnknownModels);
+        Assert.False(estimate.IsApproximate);
+    }
+
     private static CostEstimator CreateEstimator(params ImageModel[] models)
     {
         var providers = Substitute.For<IProviderRouter>();
@@ -76,6 +104,23 @@ public sealed class CostEstimatorTests
             .Returns(Task.FromResult<IReadOnlyList<ImageModel>>(models));
         var catalog = new ModelCatalogService(providers, repository, NullLogger<ModelCatalogService>.Instance);
         return new CostEstimator(catalog);
+    }
+
+    private static CostEstimator CreateVideoEstimator(params VideoModel[] models)
+    {
+        var providers = Substitute.For<IProviderRouter>();
+        providers.ImageProviderIds.Returns([ProviderIds.OpenRouter]);
+        var imageRepository = Substitute.For<IImageModelRepository>();
+        imageRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<ImageModel>>([]));
+        var catalog = new ModelCatalogService(providers, imageRepository, NullLogger<ModelCatalogService>.Instance);
+        var videoRepository = Substitute.For<IVideoModelRepository>();
+        videoRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<VideoModel>>(models));
+        var videoProvider = Substitute.For<IVideoModelProvider>();
+        providers.GetVideoModelProvider(ProviderIds.OpenRouter).Returns(videoProvider);
+        var videoCatalog = new VideoModelCatalogService(providers, videoRepository, NullLogger<VideoModelCatalogService>.Instance);
+        return new CostEstimator(catalog, videoCatalog);
     }
 
     private static ModelRef Ref(string id) => new(ProviderIds.OpenRouter, id);
@@ -91,5 +136,18 @@ public sealed class CostEstimatorTests
         FetchedAt = DateTimeOffset.UnixEpoch,
         Parameters = [],
         Prices = prices,
+    };
+
+    private static VideoModel Video(string id, IReadOnlyDictionary<string, decimal> prices) => new()
+    {
+        ProviderId = ProviderIds.OpenRouter,
+        Id = id,
+        Name = id,
+        Durations = [5, 8],
+        Resolutions = ["1080p"],
+        AspectRatios = [],
+        FrameImages = [],
+        PriceSkus = prices,
+        FetchedAt = DateTimeOffset.UnixEpoch,
     };
 }

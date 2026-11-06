@@ -29,6 +29,30 @@ public class SessionRepositoryTests
     }
 
     [Fact]
+    public async Task GetAsync_OldSettingsJson_UsesVideoDefaults()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var repository = new SessionRepository(test.Database);
+        var session = TestData.Session();
+        await repository.AddAsync(session, ct);
+        await using (var connection = await test.Database.OpenAsync(ct))
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "UPDATE sessions SET settings_json = @settings WHERE id = @id;";
+            command.Parameters.AddWithValue("@settings", "{\"imageModelIds\":[],\"runsPerModel\":1}");
+            command.Parameters.AddWithValue("@id", session.Id.ToString("N"));
+            await command.ExecuteNonQueryAsync(ct);
+        }
+
+        var loaded = await repository.GetAsync(session.Id, ct);
+
+        Assert.NotNull(loaded);
+        Assert.Empty(loaded.Settings.VideoModels);
+        Assert.Equal(VideoParameters.Default, loaded.Settings.VideoParameters);
+    }
+
+    [Fact]
     public async Task GetAsync_UnknownId_ReturnsNull()
     {
         var ct = TestContext.Current.CancellationToken;

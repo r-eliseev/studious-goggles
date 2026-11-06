@@ -15,6 +15,10 @@ public sealed class SessionSettings
     [property: JsonPropertyName("imageModelIds")]
     public List<ModelRef> ImageModels { get; set; } = [];
 
+    public List<ModelRef> VideoModels { get; set; } = [];
+
+    public VideoParameters VideoParameters { get; set; } = VideoParameters.Default;
+
     public int RunsPerModel { get; set; } = MinRunsPerModel;
 
     /// <summary>Parameters asked for every run of the session. Changing the models does not change them.</summary>

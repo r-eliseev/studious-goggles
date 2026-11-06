@@ -1371,12 +1371,12 @@ public sealed class GenerationService(
             if (!job.TryBeginSubmission()) cancellationToken.ThrowIfCancellationRequested();
             var handle = await queued.SubmitAsync(request, cancellationToken).ConfigureAwait(false);
             submittedHandle = handle;
-            job.PublishHandle(queued, handle);
-            job.CompleteSubmitPhase();
             generation.JobJson = JsonSerializer.Serialize(handle);
             generation.Status = queued is InMemoryQueuedImageProvider or InMemoryQueuedImageConnection
                 ? GenerationStatus.Running
                 : GenerationStatus.Queued;
+            job.PublishHandle(queued, handle);
+            job.CompleteSubmitPhase();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

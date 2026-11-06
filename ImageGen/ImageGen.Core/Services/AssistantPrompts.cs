@@ -12,12 +12,25 @@ public static class AssistantPrompts
 
     public const string GenerateImagesToolName = "generate_images";
 
+    public const string GenerateVideoToolName = "generate_video";
+
     public const string GenerateImagesToolDescription = "Generate images from a complete, self-contained prompt in English.";
 
     /// <summary>JSON Schema of the <c>generate_images</c> arguments.</summary>
     public const string GenerateImagesToolSchema = """
         {"type":"object","properties":{"prompt":{"type":"string","description":"Complete image prompt in English."}},"required":["prompt"]}
         """;
+
+    public const string GenerateVideoToolDescription = "Generate a video from a complete, self-contained prompt in English; optionally use a successful image from this session as the first frame.";
+
+    /// <summary>JSON Schema of the <c>generate_video</c> arguments.</summary>
+    public const string GenerateVideoToolSchema = """
+        {"type":"object","properties":{"prompt":{"type":"string","description":"Complete video prompt in English."},"first_frame_image_id":{"type":"string","description":"Optional id of a successful image generation from this session."}},"required":["prompt"]}
+        """;
+
+    public const string VideoSystemInstruction =
+        "When the user explicitly asks for a video, clip, or animation, call generate_video. "
+        + "For image requests, continue to call generate_images.";
 
     public const string System = """
         You are an assistant inside an image generation app. The user describes the image they want.
@@ -48,9 +61,12 @@ public static class AssistantPrompts
     /// Estimated tokens of the fixed part of every request: the system prompt, the current prompt line and the tool
     /// description and schema (C1.1).
     /// </summary>
-    public static int FixedTokens(string currentLine) =>
+    public static int FixedTokens(string currentLine, bool includeVideoTool = false) =>
         TokenEstimator.Estimate(System) + TokenEstimator.Estimate(currentLine)
-        + TokenEstimator.Estimate(GenerateImagesToolDescription) + TokenEstimator.Estimate(GenerateImagesToolSchema);
+        + TokenEstimator.Estimate(GenerateImagesToolDescription) + TokenEstimator.Estimate(GenerateImagesToolSchema)
+        + (includeVideoTool
+            ? TokenEstimator.Estimate(VideoSystemInstruction) + TokenEstimator.Estimate(GenerateVideoToolDescription) + TokenEstimator.Estimate(GenerateVideoToolSchema)
+            : 0);
 
     /// <summary>
     /// Text of an assistant message that started a run: only what the assistant said, possibly empty.
