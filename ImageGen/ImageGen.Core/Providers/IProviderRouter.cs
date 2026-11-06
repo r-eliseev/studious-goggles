@@ -20,4 +20,6 @@ public interface IProviderRouter
     ITextEmbeddingClient GetTextEmbeddingClient(string providerId);
 
     IVideoModelProvider GetVideoModelProvider(string providerId);
+
+    IQueuedVideoProvider GetQueuedVideoProvider(string providerId);
 }

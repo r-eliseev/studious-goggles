@@ -4,12 +4,13 @@ using ImageGen.Core.Domain.Models;
 namespace ImageGen.Core.Providers;
 
 /// <summary>Combines one synchronous image/chat client with a prepared in-memory queued adapter.</summary>
-public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelProvider, IAssistantChatClient, IQueuedImageProvider, ITextEmbeddingClient, IVideoModelProvider
+public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelProvider, IAssistantChatClient, IQueuedImageProvider, ITextEmbeddingClient, IVideoModelProvider, IQueuedVideoProvider
 {
     private readonly IModelProvider _imageProvider;
     private readonly IAssistantChatClient _chatClient;
     private readonly ITextEmbeddingClient? _textEmbeddingClient;
     private readonly IVideoModelProvider? _videoModelProvider;
+    private readonly IQueuedVideoProvider? _queuedVideoProvider;
     private readonly InMemoryQueuedImageProvider _queuedImages;
 
     public InMemoryQueuedImageConnection(
@@ -29,6 +30,7 @@ public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelP
         _chatClient = chatClient;
         _textEmbeddingClient = imageProvider as ITextEmbeddingClient ?? chatClient as ITextEmbeddingClient;
         _videoModelProvider = imageProvider as IVideoModelProvider ?? chatClient as IVideoModelProvider;
+        _queuedVideoProvider = imageProvider as IQueuedVideoProvider ?? chatClient as IQueuedVideoProvider;
         _queuedImages = new InMemoryQueuedImageProvider(transport, providerId, timeProvider);
     }
 
@@ -64,4 +66,22 @@ public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelP
             ImageGen.Core.Domain.Generations.ErrorKind.ModelUnavailable,
             "This provider does not support video models."))
         .ListVideoModelsAsync(cancellationToken);
+
+    public Task<ProviderJobHandle> SubmitAsync(VideoGenerationRequest request, CancellationToken cancellationToken) =>
+        (_queuedVideoProvider ?? throw new ProviderException(
+            ImageGen.Core.Domain.Generations.ErrorKind.ModelUnavailable,
+            "This provider does not support queued video generation."))
+        .SubmitAsync(request, cancellationToken);
+
+    Task<VideoJobUpdate> IQueuedVideoProvider.PollAsync(ProviderJobHandle handle, CancellationToken cancellationToken) =>
+        (_queuedVideoProvider ?? throw new ProviderException(
+            ImageGen.Core.Domain.Generations.ErrorKind.ModelUnavailable,
+            "This provider does not support queued video generation."))
+        .PollAsync(handle, cancellationToken);
+
+    public Task<ProviderContent> OpenContentAsync(ProviderJobHandle handle, CancellationToken cancellationToken) =>
+        (_queuedVideoProvider ?? throw new ProviderException(
+            ImageGen.Core.Domain.Generations.ErrorKind.ModelUnavailable,
+            "This provider does not support queued video generation."))
+        .OpenContentAsync(handle, cancellationToken);
 }

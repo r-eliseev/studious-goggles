@@ -46,6 +46,7 @@ public class ProviderRouterTests
         Assert.Same(connection, _router.GetImageProvider("openrouter"));
         Assert.Same(connection, _router.GetChatClient("openrouter"));
         Assert.Same(connection, _router.GetQueuedImageProvider("openrouter"));
+        Assert.Same(connection, _router.GetQueuedVideoProvider("openrouter"));
     }
 
     [Fact]
@@ -104,6 +105,14 @@ public class ProviderRouterTests
     public void GetVideoModelProvider_OpenAiCompatible_ThrowsModelUnavailable()
     {
         var error = Assert.Throws<ProviderException>(() => _router.GetVideoModelProvider("local"));
+
+        Assert.Equal(ErrorKind.ModelUnavailable, error.Kind);
+    }
+
+    [Fact]
+    public void GetQueuedVideoProvider_OpenAiCompatible_ThrowsModelUnavailable()
+    {
+        var error = Assert.Throws<ProviderException>(() => _router.GetQueuedVideoProvider("local"));
 
         Assert.Equal(ErrorKind.ModelUnavailable, error.Kind);
     }

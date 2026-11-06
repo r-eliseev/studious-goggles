@@ -58,6 +58,17 @@ public sealed class ProviderRouter(
             ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support video models.");
     }
 
+    public IQueuedVideoProvider GetQueuedVideoProvider(string providerId)
+    {
+        if (registry.Get(providerId).Kind != ProviderKind.OpenRouter)
+        {
+            throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support queued video generation.");
+        }
+
+        return GetConnection(providerId) as IQueuedVideoProvider
+            ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support queued video generation.");
+    }
+
     private IProviderConnection Create(ProviderConfig config) => config.Kind switch
     {
         ProviderKind.OpenRouter => Wrap(new OpenRouterClient(config, httpClientFactory, secretStore, timeProvider, loggerFactory?.CreateLogger<OpenRouterClient>()), config.Id),

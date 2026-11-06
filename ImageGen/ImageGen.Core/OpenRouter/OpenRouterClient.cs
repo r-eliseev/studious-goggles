@@ -19,7 +19,7 @@ public sealed class OpenRouterClient(
     ISecretStore secretStore,
     TimeProvider timeProvider,
     ILogger<OpenRouterClient>? logger = null)
-    : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient, ISynchronousImageTransport, ITextEmbeddingClient, IVideoModelProvider
+    : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient, ISynchronousImageTransport, ITextEmbeddingClient, IVideoModelProvider, IQueuedVideoProvider
 {
     private const int PriceRequestParallelism = 4;
     private const string EmbeddingModel = "baai/bge-m3";
@@ -114,6 +114,232 @@ public sealed class OpenRouterClient(
         }
 
         return result;
+    }
+
+    public async Task<ProviderJobHandle> SubmitAsync(VideoGenerationRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.ModelId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.Prompt);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.DurationSeconds);
+
+        var body = new JsonObject
+        {
+            ["model"] = request.ModelId,
+            ["prompt"] = request.Prompt,
+            ["duration"] = request.DurationSeconds,
+            ["generate_audio"] = request.GenerateAudio,
+        };
+        SetIfNotNull(body, "resolution", request.Resolution);
+        SetIfNotNull(body, "aspect_ratio", request.AspectRatio);
+        if (request.Seed is { } seed)
+        {
+            body["seed"] = seed;
+        }
+
+        if (request.FirstFrame is { } firstFrame)
+        {
+            if (firstFrame.Content.Length == 0
+                || !firstFrame.MediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+                || firstFrame.MediaType.Any(char.IsWhiteSpace))
+            {
+                throw new ArgumentException("The first frame must have image bytes and an image media type.", nameof(request));
+            }
+
+            var dataUrl = $"data:{firstFrame.MediaType};base64,{Convert.ToBase64String(firstFrame.Content)}";
+            body["frame_images"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["type"] = "image_url",
+                    ["image_url"] = new JsonObject { ["url"] = dataUrl },
+                    ["frame_type"] = "first_frame",
+                },
+            };
+        }
+
+        using var requestMessage = await CreateAuthorizedRequestAsync(HttpMethod.Post, "videos", body, cancellationToken);
+        var response = await SendJsonAsync(requestMessage, cancellationToken);
+        var id = ReadString(response["id"]);
+        var pollingUrl = ReadString(response["polling_url"]);
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(pollingUrl))
+        {
+            throw new ProviderException(ErrorKind.EmptyResponse, "OpenRouter returned an incomplete video job handle.");
+        }
+
+        var statusUri = ValidateVideoAddress(pollingUrl, allowRelative: true);
+        var contentUri = new Uri(Config.BaseAddress, $"videos/{Uri.EscapeDataString(id)}/content?index=0");
+        return new ProviderJobHandle(Config.Id, id, statusUri.AbsoluteUri, contentUri.AbsoluteUri, string.Empty);
+    }
+
+    public async Task<VideoJobUpdate> PollAsync(ProviderJobHandle handle, CancellationToken cancellationToken)
+    {
+        var validated = ValidateVideoHandle(handle);
+        using var request = await CreateAuthorizedRequestAsync(HttpMethod.Get, validated.StatusUrl, null, cancellationToken);
+        var status = await SendVideoJsonAsync(request, cancellationToken);
+        var state = ReadString(status["status"]);
+        return state switch
+        {
+            "pending" => new VideoJobUpdate(JobState.Queued),
+            "in_progress" => new VideoJobUpdate(JobState.Running),
+            "completed" => new VideoJobUpdate(JobState.Succeeded, ReadCost(status)),
+            "failed" => FailedVideoUpdate(status),
+            "cancelled" or "expired" => new VideoJobUpdate(
+                JobState.Failed, ErrorKind: ErrorKind.Unknown, ErrorMessage: $"Video generation {state}."),
+            _ => new VideoJobUpdate(JobState.Queued),
+        };
+    }
+
+    public async Task<ProviderContent> OpenContentAsync(ProviderJobHandle handle, CancellationToken cancellationToken)
+    {
+        var validated = ValidateVideoHandle(handle);
+        var request = await CreateAuthorizedRequestAsync(HttpMethod.Get, validated.ResponseUrl, null, cancellationToken);
+        CancellationTokenSource? timeout = CreateTimeout(cancellationToken);
+        HttpResponseMessage? response = null;
+        try
+        {
+            response = await CreateHttpClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new ProviderException(
+                    ProviderClientBase.MapErrorKind((int)response.StatusCode, hasModerationReasons: false),
+                    $"OpenRouter returned HTTP {(int)response.StatusCode} while downloading video.",
+                    statusCode: (int)response.StatusCode);
+            }
+
+            if (response.Content.Headers.ContentLength is { } length && length > ProviderResponseLimits.Video)
+            {
+                throw new ProviderException(
+                    ErrorKind.Unknown,
+                    "OpenRouter video exceeded the configured size limit.",
+                    innerException: new ProviderResponseTooLargeException(ProviderResponseLimits.Video, length));
+            }
+
+            var stream = await response.Content.ReadAsStreamAsync(timeout.Token);
+            var mediaType = response.Content.Headers.ContentType?.MediaType;
+            var content = new ProviderContent(
+                stream,
+                string.IsNullOrWhiteSpace(mediaType) ? "video/mp4" : mediaType,
+                response,
+                timeout);
+            response = null;
+            timeout = null;
+            return content;
+        }
+        catch (HttpRequestException exception)
+        {
+            throw new ProviderException(ErrorKind.Network, "Could not download video from OpenRouter.", innerException: exception);
+        }
+        catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new ProviderException(ErrorKind.Timeout, "OpenRouter video download timed out.", innerException: exception);
+        }
+        finally
+        {
+            request.Dispose();
+            response?.Dispose();
+            timeout?.Dispose();
+        }
+    }
+
+    private ProviderJobHandle ValidateVideoHandle(ProviderJobHandle handle)
+    {
+        if (handle is null || !string.Equals(handle.ProviderId, Config.Id, StringComparison.Ordinal))
+        {
+            throw new ProviderException(ErrorKind.Unknown, "OpenRouter returned an invalid video job handle.");
+        }
+
+        return handle with
+        {
+            StatusUrl = ValidateVideoAddress(handle.StatusUrl, allowRelative: false).AbsoluteUri,
+            ResponseUrl = ValidateVideoAddress(handle.ResponseUrl, allowRelative: false).AbsoluteUri,
+        };
+    }
+
+    private Uri ValidateVideoAddress(string value, bool allowRelative)
+    {
+        Uri uri;
+        if (allowRelative && Uri.TryCreate(value, UriKind.Relative, out var relative))
+        {
+            uri = new Uri(Config.BaseAddress, relative);
+        }
+        else if (!Uri.TryCreate(value, UriKind.Absolute, out uri!))
+        {
+            throw new ProviderException(ErrorKind.Unknown, "OpenRouter returned an invalid video URL.");
+        }
+
+        if (!value.StartsWith(uri.Scheme + "://", StringComparison.OrdinalIgnoreCase)
+                && !allowRelative
+            || !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(uri.IdnHost, Config.BaseAddress.IdnHost, StringComparison.OrdinalIgnoreCase)
+            || uri.Port != Config.BaseAddress.Port
+            || uri.UserInfo.Length != 0
+            || uri.Fragment.Length != 0
+            || value.Contains('\\', StringComparison.Ordinal)
+            || value.Any(char.IsControl))
+        {
+            throw new ProviderException(ErrorKind.Unknown, "OpenRouter returned an invalid video URL.");
+        }
+
+        return uri;
+    }
+
+    private async Task<JsonNode> SendVideoJsonAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        using var timeout = CreateTimeout(cancellationToken);
+        try
+        {
+            using (request)
+            using (var response = await CreateHttpClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token))
+            {
+                var text = await BoundedHttpContentReader.ReadTextAsync(response.Content, ProviderResponseLimits.GetLimit(request), timeout.Token);
+                JsonNode? root = null;
+                try
+                {
+                    root = string.IsNullOrWhiteSpace(text) ? null : JsonNode.Parse(text);
+                }
+                catch (System.Text.Json.JsonException)
+                {
+                    // Convert an invalid provider body into the same empty-response error used by other endpoints.
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = root?["error"];
+                    var code = ReadInt(error?["code"]) ?? (int)response.StatusCode;
+                    var message = ReadString(error?["message"]) ?? $"OpenRouter returned HTTP {(int)response.StatusCode}.";
+                    throw new ProviderException(
+                        ProviderClientBase.MapErrorKind(code, error?["metadata"]?["reasons"] is JsonArray),
+                        message,
+                        statusCode: (int)response.StatusCode);
+                }
+
+                return root ?? throw new ProviderException(ErrorKind.EmptyResponse, "OpenRouter returned an empty video status.");
+            }
+        }
+        catch (HttpRequestException exception)
+        {
+            throw new ProviderException(ErrorKind.Network, "Could not reach OpenRouter.", innerException: exception);
+        }
+        catch (ProviderResponseTooLargeException exception)
+        {
+            throw new ProviderException(ErrorKind.Unknown, "OpenRouter video status exceeded the size limit.", innerException: exception);
+        }
+        catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new ProviderException(ErrorKind.Timeout, "OpenRouter did not respond in time.", innerException: exception);
+        }
+    }
+
+    private static VideoJobUpdate FailedVideoUpdate(JsonNode status)
+    {
+        var error = status["error"];
+        var code = ReadInt(error?["code"]);
+        var message = ReadString(error?["message"]) ?? ReadString(error) ?? "OpenRouter video generation failed.";
+        return new VideoJobUpdate(
+            JobState.Failed,
+            ErrorKind: code is { } value ? ProviderClientBase.MapErrorKind(value, error?["metadata"]?["reasons"] is JsonArray) : ErrorKind.Unknown,
+            ErrorMessage: message);
     }
 
     private IReadOnlyDictionary<string, decimal> ReadVideoPrices(JsonNode? node, string modelId)

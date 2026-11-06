@@ -1,8 +1,8 @@
 ---
 id: 201
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-06T21:32:43Z
+status: done
+assignee:
+claimed:
 created: 2026-11-06
 ---
 
@@ -57,6 +57,10 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+Добавлены контракт очереди видео, модели запроса/ответа, потоковый `ProviderContent` и поддержка OpenRouter: отправка генерации, проверка адресов опроса и результата, чтение статуса/цены и открытие видео без буферизации в память. Первое изображение отправляется как `frame_images` с base64 data URL. Проверка адресов требует HTTPS, совпадающий host и port, без userinfo и fragment. `InMemoryQueuedImageConnection` пробрасывает video-provider интерфейс, а `ProviderRouter` выдаёт его только OpenRouter.
+
+Проверки: Core — 776 тестов, все прошли; форматирование Core и Core.Tests, `bash scripts/check.sh` и `git diff --check` прошли. Один существующий тест `SemanticIndexServiceTests.IndexAsync_ChangedVectorDimensionClearsMixedIndexAndCanBeRetried` однажды завершился по таймауту, затем прошёл отдельно и в полном повторном прогоне. Формат `frame_images` со вложенным `image_url.url` и data URL соответствует документации OpenRouter.
 
 ## Комментарии
 
