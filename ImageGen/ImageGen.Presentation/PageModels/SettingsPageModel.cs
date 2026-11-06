@@ -23,6 +23,7 @@ public sealed partial class SettingsPageModel(
     ProviderRegistry providers,
     INavigationService navigation,
     IFolderLauncher folders,
+    ILogSharer logSharer,
     IAppPaths paths,
     IDialogService dialogs,
     ErrorAlert errorAlert,
@@ -88,6 +89,8 @@ public sealed partial class SettingsPageModel(
 
     public bool CanOpenLogs => folders.IsSupported;
 
+    public bool CanShareLogs => logSharer.IsSupported;
+
     /// <summary>Folder that holds the log files (the same folder the app writes to).</summary>
     public string LogsFolder => ImageGenLogging.LogDirectoryFor(paths.DataDirectory);
 
@@ -107,6 +110,8 @@ public sealed partial class SettingsPageModel(
             Styles.Add(new StyleOptionViewModel(AppearanceStyle.Gallery, AppResources.StyleGallery, AppResources.StyleGalleryHint, SelectStyleAsync));
             Styles.Add(new StyleOptionViewModel(AppearanceStyle.Notebook, AppResources.StyleNotebook, AppResources.StyleNotebookHint, SelectStyleAsync));
         }
+
+        ShowAppearance(appearance.Current);
 
         if (ProviderKeys.Count == 0)
         {
@@ -129,15 +134,67 @@ public sealed partial class SettingsPageModel(
             AssistantModels.Add(new AssistantModelOption(new ModelRef(providerId, model.Id), model.Name, providerName));
         }
 
-        SelectedAssistantModel = AssistantModels.FirstOrDefault(option => option.Reference == defaultAssistantModel.Current)
-            ?? new AssistantModelOption(defaultAssistantModel.Current, defaultAssistantModel.Current.ModelId,
-                providers.TryGet(defaultAssistantModel.Current.ProviderId, out var currentProvider) ? currentProvider.DisplayName : defaultAssistantModel.Current.ProviderId);
+        var selectedAssistant = AssistantModels.FirstOrDefault(option => option.Reference == defaultAssistantModel.Current);
+        if (selectedAssistant is null)
+        {
+            var defaultModel = defaultAssistantModel.Current;
+            selectedAssistant = new AssistantModelOption(defaultModel,
+                defaultModel.ModelId,
+                providers.TryGet(defaultModel.ProviderId, out var currentProvider) ? currentProvider.DisplayName : defaultModel.ProviderId);
+            AssistantModels.Insert(0, selectedAssistant);
+        }
 
-        ShowAppearance(appearance.Current);
+        SelectedAssistantModel = selectedAssistant;
     }
 
     [RelayCommand]
     private Task OpenLogsAsync() => folders.OpenAsync(LogsFolder, CancellationToken.None);
+
+    [RelayCommand]
+    private async Task ShareLogsAsync()
+    {
+        try
+        {
+            if (LogFiles.List(LogsFolder).Count == 0)
+            {
+                await dialogs.AlertAsync(AppResources.SettingsLogs, AppResources.SettingsNoLogs);
+                return;
+            }
+
+            var targetDirectory = Path.Combine(Path.GetTempPath(), "imagegen-logs-share");
+            var copies = await LogFiles.CopyForSharingAsync(LogsFolder, targetDirectory, CancellationToken.None);
+            await logSharer.ShareAsync(copies, CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            await _errorAlert.ShowAsync(exception);
+        }
+    }
+
+    [RelayCommand]
+    private async Task ClearLogsAsync()
+    {
+        try
+        {
+            var confirmed = await dialogs.ConfirmAsync(
+                AppResources.SettingsLogs,
+                AppResources.SettingsClearLogsConfirm,
+                AppResources.SettingsClearLogs,
+                AppResources.Cancel,
+                destructive: true);
+            if (!confirmed)
+            {
+                return;
+            }
+
+            var deleted = LogFiles.DeleteAllExceptNewest(LogsFolder);
+            await dialogs.AlertAsync(AppResources.SettingsLogs, string.Format(AppResources.SettingsLogsCleared, deleted));
+        }
+        catch (Exception exception)
+        {
+            await _errorAlert.ShowAsync(exception);
+        }
+    }
 
     [RelayCommand]
     private Task OpenSpendingAsync() => navigation.GoToAsync(Routes.Spending);

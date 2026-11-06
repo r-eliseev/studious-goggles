@@ -582,6 +582,24 @@
   <data name="SettingsOpenLogs" xml:space="preserve">
     <value>Open folder</value>
   </data>
+  <data name="SettingsShareLogs" xml:space="preserve">
+    <value>Share logs</value>
+  </data>
+  <data name="SettingsShareLogsTitle" xml:space="preserve">
+    <value>ImageGen logs</value>
+  </data>
+  <data name="SettingsClearLogs" xml:space="preserve">
+    <value>Clear logs</value>
+  </data>
+  <data name="SettingsClearLogsConfirm" xml:space="preserve">
+    <value>Delete old log files? The current file is kept.</value>
+  </data>
+  <data name="SettingsLogsCleared" xml:space="preserve">
+    <value>Deleted {0} log files. The current file is kept.</value>
+  </data>
+  <data name="SettingsNoLogs" xml:space="preserve">
+    <value>No log files yet.</value>
+  </data>
   <data name="ErrorDetailsTitle" xml:space="preserve">
     <value>Error details</value>
   </data>

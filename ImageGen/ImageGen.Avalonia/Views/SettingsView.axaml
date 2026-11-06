@@ -127,6 +127,10 @@
                         Command="{Binding OpenLogsCommand}"
                         IsVisible="{Binding CanOpenLogs}"
                         AutomationProperties.Name="{markup:Res SettingsOpenLogs}" />
+                <Button Classes="ghost"
+                        Content="{markup:Res SettingsClearLogs}"
+                        Command="{Binding ClearLogsCommand}"
+                        AutomationProperties.Name="{markup:Res SettingsClearLogs}" />
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

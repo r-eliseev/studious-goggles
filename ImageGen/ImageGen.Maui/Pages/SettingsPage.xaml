@@ -107,6 +107,17 @@
                         IsVisible="{Binding CanOpenLogs}"
                         HorizontalOptions="Start"
                         SemanticProperties.Description="{x:Static strings:AppResources.SettingsOpenLogs}" />
+                <Button StyleClass="ghost"
+                        Text="{x:Static strings:AppResources.SettingsShareLogs}"
+                        Command="{Binding ShareLogsCommand}"
+                        IsVisible="{Binding CanShareLogs}"
+                        HorizontalOptions="Start"
+                        SemanticProperties.Description="{x:Static strings:AppResources.SettingsShareLogs}" />
+                <Button StyleClass="ghost"
+                        Text="{x:Static strings:AppResources.SettingsClearLogs}"
+                        Command="{Binding ClearLogsCommand}"
+                        HorizontalOptions="Start"
+                        SemanticProperties.Description="{x:Static strings:AppResources.SettingsClearLogs}" />
             </VerticalStackLayout>
         </VerticalStackLayout>
     </ScrollView>

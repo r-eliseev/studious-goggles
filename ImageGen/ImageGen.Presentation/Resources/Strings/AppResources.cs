@@ -226,6 +226,18 @@ public static class AppResources
 
     public static string SettingsOpenLogs => Get(nameof(SettingsOpenLogs));
 
+    public static string SettingsShareLogs => Get(nameof(SettingsShareLogs));
+
+    public static string SettingsShareLogsTitle => Get(nameof(SettingsShareLogsTitle));
+
+    public static string SettingsClearLogs => Get(nameof(SettingsClearLogs));
+
+    public static string SettingsClearLogsConfirm => Get(nameof(SettingsClearLogsConfirm));
+
+    public static string SettingsLogsCleared => Get(nameof(SettingsLogsCleared));
+
+    public static string SettingsNoLogs => Get(nameof(SettingsNoLogs));
+
     public static string SessionsToday => Get(nameof(SessionsToday));
 
     public static string SessionsEarlier => Get(nameof(SessionsEarlier));

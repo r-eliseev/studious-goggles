@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Storage;
 using MetadataExtractor;
@@ -18,8 +19,11 @@ public sealed class FileImageStore : IImageFileStore
     private readonly IAppPaths appPaths;
     private readonly ILogger<FileImageStore> logger;
     private readonly Func<string, ImageDimensions?> readDimensions;
+    private readonly Action<string> deleteOrphanedTemporaryFile;
+    private static readonly Regex OrphanedImageTemporaryFilePattern = new(@"^\..+\.[0-9a-f]{32}\.tmp$", RegexOptions.CultureInvariant);
+    private static readonly Regex OrphanedDefaultsTemporaryFilePattern = new(@"^defaults\.json\.[0-9a-f]{32}\.tmp$", RegexOptions.CultureInvariant);
     public const string ImagesFolder = "images";
-    private readonly AtomicImageFileWriter atomicWriter = new();
+    private readonly AtomicImageFileWriter atomicWriter;
     private readonly SemaphoreSlim _metadataReadGate = new(2, 2);
     private readonly object dimensionReadLock = new();
     private TaskCompletionSource dimensionReadsIdle = CompletedSource();
@@ -30,11 +34,17 @@ public sealed class FileImageStore : IImageFileStore
     {
     }
 
-    internal FileImageStore(IAppPaths appPaths, ILogger<FileImageStore> logger, Func<string, ImageDimensions?> readDimensions)
+    internal FileImageStore(
+        IAppPaths appPaths,
+        ILogger<FileImageStore> logger,
+        Func<string, ImageDimensions?> readDimensions,
+        Action<string>? deleteOrphanedTemporaryFile = null)
     {
         this.appPaths = appPaths;
         this.logger = logger;
         this.readDimensions = readDimensions;
+        this.deleteOrphanedTemporaryFile = deleteOrphanedTemporaryFile ?? File.Delete;
+        atomicWriter = new AtomicImageFileWriter(logger: logger);
     }
 
     public async Task<string> SaveAsync(
@@ -144,6 +154,68 @@ public sealed class FileImageStore : IImageFileStore
             return activeDimensionReads == 0 ? Task.CompletedTask : dimensionReadsIdle.Task;
         }
     }
+
+    /// <summary>Deletes old temporary files left by interrupted atomic writes.</summary>
+    public int DeleteOrphanedTemporaryFiles(TimeSpan olderThan, DateTimeOffset now)
+    {
+        var deletedCount = 0;
+        var imagesDirectory = Path.Combine(appPaths.DataDirectory, ImagesFolder);
+        if (Directory.Exists(imagesDirectory))
+        {
+            try
+            {
+                foreach (var path in Directory.EnumerateFiles(imagesDirectory, "*", SearchOption.AllDirectories))
+                {
+                    if (OrphanedImageTemporaryFilePattern.IsMatch(Path.GetFileName(path)))
+                    {
+                        TryDeleteOldTemporaryFile(path, olderThan, now, ref deletedCount);
+                    }
+                }
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                LogTemporaryFileCleanupFailure(imagesDirectory, exception);
+            }
+        }
+
+        try
+        {
+            foreach (var path in Directory.EnumerateFiles(appPaths.DataDirectory, "defaults.json.*.tmp", SearchOption.TopDirectoryOnly))
+            {
+                if (OrphanedDefaultsTemporaryFilePattern.IsMatch(Path.GetFileName(path)))
+                {
+                    TryDeleteOldTemporaryFile(path, olderThan, now, ref deletedCount);
+                }
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            LogTemporaryFileCleanupFailure(appPaths.DataDirectory, exception);
+        }
+
+        return deletedCount;
+    }
+
+    private void TryDeleteOldTemporaryFile(string path, TimeSpan olderThan, DateTimeOffset now, ref int deletedCount)
+    {
+        try
+        {
+            if (now - File.GetLastWriteTimeUtc(path) <= olderThan)
+            {
+                return;
+            }
+
+            deleteOrphanedTemporaryFile(path);
+            deletedCount++;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            LogTemporaryFileCleanupFailure(Path.GetRelativePath(appPaths.DataDirectory, path), exception);
+        }
+    }
+
+    private void LogTemporaryFileCleanupFailure(string relativePath, Exception exception) =>
+        logger.LogWarning(exception, "Could not remove orphaned temporary file {Path} ({ExceptionType}).", relativePath, exception.GetType().Name);
 
     private void BeginDimensionRead()
     {

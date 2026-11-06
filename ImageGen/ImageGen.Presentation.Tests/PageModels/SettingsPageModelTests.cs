@@ -22,6 +22,7 @@ public sealed class SettingsPageModelTests : IDisposable
     private readonly ISecretStore _secrets = Substitute.For<ISecretStore>();
     private readonly INavigationService _navigation = Substitute.For<INavigationService>();
     private readonly IFolderLauncher _folders = Substitute.For<IFolderLauncher>();
+    private readonly ILogSharer _logSharer = Substitute.For<ILogSharer>();
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly IProviderRouter _router = Substitute.For<IProviderRouter>();
     private readonly IDefaultAssistantModel _defaultAssistantModel = DefaultAssistantModels.Create();
@@ -89,6 +90,62 @@ public sealed class SettingsPageModelTests : IDisposable
 
         Assert.Single(model.Styles, s => s.IsSelected);
         Assert.True(model.Styles.Single(s => s.Style == AppearanceStyle.Notebook).IsSelected);
+    }
+
+    [Fact]
+    public async Task Load_ShowsAppearanceBeforeAssistantCatalogLoads()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await _appearance.SaveAsync(new AppearanceSettings(AppearanceStyle.Gallery, AppearanceTheme.Dark), ct);
+        _router.ChatProviderIds.Returns([ProviderIds.OpenRouter]);
+        var catalog = new TaskCompletionSource<IReadOnlyList<ChatModel>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var chat = Substitute.For<IAssistantChatClient>();
+        chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(_ => catalog.Task);
+        _router.GetChatClient(ProviderIds.OpenRouter).Returns(chat);
+        var model = CreateModel();
+
+        var loadTask = model.LoadCommand.ExecuteAsync(null);
+        try
+        {
+            var deadline = Task.Delay(TimeSpan.FromSeconds(2), ct);
+            while (!model.Styles.Any(style => style.Style == AppearanceStyle.Gallery && style.IsSelected)
+                || model.SelectedTheme != AppearanceTheme.Dark)
+            {
+                if (loadTask.IsCompleted)
+                {
+                    await loadTask;
+                }
+
+                await Task.Delay(10, ct);
+                Assert.False(deadline.IsCompleted, "Appearance was not applied while the assistant catalog was loading.");
+            }
+        }
+        finally
+        {
+            catalog.TrySetResult([]);
+            await loadTask;
+        }
+    }
+
+    [Fact]
+    public async Task Load_DefaultModelMissingFromCatalog_AddsItToList()
+    {
+        var defaultModel = new ModelRef(ProviderIds.OpenRouter, "vendor/default");
+        _defaultAssistantModel.Current.Returns(defaultModel);
+        _router.ChatProviderIds.Returns([ProviderIds.OpenRouter]);
+        var chat = Substitute.For<IAssistantChatClient>();
+        chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns([
+            new ChatModel("vendor/first", "First", false, 100, SupportsTools: true),
+            new ChatModel("vendor/second", "Second", false, 100, SupportsTools: true),
+        ]);
+        _router.GetChatClient(ProviderIds.OpenRouter).Returns(chat);
+        var model = CreateModel();
+
+        await model.LoadCommand.ExecuteAsync(null);
+
+        Assert.Equal(3, model.AssistantModels.Count);
+        Assert.Equal(defaultModel, model.AssistantModels[0].Reference);
+        Assert.Same(model.AssistantModels[0], model.SelectedAssistantModel);
     }
 
     [Fact]
@@ -233,6 +290,71 @@ public sealed class SettingsPageModelTests : IDisposable
     }
 
     [Fact]
+    public void CanShareLogs_FollowsSharer()
+    {
+        _logSharer.IsSupported.Returns(true);
+        Assert.True(CreateModel().CanShareLogs);
+
+        _logSharer.IsSupported.Returns(false);
+        Assert.False(CreateModel().CanShareLogs);
+    }
+
+    [Fact]
+    public async Task ShareLogs_NoFiles_ShowsMessageWithoutOpeningShareSheet()
+    {
+        var model = CreateModel();
+
+        await model.ShareLogsCommand.ExecuteAsync(null);
+
+        await _dialogs.Received(1).AlertAsync(AppResources.SettingsLogs, AppResources.SettingsNoLogs);
+        await _logSharer.DidNotReceive().ShareAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ShareLogs_WithFiles_SharesCopiesOutsideLogFolder()
+    {
+        var logDirectory = ImageGenLogging.LogDirectoryFor(_directory);
+        Directory.CreateDirectory(logDirectory);
+        File.WriteAllText(Path.Combine(logDirectory, "imagegen-20261101.log"), "older");
+        File.WriteAllText(Path.Combine(logDirectory, "imagegen-20261102.log"), "current");
+        var model = CreateModel();
+
+        await model.ShareLogsCommand.ExecuteAsync(null);
+
+        await _logSharer.Received(1).ShareAsync(Arg.Is<IReadOnlyList<string>>(files =>
+            files.Count == 2
+            && files.All(file => !file.StartsWith(logDirectory, StringComparison.Ordinal))
+            && files.Select(Path.GetFileName).SequenceEqual(new[] { "imagegen-20261101.log", "imagegen-20261102.log" })), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ClearLogs_Cancel_KeepsFiles()
+    {
+        var paths = CreateLogFiles("imagegen-20261101.log", "imagegen-20261102.log");
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(false);
+        var model = CreateModel();
+
+        await model.ClearLogsCommand.ExecuteAsync(null);
+
+        Assert.All(paths, path => Assert.True(File.Exists(path)));
+        await _dialogs.DidNotReceive().AlertAsync(Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task ClearLogs_Confirmed_DeletesOlderAndKeepsNewest()
+    {
+        var paths = CreateLogFiles("imagegen-20261101.log", "imagegen-20261102.log");
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+        var model = CreateModel();
+
+        await model.ClearLogsCommand.ExecuteAsync(null);
+
+        Assert.False(File.Exists(paths[0]));
+        Assert.True(File.Exists(paths[1]));
+        await _dialogs.Received(1).AlertAsync(AppResources.SettingsLogs, Arg.Is<string>(message => message.Contains("1", StringComparison.Ordinal)));
+    }
+
+    [Fact]
     public void CanOpenLogs_FollowsLauncher()
     {
         _folders.IsSupported.Returns(false);
@@ -242,9 +364,21 @@ public sealed class SettingsPageModelTests : IDisposable
         Assert.True(CreateModel().CanOpenLogs);
     }
 
-    private SettingsPageModel CreateModel() => new(_appearance, _keyService, _registry, _navigation, _folders, new TestPaths(_directory), _dialogs,
+    private SettingsPageModel CreateModel() => new(_appearance, _keyService, _registry, _navigation, _folders, _logSharer, new TestPaths(_directory), _dialogs,
         ErrorAlerts.Create(_dialogs), new ChatModelCatalogService(_router, NullLogger<ChatModelCatalogService>.Instance), _defaultAssistantModel,
         _semanticIndex, _mainThread);
+
+    private string[] CreateLogFiles(params string[] names)
+    {
+        var logDirectory = ImageGenLogging.LogDirectoryFor(_directory);
+        Directory.CreateDirectory(logDirectory);
+        return names.Select(name =>
+        {
+            var path = Path.Combine(logDirectory, name);
+            File.WriteAllText(path, name);
+            return path;
+        }).ToArray();
+    }
 
     private sealed record TestPaths(string DataDirectory) : IAppPaths;
 }

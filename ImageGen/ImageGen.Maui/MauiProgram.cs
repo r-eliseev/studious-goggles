@@ -122,6 +122,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<Func<SessionModelsPageModel>>(sp => sp.GetRequiredService<SessionModelsPageModel>);
         builder.Services.AddSingleton<Func<SessionParametersPageModel>>(sp => sp.GetRequiredService<SessionParametersPageModel>);
         builder.Services.AddSingleton<IFolderLauncher, MauiFolderLauncher>();
+        builder.Services.AddSingleton<ILogSharer, MauiLogSharer>();
 
         var app = builder.Build();
         var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ImageGen.Startup");

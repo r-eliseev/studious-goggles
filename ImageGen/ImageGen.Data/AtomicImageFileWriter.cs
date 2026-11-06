@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace ImageGen.Data;
 
 internal sealed class AtomicImageFileWriter
@@ -5,15 +7,18 @@ internal sealed class AtomicImageFileWriter
     private readonly Func<string, string> temporaryPathFactory;
     private readonly Func<Stream, ReadOnlyMemory<byte>, CancellationToken, Task> writeAsync;
     private readonly Action<string> deleteFile;
+    private readonly ILogger? logger;
 
     public AtomicImageFileWriter(
         Func<string, string>? temporaryPathFactory = null,
         Func<Stream, ReadOnlyMemory<byte>, CancellationToken, Task>? writeAsync = null,
-        Action<string>? deleteFile = null)
+        Action<string>? deleteFile = null,
+        ILogger? logger = null)
     {
         this.temporaryPathFactory = temporaryPathFactory ?? ((finalPath) => Path.Combine(Path.GetDirectoryName(finalPath)!, $".{Path.GetFileName(finalPath)}.{Guid.NewGuid():N}.tmp"));
         this.writeAsync = writeAsync ?? ((stream, content, cancellationToken) => stream.WriteAsync(content, cancellationToken).AsTask());
         this.deleteFile = deleteFile ?? File.Delete;
+        this.logger = logger;
     }
 
     public async Task WriteAsync(string finalPath, ReadOnlyMemory<byte> content, CancellationToken cancellationToken)
@@ -48,14 +53,13 @@ internal sealed class AtomicImageFileWriter
                         deleteFile(temporaryPath);
                     }
                 }
-                catch (IOException)
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
                 {
-                }
-                catch (UnauthorizedAccessException)
-                {
-                }
-                catch (Exception)
-                {
+                    logger?.LogWarning(
+                        exception,
+                        "Could not remove temporary image file {FileName} ({ExceptionType}).",
+                        Path.GetFileName(temporaryPath),
+                        exception.GetType().Name);
                 }
             }
         }

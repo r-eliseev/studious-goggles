@@ -14,11 +14,13 @@ public sealed class DefaultAssistantModelFile : IDefaultAssistantModel
     public const string FileName = "defaults.json";
     private static readonly ModelRef BuiltIn = new(ProviderIds.OpenRouter, SessionSettings.DefaultAssistantModelId);
     private readonly string path;
+    private readonly IProviderRouter router;
     private readonly ILogger<DefaultAssistantModelFile> logger;
 
-    public DefaultAssistantModelFile(IAppPaths paths, ILogger<DefaultAssistantModelFile> logger)
+    public DefaultAssistantModelFile(IAppPaths paths, IProviderRouter router, ILogger<DefaultAssistantModelFile> logger)
     {
         path = Path.Combine(paths.DataDirectory, FileName);
+        this.router = router;
         this.logger = logger;
         Current = Read();
     }
@@ -30,6 +32,11 @@ public sealed class DefaultAssistantModelFile : IDefaultAssistantModel
         ArgumentNullException.ThrowIfNull(model);
         ArgumentException.ThrowIfNullOrWhiteSpace(model.ProviderId);
         ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelId);
+        if (!router.ChatProviderIds.Contains(model.ProviderId, StringComparer.Ordinal))
+        {
+            throw new ArgumentException("The default assistant model provider does not support chat.", nameof(model));
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
 
         var directory = Path.GetDirectoryName(path)!;
@@ -50,7 +57,7 @@ public sealed class DefaultAssistantModelFile : IDefaultAssistantModel
                 {
                     File.Delete(temporary);
                 }
-                catch (IOException exception)
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
                 {
                     logger.LogWarning("Could not remove a temporary defaults file ({ExceptionType}).", exception.GetType().Name);
                 }
@@ -70,6 +77,12 @@ public sealed class DefaultAssistantModelFile : IDefaultAssistantModel
             var model = JsonSerializer.Deserialize<ModelRef>(File.ReadAllText(path));
             if (model is not null && !string.IsNullOrWhiteSpace(model.ProviderId) && !string.IsNullOrWhiteSpace(model.ModelId))
             {
+                if (!router.ChatProviderIds.Contains(model.ProviderId, StringComparer.Ordinal))
+                {
+                    logger.LogWarning("defaults.json names provider that is not a chat provider; using built-in assistant model");
+                    return BuiltIn;
+                }
+
                 return model;
             }
         }
