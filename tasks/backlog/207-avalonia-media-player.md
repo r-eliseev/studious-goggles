@@ -1,6 +1,6 @@
 ---
 id: 207
-status: in-progress
+status: blocked
 assignee: codex-gpt6
 claimed: 2026-11-06T23:15:05Z
 created: 2026-11-06
@@ -61,3 +61,6 @@ bash scripts/check.sh
 
 ### 2026-11-06, владелец (в чате, записал claude-audit)
 План одобрен: «заапрувь все таски которые будут».
+
+### 2026-11-06, codex-gpt6
+Перед реализацией обнаружено расхождение плана с поддерживаемыми платформами: README официального `LibVLCSharp.Avalonia` 3.10.2 перечисляет только Windows, macOS и Linux; Android не поддерживается. Пробник 206 собрал Android-пакет `VideoLAN.LibVLC.Android`, но не подключал и не проверял Avalonia `VideoView` на Android. Текущий план 207 требует одну `MediaPlayerView` и сборку Android-головы, поэтому нельзя считать desktop `VideoView` рабочим Android-путём. Нужен пересмотр плана: Android-рендер через LibVLC callbacks в Avalonia bitmap с отдельной проверкой, другой Android-плеер либо desktop-only плеер. До одобрения нового плана код не менял. Источник: https://github.com/videolan/libvlcsharp/blob/3.x/src/LibVLCSharp.Avalonia/README.md (раздел Supported platforms).
