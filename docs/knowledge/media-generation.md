@@ -16,7 +16,7 @@
 ## OpenRouter: аудио
 
 - В общем каталоге (`GET /api/v1/models`, 2026-11-06) аудио на выходе дают: `google/lyria-3-pro-preview` (описание: «$0.08 per song»), `google/lyria-3-clip-preview` («30 second duration clips are priced at $0.04 per clip»), `openai/gpt-audio`, `openai/gpt-audio-mini` (речь). Отдельного каталога `/audio/models` нет (404). Моделей звуковых эффектов нет. 38 моделей вывода `speech` (TTS) в объём не входят.
-- Аудио на выходе — через `POST /api/v1/chat/completions` с `modalities: ["text","audio"]`, `audio: {voice, format}` и обязательным `stream: true`; куски приходят в `delta.audio.data` (base64) и `delta.audio.transcript` (документация «Audio», 2026-11-06). Подходят ли эти параметры Lyria (голос, формат, длительность), в документации не сказано — нужен живой запрос (задача 208).
+- Аудио на выходе — через `POST /api/v1/chat/completions` с `modalities: ["text","audio"]`, `audio: {voice, format}` и обязательным `stream: true`; куски приходят в `delta.audio.data` (base64) и `delta.audio.transcript` (документация «Audio», 2026-11-06). Сценарий LiveCheck реализован, но параметры, формат, длительность, цена и `usage` Lyria остаются непроверенными до живого запроса владельца: после установки `IMAGEGEN_LIVE_OPENROUTER_KEY` запустить `dotnet run --project ImageGen/ImageGen.LiveCheck -- --budget-usd 0.2 --only music`.
 
 ## fal.ai и Together (не выбраны, для справки)
 

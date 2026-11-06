@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using ImageGen.Core;
 using ImageGen.Core.Diagnostics;
@@ -52,14 +53,15 @@ public sealed class LiveCheckRunner(LiveCheckOptions options, TimeProvider timeP
         {
             foreach (var provider in new[] { "openrouter", "fal", "together" })
             {
-                if (options.Only is not null && !options.Only.Contains(provider))
+                var onlyMusic = options.Only?.Contains("music") == true;
+                if (options.Only is not null && !options.Only.Contains(provider) && !(provider == "openrouter" && onlyMusic))
                 {
                     continue;
                 }
 
                 if (!options.Keys.ContainsKey(provider))
                 {
-                    results.Add(new CheckResult(provider, "all scenarios", "live response", "Key not supplied", "unverified", null, "—", "—"));
+                    results.Add(new CheckResult(provider, onlyMusic ? "music" : "all scenarios", "live response", "Key not supplied", "unverified", null, "—", "—"));
                     continue;
                 }
 
@@ -84,6 +86,12 @@ public sealed class LiveCheckRunner(LiveCheckOptions options, TimeProvider timeP
 
     private async Task RunProviderAsync(string provider, CancellationToken cancellationToken)
     {
+        if (provider == "openrouter" && options.Only?.Contains("music") == true)
+        {
+            await RunMusicAsync(provider, cancellationToken);
+            return;
+        }
+
         var router = services!.GetRequiredService<IProviderRouter>();
         var budget = budgets[provider];
         var modelOverride = options.Models;
@@ -229,6 +237,48 @@ public sealed class LiveCheckRunner(LiveCheckOptions options, TimeProvider timeP
             {
                 Add(provider, "safety filter status", "HTTP 422 for filtered prompt", ex.Kind.ToString(), ex.Kind == ErrorKind.BadRequest ? "matches status family; inspect trace" : "differs; inspect trace", togetherModel, Estimate(cost));
             }
+        }
+    }
+
+    private async Task RunMusicAsync(string provider, CancellationToken cancellationToken)
+    {
+        const string model = "google/lyria-3-clip-preview";
+        var estimate = LiveCheckEstimates.LyriaClipEstimateUsd;
+        if (!Reserve(provider, estimate, model, "music"))
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await new MusicScenario().RunAsync(
+                GetHttpClientFactory().CreateClient(),
+                options.Keys[provider],
+                options.OutputDirectory,
+                DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime),
+                trace!.Record,
+                () => budgets[provider].TryReserve(0),
+                cancellationToken);
+            if (!result.Succeeded)
+            {
+                Add(provider, "music", "streamed audio file", result.Error ?? "provider did not return audio", "differs or failed; inspect safe trace", model, Estimate(estimate));
+                return;
+            }
+
+            if (result.CostUsd is decimal actualCost)
+            {
+                budgets[provider].Settle(estimate, actualCost);
+            }
+
+            var file = Path.GetRelativePath(options.OutputDirectory, result.FilePath!);
+            var transcript = result.HasTranscript ? "present" : "none";
+            var usage = result.UsageJson ?? "unknown";
+            Add(provider, "music", "audio stream saved; inspect actual duration", $"file={file}; format={result.Format}; bytes={result.FileBytes}; audio bytes={result.AudioBytes}; events={result.EventCount}; content type={result.ContentType ?? "unknown"}; transcript={transcript}; usage={usage}", "inspect trace and generated audio", model,
+                result.CostUsd is { } cost ? $"actual ${cost.ToString("0.####", CultureInfo.InvariantCulture)}" : Estimate(estimate));
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidDataException or JsonException)
+        {
+            Add(provider, "music", "streamed audio file", ex.GetType().Name, "differs or failed; inspect safe trace", model, Estimate(estimate));
         }
     }
 

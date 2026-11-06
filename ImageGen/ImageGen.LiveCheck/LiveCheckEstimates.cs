@@ -6,6 +6,7 @@ namespace ImageGen.LiveCheck;
 public static class LiveCheckEstimates
 {
     public const decimal UnknownImageCostUsd = 1m;
+    public const decimal LyriaClipEstimateUsd = 0.10m;
     private const decimal EstimatedMegapixels = 1m;
 
     public static decimal FindImageCost(ImageModel model)
