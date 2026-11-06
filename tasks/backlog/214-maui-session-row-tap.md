@@ -13,14 +13,14 @@ created: 2026-11-07
 
 Решение без попыток настроить `SwipeView`: на телефонах строка сессии без `SwipeView`; нажатие открывает сессию, долгое нажатие — лист действий (Rename, Delete). На десктопе (`DeviceIdiom.Desktop`) — как сейчас (нажатие, контекстное меню, кнопка удаления).
 
-Зависит от: —
+Зависит от: 211 (способ задать контекст поведения и запись в `docs/knowledge/maui.md`).
 Среда: Linux (Presentation, тест разметки, сборка MAUI Android); проверка на телефоне — 140.
 
 ## Критерии готовности
 - `SessionItemViewModel.ShowActionsCommand`: через `IDialogService.ChooseAsync(Title, Cancel, [Rename, Delete session])` вызывает те же делегаты, что `RenameCommand`/`DeleteCommand`; отмена — ничего. Делегат показа передаётся из `SessionsPageModel` (по образцу `OpenSessionAsync`/`RenameSessionAsync`/`DeleteSessionAsync` — новый аргумент конструктора `showActions`, обе точки создания в `SessionsPageModel` обновить).
-- `SessionsListView.xaml`: два шаблона — `SessionRowTemplateDesktop` (нынешний, со `SwipeView` — его можно оставить или убрать, решить по факту: на десктопе свайп мышью не нужен; если убираете — записать в «Отчёт») и `SessionRowTemplatePhone`: `Grid` строки без `SwipeView` с `toolkit:TouchBehavior Command="{Binding OpenCommand}" LongPressCommand="{Binding ShowActionsCommand}"` (дочерние элементы здесь без кнопок, поэтому `ShouldMakeChildrenInputTransparent` по умолчанию допустим). Выбор шаблона в обоих `BindableLayout.ItemTemplate` — `{OnIdiom Desktop={StaticResource SessionRowTemplateDesktop}, Default={StaticResource SessionRowTemplatePhone}}`.
+- `SessionsListView.xaml`: два шаблона — `SessionRowTemplateDesktop` (нынешний, со `SwipeView` — его можно оставить или убрать, решить по факту: на десктопе свайп мышью не нужен; если убираете — записать в «Отчёт») и `SessionRowTemplatePhone`: `Grid x:Name="RowRoot"` строки без `SwipeView` с `toolkit:TouchBehavior Command="{Binding OpenCommand}" LongPressCommand="{Binding ShowActionsCommand}"` и явным контекстом `BindingContext="{Binding Source={x:Reference RowRoot}, Path=BindingContext}"` — поведения не наследуют `BindingContext` (см. 211; запись привязки — та же, что выбрана в 211). Дочерние элементы здесь без кнопок, поэтому `ShouldMakeChildrenInputTransparent` по умолчанию допустим. Выбор шаблона в обоих `BindableLayout.ItemTemplate` — `{OnIdiom Desktop={StaticResource SessionRowTemplateDesktop}, Default={StaticResource SessionRowTemplatePhone}}`.
 - Доступность: у строки `SemanticProperties.Description` = название, `SemanticProperties.Hint` — «Long press for actions» (ресурс).
-- Тесты: `SessionItemViewModelTests` (или `SessionsPageModelTests`): выбор Rename → вызван делегат переименования; Delete → удаления; отмена → ничего; тест разметки (XML): в телефонном шаблоне нет `SwipeView`, есть `TouchBehavior` с обеими командами.
+- Тесты: `SessionItemViewModelTests` (или `SessionsPageModelTests`): выбор Rename → вызван делегат переименования; Delete → удаления; отмена → ничего; тест разметки (XML): в телефонном шаблоне нет `SwipeView`, есть `TouchBehavior` с обеими командами и явным источником привязки.
 - Сборка MAUI Android; пункт 140: нажатие открывает сессию, долгое нажатие — лист Rename/Delete.
 
 ## Анализ
@@ -61,3 +61,6 @@ bash scripts/check.sh
 
 ### 2026-11-07, владелец (в чате, записал claude-audit)
 План одобрен ранее данным поручением «заапрувь все таски которые будут».
+
+### 2026-11-07, claude-audit
+Добавлен явный `BindingContext` поведения (отчёт владельца: долгое нажатие не работает — причина в 211) и зависимость от 211.
