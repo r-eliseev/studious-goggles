@@ -8,6 +8,7 @@ namespace ImageGen.Core.Serialization;
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(SessionSettings))]
 [JsonSerializable(typeof(GenerationParameters))]
+[JsonSerializable(typeof(VideoParameters))]
 [JsonSerializable(typeof(List<Guid>))]
 [JsonSerializable(typeof(List<ModelParameter>))]
 [JsonSerializable(typeof(List<ImageModelPrice>))]

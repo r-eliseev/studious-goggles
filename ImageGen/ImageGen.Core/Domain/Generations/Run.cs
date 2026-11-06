@@ -16,4 +16,8 @@ public sealed class Run
 
     /// <summary>Parameters the session asked for when the run was created. Repeat, new seed and edit reuse them.</summary>
     public GenerationParameters Parameters { get; set; } = GenerationParameters.Empty;
+
+    public VideoParameters? VideoParameters { get; set; }
+
+    public Guid? FirstFrameGenerationId { get; set; }
 }

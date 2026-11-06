@@ -26,7 +26,8 @@ public sealed class GenerationService(
     ILogger<GenerationService> logger,
     SessionChangeNotifier changes,
     IDebugTrace? trace = null,
-    IAsyncDelay? delay = null) : ISessionGenerationCoordinator
+    IAsyncDelay? delay = null,
+    VideoModelCatalogService? videoCatalog = null) : ISessionGenerationCoordinator
 {
     private readonly IDebugTrace _trace = trace ?? NullDebugTrace.Instance;
     private readonly IAsyncDelay _delay = delay ?? new SystemAsyncDelay(timeProvider);
@@ -36,6 +37,8 @@ public sealed class GenerationService(
     /// <summary>Poll interval of a queued job: starts at the minimum and grows to the maximum (ADR 0005).</summary>
     private static readonly TimeSpan PollMinInterval = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan PollMaxInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan VideoPollMinInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan VideoPollMaxInterval = TimeSpan.FromSeconds(30);
     private const int MaxPollNetworkFailures = 5;
     private const int StateSaveMaxAttempts = 3;
     private static readonly TimeSpan RemoteCancelTimeout = TimeSpan.FromSeconds(15);
@@ -224,6 +227,90 @@ public sealed class GenerationService(
         return result.Run ?? throw new InvalidOperationException("No model of the session takes the requested input.");
     }
 
+    /// <summary>Starts one video generation per selected model, retaining the run settings and optional first frame.</summary>
+    public async Task<Run> StartVideoRunAsync(
+        Guid sessionId,
+        string prompt,
+        IReadOnlyList<ModelRef> models,
+        VideoParameters parameters,
+        Guid? firstFrameGenerationId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(models);
+        ArgumentNullException.ThrowIfNull(parameters);
+        if (models.Count == 0)
+        {
+            throw new ArgumentException("At least one video model is required.", nameof(models));
+        }
+
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(parameters.DurationSeconds);
+        var text = NormalizePrompt(prompt);
+        using var lease = AcquireStartLease(sessionId);
+        await GetSessionAsync(sessionId, cancellationToken).ConfigureAwait(false);
+        var firstFrame = await ReadFirstFrameAsync(sessionId, firstFrameGenerationId, cancellationToken).ConfigureAwait(false);
+        var now = timeProvider.GetUtcNow();
+        var run = new Run
+        {
+            Id = Guid.NewGuid(),
+            SessionId = sessionId,
+            Prompt = text,
+            Origin = RunOrigin.Assistant,
+            CreatedAt = now,
+            VideoParameters = parameters,
+            FirstFrameGenerationId = firstFrameGenerationId,
+        };
+
+        var generations = new List<Generation>(models.Count);
+        for (var index = 0; index < models.Count; index++)
+        {
+            var model = models[index] ?? throw new ArgumentException("A video model reference cannot be null.", nameof(models));
+            var supportsSeed = false;
+            if (videoCatalog is not null)
+            {
+                try
+                {
+                    supportsSeed = (await videoCatalog.FindAsync(model, cancellationToken).ConfigureAwait(false))?.SupportsSeed == true;
+                }
+                catch (ProviderException)
+                {
+                    // An unavailable catalog does not prevent a video request; it means seed support is unknown.
+                }
+            }
+
+            generations.Add(new Generation
+            {
+                Id = Guid.NewGuid(),
+                RunId = run.Id,
+                SessionId = sessionId,
+                ProviderId = model.ProviderId,
+                ModelId = model.ModelId,
+                Prompt = text,
+                Seed = seeds.NextSeed(),
+                SeedApplied = supportsSeed,
+                Status = GenerationStatus.Queued,
+                Kind = MediaKind.Video,
+                DurationSeconds = parameters.DurationSeconds,
+                CreatedAt = now,
+                SortOrder = index,
+            });
+        }
+
+        await runs.AddRunAsync(run, generations, cancellationToken).ConfigureAwait(false);
+        changes.Notify(sessionId);
+        logger.LogInformation("Video run {RunId} created in session {SessionId} with {GenerationCount} generations.", run.Id, sessionId, generations.Count);
+        foreach (var generation in generations)
+        {
+            LogStatus(generation);
+            Launch(
+                generation,
+                lease.State,
+                (job, token) => ExecuteVideoAsync(generation, parameters, firstFrame, job, token),
+                acquireProviderSlot: false);
+        }
+
+        return run;
+    }
+
     /// <summary>
     /// Starts a run with the user's attached images as reference images (task 018). A model that takes no references is
     /// skipped with a reason; a model with a limit gets the first attachments up to its limit. Returns no run when every
@@ -389,6 +476,43 @@ public sealed class GenerationService(
 
             using (lease)
             {
+                if (generation.Kind == MediaKind.Video)
+                {
+                    IQueuedVideoProvider queuedVideo;
+                    try
+                    {
+                        queuedVideo = providers.GetQueuedVideoProvider(generation.ProviderId);
+                    }
+                    catch (ProviderException ex) when (ex.Kind == ErrorKind.ModelUnavailable)
+                    {
+                        generation.Status = GenerationStatus.Failed;
+                        generation.ErrorKind = ErrorKind.ModelUnavailable;
+                        generation.ErrorMessage = ex.Message;
+                        generation.CompletedAt = timeProvider.GetUtcNow();
+                        await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
+                        recovered++;
+                        continue;
+                    }
+
+                    ProviderJobHandle? videoHandle = null;
+                    try
+                    {
+                        videoHandle = JsonSerializer.Deserialize<ProviderJobHandle>(generation.JobJson!);
+                    }
+                    catch (JsonException)
+                    {
+                        // WatchVideoAsync persists malformed handles as failed without resubmitting the job.
+                    }
+
+                    Launch(
+                        generation,
+                        lease.State,
+                        (job, token) => WatchVideoAsync(generation, queuedVideo, videoHandle, job, token),
+                        submitAlreadySettled: true,
+                        acquireProviderSlot: false);
+                    continue;
+                }
+
                 IQueuedImageProvider queued;
                 try
                 {
@@ -671,7 +795,8 @@ public sealed class GenerationService(
         Func<RunningJob, CancellationToken, Task> work,
         IQueuedImageProvider? queuedProvider = null,
         ProviderJobHandle? submittedHandle = null,
-        bool submitAlreadySettled = false)
+        bool submitAlreadySettled = false,
+        bool acquireProviderSlot = true)
     {
         lock (_lifecycleGate)
         {
@@ -701,7 +826,14 @@ public sealed class GenerationService(
                 await gate.Task.ConfigureAwait(false);
                 try
                 {
-                    await RunWithProviderSlotAsync(generation.ProviderId, job, source.Token, work).ConfigureAwait(false);
+                    if (acquireProviderSlot)
+                    {
+                        await RunWithProviderSlotAsync(generation.ProviderId, job, source.Token, work).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await work(job, source.Token).ConfigureAwait(false);
+                    }
                 }
                 catch (OperationCanceledException) when (source.IsCancellationRequested)
                 {
@@ -754,6 +886,344 @@ public sealed class GenerationService(
                 slots.Release();
             }
         }
+    }
+
+    private async Task ExecuteVideoAsync(
+        Generation generation,
+        VideoParameters parameters,
+        ImageReference? firstFrame,
+        RunningJob job,
+        CancellationToken cancellationToken)
+    {
+        job.MarkPreparing();
+        if (job.IsUserCancelRequested)
+        {
+            job.CompleteSubmitPhase();
+            return;
+        }
+
+        IQueuedVideoProvider queued;
+        try
+        {
+            queued = providers.GetQueuedVideoProvider(generation.ProviderId);
+        }
+        catch (ProviderException exception) when (exception.Kind == ErrorKind.ModelUnavailable)
+        {
+            generation.Status = GenerationStatus.Failed;
+            generation.ErrorKind = exception.Kind;
+            generation.ErrorMessage = exception.Message;
+            generation.CompletedAt = timeProvider.GetUtcNow();
+            job.CompleteSubmitPhase();
+            await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        generation.Status = GenerationStatus.Queued;
+        await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
+        ProviderJobHandle? handle = null;
+        try
+        {
+            await RunWithProviderSlotAsync(generation.ProviderId, job, cancellationToken, async (_, token) =>
+            {
+                if (!job.TryBeginSubmission())
+                {
+                    token.ThrowIfCancellationRequested();
+                    return;
+                }
+
+                var request = new VideoGenerationRequest(
+                    generation.ModelId,
+                    generation.Prompt,
+                    parameters.DurationSeconds,
+                    parameters.Resolution,
+                    parameters.AspectRatio,
+                    parameters.GenerateAudio,
+                    generation.SeedApplied ? generation.Seed : null,
+                    firstFrame);
+                handle = await queued.SubmitAsync(request, token).ConfigureAwait(false);
+                generation.JobJson = JsonSerializer.Serialize(handle);
+                generation.Status = GenerationStatus.Running;
+                await SaveAndNotifyAsync(generation, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            if (generation.JobJson is null)
+            {
+                generation.Status = GenerationStatus.Failed;
+                generation.ErrorKind = exception is ProviderException providerException ? providerException.Kind : ErrorKind.Unknown;
+                generation.ErrorMessage = exception.Message;
+                generation.CompletedAt = timeProvider.GetUtcNow();
+                await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
+            throw;
+        }
+        finally
+        {
+            job.CompleteSubmitPhase();
+        }
+
+        if (handle is not null && !generation.IsFinished)
+        {
+            await WatchVideoAsync(generation, queued, handle, job, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task WatchVideoAsync(
+        Generation generation,
+        IQueuedVideoProvider queued,
+        ProviderJobHandle? handle,
+        RunningJob job,
+        CancellationToken cancellationToken)
+    {
+        if (handle is null)
+        {
+            try
+            {
+                handle = JsonSerializer.Deserialize<ProviderJobHandle>(generation.JobJson!)
+                    ?? throw new InvalidOperationException("The saved video job handle is empty.");
+            }
+            catch (Exception exception) when (exception is JsonException or InvalidOperationException)
+            {
+                await FailGenerationAsync(generation, ErrorKind.Unknown, exception.Message, cancellationToken).ConfigureAwait(false);
+                return;
+            }
+        }
+
+        var interval = VideoPollMinInterval;
+        var networkFailures = 0;
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            VideoJobUpdate update;
+            try
+            {
+                update = await queued.PollAsync(handle, cancellationToken).ConfigureAwait(false);
+                networkFailures = 0;
+            }
+            catch (ProviderException exception) when (exception.Kind == ErrorKind.Network)
+            {
+                networkFailures++;
+                if (networkFailures >= MaxPollNetworkFailures)
+                {
+                    await job.StateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+                    try
+                    {
+                        await ApplyPollingFailureAsync(generation, exception, cancellationToken).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        job.StateGate.Release();
+                    }
+
+                    return;
+                }
+
+                await _delay.DelayAsync(interval, cancellationToken).ConfigureAwait(false);
+                interval = GrowPollInterval(interval, VideoPollMaxInterval);
+                continue;
+            }
+            catch (Exception exception)
+            {
+                if (exception is OperationCanceledException && cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+
+                await job.StateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    await ApplyPollingFailureAsync(generation, exception, cancellationToken).ConfigureAwait(false);
+                }
+                finally
+                {
+                    job.StateGate.Release();
+                }
+
+                return;
+            }
+
+            await job.StateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                if (generation.IsFinished)
+                {
+                    return;
+                }
+
+                if (!await ApplyVideoUpdateAsync(generation, queued, handle, update, cancellationToken).ConfigureAwait(false))
+                {
+                    return;
+                }
+            }
+            finally
+            {
+                job.StateGate.Release();
+            }
+
+            await _delay.DelayAsync(interval, cancellationToken).ConfigureAwait(false);
+            interval = GrowPollInterval(interval, VideoPollMaxInterval);
+        }
+    }
+
+    /// <returns>True when the generation remains active and should be polled again.</returns>
+    private async Task<bool> ApplyVideoUpdateAsync(
+        Generation generation,
+        IQueuedVideoProvider queued,
+        ProviderJobHandle handle,
+        VideoJobUpdate update,
+        CancellationToken cancellationToken)
+    {
+        if ((update.State == JobState.Queued && generation.Status == GenerationStatus.Queued)
+            || (update.State == JobState.Running && generation.Status == GenerationStatus.Running)
+            || (update.State == JobState.Queued && generation.Status == GenerationStatus.Running))
+        {
+            return true;
+        }
+
+        switch (update.State)
+        {
+            case JobState.Queued:
+                generation.Status = GenerationStatus.Queued;
+                break;
+            case JobState.Running:
+                generation.Status = GenerationStatus.Running;
+                break;
+            case JobState.Succeeded:
+                await SaveVideoResultAndPersistAsync(generation, queued, handle, update.CostUsd, cancellationToken).ConfigureAwait(false);
+                return false;
+            case JobState.Filtered:
+                generation.Status = GenerationStatus.Filtered;
+                generation.ErrorKind = ErrorKind.Moderated;
+                generation.ErrorMessage = update.ErrorMessage;
+                generation.CompletedAt = timeProvider.GetUtcNow();
+                break;
+            case JobState.Failed:
+                generation.Status = GenerationStatus.Failed;
+                generation.ErrorKind = update.ErrorKind ?? ErrorKind.Unknown;
+                generation.ErrorMessage = update.ErrorMessage;
+                generation.CostUsd = update.CostUsd;
+                generation.CompletedAt = timeProvider.GetUtcNow();
+                break;
+            case JobState.Cancelled:
+                generation.Status = GenerationStatus.Cancelled;
+                generation.CompletedAt = timeProvider.GetUtcNow();
+                break;
+        }
+
+        await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
+        return !generation.IsFinished;
+    }
+
+    private async Task SaveVideoResultAndPersistAsync(
+        Generation generation,
+        IQueuedVideoProvider queued,
+        ProviderJobHandle handle,
+        decimal? costUsd,
+        CancellationToken cancellationToken)
+    {
+        generation.CostUsd = costUsd;
+        string relativePath;
+        string mediaType;
+        try
+        {
+            await using var content = await queued.OpenContentAsync(handle, cancellationToken).ConfigureAwait(false);
+            mediaType = content.MediaType;
+            relativePath = await files.SaveMediaStreamAsync(
+                generation.SessionId,
+                generation.Id,
+                content.Content,
+                mediaType,
+                ProviderResponseLimits.Video,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            generation.Status = GenerationStatus.Failed;
+            generation.ErrorKind = exception is ProviderException providerException ? providerException.Kind : ErrorKind.Unknown;
+            generation.ErrorMessage = exception.Message;
+            generation.CompletedAt = timeProvider.GetUtcNow();
+            await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        generation.ImagePath = relativePath;
+        generation.MediaType = mediaType;
+        generation.Status = GenerationStatus.Succeeded;
+        generation.CompletedAt = timeProvider.GetUtcNow();
+        try
+        {
+            await PersistStateWithRetryAsync(generation, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            try
+            {
+                await files.DeleteFileAsync(relativePath, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception cleanupException)
+            {
+                logger.LogWarning("Could not clean up video file for generation {GenerationId} in session {SessionId}.", generation.Id, generation.SessionId);
+                logger.LogDebug(cleanupException, "Video file cleanup detail for generation {GenerationId}: {RelativePath}", generation.Id, relativePath);
+            }
+            finally
+            {
+                generation.ImagePath = null;
+                generation.MediaType = null;
+            }
+
+            throw;
+        }
+
+        NotifyConfirmedState(generation);
+    }
+
+    private async Task<ImageReference?> ReadFirstFrameAsync(
+        Guid sessionId,
+        Guid? generationId,
+        CancellationToken cancellationToken)
+    {
+        if (generationId is null)
+        {
+            return null;
+        }
+
+        var generation = await runs.GetGenerationAsync(generationId.Value, cancellationToken).ConfigureAwait(false);
+        if (generation is null
+            || generation.SessionId != sessionId
+            || generation.Kind != MediaKind.Image
+            || generation.Status != GenerationStatus.Succeeded
+            || string.IsNullOrWhiteSpace(generation.ImagePath)
+            || string.IsNullOrWhiteSpace(generation.MediaType)
+            || !generation.MediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("The first frame must be a successful image generation in the same session.", nameof(generationId));
+        }
+
+        try
+        {
+            var bytes = await files.ReadAsync(generation.ImagePath, cancellationToken).ConfigureAwait(false);
+            return new ImageReference(bytes, generation.MediaType);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw new ArgumentException("The selected first-frame image could not be read.", nameof(generationId), exception);
+        }
+    }
+
+    private static TimeSpan GrowPollInterval(TimeSpan current, TimeSpan maximum)
+    {
+        var doubled = current + current;
+        return doubled > maximum ? maximum : doubled;
     }
 
     private async Task ExecuteAsync(Generation generation, RunningJob job, CancellationToken cancellationToken)

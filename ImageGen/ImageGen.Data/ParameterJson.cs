@@ -29,6 +29,12 @@ internal static class ParameterJson
     public static GenerationParameters ReadRun(string? json) =>
         json is null ? GenerationParameters.Empty : JsonSerializer.Deserialize(json, CoreJsonContext.Default.GenerationParameters) ?? GenerationParameters.Empty;
 
+    public static string? VideoRun(VideoParameters? parameters) =>
+        parameters is null ? null : JsonSerializer.Serialize(parameters, CoreJsonContext.Default.VideoParameters);
+
+    public static VideoParameters? ReadVideoRun(string? json) =>
+        json is null ? null : JsonSerializer.Deserialize(json, CoreJsonContext.Default.VideoParameters);
+
     public static string Outcomes(IReadOnlyList<ParameterOutcome> outcomes) =>
         JsonSerializer.Serialize(outcomes.ToList(), CoreJsonContext.Default.ListParameterOutcome);
 

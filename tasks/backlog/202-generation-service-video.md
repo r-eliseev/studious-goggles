@@ -1,8 +1,8 @@
 ---
 id: 202
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-06T21:41:50Z
+status: done
+assignee:
+claimed:
 created: 2026-11-06
 ---
 
@@ -62,6 +62,10 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+Добавлены `VideoParameters`, поля видео в `Run`, миграция `0016_run_video_parameters.sql` и source-generated JSON для сохранения параметров. `RunRepository` записывает и читает настройки и ID первого кадра. `StartVideoRunAsync` создаёт одну video-generation на модель, применяет seed по каталогу, проверяет успешное изображение первого кадра в той же сессии и запускает OpenRouter jobs. Submit занимает provider slot, затем watcher опрашивает с нарастающим интервалом 5–30 секунд; восстановление использует сохранённый JobJson без повторного submit. Готовый ответ сохраняется потоком с лимитом видео, затем фиксируется и публикуется; ошибки провайдера/сохранения переводят генерацию в Failed.
+
+Добавлены проверки Core и Data, обновлены `docs/architecture.md` и новая `docs/specs/media-generation.md`. Core — 783 теста, Data — 141 тест; все прошли. Форматирование Core, Data, Core.Tests и Data.Tests, `bash scripts/check.sh` и `git diff --check` прошли. Опрос видео реализован отдельным циклом, потому что `ProviderJobPoller` принимает image-only контракт и сохраняет отдельную семантику результата изображения; поведение опроса изображений не менялось.
 
 ## Комментарии
 

@@ -91,6 +91,25 @@ public class RunRepositoryTests
     }
 
     [Fact]
+    public async Task AddRunAsync_VideoSettingsAndFirstFrame_PersistsAndReadsBack()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var session = TestData.Session();
+        await new SessionRepository(test.Database).AddAsync(session, ct);
+        var repository = new RunRepository(test.Database);
+        var run = TestData.Run(session.Id, TestData.BaseTime);
+        run.VideoParameters = new VideoParameters { DurationSeconds = 8, Resolution = "720p", AspectRatio = "16:9", GenerateAudio = false };
+        run.FirstFrameGenerationId = Guid.NewGuid();
+
+        await repository.AddRunAsync(run, [], ct);
+
+        var loaded = await repository.GetRunAsync(run.Id, ct);
+        Assert.Equal(run.VideoParameters, loaded!.VideoParameters);
+        Assert.Equal(run.FirstFrameGenerationId, loaded.FirstFrameGenerationId);
+    }
+
+    [Fact]
     public async Task UpdateGenerationAsync_AllFields_AreSaved()
     {
         var ct = TestContext.Current.CancellationToken;
