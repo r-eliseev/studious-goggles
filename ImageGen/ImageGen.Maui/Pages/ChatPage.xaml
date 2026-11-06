@@ -145,10 +145,10 @@
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.Repeat}" Command="{Binding RepeatCommand}" />
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.NewSeed}" Command="{Binding NewSeedCommand}" />
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionEditPrompt}" Command="{Binding EditCommand}" />
-                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionDescribeImage}" Command="{Binding DescribeCommand}" />
-                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionPromptFromImage}" Command="{Binding DescribePromptCommand}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionDescribeImage}" Command="{Binding DescribeCommand}" IsEnabled="{Binding IsImage}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionPromptFromImage}" Command="{Binding DescribePromptCommand}" IsEnabled="{Binding IsImage}" />
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.CopyPrompt}" Command="{Binding CopyPromptCommand}" />
-                                                        <MenuFlyoutItem Text="{Binding SaveLabel}" Command="{Binding SaveCommand}" IsEnabled="{Binding HasImage}" />
+                                                        <MenuFlyoutItem Text="{Binding SaveLabel}" Command="{Binding SaveCommand}" IsEnabled="{Binding HasMedia}" />
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.Compare}" Command="{Binding CompareCommand}" IsEnabled="{Binding HasImage}" />
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.OtherModel}" Command="{Binding OtherModelCommand}" IsEnabled="{Binding IsFailedOrFiltered}" />
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.ErrorDetailsTitle}" Command="{Binding DetailsCommand}" IsEnabled="{Binding IsFailed}" />
@@ -166,6 +166,17 @@
                                                                    IsVisible="{Binding HasImage}"
                                                                    Aspect="AspectFill"
                                                                    AutomationProperties.IsInAccessibleTree="False" />
+                                                            <Grid IsVisible="{Binding IsVideo}" BackgroundColor="{DynamicResource IgSunkenColor}"
+                                                                  SemanticProperties.Description="{Binding SummaryText}">
+                                                                <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="8">
+                                                                    <Label StyleClass="icon" FontSize="32" Text="&#xE2C4;" HorizontalOptions="Center" />
+                                                                    <Label StyleClass="meta" Text="{Binding DurationText}" />
+                                                                </VerticalStackLayout>
+                                                            </Grid>
+                                                            <Grid IsVisible="{Binding IsAudio}" BackgroundColor="{DynamicResource IgSunkenColor}"
+                                                                  SemanticProperties.Description="{Binding SummaryText}">
+                                                                <Label StyleClass="icon" FontSize="32" Text="&#xE0C7;" HorizontalOptions="Center" VerticalOptions="Center" />
+                                                            </Grid>
                                                             <Button Text=""
                                                                     IsVisible="{Binding HasImage}"
                                                                     Command="{Binding Source={x:Reference Page}, Path=BindingContext.OpenImageCommand}"
@@ -273,6 +284,8 @@
                                                         <Label StyleClass="meta" Text="{Binding CostText}" />
                                                     </HorizontalStackLayout>
 
+                                                    <Label StyleClass="meta" Text="{Binding DurationText}" IsVisible="{Binding IsVideo}"
+                                                           SemanticProperties.Description="{Binding DurationText}" />
                                                     <Label StyleClass="meta"
                                                            Text="{Binding ImageDimensionsText}"
                                                            IsVisible="{Binding HasImageDimensions}"

@@ -23,10 +23,13 @@ public sealed partial class SessionModelsPageModel(
     ChatModelCatalogService chatModels,
     ProviderRegistry providers,
     INavigationService navigation,
-    ErrorAlert errorAlert) : ObservableObject
+    ErrorAlert errorAlert,
+    VideoModelCatalogService? videoCatalog = null) : ObservableObject
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
+    private readonly VideoModelCatalogService? _videoCatalog = videoCatalog;
     private readonly List<ModelOptionViewModel> _all = [];
+    private readonly List<VideoModelOptionViewModel> _videoAll = [];
     private readonly List<AssistantModelOptionViewModel> _assistants = [];
     private readonly Dictionary<string, bool> _imageGroupExpanded = new(StringComparer.Ordinal);
     private readonly Dictionary<string, bool> _assistantGroupExpanded = new(StringComparer.Ordinal);
@@ -46,6 +49,8 @@ public sealed partial class SessionModelsPageModel(
     /// <summary>Assistant model rows shown now: the models with tools filtered by <see cref="SearchText"/>.</summary>
     public ObservableCollection<AssistantModelOptionViewModel> AssistantModels { get; } = [];
 
+    public ObservableCollection<VideoModelOptionViewModel> VideoModels { get; } = [];
+
     public ObservableCollection<ImageModelGroupViewModel> ImageModelGroups { get; } = [];
 
     public ObservableCollection<AssistantModelGroupViewModel> AssistantModelGroups { get; } = [];
@@ -53,14 +58,18 @@ public sealed partial class SessionModelsPageModel(
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsImageModelsTabSelected))]
     [NotifyPropertyChangedFor(nameof(IsAssistantTabSelected))]
+    [NotifyPropertyChangedFor(nameof(IsVideoModelsTabSelected))]
     [NotifyPropertyChangedFor(nameof(SelectedTabIndex))]
     [NotifyPropertyChangedFor(nameof(ImageModelsTabAutomationName))]
     [NotifyPropertyChangedFor(nameof(AssistantTabAutomationName))]
+    [NotifyPropertyChangedFor(nameof(VideoModelsTabAutomationName))]
     public partial SessionModelsTab SelectedTab { get; set; } = SessionModelsTab.ImageModels;
 
     public bool IsImageModelsTabSelected => SelectedTab == SessionModelsTab.ImageModels;
 
     public bool IsAssistantTabSelected => SelectedTab == SessionModelsTab.AssistantModel;
+
+    public bool IsVideoModelsTabSelected => SelectedTab == SessionModelsTab.VideoModels;
 
     public int SelectedTabIndex
     {
@@ -82,11 +91,18 @@ public sealed partial class SessionModelsPageModel(
         ? $"{AppResources.AssistantModelTitle}, {AppResources.AssistantSelected}"
         : AppResources.AssistantModelTitle;
 
+    public string VideoModelsTabAutomationName => IsVideoModelsTabSelected
+        ? $"{AppResources.VideoModelsTitle}, {AppResources.AssistantSelected}"
+        : AppResources.VideoModelsTitle;
+
     [RelayCommand]
     private void ShowImageModels() => SelectedTab = SessionModelsTab.ImageModels;
 
     [RelayCommand]
     private void ShowAssistantModel() => SelectedTab = SessionModelsTab.AssistantModel;
+
+    [RelayCommand]
+    private void ShowVideoModels() => SelectedTab = SessionModelsTab.VideoModels;
 
     [ObservableProperty]
     public partial string SearchText { get; set; } = "";
@@ -107,6 +123,9 @@ public sealed partial class SessionModelsPageModel(
     /// <summary>"Image models · N selected" for the section header; updated when a row is checked or unchecked.</summary>
     public string SelectedCountText =>
         string.Format(CultureInfo.CurrentCulture, AppResources.ImageModelsSelectedFormat, _all.Count(m => m.IsSelected));
+
+    public string SelectedVideoCountText =>
+        string.Format(CultureInfo.CurrentCulture, AppResources.VideoModelsSelectedFormat, _videoAll.Count(model => model.IsSelected));
 
     public string RunsPerModelText =>
         string.Format(CultureInfo.CurrentCulture, AppResources.RunsPerModelFormat, (int)Math.Round(RunsPerModel));
@@ -153,6 +172,13 @@ public sealed partial class SessionModelsPageModel(
                 AssistantModel = _assistants.FirstOrDefault(a => a.IsSelected)?.Reference ?? session.Settings.AssistantModel,
             };
             await sessionService.UpdateSettingsAsync(_sessionId, settings, CancellationToken.None);
+            if (_videoCatalog is not null)
+            {
+                var selectedVideos = _videoAll.Where(model => model.IsSelected).Select(model => model.Reference).ToList();
+                await sessionService.UpdateVideoSettingsAsync(
+                    _sessionId, selectedVideos, session.Settings.VideoParameters, CancellationToken.None);
+            }
+
             await CloseAsync();
         }
         catch (Exception ex)
@@ -197,6 +223,9 @@ public sealed partial class SessionModelsPageModel(
             var assistant = _loaded
                 ? _assistants.FirstOrDefault(a => a.IsSelected)?.Reference
                 : session.Settings.AssistantModel;
+            var selectedVideos = _loaded
+                ? _videoAll.Where(model => model.IsSelected).Select(model => model.Reference).ToHashSet()
+                : session.Settings.VideoModels.ToHashSet();
             if (!_loaded)
             {
                 RunsPerModel = session.Settings.RunsPerModel;
@@ -233,6 +262,37 @@ public sealed partial class SessionModelsPageModel(
                 return new AssistantModelOptionViewModel(reference, providerText, item.Model, reference == assistant, SelectAssistant);
             }));
 
+            IReadOnlyList<ImageGen.Core.Domain.Models.VideoModel> videos = [];
+            if (_videoCatalog is not null)
+            {
+                try
+                {
+                    videos = await _videoCatalog.GetVideoModelsAsync(forceRefresh, CancellationToken.None);
+                }
+                catch (ProviderException)
+                {
+                    // Video catalog availability must not prevent choosing image and assistant models.
+                }
+            }
+            _videoAll.Clear();
+            _videoAll.AddRange(videos.Select(video => new VideoModelOptionViewModel(
+                new ModelRef(video.ProviderId, video.Id),
+                video.Name,
+                VideoPriceText(video),
+                video.GeneratesAudio == true,
+                selectedVideos.Contains(new ModelRef(video.ProviderId, video.Id)))));
+            foreach (var row in _videoAll)
+            {
+                row.PropertyChanged += (_, e) =>
+                {
+                    if (e.PropertyName == nameof(VideoModelOptionViewModel.IsSelected))
+                    {
+                        OnPropertyChanged(nameof(SelectedVideoCountText));
+                    }
+                };
+            }
+            OnPropertyChanged(nameof(SelectedVideoCountText));
+
             _loaded = true;
             ApplyFilter();
         }
@@ -268,6 +328,12 @@ public sealed partial class SessionModelsPageModel(
         foreach (var model in _assistants.Where(m => Matches(search, m.Name, m.Reference.ModelId)))
         {
             AssistantModels.Add(model);
+        }
+
+        VideoModels.Clear();
+        foreach (var model in _videoAll.Where(m => Matches(search, m.Name, m.Reference.ModelId)))
+        {
+            VideoModels.Add(model);
         }
 
         RebuildImageModelGroups(search);
@@ -316,6 +382,14 @@ public sealed partial class SessionModelsPageModel(
 
             AssistantModelGroups.Add(new AssistantModelGroupViewModel(group.Key, group.Label, group.Items, isExpanded, SaveAssistantGroupExpansion));
         }
+    }
+
+    private static string VideoPriceText(ImageGen.Core.Domain.Models.VideoModel model)
+    {
+        var estimate = VideoPriceCalculator.Estimate(model, 5, null, model.GeneratesAudio == true);
+        return estimate is { } price
+            ? string.Format(CultureInfo.CurrentCulture, AppResources.VideoPriceForDurationFormat, price, 5)
+            : AppResources.VideoPriceUnknown;
     }
 
     private void SaveImageGroupExpansion(ModelGroupViewModel group)

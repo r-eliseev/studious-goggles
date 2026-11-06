@@ -184,6 +184,30 @@ public static class AppResources
 
     public static string ImageModelsSelectedFormat => Get(nameof(ImageModelsSelectedFormat));
 
+    public static string VideoModelsTitle => Get(nameof(VideoModelsTitle));
+
+    public static string VideoModelsSelectedFormat => Get(nameof(VideoModelsSelectedFormat));
+
+    public static string VideoPriceUnknown => Get(nameof(VideoPriceUnknown));
+
+    public static string VideoPriceForDurationFormat => Get(nameof(VideoPriceForDurationFormat));
+
+    public static string VideoAudioBadge => Get(nameof(VideoAudioBadge));
+
+    public static string VideoDuration => Get(nameof(VideoDuration));
+
+    public static string VideoResolution => Get(nameof(VideoResolution));
+
+    public static string VideoAspectRatio => Get(nameof(VideoAspectRatio));
+
+    public static string VideoGenerateAudio => Get(nameof(VideoGenerateAudio));
+
+    public static string VideoDurationFormat => Get(nameof(VideoDurationFormat));
+
+    public static string StoppedWaitingVideo => Get(nameof(StoppedWaitingVideo));
+
+    public static string SaveFile => Get(nameof(SaveFile));
+
     public static string SettingsTitle => Get(nameof(SettingsTitle));
 
     public static string SettingsOpenRouter => Get(nameof(SettingsOpenRouter));

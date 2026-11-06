@@ -270,7 +270,7 @@ public sealed partial class ChatPageModel(
             }
 
             UpdateRetry();
-            await UpdateNextRunEstimateAsync(settings.ImageModels, settings.RunsPerModel, settings.Parameters);
+            await UpdateNextRunEstimateAsync(settings);
         }
         catch (Exception ex)
         {
@@ -601,15 +601,21 @@ public sealed partial class ChatPageModel(
         }
 
         var session = await sessions.GetAsync(sessionId, cancellationToken);
-        return session is null
-            ? null
-            : await _costEstimator.EstimateAsync(session.Settings.ImageModels, session.Settings.RunsPerModel, session.Settings.Parameters, cancellationToken);
+        return session is null ? null : await EstimateAsync(session.Settings, cancellationToken);
     }
 
-    private async Task UpdateNextRunEstimateAsync(
-        IReadOnlyList<ModelRef> models,
-        int runsPerModel,
-        ImageGen.Core.Domain.Sessions.GenerationParameters parameters)
+    private async Task<CostEstimate> EstimateAsync(ImageGen.Core.Domain.Sessions.SessionSettings settings, CancellationToken cancellationToken)
+    {
+        var image = await _costEstimator!.EstimateAsync(
+            settings.ImageModels, settings.RunsPerModel, settings.Parameters, cancellationToken);
+        var video = await _costEstimator.EstimateVideoAsync(settings.VideoModels, settings.VideoParameters, cancellationToken);
+        return new CostEstimate(
+            image.KnownUsd + video.KnownUsd,
+            image.UnknownModels.Concat(video.UnknownModels).Distinct().ToList(),
+            image.IsApproximate || video.IsApproximate);
+    }
+
+    private async Task UpdateNextRunEstimateAsync(ImageGen.Core.Domain.Sessions.SessionSettings settings)
     {
         if (_costEstimator is null)
         {
@@ -620,7 +626,7 @@ public sealed partial class ChatPageModel(
 
         try
         {
-            var estimate = await _costEstimator.EstimateAsync(models, runsPerModel, parameters, CancellationToken.None);
+            var estimate = await EstimateAsync(settings, CancellationToken.None);
             NextRunEstimateText = string.Format(
                 CultureInfo.CurrentCulture,
                 AppResources.NextRunEstimateFormat,
@@ -659,6 +665,10 @@ public sealed partial class ChatPageModel(
         {
             card.SetCancellationFailed();
         }
+        else if (result == GenerationCancelResult.StoppedWaiting)
+        {
+            card.SetStoppedWaiting();
+        }
     }
 
     private async Task CancelRunAsync(Guid runId)
@@ -667,6 +677,11 @@ public sealed partial class ChatPageModel(
         foreach (var result in results.Where(item => item.Result == GenerationCancelResult.CancelFailed))
         {
             if (_cards.TryGetValue(result.GenerationId, out var card)) card.SetCancellationFailed();
+        }
+
+        foreach (var result in results.Where(item => item.Result == GenerationCancelResult.StoppedWaiting))
+        {
+            if (_cards.TryGetValue(result.GenerationId, out var card)) card.SetStoppedWaiting();
         }
     }
 

@@ -60,6 +60,26 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
+
+                <TextBlock Classes="section" Text="{markup:Res VideoModelsTitle}" />
+                <TextBlock Classes="meta" Text="{markup:Res VideoDuration}" />
+                <ComboBox ItemsSource="{Binding VideoDurationOptions}" SelectedItem="{Binding SelectedVideoDuration, Mode=TwoWay}"
+                          HorizontalAlignment="Stretch" AutomationProperties.Name="{markup:Res VideoDuration}">
+                    <ComboBox.ItemTemplate><DataTemplate DataType="pm:ParameterOption" x:DataType="pm:ParameterOption"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Classes="meta" Text="{markup:Res VideoResolution}" />
+                <ComboBox ItemsSource="{Binding VideoResolutionOptions}" SelectedItem="{Binding SelectedVideoResolution, Mode=TwoWay}"
+                          HorizontalAlignment="Stretch" AutomationProperties.Name="{markup:Res VideoResolution}">
+                    <ComboBox.ItemTemplate><DataTemplate DataType="pm:ParameterOption" x:DataType="pm:ParameterOption"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Classes="meta" Text="{markup:Res VideoAspectRatio}" />
+                <ComboBox ItemsSource="{Binding VideoAspectRatioOptions}" SelectedItem="{Binding SelectedVideoAspectRatio, Mode=TwoWay}"
+                          HorizontalAlignment="Stretch" AutomationProperties.Name="{markup:Res VideoAspectRatio}">
+                    <ComboBox.ItemTemplate><DataTemplate DataType="pm:ParameterOption" x:DataType="pm:ParameterOption"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox>
+                <CheckBox Content="{markup:Res VideoGenerateAudio}" IsChecked="{Binding GenerateVideoAudio, Mode=TwoWay}"
+                          IsVisible="{Binding IsVideoAudioOptionVisible}"
+                          AutomationProperties.Name="{markup:Res VideoGenerateAudio}" />
             </StackPanel>
         </ScrollViewer>
 

@@ -19,6 +19,9 @@ public class SessionParametersPageModelTests
 
     private readonly ISessionRepository _sessions = Substitute.For<ISessionRepository>();
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
+    private readonly IVideoModelRepository _videoModelRepository = Substitute.For<IVideoModelRepository>();
+    private readonly IVideoModelProvider _videoProvider = Substitute.For<IVideoModelProvider>();
+    private readonly VideoModelCatalogService _videoCatalog;
     private readonly INavigationService _navigation = Substitute.For<INavigationService>();
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly Session _session;
@@ -29,16 +32,20 @@ public class SessionParametersPageModelTests
     {
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
+        var router = ProviderDoubles.Router();
+        router.GetVideoModelProvider(ProviderIds.OpenRouter).Returns(_videoProvider);
+        _videoCatalog = new VideoModelCatalogService(router, _videoModelRepository, NullLogger<VideoModelCatalogService>.Instance);
         var sessionService = new SessionService(
             _sessions,
             Substitute.For<IChatMessageRepository>(),
             Substitute.For<IRunRepository>(),
             Substitute.For<IImageFileStore>(),
-            new ChatModelCatalogService(ProviderDoubles.Router(), NullLogger<ChatModelCatalogService>.Instance),
-            time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance), Substitute.For<ISessionGenerationCoordinator>(), DefaultAssistantModels.Create());
+            new ChatModelCatalogService(router, NullLogger<ChatModelCatalogService>.Instance),
+            time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance), Substitute.For<ISessionGenerationCoordinator>(), DefaultAssistantModels.Create(),
+            _videoCatalog);
         var catalog = new ModelCatalogService(
             ProviderDoubles.Router(), _modelRepository, NullLogger<ModelCatalogService>.Instance);
-        _model = new SessionParametersPageModel(sessionService, catalog, _navigation, ErrorAlerts.Create(_dialogs));
+        _model = new SessionParametersPageModel(sessionService, catalog, _navigation, ErrorAlerts.Create(_dialogs), _videoCatalog);
         _model.ApplyQueryAttributes(new Dictionary<string, object> { [Routes.SessionIdParameter] = SessionId.ToString("D") });
 
         _session = new Session
@@ -60,6 +67,11 @@ public class SessionParametersPageModelTests
                 WithParameters("vendor/alpha", "Alpha", "aspect_ratio", "1:1", "3:2", "auto"),
                 WithParameters("vendor/beta", "Beta", "aspect_ratio", "4:3"),
             ]));
+        _videoModelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(
+        [
+            Video("vendor/alpha-video", [4, 6, 8], ["720p", "1080p"], ["16:9", "1:1"], generatesAudio: true),
+            Video("vendor/beta-video", [5, 6, 8, 10], ["1080p", "4k"], ["16:9"], generatesAudio: false),
+        ]);
     }
 
     [Fact]
@@ -128,10 +140,53 @@ public class SessionParametersPageModelTests
         Assert.Null(_saved!.Settings.Parameters.AspectRatio);
     }
 
+    [Fact]
+    public async Task OnAppearingAsync_VideoParameters_UsesCommonValuesAndAudioVisibility()
+    {
+        _session.Settings.VideoModels = [
+            new ModelRef(ProviderIds.OpenRouter, "vendor/alpha-video"),
+            new ModelRef(ProviderIds.OpenRouter, "vendor/beta-video"),
+        ];
+        _session.Settings.VideoParameters = new VideoParameters { DurationSeconds = 8, Resolution = "1080p", AspectRatio = "16:9", GenerateAudio = false };
+
+        await _model.OnAppearingAsync();
+
+        Assert.Equal(["6", "8"], _model.VideoDurationOptions.Select(option => option.Value));
+        Assert.Equal([null, "1080p"], _model.VideoResolutionOptions.Select(option => option.Value));
+        Assert.Equal([null, "16:9"], _model.VideoAspectRatioOptions.Select(option => option.Value));
+        Assert.True(_model.IsVideoAudioOptionVisible);
+        Assert.False(_model.GenerateVideoAudio);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_NoSelectedModelSupportsAudio_HidesAudioSwitch()
+    {
+        _session.Settings.VideoModels = [new ModelRef(ProviderIds.OpenRouter, "vendor/beta-video")];
+
+        await _model.OnAppearingAsync();
+
+        Assert.False(_model.IsVideoAudioOptionVisible);
+    }
+
     private static ImageModel WithParameters(string id, string name, string parameterName, params string[] values)
     {
         var model = TestModels.Model(id, name);
         model.Parameters = [new ModelParameter(parameterName, ParameterKind.Enum, values)];
         return model;
     }
+
+    private static VideoModel Video(string id, IReadOnlyList<int> durations, IReadOnlyList<string> resolutions,
+        IReadOnlyList<string> aspectRatios, bool generatesAudio) => new()
+        {
+            ProviderId = ProviderIds.OpenRouter,
+            Id = id,
+            Name = id,
+            Durations = durations,
+            Resolutions = resolutions,
+            AspectRatios = aspectRatios,
+            FrameImages = [],
+            GeneratesAudio = generatesAudio,
+            PriceSkus = new Dictionary<string, decimal>(),
+            FetchedAt = Now,
+        };
 }

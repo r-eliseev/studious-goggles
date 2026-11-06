@@ -34,12 +34,15 @@ public class SessionModelsPageModelTests
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
     private readonly IModelProvider _provider = Substitute.For<IModelProvider>();
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
+    private readonly IVideoModelRepository _videoModelRepository = Substitute.For<IVideoModelRepository>();
+    private readonly IVideoModelProvider _videoProvider = Substitute.For<IVideoModelProvider>();
     private readonly INavigationService _navigation = Substitute.For<INavigationService>();
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
     private readonly Session _session;
     private SessionService _sessionService;
     private readonly ModelCatalogService _catalog;
+    private readonly VideoModelCatalogService _videoCatalog;
     private ChatModelCatalogService _chatModels;
     private Session? _saved;
 
@@ -47,9 +50,12 @@ public class SessionModelsPageModelTests
     {
         var time = Substitute.For<TimeProvider>();
         time.GetUtcNow().Returns(Now);
-        _chatModels = new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance);
-        _sessionService = new SessionService(_sessions, _messages, _runs, _files, _chatModels, time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance), Substitute.For<ISessionGenerationCoordinator>(), DefaultAssistantModels.Create());
-        _catalog = new ModelCatalogService(ProviderDoubles.Router(_provider), _modelRepository, NullLogger<ModelCatalogService>.Instance);
+        var router = ProviderDoubles.Router(_provider, _chat);
+        router.GetVideoModelProvider(ProviderIds.OpenRouter).Returns(_videoProvider);
+        _chatModels = new ChatModelCatalogService(router, NullLogger<ChatModelCatalogService>.Instance);
+        _catalog = new ModelCatalogService(router, _modelRepository, NullLogger<ModelCatalogService>.Instance);
+        _videoCatalog = new VideoModelCatalogService(router, _videoModelRepository, NullLogger<VideoModelCatalogService>.Instance);
+        _sessionService = new SessionService(_sessions, _messages, _runs, _files, _chatModels, time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance), Substitute.For<ISessionGenerationCoordinator>(), DefaultAssistantModels.Create(), _videoCatalog);
         _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ChatModel>>(
         [
             new ChatModel("vendor/zed", "Zed", SupportsImageInput: false, ContextLength: 1000, SupportsTools: true),
@@ -75,6 +81,11 @@ public class SessionModelsPageModelTests
         _sessions.UpdateAsync(Arg.Do<Session>(saved => _saved = saved), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
         _modelRepository.ListAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns([Alpha, Beta, Gamma]);
         _provider.ListImageModelsAsync(Arg.Any<CancellationToken>()).Returns([Gamma, Alpha, Beta]);
+        _videoModelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(
+        [
+            Video("google/veo", "Veo", [5, 8], new Dictionary<string, decimal> { ["duration_seconds_with_audio"] = 0.1m }, generatesAudio: true),
+            Video("vendor/seedance", "Seedance", [5, 8], new Dictionary<string, decimal>(), generatesAudio: false),
+        ]);
     }
 
     [Fact]
@@ -139,6 +150,31 @@ public class SessionModelsPageModelTests
 
         Assert.Equal([Ref(Alpha.Id), Ref(Beta.Id), Ref(RemovedModel)], _saved!.Settings.ImageModels);
         Assert.Equal(Ref("vendor/zed"), _saved.Settings.AssistantModel);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_VideoModels_ShowPriceAudioAndSavedSelection()
+    {
+        _session.Settings.VideoModels = [Ref("google/veo")];
+        var model = await OpenAsync();
+
+        Assert.Equal(["Veo", "Seedance"], model.VideoModels.Select(option => option.Name));
+        Assert.Equal("$0.5 / 5 s", model.VideoModels[0].PriceText);
+        Assert.True(model.VideoModels[0].GeneratesAudio);
+        Assert.True(model.VideoModels[0].IsSelected);
+        Assert.False(model.VideoModels[1].IsSelected);
+    }
+
+    [Fact]
+    public async Task SaveCommand_SelectedVideoModels_UpdatesVideoSettings()
+    {
+        var model = await OpenAsync();
+        model.VideoModels[0].IsSelected = true;
+        model.VideoModels[1].IsSelected = true;
+
+        await model.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal([Ref("google/veo"), Ref("vendor/seedance")], _saved!.Settings.VideoModels);
     }
 
     [Fact]
@@ -288,7 +324,7 @@ public class SessionModelsPageModelTests
 
     private SessionModelsPageModel CreateModel(ProviderRegistry? registry = null)
     {
-        var model = new SessionModelsPageModel(_sessionService, _catalog, _chatModels, registry ?? ProviderDoubles.BuiltInRegistry(), _navigation, ErrorAlerts.Create(_dialogs));
+        var model = new SessionModelsPageModel(_sessionService, _catalog, _chatModels, registry ?? ProviderDoubles.BuiltInRegistry(), _navigation, ErrorAlerts.Create(_dialogs), _videoCatalog);
         model.ApplyQueryAttributes(new Dictionary<string, object> { [Routes.SessionIdParameter] = SessionId.ToString("D") });
         return model;
     }
@@ -299,6 +335,20 @@ public class SessionModelsPageModelTests
         await model.OnAppearingAsync();
         return model;
     }
+
+    private static VideoModel Video(string id, string name, IReadOnlyList<int> durations, IReadOnlyDictionary<string, decimal> prices, bool generatesAudio) => new()
+    {
+        ProviderId = ProviderIds.OpenRouter,
+        Id = id,
+        Name = name,
+        Durations = durations,
+        Resolutions = ["720p"],
+        AspectRatios = ["16:9"],
+        FrameImages = [],
+        GeneratesAudio = generatesAudio,
+        PriceSkus = prices,
+        FetchedAt = Now,
+    };
 
     private static string[] Ids(IEnumerable<ModelOptionViewModel> models) => models.Select(m => m.Id).ToArray();
 

@@ -38,6 +38,25 @@
                         ItemDisplayBinding="{Binding Label}"
                         SelectedItem="{Binding SelectedQuality, Mode=TwoWay}"
                         SemanticProperties.Description="{x:Static strings:AppResources.ParameterQuality}" />
+
+                <Label StyleClass="section" Text="{x:Static strings:AppResources.VideoModelsTitle}" />
+                <Label StyleClass="meta" Text="{x:Static strings:AppResources.VideoDuration}" />
+                <Picker ItemsSource="{Binding VideoDurationOptions}" ItemDisplayBinding="{Binding Label}"
+                        SelectedItem="{Binding SelectedVideoDuration, Mode=TwoWay}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.VideoDuration}" />
+                <Label StyleClass="meta" Text="{x:Static strings:AppResources.VideoResolution}" />
+                <Picker ItemsSource="{Binding VideoResolutionOptions}" ItemDisplayBinding="{Binding Label}"
+                        SelectedItem="{Binding SelectedVideoResolution, Mode=TwoWay}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.VideoResolution}" />
+                <Label StyleClass="meta" Text="{x:Static strings:AppResources.VideoAspectRatio}" />
+                <Picker ItemsSource="{Binding VideoAspectRatioOptions}" ItemDisplayBinding="{Binding Label}"
+                        SelectedItem="{Binding SelectedVideoAspectRatio, Mode=TwoWay}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.VideoAspectRatio}" />
+                <Switch IsToggled="{Binding GenerateVideoAudio, Mode=TwoWay}"
+                        IsVisible="{Binding IsVideoAudioOptionVisible}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.VideoGenerateAudio}" />
+                <Label StyleClass="meta" Text="{x:Static strings:AppResources.VideoGenerateAudio}"
+                       IsVisible="{Binding IsVideoAudioOptionVisible}" />
             </VerticalStackLayout>
         </ScrollView>
 

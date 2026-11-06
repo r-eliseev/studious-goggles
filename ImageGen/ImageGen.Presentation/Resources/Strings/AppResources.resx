@@ -519,6 +519,42 @@
   <data name="ImageModelsSelectedFormat" xml:space="preserve">
     <value>Image models · {0} selected</value>
   </data>
+  <data name="VideoModelsTitle" xml:space="preserve">
+    <value>Video models</value>
+  </data>
+  <data name="VideoModelsSelectedFormat" xml:space="preserve">
+    <value>Video models · {0} selected</value>
+  </data>
+  <data name="VideoPriceUnknown" xml:space="preserve">
+    <value>price unknown</value>
+  </data>
+  <data name="VideoPriceForDurationFormat" xml:space="preserve">
+    <value>${0} / {1} s</value>
+  </data>
+  <data name="VideoAudioBadge" xml:space="preserve">
+    <value>Audio</value>
+  </data>
+  <data name="VideoDuration" xml:space="preserve">
+    <value>Duration</value>
+  </data>
+  <data name="VideoResolution" xml:space="preserve">
+    <value>Resolution</value>
+  </data>
+  <data name="VideoAspectRatio" xml:space="preserve">
+    <value>Aspect ratio</value>
+  </data>
+  <data name="VideoGenerateAudio" xml:space="preserve">
+    <value>Generate audio</value>
+  </data>
+  <data name="VideoDurationFormat" xml:space="preserve">
+    <value>{0} s</value>
+  </data>
+  <data name="StoppedWaitingVideo" xml:space="preserve">
+    <value>Stopped waiting. The provider may still charge for this video.</value>
+  </data>
+  <data name="SaveFile" xml:space="preserve">
+    <value>Save file</value>
+  </data>
   <data name="SettingsTitle" xml:space="preserve">
     <value>Settings</value>
   </data>

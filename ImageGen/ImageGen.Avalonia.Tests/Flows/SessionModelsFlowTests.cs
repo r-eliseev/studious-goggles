@@ -149,7 +149,7 @@ public class SessionModelsFlowTests
     }
 
     [AvaloniaFact]
-    public async Task Tabs_TwoTabsWithImageModelsFirst()
+    public async Task Tabs_ThreeTabsWithImageModelsFirst()
     {
         using var shell = new ShellHarness(openRouter: OpenRouterFakes.Create());
         var chat = await shell.OpenNewChatAsync();
@@ -162,9 +162,10 @@ public class SessionModelsFlowTests
         var tabs = view.GetVisualDescendants().OfType<TabControl>().Single();
         var items = tabs.Items.Cast<TabItem>().ToArray();
 
-        Assert.Equal(2, items.Length);
+        Assert.Equal(3, items.Length);
         Assert.Equal(AppResources.ImageModelsTab, items[0].Header);
         Assert.Equal(AppResources.AssistantModelTitle, items[1].Header);
+        Assert.Equal(AppResources.VideoModelsTitle, items[2].Header);
         Assert.Equal(0, tabs.SelectedIndex);
     }
 

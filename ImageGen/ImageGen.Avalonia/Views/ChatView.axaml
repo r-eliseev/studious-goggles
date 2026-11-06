@@ -163,11 +163,11 @@
                                                         <MenuItem Header="{markup:Res Repeat}" Command="{Binding RepeatCommand}" InputGesture="R" />
                                                         <MenuItem Header="{markup:Res NewSeed}" Command="{Binding NewSeedCommand}" InputGesture="Shift+R" />
                                                         <MenuItem Header="{markup:Res ActionEditPrompt}" Command="{Binding EditCommand}" InputGesture="E" />
-                                                        <MenuItem Header="{markup:Res ActionDescribeImage}" Command="{Binding DescribeCommand}" />
-                                                        <MenuItem Header="{markup:Res ActionPromptFromImage}" Command="{Binding DescribePromptCommand}" />
+                                                        <MenuItem Header="{markup:Res ActionDescribeImage}" Command="{Binding DescribeCommand}" IsVisible="{Binding IsImage}" />
+                                                        <MenuItem Header="{markup:Res ActionPromptFromImage}" Command="{Binding DescribePromptCommand}" IsVisible="{Binding IsImage}" />
                                                         <MenuItem Header="{markup:Res CopyPrompt}" Command="{Binding CopyPromptCommand}" InputGesture="Ctrl+C" />
-                                                        <MenuItem Header="{markup:Res SaveImageAs}" Command="{Binding SaveCommand}" IsVisible="{Binding HasImage}" InputGesture="Ctrl+S" />
-                                                        <MenuItem Header="{markup:Res Compare}" Command="{Binding CompareCommand}" IsVisible="{Binding HasImage}" />
+                                                        <MenuItem Header="{Binding SaveLabel, FallbackValue={markup:Res SaveImageAs}, TargetNullValue={markup:Res SaveImageAs}}" Command="{Binding SaveCommand}" IsVisible="{Binding HasMedia}" InputGesture="Ctrl+S" />
+                                                        <MenuItem Header="{markup:Res Compare}" Command="{Binding CompareCommand}" IsVisible="{Binding IsImage}" IsEnabled="{Binding HasImage}" />
                                                         <MenuItem Header="{markup:Res OtherModel}" Command="{Binding OtherModelCommand}" IsVisible="{Binding IsFailedOrFiltered}" />
                                                         <MenuItem Header="{markup:Res ErrorDetailsTitle}" Command="{Binding DetailsCommand}" IsVisible="{Binding IsFailed}" />
                                                     </ContextMenu>
@@ -193,6 +193,17 @@
                                                                        IsVisible="{Binding HasImage}"
                                                                        Stretch="UniformToFill"
                                                                        AutomationProperties.Name="{Binding SummaryText}" />
+                                                                <Border IsVisible="{Binding IsVideo}" Background="{DynamicResource IgSunkenBrush}"
+                                                                        AutomationProperties.Name="{Binding SummaryText}">
+                                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                                                                        <TextBlock Classes="icon" Text="&#xE2C4;" FontSize="32" HorizontalAlignment="Center" />
+                                                                        <TextBlock Classes="meta" Text="{Binding DurationText}" />
+                                                                    </StackPanel>
+                                                                </Border>
+                                                                <Border IsVisible="{Binding IsAudio}" Background="{DynamicResource IgSunkenBrush}"
+                                                                        AutomationProperties.Name="{Binding SummaryText}">
+                                                                    <TextBlock Classes="icon" Text="&#xE0C7;" FontSize="32" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                                </Border>
                                                                 <Button Content=""
                                                                         IsVisible="{Binding HasImage}"
                                                                         Command="{Binding #Layout.DataContext.OpenImageCommand}"
@@ -337,6 +348,7 @@
                                                             <TextBlock Classes="icon" Text="&#xE1F9;" />
                                                         </Button>
                                                         <Button Classes="ghost icon small" Command="{Binding DescribeCommand}"
+                                                                IsVisible="{Binding IsImage}"
                                                                 ToolTip.Tip="{markup:Res DescribeButton}"
                                                                 AutomationProperties.Name="{markup:Res DescribeButton}">
                                                             <TextBlock Classes="icon" Text="&#xE0BA;" />
@@ -347,7 +359,7 @@
                                                             <TextBlock Classes="icon" Text="&#xE09E;" />
                                                         </Button>
                                                         <Button Classes="ghost icon small" Command="{Binding SaveCommand}"
-                                                                IsVisible="{Binding HasImage}"
+                                                                IsVisible="{Binding HasMedia}"
                                                                 ToolTip.Tip="{Binding SaveLabel}"
                                                                 AutomationProperties.Name="{Binding SaveLabel}">
                                                             <TextBlock Classes="icon" Text="&#xE0B2;" />
