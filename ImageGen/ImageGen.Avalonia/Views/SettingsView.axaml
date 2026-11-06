@@ -128,6 +128,11 @@
                         IsVisible="{Binding CanOpenLogs}"
                         AutomationProperties.Name="{markup:Res SettingsOpenLogs}" />
                 <Button Classes="ghost"
+                        Content="{markup:Res SettingsShareLogs}"
+                        Command="{Binding ShareLogsCommand}"
+                        IsVisible="{Binding CanShareLogs}"
+                        AutomationProperties.Name="{markup:Res SettingsShareLogs}" />
+                <Button Classes="ghost"
                         Content="{markup:Res SettingsClearLogs}"
                         Command="{Binding ClearLogsCommand}"
                         AutomationProperties.Name="{markup:Res SettingsClearLogs}" />

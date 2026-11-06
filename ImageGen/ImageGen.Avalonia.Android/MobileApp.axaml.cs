@@ -60,6 +60,10 @@ public sealed class MobileApp : global::Avalonia.Application
         secrets.AttachLogger(Services.GetRequiredService<ILogger<AndroidSecretStore>>());
         var logger = Services.GetRequiredService<ILogger<MobileApp>>();
         StartupLog.Write(logger, "Avalonia Android", paths.DataDirectory, logDirectory, level.Level);
+        logger.LogInformation(
+            "Android temporary directory is {TemporaryDirectory}; application cache directory is {CacheDirectory}.",
+            Path.GetFullPath(Path.GetTempPath()),
+            Path.GetFullPath(global::Android.App.Application.Context.CacheDir!.AbsolutePath));
         if (level.Warning is not null)
         {
             logger.LogWarning("{Warning}", level.Warning);
@@ -90,7 +94,7 @@ public sealed class MobileApp : global::Avalonia.Application
         services.AddSingleton<IClipboardService>(new AvaloniaClipboardService(() => TopLevel.GetTopLevel(MainView.Current)));
         services.AddSingleton<IImageSaver, AndroidImageSaver>();
         services.AddSingleton<IFolderLauncher, UnsupportedFolderLauncher>();
-        services.AddSingleton<ILogSharer, UnsupportedLogSharer>();
+        services.AddSingleton<ILogSharer, AndroidLogSharer>();
         services.AddSingleton<OverlayImageViewerService>(sp => new OverlayImageViewerService(
             () => MainView.Current?.OverlayHost,
             sp.GetRequiredService<IDialogService>()));
