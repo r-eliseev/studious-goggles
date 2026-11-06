@@ -176,3 +176,19 @@
 - 184 | backlog | done | 2026-11-02 | Семантический индекс: записывать расход до проверки ответа эмбеддингов | `tasks/backlog/184-embedding-expense-before-validation.md`
 - 185 | backlog | done | 2026-11-03 | Семантический индекс: не перечитывать все источники на каждую пачку | `tasks/backlog/185-semantic-index-batch-source-lookup.md`
 - 186 | backlog | done | 2026-11-02 | Одно подтверждение расходов для чата и выбора модели | `tasks/backlog/186-shared-spending-confirmation.md`
+- 166 | backlog | done | 2026-11-06 | Генерация не только картинок: общая основа для аудио и видео | `tasks/backlog/166-media-generation-foundation.md`
+- 169 | backlog | cancelled | 2026-11-06 | Генерация видео | `tasks/backlog/169-video-generation.md`
+- 175 | backlog | done | 2026-11-05 | Модель ассистента по умолчанию: проверять провайдера из defaults.json | `tasks/backlog/175-default-assistant-model-validation.md`
+- 177 | backlog | done | 2026-11-05 | Атомарная запись: явная обработка сбоя очистки и осиротевшие .tmp | `tasks/backlog/177-atomic-writer-cleanup.md`
+- 178 | backlog | done | 2026-11-05 | Регрессионный тест на клавиши MAUI-просмотрщика под Windows | `tasks/backlog/178-maui-viewer-arrow-keys-test.md`
+- 187 | backlog | done | 2026-11-05 | Логи: поделиться файлами (Android) и очистить | `tasks/backlog/187-share-and-clear-logs.md`
+- 188 | backlog | done | 2026-11-05 | Settings: оформление не ждёт сеть; модель по умолчанию всегда в списке | `tasks/backlog/188-settings-page-load-and-default-option.md`
+- 189 | backlog | done | 2026-11-05 | Первый запуск: выбор модели ассистента на экране ключа | `tasks/backlog/189-apikey-first-run-model-choice.md`
+- 190 | backlog | done | 2026-11-05 | Удалять осиротевшие временные файлы при запуске | `tasks/backlog/190-orphaned-temp-files-cleanup.md`
+- 191 | backlog | done | 2026-11-06 | Avalonia: общая сборка контейнера и службы на `TopLevel` | `tasks/backlog/191-avalonia-shared-composition.md`
+- 192 | backlog | done | 2026-11-06 | Avalonia: диалоги поверх страницы (для Android) | `tasks/backlog/192-avalonia-overlay-dialogs.md`
+- 193 | backlog | done | 2026-11-06 | Avalonia: просмотр картинки поверх страницы (для Android) | `tasks/backlog/193-avalonia-overlay-image-viewer.md`
+- 194 | backlog | done | 2026-11-06 | Avalonia: сравнение картинок поверх страницы (для Android) | `tasks/backlog/194-avalonia-overlay-comparison.md`
+- 195 | backlog | done | 2026-11-06 | Android-голова Avalonia: проект, запуск, ключи | `tasks/backlog/195-avalonia-android-head.md`
+- 196 | backlog | done | 2026-11-06 | Android-голова Avalonia: «Share logs» | `tasks/backlog/196-avalonia-android-log-sharing.md`
+- 197 | backlog | done | 2026-11-06 | Android-голова Avalonia: сборка в CI и APK в релизе | `tasks/backlog/197-avalonia-android-ci-release.md`
