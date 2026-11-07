@@ -12,8 +12,8 @@ created: 2026-11-07
 Решение владельца 2026-11-07: после smoke — сценарии через локальный мок OpenAI-совместимого провайдера (ADR 0029, `docs/specs/ui-e2e.md`). Без ключа приложение не проходит дальше экрана первого запуска (`SessionsPageModel.OnAppearingAsync` → `ApiKeyPage`, ключ проверяется по сети), поэтому мок — единственный путь дальше без настоящих ключей и денег. Приложение уже поддерживает свои OpenAI-совместимые провайдеры через `providers.json` в папке данных (`ProviderConfigLoader.UserFileName`), и на экране первого запуска есть выбор провайдера (`apikey.provider`).
 
 Неизвестно (2026-11-07), выяснить первым шагом:
-- как положить `providers.json` в папку данных Release APK: `AppDataDirectory` — внутреннее хранилище, `adb run-as` работает только для отладочных сборок;
-- пускает ли Release-сборка Android HTTP без TLS к `10.0.2.2` или `localhost` (через `adb reverse`): по умолчанию Android 9+ запрещает cleartext;
+- как положить `providers.json` в папку данных Release APK. `AppDataDirectory` — внутреннее хранилище, `adb run-as` работает только для отладочных сборок. Предпочтительный путь (обсуждено с владельцем 2026-11-07): эмулятор с образом `google_apis` (без Play) разрешает `adb root`, поэтому файл кладётся прямо в `/data/data/com.eliseev.imagegen/files/`, владелец и права те же, что у папки приложения, плюс `restorecon`. Сборка не меняется. Работает ли это, проверить;
+- пускает ли Release-сборка Android HTTP без TLS к `localhost`. `ProviderRegistry` (строки ≈62–66) разрешает `http` только для хоста `localhost`, поэтому `10.0.2.2` не годится: нужен `adb reverse tcp:5080 tcp:5080` и `baseAddress` `http://localhost:5080`. Android 9+ по умолчанию запрещает cleartext, а в `AndroidManifest.xml` проекта нет ни `usesCleartextTraffic`, ни `networkSecurityConfig`;
 - какие запросы приложение делает к провайдеру для проверки ключа, списка моделей, чата с вызовом инструмента генерации и генерации картинки (по коду `OpenAiCompatibleClient` и чат-клиента).
 
 Зависит от: 240 (и 241 — для Windows-варианта сценария).
@@ -23,9 +23,11 @@ created: 2026-11-07
 - Шаг 1, факты: в «Комментарии» и `docs/knowledge/ui-e2e.md` записать:
   - запросы приложения к OpenAI-совместимому провайдеру (метод, путь, нужные поля ответа);
   - способ доставить `providers.json` на Android. Варианты в порядке предпочтения:
-    1. Release со свойством отладки, если такое есть в .NET Android (`-p:AndroidDebuggable`? проверить по документации) и `run-as`;
-    2. отдельная отладочная сборка `-c Debug -p:EmbedAssembliesIntoApk=true`.
-  - способ разрешить HTTP. Если без правки приложения нельзя — `network_security_config` только для `10.0.2.2` и `localhost`, подключённый только при свойстве сборки `ImageGenE2E=true`, чтобы обычный Release не менялся.
+    1. `adb root` на эмуляторе `google_apis` и `adb push` в `files/`. Порядок: `adb root`; `adb shell mkdir -p /data/data/com.eliseev.imagegen/files`; `adb push e2e-providers.json /data/data/com.eliseev.imagegen/files/providers.json`; `adb shell chown -R $(adb shell stat -c %u:%g /data/data/com.eliseev.imagegen) /data/data/com.eliseev.imagegen/files`; `adb shell restorecon -R /data/data/com.eliseev.imagegen/files`. Фикстура повторяет это после каждого `mobile: clearApp`, потому что `clearApp` стирает файл;
+    2. Release со свойством отладки, если такое есть в .NET Android (проверить по документации), и `run-as`;
+    3. отдельная отладочная сборка `-c Debug -p:EmbedAssembliesIntoApk=true`.
+  - ключ мока подложить нельзя: `SecureStorage` на Android шифрует его ключом Android Keystore устройства. Ключ вводится через экран первого запуска, и это заодно проверяет сам первый запуск;
+  - способ разрешить HTTP. Если без правки приложения нельзя — `network_security_config` только для `localhost`, подключённый только при свойстве сборки `ImageGenE2E=true`, чтобы обычный Release не менялся.
   Выбранный вариант записать в ADR 0029: дописать пункт в «Решение» с датой.
   Если доставка или HTTP требуют правок, которые меняют обычный Release, остановиться: `blocked` и вопрос владельцу.
 - Мок — проект `ImageGen/ImageGen.E2E.MockProvider`:
@@ -42,7 +44,7 @@ created: 2026-11-07
   2. на экране сессий нажать `sessions.new`, в чате ввести «a red square» в `chat.input` и нажать `chat.send`;
   3. в `chat.feed` в течение 60 с появляется карточка картинки и текст «Done».
   Если для карточки нет id, добавить его отдельным шагом с константой в `TestIds` и проверкой в `AutomationIdsTests` (как в 239).
-- Workflow: мок запускается в job `test-android` до тестов (`dotnet run --project ImageGen/ImageGen.E2E.MockProvider -- --urls http://0.0.0.0:5080 &`, ожидание готовности), `adb reverse tcp:5080 tcp:5080` при варианте с `localhost`; лог мока — в артефакт.
+- Workflow: мок запускается в job `test-android` до тестов (`dotnet run --project ImageGen/ImageGen.E2E.MockProvider -- --urls http://0.0.0.0:5080 &`, ожидание готовности), `adb reverse tcp:5080 tcp:5080` (только `localhost`, см. `ProviderRegistry`); лог мока — в артефакт.
 - Windows — тот же сценарий в `ImageGen.E2E.Windows`, если 241 работает; иначе пропустить и записать.
 
 ## Анализ
