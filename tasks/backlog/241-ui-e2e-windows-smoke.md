@@ -31,7 +31,7 @@ ADR 0029, `docs/specs/ui-e2e.md`, `docs/knowledge/ui-e2e.md` (238), проект
 2. База теста и два smoke-теста, прогон в CI.
 3. Workflow и запись итога.
 
-Файлы: `ImageGen/ImageGen.E2E.Windows/` (новый: `ImageGen.E2E.Windows.csproj`, `VideoRecorder.cs`, `VideoRecorderTests.cs`, `WindowsTestBase.cs`, `FirstRunTests.cs`), при выносе — `ImageGen/ImageGen.E2E.Common/TestArtifacts.cs`, `Directory.Packages.props`, `ImageGen/ImageGen.slnx`, `.github/workflows/ui-e2e.yml`, `docs/knowledge/ui-e2e.md`, `docs/status.md`.
+Файлы: `ImageGen/ImageGen.E2E.Windows/` (новый: `ImageGen.E2E.Windows.csproj`, `VideoRecorder.cs`, `VideoRecorderTests.cs`, `WindowsTestBase.cs`, `FirstRunTests.cs`), при выносе — `ImageGen/ImageGen.E2E.Common/TestArtifacts.cs`, `ImageGen/Directory.Packages.props`, `ImageGen/ImageGen.slnx`, `.github/workflows/ui-e2e.yml`, `docs/knowledge/ui-e2e.md`, `docs/status.md`.
 
 ### Проверка
 ```

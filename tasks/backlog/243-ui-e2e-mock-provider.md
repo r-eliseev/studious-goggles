@@ -74,7 +74,7 @@ created: 2026-11-07
 - E2E: `ImageGen/ImageGen.E2E.Android/MockSessionTests.cs` (новый), `ImageGen/ImageGen.E2E.Windows/MockSessionTests.cs` (новый);
 - при варианте с конфигом сети: `ImageGen/ImageGen.Maui/ImageGen.Maui.csproj`, `ImageGen/ImageGen.Maui/Platforms/Android/Resources/xml/e2e_network_security_config.xml` (новый);
 - `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml` (id карточки);
-- общие: `Directory.Packages.props`, `ImageGen/ImageGen.slnx`, `.github/workflows/ui-e2e.yml`;
+- общие: `ImageGen/Directory.Packages.props`, `ImageGen/ImageGen.slnx`, `.github/workflows/ui-e2e.yml`;
 - документация: `docs/knowledge/ui-e2e.md`, `docs/decisions/0029-ui-e2e-tests.md`.
 
 ### Проверка
