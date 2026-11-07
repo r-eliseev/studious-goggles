@@ -400,7 +400,7 @@
             <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
                 <Label x:Name="ChatTitle" StyleClass="title" Text="{Binding Title}" VerticalOptions="Center"
                        IsVisible="{Binding IsWide}" MaxLines="1" LineBreakMode="TailTruncation" />
-                <Button StyleClass="chip,chip-compact" Text="{Binding ModelsButtonText}"
+                <Button AutomationId="chat.models" StyleClass="chip,chip-compact" Text="{Binding ModelsButtonText}"
                         Command="{Binding OpenModelsCommand}"
                         SemanticProperties.Description="{Binding ModelsButtonText}" />
                 <Border StyleClass="chip,chip-compact" VerticalOptions="Center">
@@ -414,7 +414,7 @@
             </HorizontalStackLayout>
         </ScrollView>
 
-        <CollectionView x:Name="Transcript"
+        <CollectionView AutomationId="chat.feed" x:Name="Transcript"
                         Grid.Row="1"
                         ItemsSource="{Binding Items}"
                         ItemTemplate="{StaticResource ChatItemSelector}"
@@ -461,7 +461,7 @@
                        IsVisible="{Binding HasNextRunEstimate}"
                        Text="{Binding NextRunEstimateText}"
                        SemanticProperties.Description="{Binding NextRunEstimateText}" />
-                <controls:ChatEditor Text="{Binding InputText}"
+                <controls:ChatEditor AutomationId="chat.input" Text="{Binding InputText}"
                         SendCommand="{Binding SendCommand}"
                         Placeholder="{x:Static strings:AppResources.ChatPlaceholder}"
                         AutoSize="TextChanges"
@@ -474,7 +474,7 @@
                             SemanticProperties.Description="{x:Static strings:AppResources.AttachImageButton}" />
                     <Label Grid.Column="1" StyleClass="meta" Text="{Binding AttachmentsText}"
                            VerticalTextAlignment="Center" Margin="8,0,0,0" />
-                    <Button Grid.Column="2"
+                    <Button AutomationId="chat.send" Grid.Column="2"
                             StyleClass="primary,icon" Text="{x:Static appearance:IconGlyphs.Send}" FontFamily="LucideIcons"
                             Command="{Binding SendCommand}"
                             SemanticProperties.Description="{x:Static strings:AppResources.Send}" />

@@ -20,5 +20,6 @@
   <ItemGroup>
     <ProjectReference Include="../ImageGen.Presentation/ImageGen.Presentation.csproj" />
     <ProjectReference Include="../ImageGen.Data/ImageGen.Data.csproj" />
+    <ProjectReference Include="../ImageGen.E2E.Common/ImageGen.E2E.Common.csproj" />
   </ItemGroup>
 </Project>

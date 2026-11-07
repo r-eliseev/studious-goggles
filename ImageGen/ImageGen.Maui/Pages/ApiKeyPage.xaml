@@ -21,19 +21,22 @@
                 <VerticalStackLayout Spacing="6" IsVisible="{Binding IsFirstRun}">
                     <Label Text="{x:Static strings:AppResources.FirstRunProviderPrompt}" />
                     <Picker ItemsSource="{Binding ChatProviders}"
+                            AutomationId="apikey.provider"
                             ItemDisplayBinding="{Binding DisplayName}"
                             SelectedItem="{Binding SelectedChatProvider, Mode=TwoWay}"
                             Title="{x:Static strings:AppResources.FirstRunProviderPrompt}"
                             SemanticProperties.Description="{x:Static strings:AppResources.FirstRunProviderPrompt}" />
                 </VerticalStackLayout>
 
-                <Entry Text="{Binding ApiKey}"
+                <Entry AutomationId="apikey.entry"
+                       Text="{Binding ApiKey}"
                        Placeholder="{x:Static strings:AppResources.ProviderKeyPlaceholder}"
                        IsPassword="True"
                        SemanticProperties.Description="{Binding ProviderTitle}"
                        SemanticProperties.Hint="{Binding ProviderDescription}" />
 
-                <Button StyleClass="primary"
+                <Button AutomationId="apikey.save"
+                        StyleClass="primary"
                         Text="{x:Static strings:AppResources.ApiKeySave}"
                         Command="{Binding SaveCommand}"
                         HorizontalOptions="Fill"
@@ -42,18 +45,21 @@
                 <VerticalStackLayout Spacing="6" IsVisible="{Binding IsChoosingAssistantModel}">
                     <Label Text="{x:Static strings:AppResources.FirstRunAssistantModelPrompt}" />
                     <Picker ItemsSource="{Binding AssistantModels}"
+                            AutomationId="apikey.assistantModel"
                             ItemDisplayBinding="{Binding DisplayName}"
                             SelectedItem="{Binding SelectedAssistantModel, Mode=TwoWay}"
                             Title="{x:Static strings:AppResources.FirstRunAssistantModelPrompt}"
                             SemanticProperties.Description="{x:Static strings:AppResources.FirstRunAssistantModelPrompt}" />
-                    <Button StyleClass="primary"
+                    <Button AutomationId="apikey.useModel"
+                            StyleClass="primary"
                             Text="{x:Static strings:AppResources.UseAssistantModel}"
                             Command="{Binding UseSelectedAssistantModelCommand}"
                             IsEnabled="{Binding HasAssistantModels}"
                             SemanticProperties.Description="{x:Static strings:AppResources.UseAssistantModel}" />
                 </VerticalStackLayout>
 
-                <ActivityIndicator IsRunning="{Binding IsBusy}"
+                <ActivityIndicator AutomationId="apikey.busy"
+                                   IsRunning="{Binding IsBusy}"
                                    IsVisible="{Binding IsBusy}"
                                    SemanticProperties.Description="{x:Static strings:AppResources.ApiKeyChecking}" />
 
@@ -67,7 +73,7 @@
                     </HorizontalStackLayout>
                 </Border>
 
-                <Label Text="{Binding StatusText}" LineBreakMode="WordWrap">
+                <Label AutomationId="apikey.status" Text="{Binding StatusText}" LineBreakMode="WordWrap">
                     <Label.Triggers>
                         <DataTrigger TargetType="Label" Binding="{Binding HasError}" Value="True">
                             <Setter Property="TextColor" Value="{DynamicResource IgErrColor}" />
