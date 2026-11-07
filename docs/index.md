@@ -10,6 +10,7 @@
 | history.md | краткая история завершённых работ | при поиске контекста |
 | knowledge/ | среда и факты .NET, MAUI, Avalonia, провайдеров; [Avalonia Android](knowledge/avalonia-mobile.md) | перед платформенной работой |
 | knowledge/docker.md | сборка, запуск и хранение данных Web-хоста в Docker | при self-hosted запуске Web |
+| knowledge/ui-e2e.md | факты о среде E2E тестов MAUI в GitHub Actions | при работе с E2E-инфраструктурой |
 | design/ | рекомендации платформ и токены дизайна (`implementation.md`, `tokens.json`) | перед вёрсткой |
 | decisions/ | ADR и шаблон `_template.md` | при спорных изменениях |
 | specs/ | спецификации функций (`image-client.md`, `chat-sessions.md`, `media-generation.md`, `ui-e2e.md`, `apple-ci-e2e.md`) и шаблон `_template.md` | при изменении поведения |

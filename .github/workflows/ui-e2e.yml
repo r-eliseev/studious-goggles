@@ -1,0 +1,120 @@
+name: ui-e2e
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/ui-e2e.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-android:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet workload install maui-android
+      - name: Publish Android APK
+        shell: bash
+        run: dotnet publish ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -c Release -f net10.0-android -p:AndroidPackageFormat=apk -o publish/android
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: publish/android/*-Signed.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet workload install maui-windows
+      - name: Publish unpackaged Windows app
+        shell: bash
+        run: >-
+          dotnet publish ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -c Release
+          -f net10.0-windows10.0.19041.0 -p:ImageGenWindowsRid=win-x64 -p:SelfContained=true
+          -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -o publish/win-x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-app
+          path: publish/win-x64/
+          if-no-files-found: error
+          retention-days: 14
+
+  preflight-android:
+    needs: build-android
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: publish/android
+      - name: Prepare report folder
+        run: mkdir -p reports/preflight-android
+      - name: Enable KVM access
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install Appium and UIAutomator2 driver
+        run: |
+          npm install -g appium@3.9.0
+          appium driver install uiautomator2@8.7.3
+          appium driver doctor uiautomator2
+      - name: Start emulator and inspect app
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          emulator-options: -writable-system -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: bash ImageGen/ImageGen.E2E.Common/ci/android-preflight.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: preflight-android-reports
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+  preflight-windows:
+    needs: build-windows
+    runs-on: windows-latest
+    continue-on-error: true
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-app
+          path: publish/win-x64
+      - name: Install FFmpeg
+        run: choco install ffmpeg -y --no-progress
+      - name: Run Windows interactive preflight
+        if: always()
+        shell: pwsh
+        run: .\ImageGen\ImageGen.E2E.Common\ci\windows-preflight.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: preflight-windows-reports
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 14
