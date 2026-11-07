@@ -1,8 +1,8 @@
 ---
 id: 218
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-07T10:24:44Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -48,6 +48,12 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+- `GenerationItemViewModel` теперь публикует отдельные `VideoFilePath` и `AudioFilePath`; они заполнены только для успешного медиа соответствующего типа. `MediaFilePath` сохранён для команды сохранения файла.
+- Источники двух MediaElement в `ChatPage.xaml` разделены по типу. Тесты покрывают картинку, видео, аудио и обе привязки разметки.
+- TDD: до реализации тесты не собирались из-за отсутствующих свойств; после исправления целевые 4/4, весь Presentation 517/517. MAUI Android build — 0 warnings/errors. Форматирование Presentation, Presentation.Tests и MAUI прошло; `scripts/check.sh` пройден.
+- Пункт 140 дополнен проверкой logcat на `ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED`. Проверка на телефоне недоступна из этой среды и остаётся ручной.
+- План выполнен; код завершён, ручное подтверждение поведения на Android не выполнялось.
 
 ## Комментарии
 

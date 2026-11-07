@@ -183,6 +183,12 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     public partial string MediaFilePath { get; set; } = "";
 
     [ObservableProperty]
+    public partial string VideoFilePath { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string AudioFilePath { get; set; } = "";
+
+    [ObservableProperty]
     public partial string DurationText { get; set; } = "";
 
     [ObservableProperty]
@@ -419,6 +425,8 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         HasMedia = generation.Status == GenerationStatus.Succeeded && !string.IsNullOrEmpty(generation.ImagePath);
         var fullPath = HasMedia ? _files.GetFullPath(generation.ImagePath!) : "";
         MediaFilePath = fullPath;
+        VideoFilePath = IsVideo && HasMedia ? fullPath : "";
+        AudioFilePath = IsAudio && HasMedia ? fullPath : "";
         HasImage = HasMedia && generation.Kind == MediaKind.Image;
         ImageFilePath = HasImage ? fullPath : "";
         _mediaType = generation.MediaType ?? "image/png";

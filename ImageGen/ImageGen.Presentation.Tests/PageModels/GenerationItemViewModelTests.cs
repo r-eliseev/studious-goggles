@@ -222,6 +222,40 @@ public class GenerationItemViewModelTests
         Assert.True(card.NewSeedCommand.CanExecute(null));
         Assert.True(card.EditCommand.CanExecute(null));
         Assert.True(card.SaveCommand.CanExecute(null));
+        Assert.Equal("/data/videos/session/video.mp4", card.VideoFilePath);
+        Assert.Empty(card.AudioFilePath);
+    }
+
+    [Fact]
+    public void ImageGeneration_Success_DoesNotExposePlayerPaths()
+    {
+        var generation = BaseGeneration();
+        generation.Kind = MediaKind.Image;
+        generation.ImagePath = "images/session/image.png";
+        var files = Substitute.For<IImageFileStore>();
+        files.GetFullPath(generation.ImagePath).Returns("/data/images/session/image.png");
+
+        var card = CardOf(generation, files: files);
+
+        Assert.Equal("/data/images/session/image.png", card.MediaFilePath);
+        Assert.Empty(card.VideoFilePath);
+        Assert.Empty(card.AudioFilePath);
+    }
+
+    [Fact]
+    public void AudioGeneration_Success_ExposesOnlyAudioPlayerPath()
+    {
+        var generation = BaseGeneration();
+        generation.Kind = MediaKind.Audio;
+        generation.ImagePath = "audio/session/audio.mp3";
+        generation.MediaType = "audio/mpeg";
+        var files = Substitute.For<IImageFileStore>();
+        files.GetFullPath(generation.ImagePath).Returns("/data/audio/session/audio.mp3");
+
+        var card = CardOf(generation, files: files);
+
+        Assert.Equal("/data/audio/session/audio.mp3", card.AudioFilePath);
+        Assert.Empty(card.VideoFilePath);
     }
 
     [Fact]

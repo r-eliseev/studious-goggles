@@ -172,7 +172,7 @@
                                                                    IsVisible="{Binding HasImage}"
                                                                    Aspect="AspectFit"
                                                                    AutomationProperties.IsInAccessibleTree="False" />
-                                                            <toolkit:MediaElement Source="{Binding MediaFilePath, Converter={StaticResource FilePathToMediaSource}}"
+                                                            <toolkit:MediaElement Source="{Binding VideoFilePath, Converter={StaticResource FilePathToMediaSource}}"
                                                                                   HeightRequest="176" WidthRequest="264"
                                                                                   ShouldAutoPlay="False" ShouldShowPlaybackControls="True"
                                                                                   IsVisible="False" Loaded="OnMediaElementLoaded" Unloaded="OnMediaElementUnloaded"
@@ -250,7 +250,7 @@
                                                             </Border>
                                                         </Grid>
                                                     </Border>
-                                                    <toolkit:MediaElement Source="{Binding MediaFilePath, Converter={StaticResource FilePathToMediaSource}}"
+                                                    <toolkit:MediaElement Source="{Binding AudioFilePath, Converter={StaticResource FilePathToMediaSource}}"
                                                                           HeightRequest="64" ShouldAutoPlay="False" ShouldShowPlaybackControls="True"
                                                                           IsVisible="False" Loaded="OnMediaElementLoaded" Unloaded="OnMediaElementUnloaded"
                                                                           SemanticProperties.Description="{Binding SummaryText}">

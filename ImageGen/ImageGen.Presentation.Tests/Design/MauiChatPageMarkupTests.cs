@@ -94,13 +94,15 @@ public class MauiChatPageMarkupTests
             .Where(element => element.Name == toolkit + "MediaElement")
             .ToList();
         Assert.Equal(2, players.Count);
-        var player = Assert.Single(players, element => (string?)element.Attribute("HeightRequest") == "176");
+        var videoPlayer = Assert.Single(players, element => (string?)element.Attribute("HeightRequest") == "176");
+        var audioPlayer = Assert.Single(players, element => (string?)element.Attribute("HeightRequest") == "64");
 
-        Assert.Equal("{Binding MediaFilePath, Converter={StaticResource FilePathToMediaSource}}", (string?)player.Attribute("Source"));
-        Assert.Equal("False", (string?)player.Attribute("ShouldAutoPlay"));
-        Assert.Equal("True", (string?)player.Attribute("ShouldShowPlaybackControls"));
-        Assert.Equal("{Binding SummaryText}", (string?)player.Attribute("SemanticProperties.Description"));
-        Assert.Contains(player.Descendants(), element =>
+        Assert.Equal("{Binding VideoFilePath, Converter={StaticResource FilePathToMediaSource}}", (string?)videoPlayer.Attribute("Source"));
+        Assert.Equal("{Binding AudioFilePath, Converter={StaticResource FilePathToMediaSource}}", (string?)audioPlayer.Attribute("Source"));
+        Assert.Equal("False", (string?)videoPlayer.Attribute("ShouldAutoPlay"));
+        Assert.Equal("True", (string?)videoPlayer.Attribute("ShouldShowPlaybackControls"));
+        Assert.Equal("{Binding SummaryText}", (string?)videoPlayer.Attribute("SemanticProperties.Description"));
+        Assert.Contains(videoPlayer.Descendants(), element =>
             element.Name.LocalName == "BindingCondition"
             && (string?)element.Attribute("Binding") == "{Binding HasMedia}"
             && (string?)element.Attribute("Value") == "True");
