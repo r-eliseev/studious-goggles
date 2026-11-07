@@ -44,11 +44,11 @@ write_summary() {
 import json
 import sys
 
-keys = ("runtime", "deviceType", "launched", "aliveAfter15s", "crashReports")
+keys = ("runtime", "deviceType", "launched", "aliveAfter30s", "crashReports")
 values = sys.argv[2:]
 summary = dict(zip(keys, values))
 summary["launched"] = summary["launched"] == "true"
-summary["aliveAfter15s"] = summary["aliveAfter15s"] == "true"
+summary["aliveAfter30s"] = summary["aliveAfter30s"] == "true"
 summary["crashReports"] = int(summary["crashReports"])
 with open(sys.argv[1], "w", encoding="utf-8") as output:
     json.dump(summary, output, indent=2)
@@ -138,17 +138,30 @@ xcrun simctl install "$udid" "$app_path"
 xcrun simctl launch --console-pty "$udid" "$bundle_id" >"$out_dir/launch.log" 2>&1 &
 launch_pid=$!
 launched=true
+is_running() {
+  xcrun simctl spawn "$udid" launchctl list | grep -Fq "$bundle_id"
+}
+# The process check that decides the result runs at 30 s: on a slow start (still on the splash screen) the 15 s
+# check missed a live app, and an unhandled managed exception (SIGABRT) leaves no crash report, so "seen once" is
+# not enough either.
 sleep 15
-if xcrun simctl spawn "$udid" launchctl list | grep -Fq "$bundle_id"; then
-  alive=true
+if is_running; then
+  echo "process is running at 15 s" >&2
+else
+  echo "process not found at 15 s; checking again at 30 s" >&2
 fi
 xcrun simctl io "$udid" screenshot "$out_dir/screenshot.png"
 sleep 15
+if is_running; then
+  alive=true
+fi
 xcrun simctl io "$udid" screenshot "$out_dir/screenshot-30s.png"
 copy_crash_reports
 if [ "$alive" = true ] && [ "$crash_count" -eq 0 ]; then
   result=0
 else
-  echo "smoke failed: aliveAfter15s=$alive crashReports=$crash_count" >&2
+  echo "smoke failed: aliveAfter30s=$alive crashReports=$crash_count" >&2
+  echo "last lines of launch.log:" >&2
+  tail -n 30 "$out_dir/launch.log" >&2 || true
 fi
 exit 0
