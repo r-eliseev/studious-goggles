@@ -233,7 +233,7 @@ jobs:
           if [ -f artifacts/maui-ios-sim.tar.gz ]; then
             bash ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh artifacts/maui-ios-sim.tar.gz com.eliseev.imagegen reports/ios-smoke/maui
           else
-            printf '{"runtime":"blocked","deviceType":"unknown","launched":false,"aliveAfter15s":false,"crashReports":0}\n' > reports/ios-smoke/maui/summary.json
+            printf '{"runtime":"blocked","deviceType":"unknown","launched":false,"aliveAfter30s":false,"crashReports":0}\n' > reports/ios-smoke/maui/summary.json
             echo 'No MAUI simulator app artifact was produced by its build job.' > reports/ios-smoke/maui/errors.txt
             exit 1
           fi
@@ -267,7 +267,7 @@ jobs:
           if [ -f artifacts/avalonia-ios-sim.tar.gz ]; then
             bash ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh artifacts/avalonia-ios-sim.tar.gz com.eliseev.imagegen.avalonia reports/ios-smoke/avalonia
           else
-            printf '{"runtime":"blocked","deviceType":"unknown","launched":false,"aliveAfter15s":false,"crashReports":0}\n' > reports/ios-smoke/avalonia/summary.json
+            printf '{"runtime":"blocked","deviceType":"unknown","launched":false,"aliveAfter30s":false,"crashReports":0}\n' > reports/ios-smoke/avalonia/summary.json
             echo 'No Avalonia simulator app artifact was produced by its build job.' > reports/ios-smoke/avalonia/errors.txt
             exit 1
           fi
