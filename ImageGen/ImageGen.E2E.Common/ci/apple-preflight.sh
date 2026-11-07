@@ -104,6 +104,10 @@ if [ "$release_found" = true ]; then
     elif bash "$report_dir/dotnet-install.sh" --version "$sdk_pinned" --install-dir "$pinned_dotnet"; then
       export DOTNET_ROOT="$pinned_dotnet"
       export PATH="$pinned_dotnet:$PATH"
+      if [ -n "${GITHUB_ENV:-}" ]; then
+        printf 'DOTNET_ROOT=%s\n' "$pinned_dotnet" >>"$GITHUB_ENV"
+        printf '%s\n' "$pinned_dotnet" >>"$GITHUB_PATH"
+      fi
       dotnet workload install maui --version "$workload_set" || true
       if dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-ios -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=false; then
         pinned_ios=ok

@@ -30,6 +30,30 @@ jobs:
           xcode-select -p
       - name: Run Apple toolchain inventory and builds
         run: bash ImageGen/ImageGen.E2E.Common/ci/apple-preflight.sh
+      - name: Build Avalonia iOS for simulator
+        run: dotnet build ImageGen/ImageGen.Avalonia.iOS/ImageGen.Avalonia.iOS.csproj -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=false
+      - name: Verify Avalonia iOS formatting
+        run: dotnet format ImageGen/ImageGen.Avalonia.iOS/ImageGen.Avalonia.iOS.csproj --verify-no-changes
+      - name: Launch Avalonia iOS in simulator
+        run: |
+          set -euo pipefail
+          runtime=$(python3 -c 'import json; d=json.load(open("reports/apple-preflight/runtimes.json")); print(next(x["identifier"] for x in d["runtimes"] if x.get("isAvailable") and x["identifier"].startswith("iOS ")))' )
+          device_type=$(python3 -c 'import json; d=json.load(open("reports/apple-preflight/devicetypes.json")); print(next(x["identifier"] for x in d["devicetypes"] if "iPhone 17" in x["name"]))')
+          device=$(xcrun simctl create "Omnilite CI" "$device_type" "$runtime")
+          echo "$device" > reports/apple-preflight/avalonia-simulator-id.txt
+          xcrun simctl boot "$device"
+          xcrun simctl bootstatus "$device" -b
+          app_path=$(find ImageGen/ImageGen.Avalonia.iOS/bin/Debug/net10.0-ios/iossimulator-arm64 -maxdepth 1 -type d -name '*.app' | head -n 1)
+          xcrun simctl install "$device" "$app_path"
+          xcrun simctl launch "$device" com.eliseev.imagegen.avalonia
+          sleep 15
+          xcrun simctl io "$device" screenshot reports/apple-preflight/avalonia-ios-first-run.png
+      - name: Delete Avalonia simulator
+        if: always()
+        run: |
+          if [ -f reports/apple-preflight/avalonia-simulator-id.txt ]; then
+            xcrun simctl delete "$(cat reports/apple-preflight/avalonia-simulator-id.txt)" || true
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
