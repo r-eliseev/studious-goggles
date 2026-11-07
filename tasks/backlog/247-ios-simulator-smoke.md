@@ -89,3 +89,13 @@ Run [42402076497](https://github.com/r-eliseev/studious-goggles/actions/runs/424
 В собранном `ImageGen.Avalonia` есть оба класса, `_OBJC_CLASS_$_AppDelegate` и `_OBJC_CLASS_$_Avalonia_iOS_AvaloniaAppDelegate_1` (проверено `llvm-nm` по артефакту `avalonia-ios-sim`). Значит, Objective-C-класс `AppDelegate` создан, но рантайм не сопоставляет его с нашим управляемым типом и доходит до generic-базы. Регистратор поэтому ни при чём.
 
 Отличие от MAUI, которое запускается: сборка Avalonia iOS идёт с `-p:TrimMode=copy`. Через шаги ILLink в .NET iOS проходит и регистрация. Следующая проверка — без `TrimMode=copy`, а предупреждения линкера не как ошибки (`-p:ILLinkTreatWarningsAsErrors=false`), коммит `ea773d0`.
+
+### 2026-11-07, claude-audit (Avalonia iOS запускается: три причины)
+Ветка `review/2026-11-01-windows-tasks-close-ghnt1m`, прогоны через `workflow_dispatch`:
+1. **`-p:TrimMode=copy`** в сборке Avalonia iOS (`apple-ci.yml`). С ним рантайм не сопоставлял Objective-C-класс `AppDelegate` с управляемым типом и создавал generic `AvaloniaAppDelegate\`1`. Без флага и с `-p:ILLinkTreatWarningsAsErrors=false` (run [42403798934](https://github.com/r-eliseev/studious-goggles/actions/runs/42403798934)) делегат создаётся, сборка идёт 3,5 мин вместо 11.
+2. **`NullReferenceException` в `MainView..ctor`**: `PageHost` пуст после `AvaloniaXamlLoader.Load(this)`. В `ImageGen.Avalonia.iOS/Views/MainView.axaml.cs` теперь `InitializeComponent()` (коммит `edb07a9`). Почему тот же код работает в Android-голове, не выяснено.
+3. **`Could not create glyphTypeface ... avares://ImageGen.Avalonia/Assets/Fonts`.** `Link="Assets/%(RecursiveDir)..."` при `Include=".../Assets/Fonts/**"` клал шрифты в `Assets/`: `%(RecursiveDir)` — только часть после `**`. Исправлено в iOS- и Android-головах, шрифты и лицензии вынесены отдельными элементами (коммит `2034c8a`). В Android-голове Avalonia, возможно, иконки Lucide тоже не показываются (там приложение не падает), на устройстве не проверено.
+
+Run [42405774295](https://github.com/r-eliseev/studious-goggles/actions/runs/42405774295): `smoke-ios-avalonia` зелёный, на скриншоте экран «Connect OpenRouter». На скриншоте страница не заполняет экран: сверху и снизу чёрные поля, верхней панели навигации нет. Это вопрос отступов безопасной зоны для 246 или новой задачи, на запуск не влияет.
+
+В том же прогоне `smoke-ios-maui` упал ложно: на 15 с приложение ещё было на заставке, а на 30 с уже показывало экран ключа. В `apple-sim-smoke.sh` решающая проверка процесса теперь на 30 с, ключ сводки `aliveAfter30s`, при падении печатается хвост `launch.log` (коммит `e2175df`).
