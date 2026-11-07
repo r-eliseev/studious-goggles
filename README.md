@@ -9,26 +9,22 @@
 - Каталог Together содержит FLUX.1.1 Pro, FLUX.2 Dev, FLUX.2 Flex и FLUX.2 Pro. Живая генерация и фактическое списание Together пока не проверялись; фактическая стоимость остаётся неизвестной.
 - fal.ai встроен как провайдер генерации, но его настройка не является обязательным шагом первого запуска.
 
-Эти возможности описывают текущую ветку исходного кода. Последний опубликованный релиз v0.1.4 предшествует поддержке Together, общему экрану ключей провайдеров и Web-оболочке.
+Эти возможности описывают текущую ветку исходного кода; релиз выходит автоматически после каждого изменения в `main`.
 
 ## Скачать
 
-Последний опубликованный релиз: [ImageGen v0.1.4](https://github.com/r-eliseev/studious-goggles/releases/tag/v0.1.4). Новый релиз выходит автоматически после каждого изменения в `main` на странице [Releases](https://github.com/r-eliseev/studious-goggles/releases).
+Последний релиз — на странице [Releases](https://github.com/r-eliseev/studious-goggles/releases/latest); новый выходит автоматически после каждого изменения в `main` (следующий patch-номер). Имена пакетов (`<версия>` — например, `v0.1.13`):
 
-| Оболочка | ОС / архитектура | Пакет v0.1.4 | Формат | Проверка запуска |
+| Оболочка | ОС / архитектура | Пакет | Формат | Проверка запуска |
 |---|---|---|---|---|
-| Avalonia | Linux x64 | [Linux x64](https://github.com/r-eliseev/studious-goggles/releases/download/v0.1.4/ImageGen-Avalonia-v0.1.4-linux-x64.tar.gz) | `.tar.gz` | Пакет собран CI; запуск на целевом устройстве не проверен |
-| Avalonia | Linux arm64 | [Linux arm64](https://github.com/r-eliseev/studious-goggles/releases/download/v0.1.4/ImageGen-Avalonia-v0.1.4-linux-arm64.tar.gz) | `.tar.gz` | Пакет собран CI; запуск на ARM-устройстве не проверен |
-| Avalonia | Windows x64 | [Windows x64](https://github.com/r-eliseev/studious-goggles/releases/download/v0.1.4/ImageGen-Avalonia-v0.1.4-win-x64.zip) | `.zip` | Пакет собран CI; ручной запуск из релиза не проверен |
-| Avalonia | Windows arm64 | [Windows arm64](https://github.com/r-eliseev/studious-goggles/releases/download/v0.1.4/ImageGen-Avalonia-v0.1.4-win-arm64.zip) | `.zip` | Пакет собран CI; запуск на ARM-устройстве не проверен |
-| Avalonia | macOS x64 | [macOS x64](https://github.com/r-eliseev/studious-goggles/releases/download/v0.1.4/ImageGen-Avalonia-v0.1.4-osx-x64.tar.gz) | `.tar.gz` | Пакет собран CI; запуск на Mac не проверен |
-| Avalonia | macOS arm64 | [macOS arm64](https://github.com/r-eliseev/studious-goggles/releases/download/v0.1.4/ImageGen-Avalonia-v0.1.4-osx-arm64.tar.gz) | `.tar.gz` | Пакет собран CI; запуск на Mac не проверен |
-| MAUI | Android | [Android APK](https://github.com/r-eliseev/studious-goggles/releases/download/v0.1.4/ImageGen-Maui-v0.1.4-android.apk) | `.apk` | Подписан отладочным ключом сборки; установка и работа на устройстве не проверены |
-| Avalonia | Android | `ImageGen-Avalonia-<версия>-android.apk` | `.apk` | Устанавливается рядом с MAUI; свои данные и ключи; запуск на устройстве проверяет задача 198 |
-| MAUI | Windows x64 | [Windows x64](https://github.com/r-eliseev/studious-goggles/releases/download/v0.1.4/ImageGen-Maui-v0.1.4-win-x64.zip) | `.zip` | Архитектура проверена по PE; запуск собранной MAUI-программы на Windows проверялся отдельно |
-| MAUI | Windows arm64 | [Windows arm64 — содержит x64-файлы](https://github.com/r-eliseev/studious-goggles/releases/download/v0.1.4/ImageGen-Maui-v0.1.4-win-arm64.zip) | `.zip` | Не устанавливайте на Windows ARM: пакет v0.1.4 неверно помечен как arm64 и содержит x64 PE-файлы |
+| Avalonia | Linux x64 / arm64 | `ImageGen-Avalonia-<версия>-linux-x64.tar.gz`, `…-linux-arm64.tar.gz` | `.tar.gz` | Пакет собран CI; запуск на целевом устройстве — ручная задача 046 |
+| Avalonia | Windows x64 / arm64 | `ImageGen-Avalonia-<версия>-win-x64.zip`, `…-win-arm64.zip` | `.zip` | Пакет собран CI; ручной запуск — 046 |
+| Avalonia | macOS x64 / arm64 | `ImageGen-Avalonia-<версия>-osx-x64.tar.gz`, `…-osx-arm64.tar.gz` | `.tar.gz` | Пакет собран CI; запуск на Mac не проверен |
+| Avalonia | Android | `ImageGen-Avalonia-<версия>-android.apk` | `.apk` | Устанавливается рядом с MAUI; свои данные и ключи; проверка на устройстве — 198 |
+| MAUI | Android | `ImageGen-Maui-<версия>-android.apk` | `.apk` | Подписан постоянным ключом; проверка на устройстве — 140 |
+| MAUI | Windows x64 / arm64 | `ImageGen-Maui-<версия>-win-x64.zip`, `…-win-arm64.zip` | `.zip` | Архитектура PE проверяется в release workflow; ручной запуск — 016 |
 
-Release workflow публикует Avalonia self-contained archives, Windows MAUI unpackaged ZIP и Android APK для MAUI и Avalonia. Avalonia Android APK устанавливается рядом с MAUI и использует собственные application ID, каталог данных и ключи провайдеров. Android APK предназначен для ручной установки; публикации в магазинах, MSIX и автообновления нет. APK до v0.1.5 включительно подписаны разными отладочными ключами: обновление не ставится поверх и требует удалить приложение вместе с данными. Со следующего релиза пакет Android — `com.eliseev.imagegen`: он ставится отдельным приложением (старое ImageGen удалите вручную, ключи провайдеров введите заново). С первого релиза после v0.1.5 APK подписан постоянным ключом (сертификат `CN=ImageGen, O=eliseev`, SHA-256 `6711f8ba…10277`): переход на него с v0.1.5 и раньше требует один раз удалить приложение, дальше обновления ставятся поверх. MAUI для iOS и Mac Catalyst не выпускается. Для Windows ARM используйте Avalonia пакет, пока исправленный MAUI arm64 пакет не появится в новом релизе.
+Release workflow публикует Avalonia self-contained archives, Windows MAUI unpackaged ZIP и Android APK для MAUI и Avalonia. Avalonia Android APK устанавливается рядом с MAUI и использует собственные application ID, каталог данных и ключи провайдеров. Android APK предназначен для ручной установки; публикации в магазинах, MSIX и автообновления нет. APK до v0.1.5 включительно подписаны разными отладочными ключами: обновление не ставится поверх и требует удалить приложение вместе с данными. Со следующего релиза пакет Android — `com.eliseev.imagegen`: он ставится отдельным приложением (старое ImageGen удалите вручную, ключи провайдеров введите заново). С первого релиза после v0.1.5 APK подписан постоянным ключом (сертификат `CN=ImageGen, O=eliseev`, SHA-256 `6711f8ba…10277`): переход на него с v0.1.5 и раньше требует один раз удалить приложение, дальше обновления ставятся поверх. MAUI для iOS и Mac Catalyst не выпускается.
 
 Сборка пакетов через CI подтверждает сборку и состав архитектуры там, где workflow проверяет PE. Она сама по себе не подтверждает работу приложения на устройстве. Текущие ручные проверки платформ перечислены в [`docs/knowledge/dev-environment.md`](docs/knowledge/dev-environment.md) и задачах [`016`](tasks/v0.1/016-skeleton-manual-check.md), [`046`](tasks/backlog/046-desktop-manual-check.md) и [`140`](tasks/backlog/140-android-manual-check.md).
 
