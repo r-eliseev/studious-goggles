@@ -6,4 +6,5 @@ public sealed record SemanticIndexStatus(
     int Pending,
     SemanticIndexState State,
     string? ErrorCode = null,
-    string? WarningCode = null);
+    string? WarningCode = null,
+    string? ErrorDetail = null);

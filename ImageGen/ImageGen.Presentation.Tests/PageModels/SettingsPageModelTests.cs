@@ -81,6 +81,17 @@ public sealed class SettingsPageModelTests : IDisposable
     }
 
     [Fact]
+    public void SemanticSearchStatusText_Failed_IncludesShortErrorDetail()
+    {
+        var model = CreateModel();
+        model.SemanticIndexStatus = new SemanticIndexStatus(true, 0, 1, SemanticIndexState.Failed,
+            ErrorCode: "Unknown", ErrorDetail: "response model 'other/model' differs from requested 'baai/bge-m3'");
+
+        Assert.Contains(AppResources.SemanticSearchFailed, model.SemanticSearchStatusText, StringComparison.Ordinal);
+        Assert.Contains("response model 'other/model'", model.SemanticSearchStatusText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Load_ShowsCurrentStyleSelected()
     {
         await _appearance.SaveAsync(new AppearanceSettings(AppearanceStyle.Notebook, AppearanceTheme.System), CancellationToken.None);

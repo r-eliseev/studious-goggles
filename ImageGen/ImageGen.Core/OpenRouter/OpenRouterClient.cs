@@ -569,20 +569,39 @@ public sealed class OpenRouterClient(
 
     private static float[][] ReadEmbeddings(JsonNode root, int expectedCount)
     {
-        if (root["data"] is not JsonArray data || data.Count != expectedCount)
+        if (root["data"] is not JsonArray data)
         {
-            throw InvalidEmbeddingResponse();
+            throw InvalidEmbeddingResponse("embedding response has no data array");
+        }
+
+        if (data.Count != expectedCount)
+        {
+            throw InvalidEmbeddingResponse($"embedding response has {data.Count} items, expected {expectedCount}");
         }
 
         var vectors = new float[expectedCount][];
         var dimensions = 0;
-        foreach (var item in data)
+        for (var itemNumber = 0; itemNumber < data.Count; itemNumber++)
         {
-            if (item?["index"] is not JsonValue indexValue || !indexValue.TryGetValue<int>(out var index)
-                || index < 0 || index >= expectedCount || vectors[index] is not null
-                || item["embedding"] is not JsonArray values || values.Count == 0)
+            var item = data[itemNumber];
+            if (item?["index"] is not JsonValue indexValue || !indexValue.TryGetValue<int>(out var index))
             {
-                throw InvalidEmbeddingResponse();
+                throw InvalidEmbeddingResponse($"embedding item {itemNumber} has no index");
+            }
+
+            if (index < 0 || index >= expectedCount || vectors[index] is not null)
+            {
+                throw InvalidEmbeddingResponse($"embedding item {itemNumber} has an invalid or duplicate index");
+            }
+
+            if (item["embedding"] is not JsonArray values)
+            {
+                throw InvalidEmbeddingResponse($"embedding item {itemNumber} has no vector");
+            }
+
+            if (values.Count == 0)
+            {
+                throw InvalidEmbeddingResponse($"embedding item {itemNumber} has an empty vector");
             }
 
             if (dimensions == 0)
@@ -591,7 +610,7 @@ public sealed class OpenRouterClient(
             }
             else if (values.Count != dimensions)
             {
-                throw InvalidEmbeddingResponse();
+                throw InvalidEmbeddingResponse($"embedding item {itemNumber} has {values.Count} values, expected {dimensions}");
             }
 
             var vector = new float[dimensions];
@@ -603,24 +622,25 @@ public sealed class OpenRouterClient(
                     || value > float.MaxValue
                     || value < -float.MaxValue)
                 {
-                    throw InvalidEmbeddingResponse();
+                    throw InvalidEmbeddingResponse($"embedding vector {index} contains a non-finite value");
                 }
 
                 vector[dimension] = (float)value;
                 if (!float.IsFinite(vector[dimension]))
                 {
-                    throw InvalidEmbeddingResponse();
+                    throw InvalidEmbeddingResponse($"embedding vector {index} contains a non-finite value");
                 }
             }
 
             vectors[index] = vector;
         }
 
-        return vectors.Any(vector => vector is null) ? throw InvalidEmbeddingResponse() : vectors;
+        return vectors.Any(vector => vector is null)
+            ? throw InvalidEmbeddingResponse("embedding response is missing one or more indexes")
+            : vectors;
     }
 
-    private static ProviderException InvalidEmbeddingResponse() =>
-        new(ErrorKind.Unknown, "OpenRouter returned an invalid embedding response.");
+    private static ProviderException InvalidEmbeddingResponse(string message) => new(ErrorKind.Unknown, message);
 
     private static int? ReadPromptTokens(JsonNode root) =>
         root["usage"]?["prompt_tokens"] is JsonValue tokens && tokens.TryGetValue<int>(out var count) ? count : null;

@@ -70,6 +70,11 @@ public sealed partial class SettingsPageModel(
                 SemanticIndexState.Unavailable => AppResources.SemanticSearchUnavailable,
                 _ => SemanticIndexStatus.ErrorCode == "stopped" ? AppResources.SemanticSearchStopped : AppResources.SemanticSearchFailed,
             };
+            if (SemanticIndexStatus.State == SemanticIndexState.Failed && !string.IsNullOrWhiteSpace(SemanticIndexStatus.ErrorDetail))
+            {
+                message = $"{message}\n{SemanticIndexStatus.ErrorDetail}";
+            }
+
             return SemanticIndexStatus.WarningCode == "limit_reached"
                 ? $"{message} {AppResources.SemanticSearchLimitWarning}"
                 : message;

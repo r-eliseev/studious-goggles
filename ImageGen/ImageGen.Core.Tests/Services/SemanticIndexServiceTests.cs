@@ -240,6 +240,7 @@ public class SemanticIndexServiceTests
         var status = await WaitForStateAsync(setup.Service, SemanticIndexState.Failed, ct);
 
         Assert.Equal("Unknown", status.ErrorCode);
+        Assert.Equal("vector 0 contains a non-finite value", status.ErrorDetail);
         Assert.Empty(setup.Repository.Items);
         await setup.Service.DisposeAsync();
     }
@@ -258,6 +259,37 @@ public class SemanticIndexServiceTests
         Assert.Equal("Unknown", status.ErrorCode);
         Assert.Empty(setup.Repository.Items);
         Assert.Equal(0.001m, Assert.Single(setup.Repository.Expenses).CostUsd);
+        await setup.Service.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task IndexAsync_ModelMismatch_ReportsExpectedAndReturnedNames()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var setup = Create([Source(SearchTextKind.Title, "model mismatch")]);
+        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(new EmbeddingResult([[0.5f]], "other/model", 1, null));
+
+        await setup.Service.EnableAsync(ct);
+        var status = await WaitForStateAsync(setup.Service, SemanticIndexState.Failed, ct);
+
+        Assert.Equal("response model 'other/model' differs from requested 'baai/bge-m3'", status.ErrorDetail);
+        await setup.Service.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task IndexAsync_ModelNameComparisonIsCaseInsensitiveAndStoresResponseName()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var setup = Create([Source(SearchTextKind.Title, "model casing")]);
+        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(new EmbeddingResult([[0.5f]], "BAAI/BGE-M3", 1, null));
+
+        await setup.Service.EnableAsync(ct);
+        var status = await WaitForStateAsync(setup.Service, SemanticIndexState.Ready, ct);
+
+        Assert.Equal(SemanticIndexState.Ready, status.State);
+        Assert.Equal("BAAI/BGE-M3", Assert.Single(setup.Repository.Items.Values).Model);
         await setup.Service.DisposeAsync();
     }
 
@@ -285,6 +317,7 @@ public class SemanticIndexServiceTests
         var failed = await WaitForStateAsync(setup.Service, SemanticIndexState.Failed, ct);
 
         Assert.Equal("Unknown", failed.ErrorCode);
+        Assert.Equal("embedding dimension changed from 2 to 3; the old index was cleared", failed.ErrorDetail);
         Assert.Empty(setup.Repository.Items);
         Assert.Equal(2, setup.Repository.Expenses.Count);
 

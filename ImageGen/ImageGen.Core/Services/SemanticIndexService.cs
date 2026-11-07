@@ -127,7 +127,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
             }
             else if (_status.State is SemanticIndexState.Failed or SemanticIndexState.Unavailable)
             {
-                status = status with { State = _status.State, ErrorCode = _status.ErrorCode };
+                status = status with { State = _status.State, ErrorCode = _status.ErrorCode, ErrorDetail = _status.ErrorDetail };
             }
         }
 
@@ -229,7 +229,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
         _hasStarted = true;
         _indexCancellation?.Dispose();
         _indexCancellation = new CancellationTokenSource();
-        SetStatus(_status with { Enabled = true, State = SemanticIndexState.Indexing, ErrorCode = null });
+        SetStatus(_status with { Enabled = true, State = SemanticIndexState.Indexing, ErrorCode = null, ErrorDetail = null });
         _indexTask = IndexAsync(_indexCancellation.Token);
         _ = ObserveIndexCompletionAsync(_indexTask);
     }
@@ -253,7 +253,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
         }
         catch (ProviderException exception)
         {
-            _logger.LogWarning("Semantic search indexing failed with provider error {ErrorKind}.", exception.Kind);
+            _logger.LogWarning("Semantic search indexing failed with provider error {ErrorKind}: {ErrorDetail}", exception.Kind, exception.Message);
             SetStatus(_status with
             {
                 Enabled = true,
@@ -261,6 +261,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
                     ? SemanticIndexState.Unavailable
                     : SemanticIndexState.Failed,
                 ErrorCode = exception.Kind.ToString(),
+                ErrorDetail = exception.Message.Length <= 200 ? exception.Message : exception.Message[..200],
             });
         }
         catch (Exception exception)
@@ -313,7 +314,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
         var selectedByKey = selected.ToDictionary(source => source.SourceKey, StringComparer.Ordinal);
         var hashesByKey = selected.ToDictionary(source => source.SourceKey, source => HashText(source.Text), StringComparer.Ordinal);
         var stored = await _embeddings.ListAllAsync(cancellationToken).ConfigureAwait(false);
-        var dimensions = stored.Where(embedding => embedding.Model == EmbeddingModel)
+        var dimensions = stored.Where(embedding => string.Equals(embedding.Model, EmbeddingModel, StringComparison.OrdinalIgnoreCase))
             .Select(embedding => embedding.Dimensions)
             .Distinct()
             .ToArray();
@@ -380,7 +381,8 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
             {
                 await _embeddings.UpsertBatchAsync([], expense, cancellationToken).ConfigureAwait(false);
                 await _embeddings.DeleteAllAsync(cancellationToken).ConfigureAwait(false);
-                throw new ProviderException(ErrorKind.Unknown, "Embedding dimension changed; the old index was cleared.");
+                throw new ProviderException(ErrorKind.Unknown,
+                    $"embedding dimension changed from {expected} to {result.Dimensions}; the old index was cleared");
             }
 
             expectedDimensions ??= result.Dimensions;
@@ -552,16 +554,30 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
 
     private static void ValidateResult(EmbeddingResult result, int expectedCount)
     {
-        if (result.Vectors.Length != expectedCount || result.Dimensions <= 0 || result.Model != EmbeddingModel)
+        if (result.Vectors.Length != expectedCount)
         {
-            throw new ProviderException(ErrorKind.Unknown, "Embedding response did not match the requested batch.");
+            throw new ProviderException(ErrorKind.Unknown, $"embedding response has {result.Vectors.Length} vectors, expected {expectedCount}");
         }
 
-        foreach (var vector in result.Vectors)
+        if (result.Dimensions <= 0)
         {
+            throw new ProviderException(ErrorKind.Unknown, $"embedding response has invalid dimension count {result.Dimensions}");
+        }
+
+        if (!string.Equals(result.Model, EmbeddingModel, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ProviderException(ErrorKind.Unknown, $"response model '{result.Model}' differs from requested '{EmbeddingModel}'");
+        }
+
+        for (var index = 0; index < result.Vectors.Length; index++)
+        {
+            var vector = result.Vectors[index];
             if (vector.Length != result.Dimensions || vector.Any(value => !float.IsFinite(value)))
             {
-                throw new ProviderException(ErrorKind.Unknown, "Embedding response contained an invalid vector.");
+                var detail = vector.Length != result.Dimensions
+                    ? $"vector {index} has {vector.Length} values, expected {result.Dimensions}"
+                    : $"vector {index} contains a non-finite value";
+                throw new ProviderException(ErrorKind.Unknown, detail);
             }
         }
     }

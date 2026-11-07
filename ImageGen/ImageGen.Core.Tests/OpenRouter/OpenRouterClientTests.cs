@@ -126,6 +126,23 @@ public class OpenRouterClientTests
     }
 
     [Theory]
+    [InlineData("{\"data\":[]}", 1, "embedding response has 0 items, expected 1")]
+    [InlineData("{\"data\":[{\"embedding\":[0.1]}]}", 1, "embedding item 0 has no index")]
+    [InlineData("{\"data\":[{\"index\":0}]}", 1, "embedding item 0 has no vector")]
+    [InlineData("{\"data\":[{\"index\":0,\"embedding\":[]}]}", 1, "embedding item 0 has an empty vector")]
+    [InlineData("{\"data\":[{\"index\":0,\"embedding\":[0.1]},{\"index\":1,\"embedding\":[0.2,0.3]}]}", 2, "embedding item 1 has 2 values, expected 1")]
+    [InlineData("{\"data\":[{\"index\":0,\"embedding\":[1.0e100]}]}", 1, "embedding vector 0 contains a non-finite value")]
+    public async Task EmbedAsync_MalformedResponse_ExplainsValidationFailure(string json, int textCount, string message)
+    {
+        var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, json));
+
+        IReadOnlyList<string> texts = textCount == 2 ? ["one", "two"] : ["one"];
+        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync(texts, TestContext.Current.CancellationToken));
+
+        Assert.Equal(message, error.Message);
+    }
+
+    [Theory]
     [InlineData(HttpStatusCode.Unauthorized, ErrorKind.InvalidKey)]
     [InlineData(HttpStatusCode.TooManyRequests, ErrorKind.RateLimited)]
     [InlineData(HttpStatusCode.InternalServerError, ErrorKind.Unknown)]

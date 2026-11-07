@@ -54,14 +54,15 @@ public sealed class LiveCheckRunner(LiveCheckOptions options, TimeProvider timeP
             foreach (var provider in new[] { "openrouter", "fal", "together" })
             {
                 var onlyMusic = options.Only?.Contains("music") == true;
-                if (options.Only is not null && !options.Only.Contains(provider) && !(provider == "openrouter" && onlyMusic))
+                var onlyEmbeddings = options.Only?.Contains("embeddings") == true;
+                if (options.Only is not null && !options.Only.Contains(provider) && !(provider == "openrouter" && (onlyMusic || onlyEmbeddings)))
                 {
                     continue;
                 }
 
                 if (!options.Keys.ContainsKey(provider))
                 {
-                    results.Add(new CheckResult(provider, onlyMusic ? "music" : "all scenarios", "live response", "Key not supplied", "unverified", null, "—", "—"));
+                    results.Add(new CheckResult(provider, onlyMusic ? "music" : onlyEmbeddings ? "embeddings" : "all scenarios", "live response", "Key not supplied", "unverified", null, "—", "—"));
                     continue;
                 }
 
@@ -89,6 +90,12 @@ public sealed class LiveCheckRunner(LiveCheckOptions options, TimeProvider timeP
         if (provider == "openrouter" && options.Only?.Contains("music") == true)
         {
             await RunMusicAsync(provider, cancellationToken);
+            return;
+        }
+
+        if (provider == "openrouter" && options.Only?.Contains("embeddings") == true)
+        {
+            await RunEmbeddingsAsync(provider, cancellationToken);
             return;
         }
 
@@ -237,6 +244,31 @@ public sealed class LiveCheckRunner(LiveCheckOptions options, TimeProvider timeP
             {
                 Add(provider, "safety filter status", "HTTP 422 for filtered prompt", ex.Kind.ToString(), ex.Kind == ErrorKind.BadRequest ? "matches status family; inspect trace" : "differs; inspect trace", togetherModel, Estimate(cost));
             }
+        }
+    }
+
+    private async Task RunEmbeddingsAsync(string provider, CancellationToken cancellationToken)
+    {
+        const decimal estimate = 0.01m;
+        const string model = "baai/bge-m3";
+        if (!Reserve(provider, estimate, model, "embeddings")) return;
+
+        try
+        {
+            var router = services!.GetRequiredService<IProviderRouter>();
+            var client = (OpenRouterClient)router.GetConnection(provider);
+            var result = await client.EmbedAsync(["A short search phrase", "Another short phrase"], cancellationToken);
+            var tracePath = Path.Combine(options.OutputDirectory, traceRelativePath);
+            var traceLine = (await File.ReadAllLinesAsync(tracePath, cancellationToken))
+                .Reverse()
+                .First(line => line.Contains("/embeddings", StringComparison.Ordinal));
+            var summary = EmbeddingTraceSummary.Parse(traceLine);
+            Add(provider, "embeddings", "HTTP 200; two vectors parsed", $"HTTP {summary.Status}; model={summary.Model}; vectors={summary.ItemCount}; lengths={summary.VectorLengths}; all index fields present={summary.IndexPresent}; usage={summary.Usage}; parser dimensions={result.Dimensions}",
+                summary.Status == "200" && result.Vectors.Length == 2 ? "passed app parser" : "failed app parser", model, Estimate(estimate));
+        }
+        catch (Exception ex) when (ex is ProviderException or HttpRequestException or FormatException or InvalidOperationException)
+        {
+            Add(provider, "embeddings", "HTTP 200; two vectors parsed", ex.Message, "failed app parser; inspect safe trace", model, Estimate(estimate));
         }
     }
 
