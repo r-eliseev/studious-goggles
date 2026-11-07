@@ -70,6 +70,19 @@ smoke_app() {
     return 0
   fi
 
+  if ! codesign --force --deep --sign - --timestamp=none "$app_path" >"$report_dir/app-$label-codesign.log" 2>&1; then
+    printf 'Could not ad-hoc sign app bundle.\n' >"$report_dir/app-$label.txt"
+    app_failures+=("$label:codesign")
+    rm -rf "$app_dir"
+    return 0
+  fi
+  if ! codesign --verify --deep --strict "$app_path" >>"$report_dir/app-$label-codesign.log" 2>&1; then
+    printf 'App bundle code signature verification failed.\n' >"$report_dir/app-$label.txt"
+    app_failures+=("$label:codesign-verify")
+    rm -rf "$app_dir"
+    return 0
+  fi
+
   start_marker="$report_dir/$label-start.marker"
   touch "$start_marker"
   if ! open -n "$app_path" >"$report_dir/app-$label-open.log" 2>&1; then

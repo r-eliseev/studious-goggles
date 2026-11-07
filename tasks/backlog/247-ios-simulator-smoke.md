@@ -61,6 +61,7 @@ bash scripts/check.sh
 - `apple-sim-smoke.sh` проверяет bundle id и arm64, создаёт/загружает/запускает приложение, проверяет процесс через 15 секунд, сохраняет два скриншота и логи, собирает crash reports и удаляет симулятор через `trap`.
 - Добавлены отдельные schedule/dispatch jobs для MAUI и Avalonia; оба артефакта публикуются при любом исходе. На pull request smoke jobs пока пропущены; вопрос о включении после трёх ночных прогонов добавлен в `docs/status.md`.
 - Локально: `python3 -I .../apple-sim-pick.py` — успешно; `bash -n .../apple-sim-smoke.sh` и YAML parse — успешно; shell smoke и GitHub-прогоны ещё ожидаются.
+- После merge run [42381579325](https://github.com/r-eliseev/studious-goggles/actions/runs/42381579325) автоматически выполнил оба simulator smoke. Оба crash report указывают `CODESIGNING`, `Invalid Page`, `SIGKILL (Code Signature Invalid)`; MAUI был виден живым через 15 секунд, Avalonia — нет. Simulator apps собирались с `EnableCodeSigning=false` и устанавливались без последующей подписи. Перед установкой добавлена ad-hoc подпись и строгая проверка `codesign`; CI-подтверждение ожидается.
 
 ## Комментарии
 
@@ -69,3 +70,6 @@ bash scripts/check.sh
 
 ### 2026-11-07, владелец (в чате, записал claude-audit)
 Дополнение владельца «MAUI + Avalonia — Apple CI/E2E» (оригинал — `docs/specs/ui-e2e-original/`). План одобрен ранее данным поручением «заапрувь все таски которые будут». Новый workflow `apple-ci.yml` по этому дополнению владелец попросил явно (ADR 0030).
+
+### 2026-11-07, codex-gpt6
+В run 42381579325 оба iOS smoke jobs запускались автоматически после merge, но приложения завершались с `SIGKILL (Code Signature Invalid)`, `CODESIGNING: Invalid Page`. Приложения собираются unsigned для simulator. Добавил ad-hoc signing извлечённого `.app` с `codesign --verify --deep --strict` до `simctl install`; проверка на hosted macOS ожидается.
