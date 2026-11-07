@@ -67,6 +67,7 @@ bash scripts/check.sh
 - Integrated run [42374038475](https://github.com/r-eliseev/studious-goggles/actions/runs/42374038475): APK build and Android preflight passed, but test launch failed because the MTP command had an incorrect extra `--`; fixed to pass `--report-trx` directly. Local test runs also exposed that Allure and per-test paths are relative to the runner output directory: per-test reports now use `E2E_REPORTS_DIR` (repo `reports/` in CI, repo `tmp/` locally), and Allure results use a path back to the workspace. Rerun pending.
 - CI run [42375415656](https://github.com/r-eliseev/studious-goggles/actions/runs/42375415656): the APK built and preflight installed/launched it, but the test command did not inherit `APP_APK` because the emulator action invokes script lines in separate shells. Changed the test invocation to pass `APP_APK` as a command-scoped environment variable. The invalid-key scenario now waits for a terminal invalid-format/network status instead of accepting “Checking the key...”. Android build, formatting, and `scripts/check.sh` pass locally; CI rerun pending.
 - CI run [42376767519](https://github.com/r-eliseev/studious-goggles/actions/runs/42376767519): Windows tests passed; Android preflight installed/launched the APK, but MTP changes the process working directory to the test output folder, so the relative APK path was not found by `AndroidSession`. The workflow now passes the APK path rooted at `$GITHUB_WORKSPACE`; rerun pending.
+- CI run [42377863074](https://github.com/r-eliseev/studious-goggles/actions/runs/42377863074): the absolute APK path was resolved and Appium session creation reached capability setup; Appium.WebDriver 9 rejects the generic `app` capability setter and requires `AppiumOptions.App`. Updated `AndroidSession` to use that property. Windows E2E and all application builds passed in this run; Android rerun pending.
 
 ## Комментарии
 
@@ -81,3 +82,6 @@ bash scripts/check.sh
 
 ### 2026-11-07, codex-gpt6
 В run 42376767519 обнаружил вторую часть проблемы: тестовый runner запускается из `bin/Debug/net10.0`, поэтому относительный `APP_APK` там не разрешался, хотя preflight из корня репозитория видел файл. Теперь workflow передаёт абсолютный путь от `$GITHUB_WORKSPACE`. В этом же run прошёл Windows smoke: 3 теста, build и preflight.
+
+### 2026-11-07, codex-gpt6
+В run 42377863074 runner нашёл APK и перешёл к созданию AppiumDriver, после чего Appium.WebDriver 9 сообщил, что capability `app` задаётся через `AppiumOptions.App`. Перевёл `AndroidSession` на это свойство; сборка/формат/CI проверка ожидаются.

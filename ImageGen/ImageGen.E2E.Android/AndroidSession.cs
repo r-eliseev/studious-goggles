@@ -19,8 +19,8 @@ internal static class AndroidSession
         {
             PlatformName = "Android",
             AutomationName = "UiAutomator2",
+            App = Path.GetFullPath(appPath),
         };
-        options.AddAdditionalAppiumOption("app", Path.GetFullPath(appPath));
         options.AddAdditionalAppiumOption("appPackage", AppPackage);
         options.AddAdditionalAppiumOption("noReset", false);
         options.AddAdditionalAppiumOption("newCommandTimeout", 120);
