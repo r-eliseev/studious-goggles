@@ -1,6 +1,6 @@
 ---
 id: 214
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -53,6 +53,10 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+Добавлен `ShowActionsCommand` и передан delegate показа действий из обеих точек создания элемента в `SessionsPageModel`. Выбор через `IDialogService.ChooseAsync` вызывает существующие Rename/Delete handlers; отмена не выполняет действий. MAUI теперь выбирает отдельный шаблон по идиоме: десктоп сохраняет `SwipeView`, телефон открывает сессию коротким касанием и показывает действия долгим. Для телефонной строки добавлены явный `BindingContext` поведения и доступная подсказка. Сохранён четырёхпараметрический конструктор `SessionItemViewModel` для Avalonia callers, где действие long press не используется.
+
+Проверено: новые тесты выбора Rename/Delete/Cancel и разметки; Presentation.Tests — 513/513; Avalonia headless — 180 passed, 2 skipped (DPAPI и D-Bus недоступны); MAUI Android build — 0 предупреждений и ошибок; форматирование Presentation, Presentation.Tests и MAUI прошло. `scripts/check.sh` запускается перед коммитом. Проверка касаний на телефоне внесена в задачу 140.
 
 ## Комментарии
 

@@ -15,14 +15,16 @@ public class MauiSessionsListMarkupTests
             .ToList();
 
         Assert.Equal(2, lists.Count);
-        Assert.All(lists, list => Assert.Equal("{StaticResource SessionRowTemplate}", (string?)list.Attribute("BindableLayout.ItemTemplate")));
+        Assert.All(lists, list => Assert.Equal(
+            "{OnIdiom Desktop={StaticResource SessionRowTemplateDesktop}, Default={StaticResource SessionRowTemplatePhone}}",
+            (string?)list.Attribute("BindableLayout.ItemTemplate")));
     }
 
     [Fact]
-    public void SessionRow_OpensByTapOnRowNotByButtonInsideSwipeView()
+    public void DesktopSessionRow_OpensByTapOnRowAndKeepsSwipeActions()
     {
         // On Android a Button inside the SwipeView lost the tap to the swipe, which showed Rename/Delete instead (task 162).
-        var template = RowTemplate();
+        var template = RowTemplate("SessionRowTemplateDesktop");
         var swipe = Assert.Single(template.Descendants(), element => element.Name.LocalName == "SwipeView");
 
         Assert.DoesNotContain(swipe.Descendants(), element => element.Name.LocalName == "Button"
@@ -33,9 +35,28 @@ public class MauiSessionsListMarkupTests
     }
 
     [Fact]
-    public void SessionRow_IsAccessibleAndKeepsSwipeActions()
+    public void PhoneSessionRow_UsesTouchBehaviorForTapAndLongPressWithoutSwipe()
     {
-        var template = RowTemplate();
+        XNamespace toolkit = "http://schemas.microsoft.com/dotnet/2022/maui/toolkit";
+        var template = RowTemplate("SessionRowTemplatePhone");
+        var row = Assert.Single(template.Descendants(), element =>
+            element.Name.LocalName == "Grid" && (string?)element.Attribute(Xaml + "Name") == "RowRoot");
+        var behavior = Assert.Single(template.Descendants(toolkit + "TouchBehavior"));
+
+        Assert.DoesNotContain(template.Descendants(), element => element.Name.LocalName == "SwipeView");
+        Assert.Equal("{Binding OpenCommand}", (string?)behavior.Attribute("Command"));
+        Assert.Equal("{Binding ShowActionsCommand}", (string?)behavior.Attribute("LongPressCommand"));
+        Assert.Equal(
+            "{Binding Source={x:Reference RowRoot}, Path=BindingContext, x:DataType=Grid}",
+            (string?)behavior.Attribute("BindingContext"));
+        Assert.Equal("{Binding Title}", (string?)row.Attribute("SemanticProperties.Description"));
+        Assert.Equal("{x:Static strings:AppResources.SessionLongPressHint}", (string?)row.Attribute("SemanticProperties.Hint"));
+    }
+
+    [Fact]
+    public void DesktopSessionRow_IsAccessibleAndKeepsSwipeActions()
+    {
+        var template = RowTemplate("SessionRowTemplateDesktop");
         var row = Assert.Single(template.Descendants(), element => element.Descendants().Any(child =>
             child.Name.LocalName == "TapGestureRecognizer") && element.Name.LocalName == "Grid");
 
@@ -47,9 +68,9 @@ public class MauiSessionsListMarkupTests
             && (string?)element.Attribute("Command") == "{Binding DeleteCommand}");
     }
 
-    private static XElement RowTemplate() =>
+    private static XElement RowTemplate(string key) =>
         Assert.Single(Load().Descendants(), element => element.Name.LocalName == "DataTemplate"
-            && (string?)element.Attribute(Xaml + "Key") == "SessionRowTemplate");
+            && (string?)element.Attribute(Xaml + "Key") == key);
 
     private static XDocument Load() => XDocument.Load(Path.Combine(MauiRoot(), "Controls", "SessionsListView.xaml"));
 

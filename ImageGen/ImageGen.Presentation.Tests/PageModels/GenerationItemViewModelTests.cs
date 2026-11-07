@@ -460,6 +460,19 @@ public class GenerationItemViewModelTests
         }
     }
 
+    [Fact]
+    public void ApplyImageDimensions_SetsImageAreaHeightAndRaisesNotification()
+    {
+        var card = CardOf(BaseGeneration());
+        var changedProperties = new List<string?>();
+        card.PropertyChanged += (_, eventArgs) => changedProperties.Add(eventArgs.PropertyName);
+
+        card.ApplyImageDimensions(new ImageDimensions(1024, 1024));
+
+        Assert.Equal(264d, card.ImageAreaHeight);
+        Assert.Contains(nameof(card.ImageAreaHeight), changedProperties);
+    }
+
     [Theory]
     [InlineData(800, 1200, "800×1200 px · 2:3")]
     [InlineData(512, 512, "512×512 px · 1:1")]
@@ -507,7 +520,7 @@ public class GenerationItemViewModelTests
         var generation = BaseGeneration();
         generation.ImagePath = "images/s/done.png";
         var card = CardOf(generation);
-        card.ApplyImageDimensions(new ImageDimensions(1200, 800));
+        card.ApplyImageDimensions(new ImageDimensions(1024, 1024));
         generation.Status = status;
         generation.ImagePath = status == GenerationStatus.Succeeded ? imagePath : null;
 
@@ -515,6 +528,7 @@ public class GenerationItemViewModelTests
 
         Assert.Empty(card.ImageDimensionsText);
         Assert.False(card.HasImageDimensions);
+        Assert.Equal(176d, card.ImageAreaHeight);
     }
 
     private static Generation BaseGeneration() => new()

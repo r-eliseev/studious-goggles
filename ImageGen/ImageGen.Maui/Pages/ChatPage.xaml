@@ -110,7 +110,7 @@
                                         <RoundRectangle CornerRadius="{DynamicResource IgRadiusSm}" />
                                     </Border.StrokeShape>
                                     <Label Text="{Binding PromptText}"
-                                           TextColor="{DynamicResource IgPromptForegroundBrush}"
+                                           TextColor="{DynamicResource IgPromptForegroundColor}"
                                            FontFamily="{DynamicResource IgPromptFont}"
                                            FontAttributes="{DynamicResource IgPromptFontStyle}"
                                            LineBreakMode="WordWrap" />
@@ -125,7 +125,7 @@
                                             BindableLayout.ItemsSource="{Binding Generations}">
                                     <BindableLayout.ItemTemplate>
                                         <DataTemplate x:DataType="pm:GenerationItemViewModel">
-                                            <Border WidthRequest="280" Margin="0,0,8,8" Padding="8"
+                                            <Border x:Name="CardRoot" WidthRequest="280" Margin="0,0,8,8" Padding="8"
                                                     Background="{DynamicResource IgCardBackgroundBrush}"
                                                     StrokeThickness="{DynamicResource IgCardBorderThickness}"
                                                     Stroke="{DynamicResource IgLineColor}"
@@ -135,7 +135,11 @@
                                                 </Border.StrokeShape>
                                                 <!-- Long press (phones) opens the actions sheet; right-click (Windows, Mac) opens the flyout. Off on Windows: it captures the pointer and the "…" button gets no Click (task 088). -->
                                                 <Border.Behaviors>
-                                                    <toolkit:TouchBehavior IsEnabled="{OnPlatform WinUI=False, Default=True}" LongPressCommand="{Binding ShowActionsCommand}" />
+                                                    <toolkit:TouchBehavior x:DataType="pm:GenerationItemViewModel"
+                                                                           BindingContext="{Binding Source={x:Reference CardRoot}, Path=BindingContext, x:DataType=Border}"
+                                                                           ShouldMakeChildrenInputTransparent="False"
+                                                                           IsEnabled="{OnPlatform WinUI=False, Default=True}"
+                                                                           LongPressCommand="{Binding ShowActionsCommand}" />
                                                 </Border.Behaviors>
                                                 <Border.GestureRecognizers>
                                                     <TapGestureRecognizer Command="{Binding Source={x:Reference Page}, Path=BindingContext.SelectCardCommand}"
@@ -156,8 +160,9 @@
                                                     </MenuFlyout>
                                                 </FlyoutBase.ContextFlyout>
                                                 <VerticalStackLayout Spacing="6">
-                                                    <!-- Image area 3:2 with the per-status placeholder and the overlay strip. -->
-                                                    <Border WidthRequest="264" HeightRequest="176"
+                                                    <!-- Image area fits the source aspect ratio; unknown sizes and status placeholders use the default 3:2 height. -->
+                                                    <Border WidthRequest="264" HeightRequest="{Binding ImageAreaHeight}"
+                                                            Background="{DynamicResource IgSunkenBrush}"
                                                             StrokeThickness="0">
                                                         <Border.StrokeShape>
                                                             <RoundRectangle CornerRadius="{DynamicResource IgCardImageCornerRadius}" />
@@ -165,7 +170,7 @@
                                                         <Grid>
                                                             <Image Source="{Binding ImageFilePath, Converter={StaticResource FilePathToImageSource}}"
                                                                    IsVisible="{Binding HasImage}"
-                                                                   Aspect="AspectFill"
+                                                                   Aspect="AspectFit"
                                                                    AutomationProperties.IsInAccessibleTree="False" />
                                                             <toolkit:MediaElement Source="{Binding MediaFilePath, Converter={StaticResource FilePathToMediaSource}}"
                                                                                   HeightRequest="176" WidthRequest="264"
@@ -391,24 +396,25 @@
         <controls:SessionsListView x:Name="SessionList" Grid.Column="0" />
 
         <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12">
-        <!-- Header: title and the three chips. -->
-        <FlexLayout x:Name="ChatHeader" Wrap="Wrap" Direction="Row" AlignItems="Center"
-                    JustifyContent="Start" AlignContent="Start" Margin="0,0,0,-8">
-            <Label x:Name="ChatTitle" StyleClass="title" Text="{Binding Title}" VerticalOptions="Center"
-                   IsVisible="{Binding IsWide}" MaxLines="1" LineBreakMode="TailTruncation" Margin="0,0,8,8" />
-            <Button StyleClass="chip" Text="{Binding ModelsButtonText}"
-                    Command="{Binding OpenModelsCommand}"
-                    SemanticProperties.Description="{Binding ModelsButtonText}" Margin="0,0,8,8" />
-            <Border StyleClass="chip" VerticalOptions="Center" Margin="0,0,8,8">
-                <Label x:Name="AssistantChipText" StyleClass="meta" Text="{Binding AssistantText}" VerticalOptions="Center"
-                       MaxLines="1" LineBreakMode="TailTruncation"
-                       SemanticProperties.Description="{Binding AssistantText}" />
-            </Border>
-            <Button StyleClass="chip" Text="{x:Static strings:AppResources.ChatParametersButton}"
-                    Command="{Binding OpenParametersCommand}"
-                    SemanticProperties.Description="{x:Static strings:AppResources.ChatParametersButton}"
-                    Margin="0,0,8,8" />
-        </FlexLayout>
+        <!-- Header: keep title and chips on one measured row; phones can scroll horizontally. -->
+        <ScrollView x:Name="ChatHeader" Grid.Row="0" Orientation="Horizontal"
+                    HorizontalScrollBarVisibility="Never" VerticalScrollBarVisibility="Never">
+            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                <Label x:Name="ChatTitle" StyleClass="title" Text="{Binding Title}" VerticalOptions="Center"
+                       IsVisible="{Binding IsWide}" MaxLines="1" LineBreakMode="TailTruncation" />
+                <Button StyleClass="chip,chip-compact" Text="{Binding ModelsButtonText}"
+                        Command="{Binding OpenModelsCommand}"
+                        SemanticProperties.Description="{Binding ModelsButtonText}" />
+                <Border StyleClass="chip,chip-compact" VerticalOptions="Center">
+                    <Label x:Name="AssistantChipText" StyleClass="meta" Text="{Binding AssistantText}" VerticalOptions="Center"
+                           MaxLines="1" LineBreakMode="TailTruncation"
+                           SemanticProperties.Description="{Binding AssistantText}" />
+                </Border>
+                <Button StyleClass="chip,chip-compact" Text="{x:Static strings:AppResources.ChatParametersButton}"
+                        Command="{Binding OpenParametersCommand}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.ChatParametersButton}" />
+            </HorizontalStackLayout>
+        </ScrollView>
 
         <CollectionView x:Name="Transcript"
                         Grid.Row="1"

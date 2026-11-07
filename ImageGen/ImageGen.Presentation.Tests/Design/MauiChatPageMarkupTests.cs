@@ -19,21 +19,30 @@ public class MauiChatPageMarkupTests
     }
 
     [Fact]
-    public void ChatHeader_IsWrappingFlexLayout()
+    public void ChatHeader_IsSingleHorizontalScrollViewWithCompactNarrowChips()
     {
         var document = XDocument.Load(Path.Combine(MauiRoot(), "Pages", "ChatPage.xaml"));
+        var root = Assert.IsType<XElement>(document.Root);
+        var header = Assert.Single(root.Descendants(), element =>
+            element.Name.LocalName == "ScrollView" && (string?)element.Attribute(Xaml + "Name") == "ChatHeader");
 
-        Assert.Contains(Assert.IsType<XElement>(document.Root).Descendants(), element =>
-            element.Name.LocalName == "FlexLayout"
-            && (string?)element.Attribute(Xaml + "Name") == "ChatHeader"
-            && (string?)element.Attribute("Wrap") == "Wrap"
-            && (string?)element.Attribute("Direction") == "Row"
-            && (string?)element.Attribute("AlignItems") == "Center"
-            && element.Attribute("HorizontalOptions") is null);
-        Assert.DoesNotContain(Assert.IsType<XElement>(document.Root).Descendants(), element =>
-            element.Name.LocalName == "HorizontalStackLayout"
-            && element.Elements().FirstOrDefault()?.Name.LocalName == "Label"
-            && (string?)element.Elements().First().Attribute("Text") == "{Binding Title}");
+        Assert.Equal("Horizontal", (string?)header.Attribute("Orientation"));
+        Assert.Equal("Never", (string?)header.Attribute("HorizontalScrollBarVisibility"));
+        var chips = Assert.Single(header.Elements(), element => element.Name.LocalName == "HorizontalStackLayout");
+        Assert.Equal("8", (string?)chips.Attribute("Spacing"));
+        Assert.Equal(3, chips.Elements().Count(element =>
+            ((string?)element.Attribute("StyleClass"))?.Split(',').Contains("chip-compact", StringComparer.Ordinal) == true));
+        var stylesDocument = XDocument.Load(Path.Combine(MauiRoot(), "Resources", "Styles", "Styles.xaml"));
+        var compactStyles = Assert.IsType<XElement>(stylesDocument.Root).Elements()
+            .Where(element => element.Name.LocalName == "Style" && (string?)element.Attribute("Class") == "chip-compact")
+            .ToList();
+        Assert.Equal(2, compactStyles.Count);
+        Assert.All(compactStyles, style => Assert.Contains(style.Descendants(), element =>
+            element.Name.LocalName == "DataTrigger"
+            && (string?)element.Attribute("Binding") == "{Binding IsWide}"
+            && (string?)element.Attribute("Value") == "False"));
+        Assert.DoesNotContain(root.Descendants(), element =>
+            element.Name.LocalName == "FlexLayout" && (string?)element.Attribute(Xaml + "Name") == "ChatHeader");
     }
 
     [Fact]
@@ -105,6 +114,25 @@ public class MauiChatPageMarkupTests
         Assert.Contains("protected override void OnDisappearing()", code, StringComparison.Ordinal);
         Assert.Contains("foreach (var player in _mediaPlayers.ToArray())", code, StringComparison.Ordinal);
         Assert.Contains("player.Stop();", code, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TouchBehavior_PreservesChildInputAndHasExplicitBindingContext()
+    {
+        XNamespace toolkit = "http://schemas.microsoft.com/dotnet/2022/maui/toolkit";
+        var document = XDocument.Load(Path.Combine(MauiRoot(), "Pages", "ChatPage.xaml"));
+        var behaviors = Assert.IsType<XElement>(document.Root).Descendants(toolkit + "TouchBehavior").ToList();
+
+        Assert.NotEmpty(behaviors);
+        foreach (var behavior in behaviors)
+        {
+            Assert.Equal("False", (string?)behavior.Attribute("ShouldMakeChildrenInputTransparent"));
+            Assert.True(
+                behavior.Attributes().Any(attribute =>
+                    attribute.Name.LocalName == "BindingContext" && attribute.Value.Contains("x:Reference", StringComparison.Ordinal))
+                || behavior.Attributes().Any(attribute => attribute.Value.Contains("Source={x:Reference", StringComparison.Ordinal)),
+                "TouchBehavior must preserve child input and bind from an explicit element source.");
+        }
     }
 
     [Fact]

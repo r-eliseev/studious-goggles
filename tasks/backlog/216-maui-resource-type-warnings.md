@@ -1,6 +1,6 @@
 ---
 id: 216
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -52,6 +52,12 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+- Во всех шести темах `IgRunBorderThickness` и `IgCardBorderThickness` переведены с `Thickness` на `x:Double` с прежними значениями. Добавлен `IgPromptForegroundColor` с прежним цветом рядом с кистью; `ChatPage` теперь использует цвет для `Label.TextColor`, кисть сохранена.
+- Поиск по `Pages/*.xaml` и `Controls/*.xaml`: прочие `StrokeThickness`/`TextColor` и setters с dynamic resource корректны. `Background`/`BackgroundColor` используют соответственно `*Brush`/`*Color`; `Color` использует `*Color`. Других несовпадений `*Thickness`/`*Brush` не найдено.
+- Добавлен XML-тест всех dynamic `StrokeThickness` и `TextColor` (включая setters) во всех Pages/Controls и всех шести темах. Проверено по TDD: исходный тест упал на `Thickness` вместо `Double`, после исправления прошёл.
+- Presentation tests 515/515; Android MAUI build 0 warnings/errors; `dotnet format` для Presentation.Tests и MAUI прошёл. В задачу 140 добавлена ручная проверка logcat на телефоне; запуск на устройстве этой средой недоступен.
+- План выполнен; live device/logcat check остаётся ручным пунктом задачи 140.
 
 ## Комментарии
 

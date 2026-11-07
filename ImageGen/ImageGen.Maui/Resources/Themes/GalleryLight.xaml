@@ -50,14 +50,15 @@
   <CornerRadius x:Key="IgUserMessageCornerRadius">18,18,6,18</CornerRadius>
   <x:Boolean x:Key="IgUserMessageRoleVisible">False</x:Boolean>
   <x:String x:Key="IgRoleFont">OnestRegular</x:String>
-  <Thickness x:Key="IgRunBorderThickness">0</Thickness>
+  <x:Double x:Key="IgRunBorderThickness">0</x:Double>
   <Thickness x:Key="IgRunPadding">0</Thickness>
   <SolidColorBrush x:Key="IgPromptBackgroundBrush" Color="#F1F1EF" />
   <SolidColorBrush x:Key="IgPromptForegroundBrush" Color="#171717" />
+  <Color x:Key="IgPromptForegroundColor">#171717</Color>
   <Thickness x:Key="IgPromptPadding">10,8</Thickness>
   <x:Static x:Key="IgPromptFontStyle" Member="FontAttributes.None" />
   <x:String x:Key="IgPromptFont">OnestRegular</x:String>
-  <Thickness x:Key="IgCardBorderThickness">0</Thickness>
+  <x:Double x:Key="IgCardBorderThickness">0</x:Double>
   <SolidColorBrush x:Key="IgCardBackgroundBrush" Color="Transparent" />
   <CornerRadius x:Key="IgCardImageCornerRadius">18</CornerRadius>
   <x:Boolean x:Key="IgCardShowFullMeta">False</x:Boolean>

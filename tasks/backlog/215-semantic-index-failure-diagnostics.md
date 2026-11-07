@@ -1,6 +1,6 @@
 ---
 id: 215
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -56,6 +56,13 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+- `OpenRouterClient.ReadEmbeddings` сообщает конкретный дефект ответа (data/count/index/vector/dimension/non-finite); `SemanticIndexService.ValidateResult` сообщает mismatch batch/model/vector/dimension. Сравнение модели без учёта регистра; исходное имя модели сохраняется в индексе.
+- `SemanticIndexStatus.ErrorDetail` содержит безопасную причину до 200 символов; Warning включает ErrorKind и текст. `SettingsPageModel.SemanticSearchStatusText` показывает причину под статусом ошибки на MAUI и Avalonia через общую модель представления.
+- LiveCheck `--only embeddings` выполняет один запрос с двумя короткими фразами, лимитирует оценку $0.01 и добавляет в отчёт HTTP, модель, число/размеры векторов, наличие индексов и usage. Парсер формы ответа приложения вызывается через `OpenRouterClient.EmbedAsync`; разбор trace-summary покрыт fixture-тестом.
+- Проверки: Core 808/808; Presentation 514/514; LiveCheck 12/12; Avalonia 180 passed, 2 skipped (DPAPI и D-Bus); MAUI Android build — 0 warnings/errors; изменённые Core, Core.Tests, Presentation, Presentation.Tests, LiveCheck и LiveCheck.Tests прошли `dotnet format --verify-no-changes`.
+- LiveCheck без ключа выполнен с `--only embeddings --budget-usd 0.01 --max-requests 1`: сценарий отмечен `unverified`, запрос не отправлялся. Живой ответ и исходную причину сбоя установить не удалось, ключ OpenRouter в среде отсутствует; после доступности ключа следует запустить указанный сценарий. Единица `usage.cost` остаётся неподтверждённой.
+- План соблюдён; проверку на живом API заменил безопасным запуском без ключа, тестами фикстуры и тем же клиентским парсером, как и предусмотрено случаем отсутствия ключа.
 
 ## Комментарии
 

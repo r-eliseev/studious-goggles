@@ -47,6 +47,8 @@ public static class AppResources
 
     public static string DeleteSessionMessage => Get(nameof(DeleteSessionMessage));
 
+    public static string SessionLongPressHint => Get(nameof(SessionLongPressHint));
+
     public static string RenameSessionTitle => Get(nameof(RenameSessionTitle));
 
     public static string Rename => Get(nameof(Rename));

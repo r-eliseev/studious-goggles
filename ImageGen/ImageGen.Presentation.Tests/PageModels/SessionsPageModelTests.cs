@@ -576,6 +576,66 @@ public class SessionsPageModelTests : IDisposable
             model.Examples);
     }
 
+    [Fact]
+    public async Task SessionRowShowActions_Rename_UsesRenameHandler()
+    {
+        var session = NewSession("Session", DateTimeOffset.UtcNow);
+        var row = await LoadSessionRowAsync(session);
+        _dialogs.ChooseAsync(row.Title, AppResources.Cancel, Arg.Is<IReadOnlyList<string>>(options =>
+                options.SequenceEqual(new[] { AppResources.Rename, AppResources.DeleteSession })))
+            .Returns(AppResources.Rename);
+        _dialogs.PromptAsync(AppResources.RenameSessionTitle, "", AppResources.Rename, AppResources.Cancel, row.Title)
+            .Returns("Renamed session");
+        _sessionRepository.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+
+        await row.ShowActionsCommand.ExecuteAsync(null);
+
+        Assert.Equal("Renamed session", row.Title);
+    }
+
+    [Fact]
+    public async Task SessionRowShowActions_Delete_UsesDeleteHandler()
+    {
+        var session = NewSession("Session", DateTimeOffset.UtcNow);
+        var row = await LoadSessionRowAsync(session);
+        _dialogs.ChooseAsync(row.Title, AppResources.Cancel, Arg.Is<IReadOnlyList<string>>(options =>
+                options.SequenceEqual(new[] { AppResources.Rename, AppResources.DeleteSession })))
+            .Returns(AppResources.DeleteSession);
+        _dialogs.ConfirmAsync(AppResources.DeleteSessionTitle, AppResources.DeleteSessionMessage,
+                AppResources.DeleteSession, AppResources.Cancel, destructive: true)
+            .Returns(true);
+
+        await row.ShowActionsCommand.ExecuteAsync(null);
+
+        await _sessionRepository.Received(1).DeleteAsync(session.Id, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SessionRowShowActions_Cancelled_DoesNotRenameOrDelete()
+    {
+        var session = NewSession("Session", DateTimeOffset.UtcNow);
+        var row = await LoadSessionRowAsync(session);
+        _dialogs.ChooseAsync(row.Title, AppResources.Cancel, Arg.Any<IReadOnlyList<string>>())
+            .Returns((string?)null);
+
+        await row.ShowActionsCommand.ExecuteAsync(null);
+
+        await _dialogs.DidNotReceive().PromptAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+        await _dialogs.DidNotReceive().ConfirmAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), destructive: true);
+        await _sessionRepository.DidNotReceive().DeleteAsync(session.Id, Arg.Any<CancellationToken>());
+        Assert.Equal("Session", row.Title);
+    }
+
+    private async Task<SessionItemViewModel> LoadSessionRowAsync(Session session)
+    {
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+        return Assert.Single(model.Sessions);
+    }
+
     private static async Task WaitUntilAsync(Func<bool> condition)
     {
         for (var attempt = 0; attempt < 300 && !condition(); attempt++)

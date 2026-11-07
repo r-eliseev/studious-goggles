@@ -1,6 +1,6 @@
 ---
 id: 211
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -53,6 +53,10 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+В `ChatPage.xaml` у карточки задан `x:Name="CardRoot"`; `TouchBehavior` получает явный `BindingContext` через `x:Reference`, тип команды указан как `GenerationItemViewModel`, а `ShouldMakeChildrenInputTransparent` выключен. Это сохраняет касания вложенной кнопки открытия изображения и привязывает long press к `ShowActionsCommand`. Других `TouchBehavior` в MAUI-разметке не найдено. В `docs/knowledge/maui.md` записаны подтверждённые свойства поведения; в ручную проверку 140 добавлены пункты для телефона.
+
+Проверено: новый тест сначала падал из-за отсутствующего `ShouldMakeChildrenInputTransparent`, затем прошёл; Presentation.Tests — 500/500; MAUI Android build — 0 предупреждений и ошибок; форматирование Presentation.Tests и MAUI прошло. Проверка на устройстве остаётся в ручной задаче 140.
 
 ## Комментарии
 

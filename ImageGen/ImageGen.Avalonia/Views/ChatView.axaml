@@ -185,13 +185,14 @@
                                                 <StackPanel Spacing="6">
                                                     <!-- Image area, 3:2, with the per-status placeholder and the overlay strip. -->
                                                     <Panel>
-                                                        <Border Width="264" Height="176"
+                                                        <Border Width="264" Height="{Binding ImageAreaHeight}"
+                                                                Background="{DynamicResource IgSunkenBrush}"
                                                                 CornerRadius="{DynamicResource IgCardImageCornerRadius}"
                                                                 ClipToBounds="True">
                                                             <Panel>
                                                                 <Image Source="{Binding ImageFilePath, Converter={StaticResource FilePathToBitmap}}"
                                                                        IsVisible="{Binding HasImage}"
-                                                                       Stretch="UniformToFill"
+                                                                       Stretch="Uniform"
                                                                        AutomationProperties.Name="{Binding SummaryText}" />
                                                                 <Border IsVisible="{Binding IsVideo}" Background="{DynamicResource IgSunkenBrush}"
                                                                         AutomationProperties.Name="{Binding SummaryText}">

@@ -1,6 +1,6 @@
 ---
 id: 213
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -53,6 +53,10 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+Добавлена чистая функция `CardImageLayout.HeightFor`: размер карточки сохраняет ширину 264, рассчитывает высоту по пропорциям и ограничивает её диапазоном 132–352; неизвестные размеры дают 176. `GenerationItemViewModel.ImageAreaHeight` уведомляет об изменениях, обновляется после чтения размеров и сбрасывается до 176 при смене пути изображения. MAUI использует `AspectFit`, Avalonia — `Uniform`; фон области взят из `IgSunken` темы. Карточки статусов и видео без размеров сохраняют прежнюю высоту 176. В задаче 140 перечислены ручные проверки квадратных, горизонтальных и вертикальных картинок.
+
+Проверено: Presentation.Tests — 508/508; Avalonia headless tests — 180 passed, 2 skipped (DPAPI и D-Bus недоступны); MAUI Android build — 0 предупреждений и ошибок. Форматирование Presentation, Presentation.Tests, Avalonia, Avalonia.Tests и MAUI прошло. `scripts/check.sh` запускается перед коммитом. Реальное отображение на Android остаётся в ручной задаче 140.
 
 ## Комментарии
 

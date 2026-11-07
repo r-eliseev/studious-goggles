@@ -34,6 +34,10 @@ dotnet run --project ImageGen/ImageGen.LiveCheck -- --budget-usd 1 --max-request
 
 Отчёт и отладочный трейс появляются под `tmp/live-check/<UTC-дата>/report.md` и `tmp/live-check/debug/<UTC-дата>/trace.jsonl`. Проверьте каждый сценарий вручную по колонке статуса, модели и ссылке на trace. Сценарии генерации резервируют оценочную цену до запроса и останавливаются, если не помещаются в бюджет. Цены из каталога могут быть устаревшими или переменными; отчёт помечает их как оценочные. Тесты инструмента работают без сети и ключей.
 
+### OpenRouter embeddings
+
+Проверка с двумя короткими текстами: `dotnet run --project ImageGen/ImageGen.LiveCheck -- --only embeddings --budget-usd 0.01 --max-requests 1 --out tmp/live-check`. При отсутствии `IMAGEGEN_LIVE_OPENROUTER_KEY` LiveCheck отмечает сценарий как `unverified` и не отправляет запрос. При ключе запрос выполняется через `OpenRouterClient.EmbedAsync`, то есть тем же разбором и проверками ответа, что использует индекс приложения; отчёт содержит HTTP-статус, модель, число и размер векторов, наличие `index`, usage и результат парсинга. По состоянию на 2026-11-07 живой ответ и причина прежнего сбоя не подтверждены: в этой рабочей среде ключ не предоставлен. `usage.cost` сохраняется как диагностическое значение и не трактуется как USD, пока единица не подтверждена.
+
 Отладка GUI: Windows-приложение — только на Windows-машине; Android вживую (эмулятор/устройство, точки останова, Hot Reload) недоступен в облачной сессии и Kiro Web; на VPS эмулятор не запускается, но возможна отладка на реальном устройстве по сети.
 - Сборка всего решения (`dotnet build ImageGen/ImageGen.slnx`) и `dotnet format ImageGen/ImageGen.slnx` на Linux не запускаются, потому что решение включает MAUI-проект, а без нагрузки MAUI он не загружается. Форматирование и сборка по отдельным проектам: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`.
 - В CI на ubuntu-latest установка нагрузки `maui-android` падала с «Disk quota exceeded», поэтому Android в CI собирается на Windows (`.github/workflows/build.yml`, задача `maui`). В облачной сессии Android-сборка проверена, но CI на ней не настроен.

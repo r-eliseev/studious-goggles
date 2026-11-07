@@ -214,7 +214,7 @@ public sealed partial class SessionsPageModel(
                     Earlier.Clear();
                     foreach (var session in sessions.OrderByDescending(session => session.UpdatedAt))
                     {
-                        var item = new SessionItemViewModel(session, OpenSessionAsync, RenameSessionAsync, DeleteSessionAsync)
+                        var item = new SessionItemViewModel(session, OpenSessionAsync, RenameSessionAsync, DeleteSessionAsync, ShowSessionActionsAsync)
                         {
                             IsCurrent = session.Id == tracker.CurrentId,
                             RunCount = runCounts.GetValueOrDefault(session.Id),
@@ -306,7 +306,7 @@ public sealed partial class SessionsPageModel(
         var item = Sessions.FirstOrDefault(row => row.Id == session.Id);
         if (item is null)
         {
-            item = new SessionItemViewModel(session, OpenSessionAsync, RenameSessionAsync, DeleteSessionAsync)
+            item = new SessionItemViewModel(session, OpenSessionAsync, RenameSessionAsync, DeleteSessionAsync, ShowSessionActionsAsync)
             {
                 IsCurrent = session.Id == tracker.CurrentId,
                 RunCount = runCount,
@@ -509,6 +509,22 @@ public sealed partial class SessionsPageModel(
         catch (Exception ex)
         {
             await _errorAlert.ShowAsync(ex);
+        }
+    }
+
+    private async Task ShowSessionActionsAsync(SessionItemViewModel item)
+    {
+        var choice = await dialogs.ChooseAsync(
+            item.Title,
+            AppResources.Cancel,
+            [AppResources.Rename, AppResources.DeleteSession]);
+        if (string.Equals(choice, AppResources.Rename, StringComparison.Ordinal))
+        {
+            await RenameSessionAsync(item);
+        }
+        else if (string.Equals(choice, AppResources.DeleteSession, StringComparison.Ordinal))
+        {
+            await DeleteSessionAsync(item);
         }
     }
 
