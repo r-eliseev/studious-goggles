@@ -1,8 +1,8 @@
 ---
 id: 241
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-07T12:37:36Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -70,3 +70,6 @@ bash scripts/check.sh
 
 ### 2026-11-07, codex-gpt6
 В run 42375415656 приложение запустилось, два теста прошли, а `InvalidKey_ShowsError` успел прочитать промежуточный статус “Checking the key...”. Изменил ожидание: тест ждёт один из конечных локализованных статусов до 30 секунд. Локальные build/format/check проходят; жду CI rerun.
+
+### 2026-11-07, codex-gpt6
+Run [42378967997](https://github.com/r-eliseev/studious-goggles/actions/runs/42378967997) прошёл: unpackaged app build, Windows preflight и UI smoke зелёные. `windows-e2e` содержит открываемые H.264 MP4 (1024×768) для обоих UI-тестов, логи и metadata; TRX подтверждает два UI-теста и тест аргументов FFmpeg как `Passed`.

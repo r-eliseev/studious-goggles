@@ -1,7 +1,7 @@
 # UI-тесты собранного приложения (E2E) в GitHub Actions
 
-Статус: черновик
-Код: `ImageGen/ImageGen.E2E.Common`, `ImageGen/ImageGen.E2E.Android`, `ImageGen/ImageGen.E2E.Windows`, `.github/workflows/ui-e2e.yml` (появятся в задачах 238–243)
+Статус: черновик (базовые сценарии 238–242 реализованы; мок-сценарий 243 заблокирован)
+Код: `ImageGen/ImageGen.E2E.Common`, `ImageGen/ImageGen.E2E.Android`, `ImageGen/ImageGen.E2E.Windows`, `.github/workflows/ui-e2e.yml` (задачи 238–242)
 
 Основа — спецификация владельца «Автоматизация UI-тестов .NET MAUI в GitHub Actions», версия 1.0, присланная 2026-11-07 (оригинал — `docs/specs/ui-e2e-original/`, удалить при архивировании 238–250; Apple-платформы — дополнение `docs/specs/apple-ci-e2e.md`, ADR 0030). Ниже записаны её требования, приведённые к проекту, с поправками после проверки. Решения и проверенные факты — в ADR 0029.
 

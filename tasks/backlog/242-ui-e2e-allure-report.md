@@ -1,8 +1,8 @@
 ---
 id: 242
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-07T13:06:09Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -59,7 +59,8 @@ bash scripts/check.sh
 - Проверено на фикстурах в `tmp/`: passed/failed/skipped считаются по платформам, вложение копируется, одинаковые имена завершаются понятной ошибкой, отсутствие результатов не валит job. `npx allure-commandline@2.46.1 generate ...` создал HTML-отчёт из fixture результатов.
 - `dotnet build` и `dotnet format --verify-no-changes` проектов Android/Windows, `bash scripts/check.sh`, YAML/JSON parsing и `git diff --check` прошли. На Linux нет браузера для проверки `file://`; способ открыть скачанный отчёт через локальный HTTP-сервер записан в knowledge. CI job и PR status visibility ожидают прогона.
 - Проверочный Android MTP run с отсутствующим APK (ожидаемый setup failure) подтвердил, что `[AllureNUnit]` создаёт 3 result JSON и attachments. Конфиг Allure читается из test output, а относительный `directory` считается относительно него; путь `../../../../../reports/<platform>/allure-results` выводит результаты в workspace. Run `42374038475` пока не включал этот конфиг и не запускал report job; интегрированная проверка ожидает повторного CI.
-- `docs/specs/ui-e2e.md` остаётся в статусе «черновик»: пункты 238–242 ещё не прошли полный CI и не закрыты.
+- `docs/specs/ui-e2e.md` остаётся в статусе «черновик», пока мок-сценарий 243 заблокирован и интегрированная спецификация не подтверждена целиком.
+- Run [42378967997](https://github.com/r-eliseev/studious-goggles/actions/runs/42378967997) подтвердил интеграцию: report job объединил Allure results обеих платформ и создал `allure-report`. В HTML suite summary все 3 Android и оба Windows UI-теста имеют статус `passed`; отдельный Windows `VideoRecorderTests` тоже прошёл. Артефакты `android-e2e`, `windows-e2e` и `allure-report` доступны из run 14 дней.
 
 ## Комментарии
 
@@ -68,3 +69,6 @@ bash scripts/check.sh
 
 ### 2026-11-07, владелец (в чате, записал claude-audit)
 Спецификация UI-тестов прислана владельцем; выбор: NUnit + Allure, сначала smoke, затем мок. План одобрен ранее данным поручением «заапрувь все таски которые будут». Изменение `.github/workflows/` по этой спецификации владелец попросил явно (ADR 0029).
+
+### 2026-11-07, codex-gpt6
+Run 42378967997 подтвердил report job: Allure HTML собран из Android и Windows результатов, summary показывает прошедшие UI-тесты обеих платформ; Allure artifact загружен. Полный smoke прогон и видео подтверждены в карточках 240 и 241.

@@ -18,4 +18,10 @@ Workflow собирает Allure результаты Android и Windows в HTML
 
 ## Интегрированный прогон 42374038475
 
-Сборки Android APK и unpackaged Windows app прошли; Android preflight установил и запустил APK на API 33. Android UI test не стартовал из-за лишнего `--` в синтаксисе `dotnet test` с MTP. Windows UI test действительно запустил окно через FlaUI и выполнил 3 сценария: один прошёл, два упали из-за проверок доступности/статуса в тестах. Следующий прогон должен подтвердить исправленный синтаксис MTP, UI-проверки и выгрузку per-test артефактов.
+Сборки Android APK и unpackaged Windows app прошли; Android preflight установил и запустил APK на API 33. Android UI test не стартал из-за лишнего `--` в синтаксисе `dotnet test` с MTP. Windows UI test действительно запустил окно через FlaUI и выполнил 3 сценария: один прошёл, два упали из-за проверок доступности/статуса в тестах. Исправления и полный итог приведены ниже.
+
+## Полный UI E2E прогон 42378967997
+
+На коммите `13db79eb50bfa527997703fedad3768f623028a8` прошли Android APK build, Android preflight, три Android smoke-теста, Windows unpackaged build, Windows preflight, два Windows UI smoke-теста, тест `VideoRecorder` и общий report job. TRX показывает все 3 Android теста и все 3 Windows fixture tests со статусом `Passed`; Allure HTML содержит результаты и вложения обеих платформ.
+
+Артефакт `android-e2e`: три per-test MP4 H.264 320×640, проверены `ffprobe`; также logcat, metadata и Allure attachments. Артефакт `windows-e2e`: два per-test MP4 H.264 1024×768, проверены `ffprobe`; также app/FFmpeg логи, metadata и Allure attachments. Артефакт `allure-report` содержит suite summary с пятью прошедшими UI-тестами и прошедшим тестом аргументов FFmpeg. Все артефакты workflow хранятся 14 дней.

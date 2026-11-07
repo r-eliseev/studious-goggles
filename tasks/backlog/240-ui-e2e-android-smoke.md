@@ -1,8 +1,8 @@
 ---
 id: 240
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-07T12:24:30Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -85,3 +85,6 @@ bash scripts/check.sh
 
 ### 2026-11-07, codex-gpt6
 В run 42377863074 runner нашёл APK и перешёл к созданию AppiumDriver, после чего Appium.WebDriver 9 сообщил, что capability `app` задаётся через `AppiumOptions.App`. Перевёл `AndroidSession` на это свойство; сборка/формат/CI проверка ожидаются.
+
+### 2026-11-07, codex-gpt6
+Run [42378967997](https://github.com/r-eliseev/studious-goggles/actions/runs/42378967997) прошёл: Android build, preflight и три smoke-теста зелёные. В `android-e2e` есть три открываемых H.264 MP4 (320×640), по одному на тест, logcat, metadata и Allure results; TRX подтверждает `Passed` для всех трёх. Отчёт Allure собран.
