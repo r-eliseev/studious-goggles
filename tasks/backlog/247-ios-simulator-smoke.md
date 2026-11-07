@@ -82,3 +82,10 @@ Run [42398374908](https://github.com/r-eliseev/studious-goggles/actions/runs/423
 Рантайм пытается создать открытый generic-базовый класс `AvaloniaAppDelegate<TApp>` вместо нашего `AppDelegate`. `AppDelegate.cs` и `Main.cs` совпадают с официальным шаблоном Avalonia 12 и с `samples/ControlCatalog.iOS`. Гипотеза: регистратор Objective-C по умолчанию в Debug-сборке для симулятора не сопоставляет класс `AppDelegate` с нашим типом. Проверка: сборка с `-p:Registrar=static` (ветка `review/2026-11-01-windows-tasks-close-ghnt1m`, коммит `d802a0e`). Итог допишу сюда.
 
 Заодно: `apple-sim-smoke.sh` сейчас не показывает причину в выводе job. Стоит печатать последние 30 строк `launch.log`, если процесс не жив.
+
+### 2026-11-07, claude-audit (итог эксперимента со статическим регистратором)
+Run [42402076497](https://github.com/r-eliseev/studious-goggles/actions/runs/42402076497) (`-p:Registrar=static`): ошибка та же, но сообщение точнее: `Cannot construct an instance of the type 'Avalonia.iOS.AvaloniaAppDelegate\`1' from Objective-C because the type is generic`.
+
+В собранном `ImageGen.Avalonia` есть оба класса, `_OBJC_CLASS_$_AppDelegate` и `_OBJC_CLASS_$_Avalonia_iOS_AvaloniaAppDelegate_1` (проверено `llvm-nm` по артефакту `avalonia-ios-sim`). Значит, Objective-C-класс `AppDelegate` создан, но рантайм не сопоставляет его с нашим управляемым типом и доходит до generic-базы. Регистратор поэтому ни при чём.
+
+Отличие от MAUI, которое запускается: сборка Avalonia iOS идёт с `-p:TrimMode=copy`. Через шаги ILLink в .NET iOS проходит и регистрация. Следующая проверка — без `TrimMode=copy`, а предупреждения линкера не как ошибки (`-p:ILLinkTreatWarningsAsErrors=false`), коммит `ea773d0`.
