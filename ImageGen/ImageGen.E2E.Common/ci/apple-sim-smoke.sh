@@ -139,7 +139,11 @@ xcrun simctl launch --console-pty "$udid" "$bundle_id" >"$out_dir/launch.log" 2>
 launch_pid=$!
 launched=true
 is_running() {
-  xcrun simctl spawn "$udid" launchctl list | grep -Fq "$bundle_id"
+  # Not a pipe into grep -q: grep exits at the first match, launchctl then gets SIGPIPE, and with pipefail the
+  # check failed for a running app (run 42409893841: "running at 15 s", then "signal 13: Broken pipe" at 30 s).
+  local services
+  services=$(xcrun simctl spawn "$udid" launchctl list) || return 1
+  grep -Fq "$bundle_id" <<<"$services"
 }
 # The process check that decides the result runs at 30 s: on a slow start (still on the splash screen) the 15 s
 # check missed a live app, and an unhandled managed exception (SIGABRT) leaves no crash report, so "seen once" is
