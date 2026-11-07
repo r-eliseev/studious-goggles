@@ -18,8 +18,17 @@ def measure(path: Path) -> dict[str, int | float]:
         raise ValueError("unsupported BMP DIB header")
 
     width, signed_height, planes, bits_per_pixel, compression = struct.unpack_from("<iiHHI", data, 18)
-    if width <= 0 or signed_height == 0 or planes != 1 or bits_per_pixel not in (24, 32) or compression != 0:
-        raise ValueError("expected uncompressed 24-bit or 32-bit BMP")
+    valid_compression = compression == 0 or (compression == 3 and bits_per_pixel == 32)
+    if width <= 0 or signed_height == 0 or planes != 1 or bits_per_pixel not in (24, 32) or not valid_compression:
+        raise ValueError("expected uncompressed 24-bit or supported 32-bit BMP")
+
+    if compression == 3:
+        mask_offset = 14 + 40 if dib_size >= 52 else 14 + dib_size
+        if mask_offset + 12 > pixel_offset:
+            raise ValueError("BMP bit masks overlap or exceed pixel data")
+        red_mask, green_mask, blue_mask = struct.unpack_from("<III", data, mask_offset)
+        if (red_mask, green_mask, blue_mask) != (0x00FF0000, 0x0000FF00, 0x000000FF):
+            raise ValueError("unsupported 32-bit BMP channel masks")
 
     height = abs(signed_height)
     bytes_per_pixel = bits_per_pixel // 8

@@ -61,6 +61,9 @@ bash scripts/check.sh
 - `apple-sim-smoke.sh` проверяет bundle id и arm64, создаёт/загружает/запускает приложение, проверяет процесс через 15 секунд, сохраняет два скриншота и логи, собирает crash reports и удаляет симулятор через `trap`.
 - Добавлены отдельные schedule/dispatch jobs для MAUI и Avalonia; оба артефакта публикуются при любом исходе. На pull request smoke jobs пока пропущены; вопрос о включении после трёх ночных прогонов добавлен в `docs/status.md`.
 - Локально: `python3 -I .../apple-sim-pick.py` — успешно; `bash -n .../apple-sim-smoke.sh` и YAML parse — успешно; shell smoke и GitHub-прогоны ещё ожидаются.
+- После merge run [42381579325](https://github.com/r-eliseev/studious-goggles/actions/runs/42381579325) автоматически выполнил оба simulator smoke. Оба crash report указывают `CODESIGNING`, `Invalid Page`, `SIGKILL (Code Signature Invalid)`; MAUI был виден живым через 15 секунд, Avalonia — нет. Simulator apps собирались с `EnableCodeSigning=false` и устанавливались без последующей подписи. Перед установкой добавлена ad-hoc подпись и строгая проверка `codesign`; CI-подтверждение ожидается.
+- Run [42386890196](https://github.com/r-eliseev/studious-goggles/actions/runs/42386890196) проверил обе сборочные стратегии: подпись на этапе сборки и ad-hoc переподпись готового `.app` не устранили падение. В обоих crash report faulting image — системный `dyld_sim`, который падает при разборе Mach-O; причина не доказана как проблема подписи приложения. Workflow возвращён к штатной unsigned simulator-сборке .NET; записан блокер Apple runtime, повторная проверка ожидается.
+- Run [42392573546](https://github.com/r-eliseev/studious-goggles/actions/runs/42392573546) проверил MAUI и Avalonia на iOS 26.4: оба снова получили `CODESIGNING: Invalid Page` внутри `dyld_sim`, как и на iOS 26.5. Первая попытка согласованного Xcode 26.4/.NET 10.0.203 не дошла до сборки: `Xcode_26.4.app` на runner не содержит MacOSX SDK, `actool` отсутствует. Во втором прогоне Xcode 26.4.1/.NET 10.0.203 обе сборки прошли, но приложения завершились с тем же crash. Тест SDK signing после этого остановился при сборке с ошибкой `No valid iOS code signing keys found in keychain`; добавлен явный ad-hoc signing identity `CodesignKey=-`. Следующий прогон проверит подписанное SDK приложение без переподписи в smoke. Похожий открытый отчёт .NET MAUI: https://github.com/dotnet/maui/issues/35792.
 
 ## Комментарии
 
@@ -69,3 +72,6 @@ bash scripts/check.sh
 
 ### 2026-11-07, владелец (в чате, записал claude-audit)
 Дополнение владельца «MAUI + Avalonia — Apple CI/E2E» (оригинал — `docs/specs/ui-e2e-original/`). План одобрен ранее данным поручением «заапрувь все таски которые будут». Новый workflow `apple-ci.yml` по этому дополнению владелец попросил явно (ADR 0030).
+
+### 2026-11-07, codex-gpt6
+В run 42381579325 оба iOS smoke jobs запускались автоматически после merge, но приложения завершались с `SIGKILL (Code Signature Invalid)`, `CODESIGNING: Invalid Page`. Приложения собираются unsigned для simulator. Добавил ad-hoc signing извлечённого `.app` с `codesign --verify --deep --strict` до `simctl install`; проверка на hosted macOS ожидается.
