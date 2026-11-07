@@ -80,6 +80,9 @@ public abstract class AndroidTestBase
     }
 
     protected IWebElement WaitForText(string id, TimeSpan timeout)
+        => WaitForText(id, timeout, text => !string.IsNullOrWhiteSpace(text));
+
+    protected IWebElement WaitForText(string id, TimeSpan timeout, Func<string, bool> predicate)
     {
         try
         {
@@ -88,7 +91,7 @@ public abstract class AndroidTestBase
                 try
                 {
                     var element = driver.FindElement(By.Id(ResourceIdFor(id)));
-                    return string.IsNullOrWhiteSpace(element.Text) ? null : element;
+                    return predicate(element.Text) ? element : null;
                 }
                 catch (NoSuchElementException)
                 {

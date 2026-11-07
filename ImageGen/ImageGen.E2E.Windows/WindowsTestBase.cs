@@ -163,12 +163,15 @@ public abstract class WindowsTestBase
     }
 
     protected AutomationElement WaitForText(string id, TimeSpan timeout)
+        => WaitForText(id, timeout, text => !string.IsNullOrWhiteSpace(text));
+
+    protected AutomationElement WaitForText(string id, TimeSpan timeout, Func<string, bool> predicate)
     {
         var element = Retry.WhileNull(
                 () =>
                 {
                     var candidate = Window.FindFirstDescendant(condition => condition.ByAutomationId(id));
-                    return string.IsNullOrWhiteSpace(candidate?.Name) ? null : candidate;
+                    return candidate is null || !predicate(candidate.Name) ? null : candidate;
                 },
                 timeout,
                 TimeSpan.FromMilliseconds(250))

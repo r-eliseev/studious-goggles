@@ -27,14 +27,13 @@ public sealed class FirstRunTests : AndroidTestBase
         Find(TestIds.ApiKeyEntry).SendKeys(InvalidKey);
         Find(TestIds.ApiKeySave).Click();
 
-        var message = WaitForText(TestIds.ApiKeyStatus, TimeSpan.FromSeconds(30)).Text;
         var invalidFormat = string.Format(CultureInfo.InvariantCulture, AppResources.ProviderKeyInvalidFormat, "OpenRouter");
         var networkError = string.Format(CultureInfo.InvariantCulture, AppResources.ProviderKeyNetworkErrorFormat, "OpenRouter");
-        Assert.That(
-            message.StartsWith(invalidFormat, StringComparison.Ordinal)
-            || message.StartsWith(networkError, StringComparison.Ordinal),
-            Is.True,
-            "The status should contain the invalid-key or network error resource.");
+        var message = WaitForText(
+            TestIds.ApiKeyStatus,
+            TimeSpan.FromSeconds(30),
+            text => text.StartsWith(invalidFormat, StringComparison.Ordinal)
+                || text.StartsWith(networkError, StringComparison.Ordinal)).Text;
         Assert.That(message, Does.Not.Contain(InvalidKey));
     }
 

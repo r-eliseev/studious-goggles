@@ -27,14 +27,13 @@ public sealed class FirstRunTests : WindowsTestBase
         Find(TestIds.ApiKeyEntry).AsTextBox().Enter(InvalidKey);
         Find(TestIds.ApiKeySave).AsButton().Invoke();
 
-        var message = WaitForText(TestIds.ApiKeyStatus, TimeSpan.FromSeconds(30)).Name;
         var invalidFormat = string.Format(CultureInfo.InvariantCulture, AppResources.ProviderKeyInvalidFormat, "OpenRouter");
         var networkError = string.Format(CultureInfo.InvariantCulture, AppResources.ProviderKeyNetworkErrorFormat, "OpenRouter");
-        Assert.That(
-            message.StartsWith(invalidFormat, StringComparison.Ordinal)
-            || message.StartsWith(networkError, StringComparison.Ordinal),
-            Is.True,
-            $"Unexpected provider status: '{message.Replace(InvalidKey, "[redacted]", StringComparison.Ordinal)}'.");
+        var message = WaitForText(
+            TestIds.ApiKeyStatus,
+            TimeSpan.FromSeconds(30),
+            text => text.StartsWith(invalidFormat, StringComparison.Ordinal)
+                || text.StartsWith(networkError, StringComparison.Ordinal)).Name;
         Assert.That(message, Does.Not.Contain(InvalidKey));
     }
 }

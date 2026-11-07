@@ -65,6 +65,7 @@ bash scripts/check.sh
 - Проверки: `dotnet build ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj` — успешно, 0 предупреждений и ошибок; `dotnet format ... --verify-no-changes` — успешно; `bash scripts/check.sh` — успешно.
 - `dotnet test ... --report-trx --results-directory tmp/e2e-test-results/android` обнаружил все 3 теста и сформировал TRX, но локальный запуск ожидаемо завершился ошибкой `APP_APK must point to an existing Android APK`: в среде нет собранного APK и Android-эмулятора. CI-прогон и проверка видео/артефактов ожидаются.
 - Integrated run [42374038475](https://github.com/r-eliseev/studious-goggles/actions/runs/42374038475): APK build and Android preflight passed, but test launch failed because the MTP command had an incorrect extra `--`; fixed to pass `--report-trx` directly. Local test runs also exposed that Allure and per-test paths are relative to the runner output directory: per-test reports now use `E2E_REPORTS_DIR` (repo `reports/` in CI, repo `tmp/` locally), and Allure results use a path back to the workspace. Rerun pending.
+- CI run [42375415656](https://github.com/r-eliseev/studious-goggles/actions/runs/42375415656): the APK built and preflight installed/launched it, but the test command did not inherit `APP_APK` because the emulator action invokes script lines in separate shells. Changed the test invocation to pass `APP_APK` as a command-scoped environment variable. The invalid-key scenario now waits for a terminal invalid-format/network status instead of accepting “Checking the key...”. Android build, formatting, and `scripts/check.sh` pass locally; CI rerun pending.
 
 ## Комментарии
 
@@ -73,3 +74,6 @@ bash scripts/check.sh
 
 ### 2026-11-07, владелец (в чате, записал claude-audit)
 Спецификация UI-тестов прислана владельцем; выбор: NUnit + Allure, сначала smoke, затем мок. План одобрен ранее данным поручением «заапрувь все таски которые будут». Изменение `.github/workflows/` по этой спецификации владелец попросил явно (ADR 0029).
+
+### 2026-11-07, codex-gpt6
+В run 42375415656 APK build и preflight прошли, но все три NUnit теста завершились на setup: `APP_APK` задавался отдельной shell-командой и не попадал в процесс тестов. Исправил передачу переменной в самой команде `dotnet test`; также уточнил ожидание ошибки ключа, чтобы промежуточный статус не считался результатом. Локальные build/format/check проходят; жду CI.

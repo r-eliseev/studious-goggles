@@ -102,9 +102,8 @@ jobs:
           script: |
             appium driver doctor uiautomator2
             bash ImageGen/ImageGen.E2E.Common/ci/android-preflight.sh
-            export APP_APK="$(find publish/android -maxdepth 1 -type f -name '*-Signed.apk' -print -quit)"
             mkdir -p reports/android/allure-results
-            dotnet test --project ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj --report-trx --results-directory reports/android
+            APP_APK="$(find publish/android -maxdepth 1 -type f -name '*-Signed.apk' -print -quit)" dotnet test --project ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj --report-trx --results-directory reports/android
       - uses: actions/upload-artifact@v4
         if: always()
         with:
