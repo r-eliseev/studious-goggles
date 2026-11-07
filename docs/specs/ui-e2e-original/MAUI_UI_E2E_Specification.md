@@ -1,4 +1,4 @@
-> Исходная спецификация владельца (2026-11-07), без правок, справочно для исполнителя задач 238–243. Действуют поправки из ADR 0029 и `docs/specs/ui-e2e.md`: Appium 3.9.0 + uiautomator2 8.7.3 вместо `appium@4`; на Android `MobileBy.Id`, а не `AccessibilityId`; проекты в `ImageGen/ImageGen.E2E.*`; мок по HTTPS; эмулятор API 33. Папку `docs/specs/ui-e2e-original/` удалить при архивировании задач 238–243.
+> Исходная спецификация владельца (2026-11-07), без правок, справочно для исполнителя задач 238–243. Действуют поправки из ADR 0029 и `docs/specs/ui-e2e.md`: Appium 3.9.0 + uiautomator2 8.7.3 вместо `appium@4`; на Android `MobileBy.Id`, а не `AccessibilityId`; проекты в `ImageGen/ImageGen.E2E.*`; мок по HTTPS; эмулятор API 33. Папку `docs/specs/ui-e2e-original/` удалить при архивировании задач 238–250.
 
 Техническая спецификация • 7 ноября 2026
 

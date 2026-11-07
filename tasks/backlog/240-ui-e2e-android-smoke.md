@@ -15,7 +15,7 @@ created: 2026-11-07
 Среда: GitHub Actions (эмулятор); локально — сборка проекта и `dotnet format` на Linux (эмулятора в сессии нет).
 
 ## Критерии готовности
-- Проект `ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj`, `net10.0`, пакеты в `Directory.Packages.props` (центральное управление, как остальные): `NUnit` 4.x, `NUnit3TestAdapter`, `Microsoft.NET.Test.Sdk`, `Appium.WebDriver`, `Allure.NUnit` 2.15.0. Версии `NUnit`, `NUnit3TestAdapter` и `Appium.WebDriver` выбрать последние стабильные на nuget.org в день работы и записать в «Отчёт»; `Appium.WebDriver` — та, у которой в описании пакета указана совместимость с Appium 3 (если не указано — 8.x и записать это). Ссылка на `ImageGen.E2E.Common`. Проект в `ImageGen/ImageGen.slnx`.
+- Проект `ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj`, `net10.0`, пакеты в `ImageGen/Directory.Packages.props` (центральное управление, как остальные): `NUnit` 4.x, `NUnit3TestAdapter`, `Microsoft.NET.Test.Sdk`, `Appium.WebDriver`, `Allure.NUnit` 2.15.0. Версии `NUnit`, `NUnit3TestAdapter` и `Appium.WebDriver` выбрать последние стабильные на nuget.org в день работы и записать в «Отчёт»; `Appium.WebDriver` — та, у которой в описании пакета указана совместимость с Appium 3 (если не указано — 8.x и записать это). Ссылка на `ImageGen.E2E.Common`. Проект в `ImageGen/ImageGen.slnx`.
 - Проект работает с MTP-раннером из `global.json` (`"test": {"runner": "Microsoft.Testing.Platform"}`): `NUnit3TestAdapter` 5.x поддерживает MTP через `<EnableNUnitRunner>true</EnableNUnitRunner>` и `<OutputType>Exe</OutputType>` — проверить по README пакета; если не поддерживает — остановиться и записать в «Комментарии».
 - `AndroidSession` (фикстура `[SetUpFixture]` или базовый класс `AndroidTestBase`): драйвер `AndroidDriver` на `http://127.0.0.1:4723`, опции `PlatformName=Android`, `AutomationName=UiAutomator2`, `App` = полный путь из переменной `APP_APK` (нет переменной или файла → `InvalidOperationException` с текстом), `appPackage=com.eliseev.imagegen`, `noReset=false`, `newCommandTimeout=120`. Таймаут создания драйвера 3 мин.
 - Перед каждым тестом: `mobile: clearApp` + `mobile: activateApp` (чистое состояние без переустановки), папка `reports/android/<Класс>.<Тест>/`, `StartRecordingScreen` с `timeLimit` 1800 с, отметка времени для logcat.
@@ -30,7 +30,7 @@ created: 2026-11-07
 
 ## Анализ
 Справочно: исходная спецификация владельца — `docs/specs/ui-e2e-original/` (docx и md); при расхождении действуют ADR 0029 и `docs/specs/ui-e2e.md`.
-ADR 0029, `docs/specs/ui-e2e.md`, `docs/knowledge/ui-e2e.md` (из 238), `ImageGen/ImageGen.E2E.Common/TestIds.cs` (239), `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx` (тексты ошибок ключа), `Directory.Packages.props`, `global.json`.
+ADR 0029, `docs/specs/ui-e2e.md`, `docs/knowledge/ui-e2e.md` (из 238), `ImageGen/ImageGen.E2E.Common/TestIds.cs` (239), `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx` (тексты ошибок ключа), `ImageGen/Directory.Packages.props`, `global.json`.
 
 ## План
 1. Проект, пакеты, сборка на Linux.
@@ -38,7 +38,7 @@ ADR 0029, `docs/specs/ui-e2e.md`, `docs/knowledge/ui-e2e.md` (из 238), `ImageG
 3. Три smoke-теста по одному, каждый — прогон в CI.
 4. Workflow: триггеры и артефакты.
 
-Файлы: `ImageGen/ImageGen.E2E.Android/` (новый проект: `ImageGen.E2E.Android.csproj`, `AndroidSession.cs`, `AndroidTestBase.cs`, `TestArtifacts.cs`, `FirstRunTests.cs`), `Directory.Packages.props`, `ImageGen/ImageGen.slnx`, `.github/workflows/ui-e2e.yml`, `docs/knowledge/ui-e2e.md`.
+Файлы: `ImageGen/ImageGen.E2E.Android/` (новый проект: `ImageGen.E2E.Android.csproj`, `AndroidSession.cs`, `AndroidTestBase.cs`, `TestArtifacts.cs`, `FirstRunTests.cs`), `ImageGen/Directory.Packages.props`, `ImageGen/ImageGen.slnx`, `.github/workflows/ui-e2e.yml`, `docs/knowledge/ui-e2e.md`.
 
 ### Проверка
 ```
