@@ -160,8 +160,9 @@
                                                     </MenuFlyout>
                                                 </FlyoutBase.ContextFlyout>
                                                 <VerticalStackLayout Spacing="6">
-                                                    <!-- Image area 3:2 with the per-status placeholder and the overlay strip. -->
-                                                    <Border WidthRequest="264" HeightRequest="176"
+                                                    <!-- Image area fits the source aspect ratio; unknown sizes and status placeholders use the default 3:2 height. -->
+                                                    <Border WidthRequest="264" HeightRequest="{Binding ImageAreaHeight}"
+                                                            Background="{DynamicResource IgSunkenBrush}"
                                                             StrokeThickness="0">
                                                         <Border.StrokeShape>
                                                             <RoundRectangle CornerRadius="{DynamicResource IgCardImageCornerRadius}" />
@@ -169,7 +170,7 @@
                                                         <Grid>
                                                             <Image Source="{Binding ImageFilePath, Converter={StaticResource FilePathToImageSource}}"
                                                                    IsVisible="{Binding HasImage}"
-                                                                   Aspect="AspectFill"
+                                                                   Aspect="AspectFit"
                                                                    AutomationProperties.IsInAccessibleTree="False" />
                                                             <toolkit:MediaElement Source="{Binding MediaFilePath, Converter={StaticResource FilePathToMediaSource}}"
                                                                                   HeightRequest="176" WidthRequest="264"

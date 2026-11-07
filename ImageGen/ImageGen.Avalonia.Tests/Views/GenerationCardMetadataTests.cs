@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 using ImageGen.Avalonia.Services;
 using ImageGen.Avalonia.Views;
@@ -132,6 +133,8 @@ public sealed class GenerationCardMetadataTests
 
         var label = Assert.Single(view.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == card.ImageDimensionsText);
         Assert.True(label.IsVisible);
+        var image = Assert.Single(view.GetVisualDescendants().OfType<Image>());
+        Assert.Equal(Stretch.Uniform, image.Stretch);
     }
 
     private static IDisposable ApplyStyle(AppearanceStyle style)

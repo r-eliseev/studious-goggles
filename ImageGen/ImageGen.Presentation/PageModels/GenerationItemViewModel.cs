@@ -168,6 +168,9 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     public partial string ImageDimensionsText { get; set; } = "";
 
     [ObservableProperty]
+    public partial double ImageAreaHeight { get; set; } = 176;
+
+    [ObservableProperty]
     public partial bool IsVideo { get; set; }
 
     [ObservableProperty]
@@ -381,6 +384,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         {
             ImageDimensionsText = "";
             HasImageDimensions = false;
+            ImageAreaHeight = CardImageLayout.HeightFor(null, null);
         }
         _generationImagePath = imagePath;
 
@@ -445,6 +449,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
 
     public void ApplyImageDimensions(ImageDimensions? dimensions)
     {
+        ImageAreaHeight = CardImageLayout.HeightFor(dimensions?.Width, dimensions?.Height);
         if (dimensions is { } value)
         {
             var divisor = GreatestCommonDivisor(value.Width, value.Height);
