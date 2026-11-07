@@ -13,6 +13,8 @@ ADR 0027, п. 1; заменяет первый этап 167. Клиент OpenRo
 
 Уточнение владельца 2026-11-07: никакого фиксированного списка моделей — загружать все доступные, как картинки и видео. У OpenRouter два вида (публичный каталог `GET /api/v1/models?output_modalities=all`, 2026-11-07): `audio` — 4 модели (`google/lyria-3-pro-preview`, `google/lyria-3-clip-preview`, `openai/gpt-audio`, `openai/gpt-audio-mini`), генерация через `chat/completions` с потоком; `speech` — 38 моделей (ElevenLabs, OpenAI, Mistral, HeyGen, Fish Audio и др.), генерация через `POST /api/v1/audio/speech` (совместим с OpenAI Audio Speech API; поля `model`, `input` обязательны, `voice`, `response_format` — по документации OpenRouter «Text-to-speech»; ответ — байты аудио с `Content-Type`, например `audio/mpeg`; цена — `pricing.prompt` за символ входного текста; без `voice` запрос уходит только к провайдерам с голосом по умолчанию, остальные отвечают ошибкой проверки).
 
+Живая проверка 2026-11-07 (claude-audit, ключ владельца, LiveCheck `--only music`, `google/lyria-3-clip-preview`, `audio.format = "mp3"`, без `voice`): HTTP 200 за 7,7 с, `Content-Type: text/event-stream`, 4 события SSE — первое без звука, звук целиком в одном событии (base64, ~1 МБ в теле), последнее — с `usage` (`cost: 0.04`, `cost_details.upstream_inference_cost: 0.04`); транскрипта нет. Файл — mp3 с заголовком `ID3`, 44,1 кГц, стерео, ~194 кбит/с, 744 657 байт, длительность 30,8 с при промпте «10 seconds» (Clip даёт ~30 с независимо от просьбы). Повтор с wav не понадобился.
+
 Зависит от: —
 Среда: Linux или Windows; живой запуск — владелец (`--only music`, ~$0.04).
 
@@ -21,6 +23,7 @@ ADR 0027, п. 1; заменяет первый этап 167. Клиент OpenRo
 - `IAudioGenerationProvider.GenerateAudioAsync(AudioGenerationRequest(AudioModel Model, string Prompt, string? Voice), CancellationToken)` — путь выбирается по `Model.Output`: `Speech` → `POST audio/speech` с `{model, input: Prompt, response_format: "mp3", voice}` (`voice` только если задан), `Content` — тело ответа потоком (`ResponseHeadersRead`), `MediaType` — из `Content-Type` (при отсутствии — по первым байтам), `CostUsd` — `null` (цену по символам считает оценка 222); `ChatAudio` — как ниже. Общий результат — → `AudioGenerationResponse : IAsyncDisposable` с `Stream Content` (только чтение, раскодированные байты по мере прихода потока), `string MediaType` (известен после первых байтов), `decimal? CostUsd` и `string? Transcript` (известны после конца потока).
 - Раскодирующий поток `SseAudioStream` (в `ImageGen.Core/OpenRouter/`): читает строки `data: …`, пропускает пустые и комментарии, на `[DONE]` — конец; из JSON берёт `choices[0].delta.audio.data` (base64 → байты), `delta.audio.transcript` (склеивает), `usage.cost` (последнее значение). Нет ни одного аудио-куска до конца → `ProviderException(ErrorKind.EmptyResponse, "audio stream contained no audio")`. Ответ `error` в потоке → `ProviderException` с текстом.
 - Формат — по первым байтам: `ID3` или кадр MPEG (`0xFF` и старшие 3 бита второго байта = 1) → `audio/mpeg`; `RIFF....WAVE` → `audio/wav`; `OggS` → `audio/ogg`; `fLaC` → `audio/flac`; иначе — `ProviderException(ErrorKind.Unknown, "unknown audio format")`.
+- Кусок звука может быть большим (~1 МБ base64 в одной строке `data:`): разбор строк — без ограничения длины строки ниже лимита ответа (`ProviderResponseLimits.Audio`), base64 раскодируется порциями.
 - `ChatAudio`: если сервер отвечает 400 с упоминанием `format` или `voice` в тексте ошибки — один повтор с `audio.format = "wav"` (как сценарий 208). `Speech`: ошибка проверки голоса → `ProviderException(ErrorKind.BadRequest, …)` с текстом провайдера, чтобы пользователь выбрал голос (223).
 - Перенос логики разбора: сценарий LiveCheck `MusicScenario` переходит на `SseAudioStream` из Core (одна реализация разбора).
 - Тесты без сети: три синтетических SSE-события с base64 кусками mp3-заголовка → поток отдаёт ровно эти байты, `MediaType = audio/mpeg`, `CostUsd` из последнего события; WAV-заголовок → `audio/wav`; поток без аудио → `EmptyResponse`; событие `error` → исключение; 400 про формат → второй запрос с `wav`; каталог из фикстуры `/models` (взять 2 модели `audio`, 2 `speech`, 2 других) → четыре модели с верным `Output` и ценой за символ у `speech`; `Speech`-запрос: тело с `model`/`input`/`response_format`, без `voice`, если не задан; ответ `audio/mpeg` 2 КБ → поток 2 КБ, тип `audio/mpeg`.
@@ -68,3 +71,6 @@ bash scripts/check.sh
 
 ### 2026-11-07, claude-audit
 По уточнению владельца: каталог — все модели с выходом `audio` и `speech`, без списков; добавлен путь `audio/speech` для речевых моделей.
+
+### 2026-11-07, claude-audit
+Добавлены факты живой проверки Lyria (формат, события потока, цена в `usage.cost`, фиксированная длина клипа ~30 с).

@@ -13,6 +13,10 @@ created: 2026-11-07
 
 Просто принять имя из ответа нельзя: `SemanticIndexService` сравнивает сохранённые эмбеддинги с константой `EmbeddingModel` строго (`StringComparison.Ordinal` в отборе устаревших и в `CountCurrent`), поэтому эмбеддинги с `parasail-bge-m3` считались бы устаревшими и пересчитывались бесконечно.
 
+Живая проверка 2026-11-07 (claude-audit, ключ владельца, прямой `POST /api/v1/embeddings` с двумя текстами): HTTP 200 за 3,1 с; `model: "BAAI/bge-m3"`, `provider: "DeepInfra"`; `data` — 2 элемента с `object`, `embedding` (1024 числа `float`), `index`; `usage.cost = 1.6e-07` (USD; `cost_details.upstream_inference_cost` то же). Утром лог владельца показал `parasail-bge-m3` — имя зависит от провайдера, которого выбрал OpenRouter.
+
+Сценарий LiveCheck `--only embeddings` (215) падает `InvalidCastException`: `(OpenRouterClient)router.GetConnection(provider)` — роутер оборачивает клиент в `InMemoryQueuedImageConnection`.
+
 Зависит от: —
 Среда: Linux или Windows.
 
@@ -21,7 +25,9 @@ created: 2026-11-07
 - Эмбеддинги сохраняются с запрошенным идентификатором модели (`EmbeddingModel`, `baai/bge-m3`), а не с именем из ответа; имя из ответа пишется в журнал на уровне Debug один раз за индексацию.
 - Все сравнения модели в `SemanticIndexService` — с `EmbeddingModel` единообразно (одно правило, одна вспомогательная функция).
 - Защита от смены модели провайдером — проверка размерности (уже есть: смена размерности очищает индекс).
-- `EmbeddingTraceSummary` LiveCheck (215) не считает разницу имени ошибкой, а печатает оба имени.
+- `EmbeddingTraceSummary` LiveCheck (215) не считает разницу имени ошибкой, а печатает оба имени и поле `provider`.
+- LiveCheck `RunEmbeddingsAsync` берёт клиента через `router.GetTextEmbeddingClient(provider)` вместо приведения `GetConnection` к `OpenRouterClient`; запуск `--only embeddings` с ключом проходит (результат — в «Отчёт»).
+- Цена эмбеддингов: `OpenRouterClient.EmbedAsync` возвращает `usage.cost` как `CostUsd` (единица подтверждена живым ответом — USD); комментарий «unit has not been verified» убрать; расход записывается в журнал (как уже делает `SemanticIndexService` при `CostUsd` не `null`). Тест: ответ с `usage.cost` 1.6e-07 → `CostUsd = 0.00000016`.
 - Тесты: ответ с `model = "parasail-bge-m3"` и правильными векторами → эмбеддинги сохранены с `baai/bge-m3`, статус `Ready`; повторный запуск индексации ничего не пересчитывает (провайдер не вызывается).
 - Факт записан в `docs/knowledge/dev-environment.md`, раздел «OpenRouter embeddings» (215): поле `model` ответа — имя провайдера (`parasail-bge-m3`, лог 2026-11-07), не запрошенное.
 
@@ -33,7 +39,7 @@ created: 2026-11-07
 2. Правка `ValidateResult`, сохранения и сравнений; Debug-запись имени из ответа.
 3. LiveCheck-сводка; запись в `docs/knowledge/dev-environment.md`.
 
-Файлы: `ImageGen/ImageGen.Core/Services/SemanticIndexService.cs`, `ImageGen/ImageGen.Core.Tests/Services/SemanticIndexServiceTests.cs`, `ImageGen/ImageGen.LiveCheck/Scenarios/EmbeddingTraceSummary.cs`, `ImageGen/ImageGen.LiveCheck.Tests/EmbeddingTraceSummaryTests.cs`, `docs/knowledge/dev-environment.md`.
+Файлы: `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core.Tests/OpenRouter/OpenRouterClientTests.cs`, `ImageGen/ImageGen.LiveCheck/Scenarios/LiveCheckRunner.cs`, `ImageGen/ImageGen.Core/Services/SemanticIndexService.cs`, `ImageGen/ImageGen.Core.Tests/Services/SemanticIndexServiceTests.cs`, `ImageGen/ImageGen.LiveCheck/Scenarios/EmbeddingTraceSummary.cs`, `ImageGen/ImageGen.LiveCheck.Tests/EmbeddingTraceSummaryTests.cs`, `docs/knowledge/dev-environment.md`.
 
 ### Проверка
 ```
@@ -61,3 +67,6 @@ bash scripts/check.sh
 
 ### 2026-11-07, владелец (в чате, записал claude-audit)
 План одобрен ранее данным поручением «заапрувь все таски которые будут».
+
+### 2026-11-07, claude-audit
+Добавлены результаты живой проверки эмбеддингов, исправление падения сценария LiveCheck и запись цены эмбеддингов (`usage.cost` в USD).
