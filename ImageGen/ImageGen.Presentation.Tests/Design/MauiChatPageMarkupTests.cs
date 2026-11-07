@@ -108,6 +108,25 @@ public class MauiChatPageMarkupTests
     }
 
     [Fact]
+    public void TouchBehavior_PreservesChildInputAndHasExplicitBindingContext()
+    {
+        XNamespace toolkit = "http://schemas.microsoft.com/dotnet/2022/maui/toolkit";
+        var document = XDocument.Load(Path.Combine(MauiRoot(), "Pages", "ChatPage.xaml"));
+        var behaviors = Assert.IsType<XElement>(document.Root).Descendants(toolkit + "TouchBehavior").ToList();
+
+        Assert.NotEmpty(behaviors);
+        foreach (var behavior in behaviors)
+        {
+            Assert.Equal("False", (string?)behavior.Attribute("ShouldMakeChildrenInputTransparent"));
+            Assert.True(
+                behavior.Attributes().Any(attribute =>
+                    attribute.Name.LocalName == "BindingContext" && attribute.Value.Contains("x:Reference", StringComparison.Ordinal))
+                || behavior.Attributes().Any(attribute => attribute.Value.Contains("Source={x:Reference", StringComparison.Ordinal)),
+                "TouchBehavior must preserve child input and bind from an explicit element source.");
+        }
+    }
+
+    [Fact]
     public void TranscriptScrolled_UserGesture_DoesNotStartProgrammaticScroll()
     {
         // A run taller than the transcript is always the visible last row: scrolling to it on every gesture threw the

@@ -125,7 +125,7 @@
                                             BindableLayout.ItemsSource="{Binding Generations}">
                                     <BindableLayout.ItemTemplate>
                                         <DataTemplate x:DataType="pm:GenerationItemViewModel">
-                                            <Border WidthRequest="280" Margin="0,0,8,8" Padding="8"
+                                            <Border x:Name="CardRoot" WidthRequest="280" Margin="0,0,8,8" Padding="8"
                                                     Background="{DynamicResource IgCardBackgroundBrush}"
                                                     StrokeThickness="{DynamicResource IgCardBorderThickness}"
                                                     Stroke="{DynamicResource IgLineColor}"
@@ -135,7 +135,11 @@
                                                 </Border.StrokeShape>
                                                 <!-- Long press (phones) opens the actions sheet; right-click (Windows, Mac) opens the flyout. Off on Windows: it captures the pointer and the "…" button gets no Click (task 088). -->
                                                 <Border.Behaviors>
-                                                    <toolkit:TouchBehavior IsEnabled="{OnPlatform WinUI=False, Default=True}" LongPressCommand="{Binding ShowActionsCommand}" />
+                                                    <toolkit:TouchBehavior x:DataType="pm:GenerationItemViewModel"
+                                                                           BindingContext="{Binding Source={x:Reference CardRoot}, Path=BindingContext, x:DataType=Border}"
+                                                                           ShouldMakeChildrenInputTransparent="False"
+                                                                           IsEnabled="{OnPlatform WinUI=False, Default=True}"
+                                                                           LongPressCommand="{Binding ShowActionsCommand}" />
                                                 </Border.Behaviors>
                                                 <Border.GestureRecognizers>
                                                     <TapGestureRecognizer Command="{Binding Source={x:Reference Page}, Path=BindingContext.SelectCardCommand}"
