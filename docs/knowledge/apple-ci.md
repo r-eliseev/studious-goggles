@@ -38,3 +38,4 @@ Run [42392573546](https://github.com/r-eliseev/studious-goggles/actions/runs/423
 - **Ссылки на ресурсы из desktop-проекта.** `Link` должен включать `Fonts/`: `Assets/Fonts/%(RecursiveDir)%(Filename)%(Extension)`. `%(RecursiveDir)` — только часть пути после `**`.
 - **Причину падения показывает `launch.log` артефакта smoke.** При `SIGABRT` от необработанного управляемого исключения отчёта о падении нет (`crashReports=0`).
 - **Проверка процесса на 15 с ненадёжна.** MAUI на 15 с бывал ещё на заставке, поэтому решает проверка на 30 с.
+- **`launchctl list | grep -q` под `pipefail` ложно падает.** `grep -q` выходит на первом совпадении, `simctl spawn` получает `SIGPIPE` («signal 13: Broken pipe»), и проверка считает живое приложение мёртвым (run 42409893841). Вывод сначала сохраняется в переменную. Проверено run [42412288939](https://github.com/r-eliseev/studious-goggles/actions/runs/42412288939): оба iOS smoke зелёные.
