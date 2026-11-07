@@ -62,12 +62,18 @@ jobs:
       - name: Package simulator app
         if: always()
         run: |
-          app=$(find ImageGen/ImageGen.Maui/bin -maxdepth 6 -type d -name '*.app' -print -quit)
+          app=$(find ImageGen/ImageGen.Maui/bin/Debug/net10.0-ios/iossimulator-arm64 -type d -name '*.app' -print -quit)
           if [ -n "$app" ]; then
-            id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")
+            plist="$app/Info.plist"
+            executable_dir="$app"
+            if [ ! -f "$plist" ]; then
+              plist="$app/Contents/Info.plist"
+              executable_dir="$app/Contents/MacOS"
+            fi
+            id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")
             [ "$id" = com.eliseev.imagegen ]
-            executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Info.plist")
-            lipo -archs "$app/$executable" | grep -qw arm64
+            executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$plist")
+            lipo -archs "$executable_dir/$executable" | grep -qw arm64
             mkdir -p artifacts
             tar -czf artifacts/maui-ios-sim.tar.gz -C "$(dirname "$app")" "$(basename "$app")"
           fi
@@ -102,12 +108,19 @@ jobs:
       - name: Package Mac Catalyst app
         if: always()
         run: |
-          app=$(find ImageGen/ImageGen.Maui/bin -maxdepth 6 -type d -name '*.app' -print -quit)
+          app=$(find ImageGen/ImageGen.Maui/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64 -type d -name '*.app' -print -quit)
           if [ -n "$app" ]; then
-            id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")
+            plist="$app/Info.plist"
+            executable_dir="$app"
+            id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist" 2>/dev/null || true)
+            if [ "$id" != com.eliseev.imagegen ]; then
+              plist="$app/Contents/Info.plist"
+              executable_dir="$app/Contents/MacOS"
+              id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")
+            fi
             [ "$id" = com.eliseev.imagegen ]
-            executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Info.plist")
-            lipo -archs "$app/$executable" | grep -qw arm64
+            executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$plist")
+            lipo -archs "$executable_dir/$executable" | grep -qw arm64
             mkdir -p artifacts
             tar -czf artifacts/maui-maccatalyst.tar.gz -C "$(dirname "$app")" "$(basename "$app")"
           fi
@@ -144,7 +157,7 @@ jobs:
       - name: Package simulator app
         if: always()
         run: |
-          app=$(find ImageGen/ImageGen.Avalonia.iOS/bin -maxdepth 6 -type d -name '*.app' -print -quit)
+          app=$(find ImageGen/ImageGen.Avalonia.iOS/bin/Debug/net10.0-ios/iossimulator-arm64 -type d -name '*.app' -print -quit)
           if [ -n "$app" ]; then
             id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")
             [ "$id" = com.eliseev.imagegen.avalonia ]
@@ -183,5 +196,69 @@ jobs:
         with:
           name: avalonia-macos
           path: artifacts/avalonia-macos.tar.gz
+          if-no-files-found: warn
+          retention-days: 14
+
+  smoke-ios-maui:
+    needs: build-maui-ios
+    if: always() && github.event_name != 'pull_request'
+    runs-on: macos-26
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download MAUI simulator app
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: maui-ios-sim
+          path: artifacts
+      - name: Run MAUI iOS simulator smoke
+        run: |
+          mkdir -p reports/ios-smoke/maui
+          if [ -f artifacts/maui-ios-sim.tar.gz ]; then
+            bash ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh artifacts/maui-ios-sim.tar.gz com.eliseev.imagegen reports/ios-smoke/maui
+          else
+            printf '{"runtime":"blocked","deviceType":"unknown","launched":false,"aliveAfter15s":false,"crashReports":0}\n' > reports/ios-smoke/maui/summary.json
+            echo 'No MAUI simulator app artifact was produced by its build job.' > reports/ios-smoke/maui/errors.txt
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-smoke-maui
+          path: reports/ios-smoke/maui/
+          if-no-files-found: warn
+          retention-days: 14
+
+  smoke-ios-avalonia:
+    needs: build-avalonia-ios
+    if: always() && github.event_name != 'pull_request'
+    runs-on: macos-26
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Avalonia simulator app
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: avalonia-ios-sim
+          path: artifacts
+      - name: Run Avalonia iOS simulator smoke
+        run: |
+          mkdir -p reports/ios-smoke/avalonia
+          if [ -f artifacts/avalonia-ios-sim.tar.gz ]; then
+            bash ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh artifacts/avalonia-ios-sim.tar.gz com.eliseev.imagegen.avalonia reports/ios-smoke/avalonia
+          else
+            printf '{"runtime":"blocked","deviceType":"unknown","launched":false,"aliveAfter15s":false,"crashReports":0}\n' > reports/ios-smoke/avalonia/summary.json
+            echo 'No Avalonia simulator app artifact was produced by its build job.' > reports/ios-smoke/avalonia/errors.txt
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-smoke-avalonia
+          path: reports/ios-smoke/avalonia/
           if-no-files-found: warn
           retention-days: 14

@@ -27,7 +27,7 @@ public sealed class IosSecretStore : ISecretStore, ISecretPersistence
         cancellationToken.ThrowIfCancellationRequested();
         try
         {
-            var status = SecKeyChain.QueryAsRecord(Query(name), out var record);
+            var record = SecKeyChain.QueryAsRecord(Query(name), out var status);
             if (status == SecStatusCode.ItemNotFound)
             {
                 return Task.FromResult<string?>(null);

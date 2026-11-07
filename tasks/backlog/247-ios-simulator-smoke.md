@@ -56,6 +56,12 @@ bash scripts/check.sh
 
 ## Отчёт
 
+### 2026-11-07, codex-gpt6 (в работе)
+- `apple-sim-pick.py` выбирает последнюю доступную iOS runtime и первый поддерживаемый ею iPhone, без зашитых версии/модели. Проверка на сохранённом инвентаре `tmp/apple-preflight-run4/` выбрала iOS 26.5 / iPhone 17 Pro.
+- `apple-sim-smoke.sh` проверяет bundle id и arm64, создаёт/загружает/запускает приложение, проверяет процесс через 15 секунд, сохраняет два скриншота и логи, собирает crash reports и удаляет симулятор через `trap`.
+- Добавлены отдельные schedule/dispatch jobs для MAUI и Avalonia; оба артефакта публикуются при любом исходе. На pull request smoke jobs пока пропущены; вопрос о включении после трёх ночных прогонов добавлен в `docs/status.md`.
+- Локально: `python3 -I .../apple-sim-pick.py` — успешно; `bash -n .../apple-sim-smoke.sh` и YAML parse — успешно; shell smoke и GitHub-прогоны ещё ожидаются.
+
 ## Комментарии
 
 ### 2026-11-07, claude-audit

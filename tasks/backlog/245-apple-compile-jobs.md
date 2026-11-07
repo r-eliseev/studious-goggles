@@ -58,7 +58,8 @@ bash scripts/check.sh
 - `bash -n ImageGen/ImageGen.E2E.Common/ci/apple-make-app.sh` — успешно.
 - Проверка на фиктивной публикации в `tmp/fake-publish`: исполняемый apphost и все обязательные поля `Info.plist` созданы; успешно.
 - Workflow разделён на четыре build jobs и запускается на pull request, main и расписании. В iOS jobs используется проверенный набор SDK 10.0.302 / workload 10.0.302.0 / Xcode 26.6. Артефакты упаковываются в tar.gz и публикуются при любом результате сборки.
-- `bash scripts/check.sh`, `git diff --check` — успешно. GitHub Actions ещё не завершён; итог сборок и упаковки требуется внести после прогона.
+- Первый workflow [42371375200](https://github.com/r-eliseev/studious-goggles/actions/runs/42371375200): MAUI iOS Simulator собрался и артефакт создался; Avalonia macOS `.app` собрался, подписался ad-hoc и упакован; MAUI Catalyst собрался, но проверка bundle ID прочитала Info.plist не из `Contents`; Avalonia iOS нашла ошибки компиляции, отражённые в отчёте 246. Исправлено: целевые пути app bundle ограничены соответствующей платформой; Catalyst теперь выбирает правильный Info.plist для его структуры.
+- `bash scripts/check.sh`, `git diff --check` — успешно. Повторный workflow с исправлениями и Avalonia iOS фиксом ожидается.
 
 ## Комментарии
 

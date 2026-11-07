@@ -20,7 +20,12 @@ public sealed class IosLogSharer : ILogSharer
         }
 
         var controller = new UIActivityViewController(urls, null);
-        var presenter = UIApplication.SharedApplication.KeyWindow?.RootViewController;
+        var activeScene = UIApplication.SharedApplication.ConnectedScenes
+            .OfType<UIWindowScene>()
+            .FirstOrDefault(scene => scene.ActivationState == UISceneActivationState.ForegroundActive);
+        var window = activeScene?.Windows.FirstOrDefault(candidate => candidate.IsKeyWindow)
+            ?? activeScene?.Windows.FirstOrDefault();
+        var presenter = window?.RootViewController;
         while (presenter?.PresentedViewController is { } presented)
         {
             presenter = presented;
@@ -33,9 +38,11 @@ public sealed class IosLogSharer : ILogSharer
 
         if (controller.PopoverPresentationController is { } popover)
         {
-            popover.SourceView = presenter.View;
+            var presenterView = presenter.View
+                ?? throw new InvalidOperationException("The iOS presenter view is not available.");
+            popover.SourceView = presenterView;
             popover.SourceRect = new CoreGraphics.CGRect(
-                presenter.View.Bounds.GetMidX(), presenter.View.Bounds.GetMidY(), 0, 0);
+                presenterView.Bounds.GetMidX(), presenterView.Bounds.GetMidY(), 0, 0);
             popover.PermittedArrowDirections = 0;
         }
 

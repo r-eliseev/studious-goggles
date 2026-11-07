@@ -58,6 +58,11 @@ bash scripts/check.sh
 
 ## Отчёт
 
+### 2026-11-07, codex-gpt6 (в работе)
+- Первый CI build выявил сигнатуру `SecKeyChain.QueryAsRecord` (`SecRecord` возвращается, `SecStatusCode` идёт через `out`), nullable UIKit view и устаревший `UIApplication.KeyWindow`; исправлены.
+- Предупреждение IL2026 из динамической загрузки Avalonia theme resources подавлено локально только в iOS-проекте, где тема выбирается по URI во время выполнения.
+- Сборка CI ожидает повторного прогона. Предыдущий run 42371375200 завершился ошибкой компиляции; детали были в `IosLogSharer`/`IosSecretStore` и предупреждении IL2026.
+
 ## Комментарии
 
 ### 2026-11-07, claude-audit
