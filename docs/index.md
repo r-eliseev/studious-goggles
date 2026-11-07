@@ -12,5 +12,5 @@
 | knowledge/docker.md | сборка, запуск и хранение данных Web-хоста в Docker | при self-hosted запуске Web |
 | design/ | рекомендации платформ и токены дизайна (`implementation.md`, `tokens.json`) | перед вёрсткой |
 | decisions/ | ADR и шаблон `_template.md` | при спорных изменениях |
-| specs/ | спецификации функций (`image-client.md`, `chat-sessions.md`, `media-generation.md`) и шаблон `_template.md` | при изменении поведения |
+| specs/ | спецификации функций (`image-client.md`, `chat-sessions.md`, `media-generation.md`, `ui-e2e.md`) и шаблон `_template.md` | при изменении поведения |
 | log/ | отчёты аудита и шаблон `_template.md` | при поиске результатов аудита |
