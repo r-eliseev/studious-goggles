@@ -159,7 +159,7 @@ jobs:
       - name: Install compatible iOS workload
         run: dotnet workload install maui --version ${{ inputs.ios_toolchain == '26.4.1' && '10.0.203.1' || '10.0.302.0' }}
       - name: Build Avalonia iOS Simulator (CI only, SDK signed)
-        run: dotnet build ImageGen/ImageGen.Avalonia.iOS/ImageGen.Avalonia.iOS.csproj -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=true -p:CodesignKey=- -p:CodesignRequireProvisioningProfile=true -p:DisableCodesignVerification=true -p:TrimMode=copy
+        run: dotnet build ImageGen/ImageGen.Avalonia.iOS/ImageGen.Avalonia.iOS.csproj -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=true -p:CodesignKey=- -p:CodesignRequireProvisioningProfile=true -p:DisableCodesignVerification=true -p:TrimMode=copy -p:Registrar=static
       - name: Verify Avalonia iOS formatting
         run: dotnet format ImageGen/ImageGen.Avalonia.iOS/ImageGen.Avalonia.iOS.csproj --verify-no-changes
       - name: Explain simulator build failure
