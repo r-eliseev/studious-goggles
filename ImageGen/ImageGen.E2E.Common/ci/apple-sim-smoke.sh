@@ -87,7 +87,11 @@ fi
 
 xcrun simctl list -j runtimes >"$out_dir/runtimes.json"
 xcrun simctl list -j devicetypes >"$out_dir/devicetypes.json"
-selection=$(python3 -I "$script_dir/apple-sim-pick.py" "$out_dir/runtimes.json" "$out_dir/devicetypes.json")
+if [ -n "${APPLE_SIM_RUNTIME_VERSION:-}" ]; then
+  selection=$(python3 -I "$script_dir/apple-sim-pick.py" "$out_dir/runtimes.json" "$out_dir/devicetypes.json" "$APPLE_SIM_RUNTIME_VERSION")
+else
+  selection=$(python3 -I "$script_dir/apple-sim-pick.py" "$out_dir/runtimes.json" "$out_dir/devicetypes.json")
+fi
 runtime=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["runtime"])' "$selection")
 runtime_name=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["runtimeName"])' "$selection")
 device_type=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["deviceType"])' "$selection")

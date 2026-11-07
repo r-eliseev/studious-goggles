@@ -2,6 +2,11 @@ name: apple-ci
 
 on:
   workflow_dispatch:
+    inputs:
+      ios_runtime_version:
+        description: iOS Simulator runtime version for diagnosis; empty selects the latest available
+        required: false
+        type: string
   schedule:
     - cron: '17 2 * * *'
   push:
@@ -213,6 +218,8 @@ jobs:
           name: maui-ios-sim
           path: artifacts
       - name: Run MAUI iOS simulator smoke
+        env:
+          APPLE_SIM_RUNTIME_VERSION: ${{ inputs.ios_runtime_version }}
         run: |
           mkdir -p reports/ios-smoke/maui
           if [ -f artifacts/maui-ios-sim.tar.gz ]; then
@@ -245,6 +252,8 @@ jobs:
           name: avalonia-ios-sim
           path: artifacts
       - name: Run Avalonia iOS simulator smoke
+        env:
+          APPLE_SIM_RUNTIME_VERSION: ${{ inputs.ios_runtime_version }}
         run: |
           mkdir -p reports/ios-smoke/avalonia
           if [ -f artifacts/avalonia-ios-sim.tar.gz ]; then
