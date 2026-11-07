@@ -48,7 +48,7 @@ smoke_app() {
   local bundle_id=$3
   local app_name=$4
   local app_dir="$repo_root/tmp/apple-macos-$label-$$"
-  local app_path executable start_marker
+  local app_path executable app_executable_path app_plist start_marker process_ids process_id
 
   if [ -z "$artifact" ] || [ ! -f "$artifact" ]; then
     printf 'Artifact unavailable (build may be blocked).\n' >"$report_dir/app-$label.txt"
@@ -66,6 +66,28 @@ smoke_app() {
   if [ -z "$app_path" ]; then
     printf 'Archive did not contain an .app bundle.\n' >"$report_dir/app-$label.txt"
     app_failures+=("$label:missing-app")
+    rm -rf "$app_dir"
+    return 0
+  fi
+  app_plist="$app_path/Contents/Info.plist"
+  if [ -f "$app_plist" ]; then
+    executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app_plist")
+    app_executable_path="$app_path/Contents/MacOS/$executable"
+  else
+    app_plist="$app_path/Info.plist"
+    executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app_plist")
+    app_executable_path="$app_path/$executable"
+  fi
+
+  if ! codesign --force --deep --sign - --timestamp=none "$app_path" >"$report_dir/app-$label-codesign.log" 2>&1; then
+    printf 'Could not ad-hoc sign app bundle.\n' >"$report_dir/app-$label.txt"
+    app_failures+=("$label:codesign")
+    rm -rf "$app_dir"
+    return 0
+  fi
+  if ! codesign --verify --deep --strict "$app_path" >>"$report_dir/app-$label-codesign.log" 2>&1; then
+    printf 'App bundle code signature verification failed.\n' >"$report_dir/app-$label.txt"
+    app_failures+=("$label:codesign-verify")
     rm -rf "$app_dir"
     return 0
   fi
@@ -91,8 +113,14 @@ smoke_app() {
     cp "$report" "$report_dir/crash/"
   done < <(find "$HOME/Library/Logs/DiagnosticReports" -type f \( -name '*.crash' -o -name '*.ips' \) -newer "$start_marker" -print0 2>/dev/null || true)
   osascript -e "tell application id \"$bundle_id\" to quit" >"$report_dir/app-$label-close.log" 2>&1 || true
-  pkill -f "$app_name" >/dev/null 2>&1 || true
-  rm -rf "$app_dir"
+  process_ids=$(pgrep -f "$app_executable_path" || true)
+  for process_id in $process_ids; do
+    [ "$process_id" = "$$" ] || kill "$process_id" >/dev/null 2>&1 || true
+  done
+  sleep 1
+  if ! pgrep -f "$app_executable_path" >/dev/null 2>&1; then
+    rm -rf "$app_dir"
+  fi
 }
 
 smoke_app avalonia "$avalonia_artifact" com.eliseev.imagegen.avalonia ImageGen.Avalonia
@@ -100,7 +128,7 @@ smoke_app catalyst "$catalyst_artifact" com.eliseev.imagegen ImageGen.Maui
 
 mkdir -p "$report_dir/crash"
 crash_count=$(find "$report_dir/crash" -type f | wc -l | tr -d ' ')
-python3 - "$report_dir/summary.json" "$gui_session" "$resolution" "$non_uniform_ratio" "$accessibility_ok" "$crash_count" "${app_failures[*]}" <<'PY'
+python3 - "$report_dir/summary.json" "$gui_session" "$resolution" "$non_uniform_ratio" "$accessibility_ok" "$crash_count" "${app_failures[*]-}" <<'PY'
 import json
 import sys
 

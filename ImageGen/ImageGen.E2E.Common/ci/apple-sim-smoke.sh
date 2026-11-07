@@ -64,7 +64,11 @@ cleanup() {
     wait "$launch_pid" >/dev/null 2>&1
   fi
   if [ -n "$udid" ]; then
-    xcrun simctl spawn "$udid" log show --last 5m --predicate 'process CONTAINS "ImageGen" OR process CONTAINS "Omnilite"' >"$out_dir/simulator.log" 2>&1
+    if command -v gtimeout >/dev/null 2>&1; then
+      gtimeout 60 xcrun simctl spawn "$udid" log show --last 5m --predicate 'process CONTAINS "ImageGen" OR process CONTAINS "Omnilite"' >"$out_dir/simulator.log" 2>&1 || echo "simulator log collection timed out or failed" >>"$out_dir/simulator.log"
+    else
+      xcrun simctl spawn "$udid" log show --last 5m --predicate 'process CONTAINS "ImageGen" OR process CONTAINS "Omnilite"' >"$out_dir/simulator.log" 2>&1 || echo "simulator log collection failed" >>"$out_dir/simulator.log"
+    fi
     copy_crash_reports
     xcrun simctl shutdown "$udid" >/dev/null 2>&1
     xcrun simctl delete "$udid" >/dev/null 2>&1
@@ -87,7 +91,11 @@ fi
 
 xcrun simctl list -j runtimes >"$out_dir/runtimes.json"
 xcrun simctl list -j devicetypes >"$out_dir/devicetypes.json"
-selection=$(python3 -I "$script_dir/apple-sim-pick.py" "$out_dir/runtimes.json" "$out_dir/devicetypes.json")
+if [ -n "${APPLE_SIM_RUNTIME_VERSION:-}" ]; then
+  selection=$(python3 -I "$script_dir/apple-sim-pick.py" "$out_dir/runtimes.json" "$out_dir/devicetypes.json" "$APPLE_SIM_RUNTIME_VERSION")
+else
+  selection=$(python3 -I "$script_dir/apple-sim-pick.py" "$out_dir/runtimes.json" "$out_dir/devicetypes.json")
+fi
 runtime=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["runtime"])' "$selection")
 runtime_name=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["runtimeName"])' "$selection")
 device_type=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["deviceType"])' "$selection")

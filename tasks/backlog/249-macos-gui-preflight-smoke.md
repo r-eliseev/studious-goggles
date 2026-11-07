@@ -55,6 +55,12 @@ bash scripts/check.sh
 
 ## Отчёт
 
+### 2026-11-07, codex-gpt6 (в работе)
+- Первый автоматический smoke на `main` — run [42381579325](https://github.com/r-eliseev/studious-goggles/actions/runs/42381579325) — остановился до проверки GUI-приложений: `sips -s format bmp` сформировал 32-bit BMP с `BI_BITFIELDS` (`compression=3`), а парсер принимал только `compression=0`.
+- Добавил поддержку несжатого 32-bit BMP с RGB masks BGRA и проверил на сохранённом runner screenshot: `nonUniformRatio=0.9991188`; стандартные 24-bit fixture `solid.bmp` и `noisy.bmp` тоже проходят.
+- В `smoke_app` добавлена ad-hoc подпись и строгая проверка `.app` перед `open`, поскольку соседние iOS smoke выявили те же unsigned simulator bundle подписи. Следующий CI запуск должен проверить macOS GUI и оба запускаемых приложения.
+- Run [42386890196](https://github.com/r-eliseev/studious-goggles/actions/runs/42386890196): скриншот содержательный (`nonUniformRatio=0.9991404`), оба приложения оставались запущенными и создали скриншоты, crash reports отсутствовали. Job завершился с `app_failures[*]: unbound variable` из-за `set -u` и пустого массива; чтение массива исправлено через пустое значение по умолчанию. Hosted confirmation ожидается.
+
 ## Комментарии
 
 ### 2026-11-07, claude-audit
@@ -62,3 +68,6 @@ bash scripts/check.sh
 
 ### 2026-11-07, владелец (в чате, записал claude-audit)
 Дополнение владельца «MAUI + Avalonia — Apple CI/E2E» (оригинал — `docs/specs/ui-e2e-original/`). План одобрен ранее данным поручением «заапрувь все таски которые будут». Новый workflow `apple-ci.yml` по этому дополнению владелец попросил явно (ADR 0030).
+
+### 2026-11-07, codex-gpt6
+Run 42381579325 провалился на конвертированном `desktop.bmp`: заголовок BMP использует compression `BI_BITFIELDS` и 32-bit BGRA masks, законный вариант вывода `sips`. Теперь парсер принимает этот формат. Следующий прогон проверит, что GUI-preflight продолжит выполнение и запустит app smokes.

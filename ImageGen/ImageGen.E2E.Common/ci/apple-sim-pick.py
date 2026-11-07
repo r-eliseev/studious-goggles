@@ -17,20 +17,30 @@ def read_json(path: str) -> dict:
 
 
 def main() -> int:
-    if len(sys.argv) != 3:
-        print(f"usage: {sys.argv[0]} <runtimes.json> <devicetypes.json>", file=sys.stderr)
+    if len(sys.argv) not in (3, 4):
+        print(f"usage: {sys.argv[0]} <runtimes.json> <devicetypes.json> [runtime-version]", file=sys.stderr)
         return 2
 
     runtimes = read_json(sys.argv[1]).get("runtimes", [])
     device_types = read_json(sys.argv[2]).get("devicetypes", [])
+    requested_version = sys.argv[3] if len(sys.argv) == 4 else None
+    requested_prefix = f"{requested_version}." if requested_version else None
     known_ids = {item.get("identifier") for item in device_types}
     candidates = [
         runtime
         for runtime in runtimes
-        if runtime.get("isAvailable") and runtime.get("platform") == "iOS"
+        if runtime.get("isAvailable")
+        and runtime.get("platform") == "iOS"
+        and (
+            requested_version is None
+            or runtime.get("version") == requested_version
+            or runtime.get("version", "").startswith(requested_prefix)
+        )
     ]
     if not candidates:
-        raise SystemExit("no available iOS simulator runtime")
+        if requested_version is None:
+            raise SystemExit("no available iOS simulator runtime")
+        raise SystemExit(f"no available iOS simulator runtime with version {requested_version}")
 
     runtime = max(candidates, key=lambda item: version_key(item.get("version", "0")))
     devices = runtime.get("supportedDeviceTypes", [])
