@@ -63,6 +63,7 @@ bash scripts/check.sh
 - Локально: `python3 -I .../apple-sim-pick.py` — успешно; `bash -n .../apple-sim-smoke.sh` и YAML parse — успешно; shell smoke и GitHub-прогоны ещё ожидаются.
 - После merge run [42381579325](https://github.com/r-eliseev/studious-goggles/actions/runs/42381579325) автоматически выполнил оба simulator smoke. Оба crash report указывают `CODESIGNING`, `Invalid Page`, `SIGKILL (Code Signature Invalid)`; MAUI был виден живым через 15 секунд, Avalonia — нет. Simulator apps собирались с `EnableCodeSigning=false` и устанавливались без последующей подписи. Перед установкой добавлена ad-hoc подпись и строгая проверка `codesign`; CI-подтверждение ожидается.
 - Run [42386890196](https://github.com/r-eliseev/studious-goggles/actions/runs/42386890196) проверил обе сборочные стратегии: подпись на этапе сборки и ad-hoc переподпись готового `.app` не устранили падение. В обоих crash report faulting image — системный `dyld_sim`, который падает при разборе Mach-O; причина не доказана как проблема подписи приложения. Workflow возвращён к штатной unsigned simulator-сборке .NET; записан блокер Apple runtime, повторная проверка ожидается.
+- Run [42392573546](https://github.com/r-eliseev/studious-goggles/actions/runs/42392573546) проверил MAUI и Avalonia на iOS 26.4: оба снова получили `CODESIGNING: Invalid Page` внутри `dyld_sim`, как и на iOS 26.5. Добавлена ручная диагностика с согласованными Xcode 26.4/.NET 10.0.203; результат ожидается. Похожий открытый отчёт .NET MAUI: https://github.com/dotnet/maui/issues/35792.
 
 ## Комментарии
 
