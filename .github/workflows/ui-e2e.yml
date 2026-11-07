@@ -77,7 +77,6 @@ jobs:
         run: |
           npm install -g appium@3.9.0
           appium driver install uiautomator2@8.7.3
-          appium driver doctor uiautomator2
       - name: Start emulator and inspect app
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -85,7 +84,9 @@ jobs:
           target: google_apis
           arch: x86_64
           emulator-options: -writable-system -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: bash ImageGen/ImageGen.E2E.Common/ci/android-preflight.sh
+          script: |
+            appium driver doctor uiautomator2
+            bash ImageGen/ImageGen.E2E.Common/ci/android-preflight.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:

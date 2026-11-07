@@ -48,6 +48,7 @@
    - Запуск: `workflow_dispatch`, `pull_request`, `push` в `main`.
    - Jobs: `build-android`, `build-windows`, `test-android`, `test-windows`, `report`. Jobs тестов — отдельные проверки в PR.
    - Владелец явно попросил этот workflow (запрет менять `.github/workflows/` без просьбы снят для него).
+- Проверено задачей 238: Windows runner имеет активную console-сессию и UI Automation видит окно/`apikey.entry`; см. `docs/knowledge/ui-e2e.md`. Android resource-id ещё ожидает фактической проверки после исправления preflight.
 
 ## Альтернативы
 - **Appium Windows driver вместо FlaUI.** Нужен WinAppDriver (на образе он есть, но документация MAUI требует именно 1.2.1) и ещё один процесс. FlaUI проще и работает напрямую через UIA3.

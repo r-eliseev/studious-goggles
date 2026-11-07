@@ -51,6 +51,11 @@ bash scripts/check.sh
 
 ## Отчёт
 
+### 2026-11-07, codex-gpt6 (частично)
+- Workflow собрал Android APK и unpackaged Windows app. Windows preflight успешен в двух запусках: активная console-сессия, окно и `apikey.entry` найдены, resolution 1024×768, non-uniform ratio 0.992126/0.994568, FFmpeg создал MP4 10 секунд, data dir `C:\\Users\\runneradmin\\AppData\\Local\\User Name\\com.eliseev.imagegen\\Data`. Артефакты: runs 42366477520 и 42366566469.
+- Android run 42366566469 остановился на `appium driver doctor uiautomator2`: exit 1, потому что `emulator` отсутствует в PATH до запуска emulator-runner; Appium 3.9.0 и UiAutomator2 8.7.3 установились. Исправление — выполнять doctor внутри шага/скрипта эмулятора (исправлено в workflow). Android resource-id и screenshots ещё не получены.
+- Факты занесены в `docs/knowledge/ui-e2e.md` и ADR 0029. Задача остаётся in-progress до успешного Android preflight.
+
 ## Комментарии
 
 ### 2026-11-07, claude-audit
