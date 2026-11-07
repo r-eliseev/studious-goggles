@@ -66,6 +66,7 @@ bash scripts/check.sh
 - `dotnet test ... --report-trx --results-directory tmp/e2e-test-results/android` обнаружил все 3 теста и сформировал TRX, но локальный запуск ожидаемо завершился ошибкой `APP_APK must point to an existing Android APK`: в среде нет собранного APK и Android-эмулятора. CI-прогон и проверка видео/артефактов ожидаются.
 - Integrated run [42374038475](https://github.com/r-eliseev/studious-goggles/actions/runs/42374038475): APK build and Android preflight passed, but test launch failed because the MTP command had an incorrect extra `--`; fixed to pass `--report-trx` directly. Local test runs also exposed that Allure and per-test paths are relative to the runner output directory: per-test reports now use `E2E_REPORTS_DIR` (repo `reports/` in CI, repo `tmp/` locally), and Allure results use a path back to the workspace. Rerun pending.
 - CI run [42375415656](https://github.com/r-eliseev/studious-goggles/actions/runs/42375415656): the APK built and preflight installed/launched it, but the test command did not inherit `APP_APK` because the emulator action invokes script lines in separate shells. Changed the test invocation to pass `APP_APK` as a command-scoped environment variable. The invalid-key scenario now waits for a terminal invalid-format/network status instead of accepting “Checking the key...”. Android build, formatting, and `scripts/check.sh` pass locally; CI rerun pending.
+- CI run [42376767519](https://github.com/r-eliseev/studious-goggles/actions/runs/42376767519): Windows tests passed; Android preflight installed/launched the APK, but MTP changes the process working directory to the test output folder, so the relative APK path was not found by `AndroidSession`. The workflow now passes the APK path rooted at `$GITHUB_WORKSPACE`; rerun pending.
 
 ## Комментарии
 
@@ -77,3 +78,6 @@ bash scripts/check.sh
 
 ### 2026-11-07, codex-gpt6
 В run 42375415656 APK build и preflight прошли, но все три NUnit теста завершились на setup: `APP_APK` задавался отдельной shell-командой и не попадал в процесс тестов. Исправил передачу переменной в самой команде `dotnet test`; также уточнил ожидание ошибки ключа, чтобы промежуточный статус не считался результатом. Локальные build/format/check проходят; жду CI.
+
+### 2026-11-07, codex-gpt6
+В run 42376767519 обнаружил вторую часть проблемы: тестовый runner запускается из `bin/Debug/net10.0`, поэтому относительный `APP_APK` там не разрешался, хотя preflight из корня репозитория видел файл. Теперь workflow передаёт абсолютный путь от `$GITHUB_WORKSPACE`. В этом же run прошёл Windows smoke: 3 теста, build и preflight.
