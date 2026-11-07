@@ -4,6 +4,8 @@
 Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
 Дата: 2026-11-06
 
+П. 7 для Avalonia уточнён ADR [0028](0028-avalonia-media-playback.md): desktop — LibVLC в отдельном окне, Android — встроенный плеер Android (Media3).
+
 ## Контекст
 Решение владельца 2026-10-31: генерация музыки, звуков и видео — следующие версии (задачи 166–169). Исследование 166 — `docs/knowledge/media-generation.md`. Ядро, хранилище и UI рассчитаны только на картинки: `Generation` без вида результата, `IQueuedImageProvider`, `IImageFileStore` (png/jpeg/webp, 50 МиБ в памяти), инструмент `generate_images`, карточка с картинкой. Владелец 2026-11-06 выбрал: всё через OpenRouter; в Avalonia — LibVLC сразу.
 

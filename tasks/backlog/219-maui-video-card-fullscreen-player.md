@@ -17,10 +17,10 @@ created: 2026-11-07
 Среда: Linux (Presentation, тест разметки, сборка MAUI Android); проверка — 140 (Android), 016 (Windows).
 
 ## Критерии готовности
-- `IVideoPlayerService.ShowAsync(string filePath, string accessibleLabel, CancellationToken)` в `ImageGen.Presentation/Services/` (по образцу `IImageViewerService`); `GenerationItemViewModel.PlayVideoCommand` (доступна при `IsVideo && HasMedia`) вызывает его — через делегат или службу так же, как карточка открывает картинку (`OpenImageCommand` в `ChatPageModel`), выбрать один способ и записать в «Отчёт».
-- MAUI `MauiVideoPlayerService` + страница `MauiVideoPlayerPage` (по образцу `MauiImageViewerService`/`MauiImageViewerPage`): чёрный фон, `MediaElement` (`Aspect="AspectFit"`, `ShouldAutoPlay="True"`, `ShouldShowPlaybackControls="True"`), кнопка Close ≥ 48×48, системный Back и Escape (Windows) закрывают; при закрытии `Stop()` и освобождение плеера (`Handler?.DisconnectHandler()` — так, как рекомендует README `CommunityToolkit.Maui.MediaElement` 10.0.0; сверить и записать в `docs/knowledge/maui.md`). Регистрация в `MauiProgram`.
-- `ChatPage.xaml`: встроенный видео-`MediaElement` удалён; область видео-карточки — обложка (`Image`, источник `VideoPosterPath` из 220 — до 220 свойство пустое и показывается значок) + значок Play по центру + длительность; вся область — кнопка `PlayVideoCommand` с `SemanticProperties.Description` «Play video» (ресурс).
-- Avalonia: `IVideoPlayerService` регистрируется заглушкой «not supported» (Avalonia-плеер — задача 207, она заблокирована); у Avalonia-карточки Play скрыт (`CanPlayVideo` = `IsSupported` службы).
+- `IMediaPlayerService.ShowAsync(string filePath, string accessibleLabel, CancellationToken)` в `ImageGen.Presentation/Services/` (по образцу `IImageViewerService`); `GenerationItemViewModel.PlayMediaCommand` (доступна при `(IsVideo || IsAudio) && HasMedia`) вызывает его — через делегат или службу так же, как карточка открывает картинку (`OpenImageCommand` в `ChatPageModel`), выбрать один способ и записать в «Отчёт».
+- MAUI `MauiMediaPlayerService` + страница `MauiMediaPlayerPage` (по образцу `MauiImageViewerService`/`MauiImageViewerPage`): чёрный фон, `MediaElement` (`Aspect="AspectFit"`, `ShouldAutoPlay="True"`, `ShouldShowPlaybackControls="True"`), кнопка Close ≥ 48×48, системный Back и Escape (Windows) закрывают; при закрытии `Stop()` и освобождение плеера (`Handler?.DisconnectHandler()` — так, как рекомендует README `CommunityToolkit.Maui.MediaElement` 10.0.0; сверить и записать в `docs/knowledge/maui.md`). Регистрация в `MauiProgram`.
+- `ChatPage.xaml`: встроенный видео-`MediaElement` удалён; область видео-карточки — обложка (`Image`, источник `VideoPosterPath` из 220 — до 220 свойство пустое и показывается значок) + значок Play по центру + длительность; вся область — кнопка `PlayMediaCommand` с `SemanticProperties.Description` «Play video» (ресурс).
+- `IMediaPlayerService` — общий для видео и аудио (ADR 0028): `bool IsSupported`, `ShowAsync(...)`. Avalonia регистрирует заглушку «not supported» до задач 207 (desktop) и 224 (Android); у карточки Play скрыт, пока `IsSupported = false` (`CanPlayMedia`). `GenerationItemViewModel.PlayMediaCommand` доступна для готового видео и аудио; в MAUI-разметке Play показывается только у видео (аудио играет встроенный плеер ленты).
 - Тесты: команда доступна только для готового видео и вызывает службу с путём; тест разметки — в шаблоне карточки нет видео-`MediaElement`, есть кнопка Play.
 - Сборка MAUI Android; пункт 140: Play открывает плеер на весь экран, видео видно, Back закрывает, звук останавливается.
 
@@ -33,7 +33,7 @@ created: 2026-11-07
 3. MAUI-служба и страница; регистрация; заглушки Avalonia.
 4. Шаблон карточки; сборка Android; `docs/knowledge/maui.md`; пункты 140 и 016.
 
-Файлы: `ImageGen/ImageGen.Presentation/Services/IVideoPlayerService.cs` (новый), `ImageGen/ImageGen.Presentation/Services/UnsupportedVideoPlayerService.cs` (новый), `ImageGen/ImageGen.Presentation/PageModels/GenerationItemViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Maui/Services/MauiVideoPlayerService.cs` (новый), `ImageGen/ImageGen.Maui/MauiProgram.cs`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Avalonia/Composition/AppServices.Desktop.cs`, `ImageGen/ImageGen.Avalonia.Android/MobileApp.axaml.cs`, тесты `ImageGen/ImageGen.Presentation.Tests/` (модели и `Design/MauiChatPageMarkupTests.cs`), `docs/knowledge/maui.md`, `tasks/backlog/140-android-manual-check.md`, `tasks/v0.1/016-skeleton-manual-check.md`.
+Файлы: `ImageGen/ImageGen.Presentation/Services/IMediaPlayerService.cs` (новый), `ImageGen/ImageGen.Presentation/Services/UnsupportedMediaPlayerService.cs` (новый), `ImageGen/ImageGen.Presentation/PageModels/GenerationItemViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Maui/Services/MauiMediaPlayerService.cs` (новый), `ImageGen/ImageGen.Maui/MauiProgram.cs`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Avalonia/Composition/AppServices.Desktop.cs`, `ImageGen/ImageGen.Avalonia.Android/MobileApp.axaml.cs`, тесты `ImageGen/ImageGen.Presentation.Tests/` (модели и `Design/MauiChatPageMarkupTests.cs`), `docs/knowledge/maui.md`, `tasks/backlog/140-android-manual-check.md`, `tasks/v0.1/016-skeleton-manual-check.md`.
 
 ### Проверка
 ```
@@ -63,3 +63,6 @@ bash scripts/check.sh
 
 ### 2026-11-07, владелец (в чате, записал claude-audit)
 План одобрен ранее данным поручением «заапрувь все таски которые будут».
+
+### 2026-11-07, claude-audit
+По ADR 0028 служба переименована в общую `IMediaPlayerService` (видео и аудио), команда — `PlayMediaCommand`; Avalonia-реализации — 207 (desktop) и 224 (Android).
