@@ -62,6 +62,7 @@ bash scripts/check.sh
 - Добавлены отдельные schedule/dispatch jobs для MAUI и Avalonia; оба артефакта публикуются при любом исходе. На pull request smoke jobs пока пропущены; вопрос о включении после трёх ночных прогонов добавлен в `docs/status.md`.
 - Локально: `python3 -I .../apple-sim-pick.py` — успешно; `bash -n .../apple-sim-smoke.sh` и YAML parse — успешно; shell smoke и GitHub-прогоны ещё ожидаются.
 - После merge run [42381579325](https://github.com/r-eliseev/studious-goggles/actions/runs/42381579325) автоматически выполнил оба simulator smoke. Оба crash report указывают `CODESIGNING`, `Invalid Page`, `SIGKILL (Code Signature Invalid)`; MAUI был виден живым через 15 секунд, Avalonia — нет. Simulator apps собирались с `EnableCodeSigning=false` и устанавливались без последующей подписи. Перед установкой добавлена ad-hoc подпись и строгая проверка `codesign`; CI-подтверждение ожидается.
+- Run [42386890196](https://github.com/r-eliseev/studious-goggles/actions/runs/42386890196) проверил обе сборочные стратегии: подпись на этапе сборки и ad-hoc переподпись готового `.app` не устранили падение. В обоих crash report faulting image — системный `dyld_sim`, который падает при разборе Mach-O; причина не доказана как проблема подписи приложения. Workflow возвращён к штатной unsigned simulator-сборке .NET; записан блокер Apple runtime, повторная проверка ожидается.
 
 ## Комментарии
 

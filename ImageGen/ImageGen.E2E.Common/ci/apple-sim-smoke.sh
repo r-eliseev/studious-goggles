@@ -126,15 +126,6 @@ if ! grep -qw arm64 <<<"$architectures"; then
   exit 1
 fi
 
-if ! codesign --force --deep --sign - --timestamp=none "$app_path" >"$out_dir/codesign.log" 2>&1; then
-  echo "could not ad-hoc sign simulator app" >&2
-  exit 1
-fi
-if ! codesign --verify --deep --strict "$app_path" >>"$out_dir/codesign.log" 2>&1; then
-  echo "simulator app code signature verification failed" >&2
-  exit 1
-fi
-
 xcrun simctl install "$udid" "$app_path"
 xcrun simctl launch --console-pty "$udid" "$bundle_id" >"$out_dir/launch.log" 2>&1 &
 launch_pid=$!
