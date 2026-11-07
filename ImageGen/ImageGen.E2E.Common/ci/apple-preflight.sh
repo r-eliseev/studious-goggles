@@ -36,13 +36,12 @@ default_catalyst=blocked
     "$@"
   }
 
-  if run_and_record 'install default maui workload' dotnet workload install maui; then
-    if run_and_record 'build MAUI iOS Simulator' dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-ios -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=false; then
-      default_ios=ok
-    fi
-    if run_and_record 'build MAUI Mac Catalyst' dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-maccatalyst -c Debug -r maccatalyst-arm64 -p:EnableCodeSigning=false; then
-      default_catalyst=ok
-    fi
+  run_and_record 'install default maui workload' dotnet workload install maui || true
+  if run_and_record 'build MAUI iOS Simulator' dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-ios -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=false; then
+    default_ios=ok
+  fi
+  if run_and_record 'build MAUI Mac Catalyst' dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-maccatalyst -c Debug -r maccatalyst-arm64 -p:EnableCodeSigning=false; then
+    default_catalyst=ok
   fi
 } >"$default_log" 2>&1
 default_duration=$(( $(date +%s) - default_started ))
@@ -66,8 +65,8 @@ prefix = sys.argv[2]
 matching = [item for item in releases if not item.get("draft") and item["tag_name"].startswith(prefix)]
 for release in matching:
     body = release.get("body", "")
-    workload = re.search(r"workload set.*?version\s+[`']?([0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?)", body, re.I | re.S)
-    sdk = re.search(r"latest \.NET SDK\s+[`']?([0-9]+\.[0-9]+\.[0-9]+)", body, re.I)
+    workload = re.search(r"workload set.*?version\s+\[?[`']?([0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?)", body, re.I | re.S)
+    sdk = re.search(r"\.NET SDK\s+([0-9]+\.[0-9]+\.[0-9]+)", body, re.I)
     if workload and sdk:
         with open(sys.argv[3], "w", encoding="utf-8") as output:
             output.write(f"tag={release['tag_name']}\nworkloadSet={workload.group(1)}\ndotnetSdk={sdk.group(1)}\n")
@@ -96,13 +95,12 @@ if [ "$release_found" = true ]; then
     elif bash "$report_dir/dotnet-install.sh" --version "$sdk_pinned" --install-dir "$pinned_dotnet"; then
       export DOTNET_ROOT="$pinned_dotnet"
       export PATH="$pinned_dotnet:$PATH"
-      if dotnet workload install maui --version "$workload_set"; then
-        if dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-ios -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=false; then
-          pinned_ios=ok
-        fi
-        if dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-maccatalyst -c Debug -r maccatalyst-arm64 -p:EnableCodeSigning=false; then
-          pinned_catalyst=ok
-        fi
+      dotnet workload install maui --version "$workload_set" || true
+      if dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-ios -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=false; then
+        pinned_ios=ok
+      fi
+      if dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-maccatalyst -c Debug -r maccatalyst-arm64 -p:EnableCodeSigning=false; then
+        pinned_catalyst=ok
       fi
     fi
   } >"$pinned_log" 2>&1
