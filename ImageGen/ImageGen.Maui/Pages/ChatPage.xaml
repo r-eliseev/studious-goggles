@@ -110,7 +110,7 @@
                                         <RoundRectangle CornerRadius="{DynamicResource IgRadiusSm}" />
                                     </Border.StrokeShape>
                                     <Label Text="{Binding PromptText}"
-                                           TextColor="{DynamicResource IgPromptForegroundBrush}"
+                                           TextColor="{DynamicResource IgPromptForegroundColor}"
                                            FontFamily="{DynamicResource IgPromptFont}"
                                            FontAttributes="{DynamicResource IgPromptFontStyle}"
                                            LineBreakMode="WordWrap" />
