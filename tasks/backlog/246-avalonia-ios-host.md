@@ -63,6 +63,7 @@ bash scripts/check.sh
 - Предупреждение IL2026 из динамической загрузки Avalonia theme resources подавлено локально только в iOS-проекте, где тема выбирается по URI во время выполнения.
 - Второй CI build прошёл компиляцию C#, затем выявил, что XAML-ресурсы ожидают assembly `ImageGen.Avalonia`, как и Android-хост. Исправлено имя сборки iOS-проекта; ожидается повторная сборка и запуск симулятора.
 - Логи повторного прогона: [42371977271](https://github.com/r-eliseev/studious-goggles/actions/runs/42371977271), job `build-avalonia-ios`.
+- Run [42373330934](https://github.com/r-eliseev/studious-goggles/actions/runs/42373330934): host C# compilation succeeds, but the iOS linker fails with `IL2104`/`IL2121` and `NETSDK1144`; package step then failed again because the app was absent. For the CI-only simulator build, switch to `TrimMode=copy` (no size reduction is needed for this smoke artifact), remove the stale broad IL2026 suppression, and avoid labeling arbitrary build errors as a toolchain block. New-run verification pending.
 
 ## Комментарии
 

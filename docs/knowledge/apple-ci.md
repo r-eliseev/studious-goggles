@@ -14,3 +14,7 @@
 ## Раздельные сборки 245
 
 Первый раздельный workflow [42371375200](https://github.com/r-eliseev/studious-goggles/actions/runs/42371375200) подтвердил MAUI iOS Simulator (артефакт `maui-ios-sim`, 12:12:29–12:15:25 UTC) и Avalonia macOS `.app` (12:11:53–12:12:26 UTC). MAUI Mac Catalyst собрался без предупреждений, но упаковочный шаг выбрал неверный `Info.plist` (12:11:47–12:13:56 UTC); Avalonia iOS выявила ошибки C# и XAML, исправления ожидают повторной проверки. Успех общего workflow не означает успех каждой платформы: смотрите отдельные jobs.
+
+### Avalonia iOS Simulator — ILLink
+
+В run [42373330934](https://github.com/r-eliseev/studious-goggles/actions/runs/42373330934), job `build-avalonia-ios`, C# compilation succeeded but ILLink ended with `IL2104`, `IL2121`, and `NETSDK1144`. This is separate from the Xcode/workload compatibility check: MAUI iOS/Catalyst and Avalonia macOS jobs passed in the same run. The CI-only simulator build now uses `TrimMode=copy` so the smoke app does not depend on size trimming, and package verification runs only after a successful build. New-run result pending.

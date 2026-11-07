@@ -10,8 +10,6 @@
     <AssemblyName>ImageGen.Avalonia</AssemblyName>
     <RootNamespace>ImageGen.Avalonia</RootNamespace>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <!-- Avalonia loads user-selected theme resources by URI at runtime. -->
-    <NoWarn>$(NoWarn);IL2026</NoWarn>
     <RepoRoot>$(MSBuildThisFileDirectory)../../</RepoRoot>
   </PropertyGroup>
   <ItemGroup>

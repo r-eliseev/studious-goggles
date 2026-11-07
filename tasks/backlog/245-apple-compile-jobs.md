@@ -60,6 +60,7 @@ bash scripts/check.sh
 - Workflow разделён на четыре build jobs и запускается на pull request, main и расписании. В iOS jobs используется проверенный набор SDK 10.0.302 / workload 10.0.302.0 / Xcode 26.6. Артефакты упаковываются в tar.gz и публикуются при любом результате сборки.
 - Первый workflow [42371375200](https://github.com/r-eliseev/studious-goggles/actions/runs/42371375200): MAUI iOS Simulator собрался и артефакт создался; Avalonia macOS `.app` собрался, подписался ad-hoc и упакован; MAUI Catalyst собрался, но проверка bundle ID прочитала Info.plist не из `Contents`; Avalonia iOS нашла ошибки компиляции, отражённые в отчёте 246. Исправлено: целевые пути app bundle ограничены соответствующей платформой; Catalyst теперь проверяет plist как в корне, так и в `Contents`; iOS-хост получил ожидаемое общими XAML-ресурсами имя сборки.
 - `bash scripts/check.sh`, `git diff --check` — успешно. Повторный workflow с исправлениями и Avalonia iOS фиксом ожидается.
+- Run [42373330934](https://github.com/r-eliseev/studious-goggles/actions/runs/42373330934): MAUI iOS/Catalyst and Avalonia macOS builds passed; `build-avalonia-ios` still fails in ILLink (`IL2104`, `IL2121`, `NETSDK1144`) after C# compilation. The workflow previously labeled every failure as a toolchain block and then failed while packaging a missing app; updated the simulator-only build to use `TrimMode=copy`, made its failure message generic, and skipped packaging after a failed build. Verification is pending.
 
 ## Комментарии
 
