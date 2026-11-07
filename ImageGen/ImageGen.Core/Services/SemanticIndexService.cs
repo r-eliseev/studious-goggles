@@ -18,7 +18,6 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
     public const int MaximumIndexedSources = 10_000;
     private const int RetryCount = 2;
     private const string EmbeddingProviderId = ProviderIds.OpenRouter;
-    private const string EmbeddingModel = "baai/bge-m3";
     private static readonly TimeSpan[] RetryDelays = [TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(8)];
     private static readonly TimeSpan SessionRefreshDelay = TimeSpan.FromSeconds(2);
 
@@ -314,7 +313,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
         var selectedByKey = selected.ToDictionary(source => source.SourceKey, StringComparer.Ordinal);
         var hashesByKey = selected.ToDictionary(source => source.SourceKey, source => HashText(source.Text), StringComparer.Ordinal);
         var stored = await _embeddings.ListAllAsync(cancellationToken).ConfigureAwait(false);
-        var dimensions = stored.Where(embedding => string.Equals(embedding.Model, EmbeddingModel, StringComparison.OrdinalIgnoreCase))
+        var dimensions = stored.Where(embedding => IsRequestedEmbeddingModel(embedding.Model))
             .Select(embedding => embedding.Dimensions)
             .Distinct()
             .ToArray();
@@ -331,7 +330,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
         var remove = stored
             .Where(embedding => !selectedByKey.TryGetValue(embedding.SourceKey, out var source)
                 || !string.Equals(embedding.ContentHash, hashesByKey[source.SourceKey], StringComparison.Ordinal)
-                || !string.Equals(embedding.Model, EmbeddingModel, StringComparison.Ordinal))
+                || !IsRequestedEmbeddingModel(embedding.Model))
             .Select(embedding => embedding.SourceKey)
             .ToArray();
         await _embeddings.DeleteBySourceKeysAsync(remove, cancellationToken).ConfigureAwait(false);
@@ -346,19 +345,26 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
         SetStatus(new SemanticIndexStatus(true, byKey.Count, Math.Max(0, selected.Length - byKey.Count), SemanticIndexState.Indexing,
             WarningCode: totalSourceCount > MaximumIndexedSources ? "limit_reached" : null));
 
+        var responseModelLogged = false;
         for (var offset = 0; offset < pending.Length; offset += BatchSize)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var batch = pending.Skip(offset).Take(BatchSize).ToArray();
             var texts = batch.Select(source => NormalizeText(source.Text)).ToArray();
             var result = await EmbedWithRetryAsync(texts, cancellationToken).ConfigureAwait(false);
+            if (!responseModelLogged)
+            {
+                _logger.LogDebug("Semantic embedding model {RequestedModel} was served as {ResponseModel}.", SemanticSearchModels.Default, result.Model);
+                responseModelLogged = true;
+            }
+
             var expense = result.CostUsd is decimal cost
                 ? new Expense
                 {
                     OperationId = $"embed:{Guid.NewGuid():N}",
                     Kind = ExpenseKind.Embedding,
                     ProviderId = EmbeddingProviderId,
-                    ModelId = result.Model,
+                    ModelId = SemanticSearchModels.Default,
                     CostUsd = cost,
                     OccurredAt = _timeProvider.GetUtcNow(),
                 }
@@ -404,7 +410,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
                     source.SessionId,
                     source.Kind,
                     hashesByKey[source.SourceKey],
-                    result.Model,
+                    SemanticSearchModels.Default,
                     result.Dimensions,
                     result.Vectors[index],
                     _timeProvider.GetUtcNow()));
@@ -508,7 +514,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
         return sources.Take(MaximumIndexedSources).Count(source =>
             stored.TryGetValue(source.SourceKey, out var embedding)
             && string.Equals(embedding.ContentHash, HashText(source.Text), StringComparison.Ordinal)
-            && string.Equals(embedding.Model, EmbeddingModel, StringComparison.Ordinal));
+            && IsRequestedEmbeddingModel(embedding.Model));
     }
 
     private void SetStatus(SemanticIndexStatus status)
@@ -546,6 +552,8 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
     private static string NormalizeText(string text) =>
         string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
+    private static bool IsRequestedEmbeddingModel(string model) => SemanticSearchModels.IsDefault(model);
+
     private static string HashText(string text) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(NormalizeText(text))));
 
     private static bool IsTransient(ProviderException exception) => exception.Kind is
@@ -562,11 +570,6 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
         if (result.Dimensions <= 0)
         {
             throw new ProviderException(ErrorKind.Unknown, $"embedding response has invalid dimension count {result.Dimensions}");
-        }
-
-        if (!string.Equals(result.Model, EmbeddingModel, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ProviderException(ErrorKind.Unknown, $"response model '{result.Model}' differs from requested '{EmbeddingModel}'");
         }
 
         for (var index = 0; index < result.Vectors.Length; index++)

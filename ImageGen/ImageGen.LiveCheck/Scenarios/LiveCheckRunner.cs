@@ -12,6 +12,7 @@ using ImageGen.Core.OpenAiCompatible;
 using ImageGen.Core.OpenRouter;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
+using ImageGen.Core.Search;
 using ImageGen.LiveCheck.Report;
 using ImageGen.Presentation.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -250,20 +251,21 @@ public sealed class LiveCheckRunner(LiveCheckOptions options, TimeProvider timeP
     private async Task RunEmbeddingsAsync(string provider, CancellationToken cancellationToken)
     {
         const decimal estimate = 0.01m;
-        const string model = "baai/bge-m3";
+        const string model = SemanticSearchModels.Default;
         if (!Reserve(provider, estimate, model, "embeddings")) return;
 
         try
         {
             var router = services!.GetRequiredService<IProviderRouter>();
-            var client = (OpenRouterClient)router.GetConnection(provider);
+            var client = router.GetTextEmbeddingClient(provider);
             var result = await client.EmbedAsync(["A short search phrase", "Another short phrase"], cancellationToken);
             var tracePath = Path.Combine(options.OutputDirectory, traceRelativePath);
             var traceLine = (await File.ReadAllLinesAsync(tracePath, cancellationToken))
                 .Reverse()
                 .First(line => line.Contains("/embeddings", StringComparison.Ordinal));
             var summary = EmbeddingTraceSummary.Parse(traceLine);
-            Add(provider, "embeddings", "HTTP 200; two vectors parsed", $"HTTP {summary.Status}; model={summary.Model}; vectors={summary.ItemCount}; lengths={summary.VectorLengths}; all index fields present={summary.IndexPresent}; usage={summary.Usage}; parser dimensions={result.Dimensions}",
+            if (result.CostUsd is decimal actualCost) budgets[provider].Settle(estimate, actualCost);
+            Add(provider, "embeddings", "HTTP 200; two vectors parsed", $"HTTP {summary.Status}; model={summary.Model}; provider={summary.Provider}; requested model={model}; vectors={summary.ItemCount}; lengths={summary.VectorLengths}; all index fields present={summary.IndexPresent}; usage={summary.Usage}; parser dimensions={result.Dimensions}",
                 summary.Status == "200" && result.Vectors.Length == 2 ? "passed app parser" : "failed app parser", model, Estimate(estimate));
         }
         catch (Exception ex) when (ex is ProviderException or HttpRequestException or FormatException or InvalidOperationException)

@@ -80,7 +80,7 @@ public class OpenRouterClientTests
         var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, """
             {"model":"baai/bge-m3","data":[
               {"index":1,"embedding":[0.25,0.5]},
-              {"index":0,"embedding":[1.0,0.0]}]}
+              {"index":0,"embedding":[1.0,0.0]}],"usage":{"cost":1.6e-7}}
             """);
         var client = CreateClient(handler);
 
@@ -92,6 +92,7 @@ public class OpenRouterClientTests
         Assert.Equal(2, result.Dimensions);
         Assert.Equal(new[] { 1f, 0f }, result.Vectors[0]);
         Assert.Equal(new[] { 0.25f, 0.5f }, result.Vectors[1]);
+        Assert.Equal(0.00000016m, result.CostUsd);
         var request = JsonNode.Parse(handler.RequestBodies[0])!.AsObject();
         Assert.Equal(EmbeddingModel, request["model"]!.GetValue<string>());
         Assert.Equal("[\"first\",\"second\"]", request["input"]!.ToJsonString());

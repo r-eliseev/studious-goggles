@@ -3,7 +3,7 @@ using System.Text.Json.Nodes;
 
 namespace ImageGen.LiveCheck.Scenarios;
 
-public sealed record EmbeddingTraceSummary(string Status, string Model, int ItemCount, string VectorLengths, string IndexPresent, string Usage)
+public sealed record EmbeddingTraceSummary(string Status, string Model, string Provider, int ItemCount, string VectorLengths, string IndexPresent, string Usage)
 {
     public static EmbeddingTraceSummary Parse(string traceLine)
     {
@@ -16,6 +16,7 @@ public sealed record EmbeddingTraceSummary(string Status, string Model, int Item
         return new EmbeddingTraceSummary(
             fields["status"]?.GetValue<string>() ?? "unknown",
             body["model"]?.GetValue<string>() ?? "missing",
+            body["provider"]?.GetValue<string>() ?? "unknown",
             data.Count,
             string.Join(",", lengths),
             data.All(item => item is JsonObject row && row.ContainsKey("index")) ? "yes" : "no",

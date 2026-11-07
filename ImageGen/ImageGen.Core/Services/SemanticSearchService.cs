@@ -93,7 +93,7 @@ public sealed class SemanticSearchService : IDisposable
                         OperationId = $"embed-query:{Guid.NewGuid():N}",
                         Kind = ExpenseKind.Embedding,
                         ProviderId = EmbeddingProviderId,
-                        ModelId = response.Model,
+                        ModelId = SemanticSearchModels.Default,
                         CostUsd = cost,
                         OccurredAt = _timeProvider.GetUtcNow(),
                     }, cancellationToken).ConfigureAwait(false);
@@ -104,7 +104,7 @@ public sealed class SemanticSearchService : IDisposable
 
             var texts = await _sources.ListSourcesAsync(cancellationToken).ConfigureAwait(false);
             var stored = await GetIndexAsync(cancellationToken).ConfigureAwait(false);
-            var indexedDimension = stored.FirstOrDefault(embedding => embedding.Model == "baai/bge-m3")?.Dimensions;
+            var indexedDimension = stored.FirstOrDefault(embedding => IsRequestedEmbeddingModel(embedding.Model))?.Dimensions;
             if (indexedDimension is int dimensions && dimensions != queryVector.Length)
             {
                 LastErrorCode = "dimension_mismatch";
@@ -123,7 +123,7 @@ public sealed class SemanticSearchService : IDisposable
                 var source = texts[order];
                 if (!embeddingsByKey.TryGetValue(source.SourceKey, out var embedding)
                     || embedding.SessionId != source.SessionId
-                    || embedding.Model != "baai/bge-m3"
+                    || !IsRequestedEmbeddingModel(embedding.Model)
                     || embedding.ContentHash != HashText(source.Text)
                     || embedding.Dimensions != queryVector.Length
                     || embedding.Vector.Length != queryVector.Length)
@@ -197,7 +197,7 @@ public sealed class SemanticSearchService : IDisposable
 
     private float[]? GetCachedQuery(string query)
     {
-        var key = $"baai/bge-m3\n{query}";
+        var key = $"{SemanticSearchModels.Default}\n{query}";
         lock (_cacheGate)
         {
             var node = _queryCache.First;
@@ -219,7 +219,7 @@ public sealed class SemanticSearchService : IDisposable
 
     private void AddCachedQuery(string query, float[] vector)
     {
-        var key = $"baai/bge-m3\n{query}";
+        var key = $"{SemanticSearchModels.Default}\n{query}";
         lock (_cacheGate)
         {
             _queryCache.AddFirst((key, vector));
@@ -232,7 +232,7 @@ public sealed class SemanticSearchService : IDisposable
 
     private static void ValidateQueryVector(EmbeddingResult result)
     {
-        if (result.Vectors.Length != 1 || result.Model != "baai/bge-m3" || result.Dimensions <= 0 || result.Vectors[0].Length != result.Dimensions
+        if (result.Vectors.Length != 1 || result.Dimensions <= 0 || result.Vectors[0].Length != result.Dimensions
             || result.Vectors[0].Any(value => !float.IsFinite(value)))
         {
             throw new ProviderException(ErrorKind.Unknown, "Embedding response contained an invalid query vector.");
@@ -261,6 +261,8 @@ public sealed class SemanticSearchService : IDisposable
 
     private static string NormalizeText(string text) =>
         string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+    private static bool IsRequestedEmbeddingModel(string model) => SemanticSearchModels.IsDefault(model);
 
     private static string HashText(string text) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(NormalizeText(text))));
 
