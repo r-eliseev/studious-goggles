@@ -75,3 +75,10 @@ bash scripts/check.sh
 
 ### 2026-11-07, codex-gpt6
 В run 42381579325 оба iOS smoke jobs запускались автоматически после merge, но приложения завершались с `SIGKILL (Code Signature Invalid)`, `CODESIGNING: Invalid Page`. Приложения собираются unsigned для simulator. Добавил ad-hoc signing извлечённого `.app` с `codesign --verify --deep --strict` до `simctl install`; проверка на hosted macOS ожидается.
+
+### 2026-11-07, claude-audit (разбор падения Avalonia на `main`)
+Run [42398374908](https://github.com/r-eliseev/studious-goggles/actions/runs/42398374908): после перехода на подпись SDK (`-p:CodesignKey=-`) `smoke-ios-maui` зелёный, а `smoke-ios-avalonia` — нет. Причина уже не в подписи. В `launch.log` артефакта `ios-smoke-avalonia`: `ObjCRuntime.RuntimeException: Unable to create an instance of the type Avalonia.iOS.AvaloniaAppDelegate\`1` → `System.MemberAccessException: Cannot access member` в `RuntimeHelpers.GetUninitializedObject`, затем `SIGABRT`. Отчёта о падении нет, поэтому `crashReports=0`: процесс умирает от необработанного управляемого исключения.
+
+Рантайм пытается создать открытый generic-базовый класс `AvaloniaAppDelegate<TApp>` вместо нашего `AppDelegate`. `AppDelegate.cs` и `Main.cs` совпадают с официальным шаблоном Avalonia 12 и с `samples/ControlCatalog.iOS`. Гипотеза: регистратор Objective-C по умолчанию в Debug-сборке для симулятора не сопоставляет класс `AppDelegate` с нашим типом. Проверка: сборка с `-p:Registrar=static` (ветка `review/2026-11-01-windows-tasks-close-ghnt1m`, коммит `d802a0e`). Итог допишу сюда.
+
+Заодно: `apple-sim-smoke.sh` сейчас не показывает причину в выводе job. Стоит печатать последние 30 строк `launch.log`, если процесс не жив.
