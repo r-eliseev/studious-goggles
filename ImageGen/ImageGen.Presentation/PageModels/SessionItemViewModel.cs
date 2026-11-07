@@ -12,20 +12,33 @@ public sealed partial class SessionItemViewModel : ObservableObject
     private readonly Func<SessionItemViewModel, Task> _open;
     private readonly Func<SessionItemViewModel, Task> _rename;
     private readonly Func<SessionItemViewModel, Task> _delete;
+    private readonly Func<SessionItemViewModel, Task> _showActions;
 
     public SessionItemViewModel(
         Session session,
         Func<SessionItemViewModel, Task> open,
         Func<SessionItemViewModel, Task> rename,
         Func<SessionItemViewModel, Task> delete)
+        : this(session, open, rename, delete, _ => Task.CompletedTask)
+    {
+    }
+
+    public SessionItemViewModel(
+        Session session,
+        Func<SessionItemViewModel, Task> open,
+        Func<SessionItemViewModel, Task> rename,
+        Func<SessionItemViewModel, Task> delete,
+        Func<SessionItemViewModel, Task> showActions)
     {
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(rename);
         ArgumentNullException.ThrowIfNull(delete);
+        ArgumentNullException.ThrowIfNull(showActions);
         _open = open;
         _rename = rename;
         _delete = delete;
+        _showActions = showActions;
         Id = session.Id;
         _title = session.Title;
         UpdatedText = session.UpdatedAt.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
@@ -85,4 +98,7 @@ public sealed partial class SessionItemViewModel : ObservableObject
 
     [RelayCommand]
     private Task DeleteAsync() => _delete(this);
+
+    [RelayCommand]
+    private Task ShowActionsAsync() => _showActions(this);
 }

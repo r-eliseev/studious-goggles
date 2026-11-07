@@ -23,7 +23,7 @@ public class SessionItemViewModelTests
     {
         var session = CreateSession();
 
-        var item = new SessionItemViewModel(session, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask);
+        var item = new SessionItemViewModel(session, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask);
 
         Assert.Equal(session.Id, item.Id);
         Assert.Equal("Red fox in snow", item.Title);
@@ -34,7 +34,7 @@ public class SessionItemViewModelTests
     {
         var session = CreateSession();
 
-        var item = new SessionItemViewModel(session, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask);
+        var item = new SessionItemViewModel(session, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask);
 
         Assert.Equal(
             UpdatedAt.ToLocalTime().ToString("g", CultureInfo.CurrentCulture),
@@ -49,7 +49,8 @@ public class SessionItemViewModelTests
             CreateSession(),
             open: target => { opened = target; return Task.CompletedTask; },
             rename: _ => Task.CompletedTask,
-            delete: _ => Task.CompletedTask);
+            delete: _ => Task.CompletedTask,
+            showActions: _ => Task.CompletedTask);
 
         item.OpenCommand.Execute(null);
         await item.OpenCommand.ExecutionTask!;
@@ -65,7 +66,8 @@ public class SessionItemViewModelTests
             CreateSession(),
             open: _ => Task.CompletedTask,
             rename: _ => Task.CompletedTask,
-            delete: target => { deleted = target; return Task.CompletedTask; });
+            delete: target => { deleted = target; return Task.CompletedTask; },
+            showActions: _ => Task.CompletedTask);
 
         item.DeleteCommand.Execute(null);
         await item.DeleteCommand.ExecutionTask!;
@@ -76,7 +78,7 @@ public class SessionItemViewModelTests
     [Fact]
     public void DetailsText_OneRun_UsesSingularWord()
     {
-        var item = new SessionItemViewModel(CreateSession(), _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask)
+        var item = new SessionItemViewModel(CreateSession(), _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask)
         {
             RunCount = 1,
         };
@@ -87,7 +89,7 @@ public class SessionItemViewModelTests
     [Fact]
     public void DetailsText_SeveralRuns_ShowsCount()
     {
-        var item = new SessionItemViewModel(CreateSession(), _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask)
+        var item = new SessionItemViewModel(CreateSession(), _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask)
         {
             RunCount = 3,
         };
@@ -98,7 +100,7 @@ public class SessionItemViewModelTests
     [Fact]
     public void Apply_UpdatesTitleTimeAndRunCount()
     {
-        var item = new SessionItemViewModel(CreateSession(), _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask);
+        var item = new SessionItemViewModel(CreateSession(), _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask);
         var changed = CreateSession();
         changed.Id = item.Id;
         changed.Title = "blue moon";
@@ -119,11 +121,28 @@ public class SessionItemViewModelTests
             CreateSession(),
             open: _ => Task.CompletedTask,
             rename: target => { renamed = target; return Task.CompletedTask; },
-            delete: _ => Task.CompletedTask);
+            delete: _ => Task.CompletedTask,
+            showActions: _ => Task.CompletedTask);
 
         item.RenameCommand.Execute(null);
         await item.RenameCommand.ExecutionTask!;
 
         Assert.Same(item, renamed);
+    }
+
+    [Fact]
+    public async Task ShowActionsCommand_Executes_CallsShowActionsWithThisItem()
+    {
+        SessionItemViewModel? shown = null;
+        var item = new SessionItemViewModel(
+            CreateSession(),
+            open: _ => Task.CompletedTask,
+            rename: _ => Task.CompletedTask,
+            delete: _ => Task.CompletedTask,
+            showActions: target => { shown = target; return Task.CompletedTask; });
+
+        await item.ShowActionsCommand.ExecuteAsync(null);
+
+        Assert.Same(item, shown);
     }
 }
