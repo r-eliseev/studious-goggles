@@ -20,7 +20,7 @@ xcrun simctl list -j devices available >"$report_dir/devices.json" || exit 1
 xcrun simctl list -j runtimes >"$report_dir/runtimes.json" || exit 1
 xcrun simctl list -j devicetypes >"$report_dir/devicetypes.json" || exit 1
 
-xcode_version=$(xcodebuild -version | awk '/^Xcode / { print $2; exit }')
+xcode_version=$(xcodebuild -version | awk '/^Xcode / && !found { print $2; found=1 }')
 sdk_version=$(dotnet --version)
 default_log="$report_dir/attempt-default.txt"
 default_started=$(date +%s)
