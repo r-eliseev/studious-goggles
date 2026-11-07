@@ -1,0 +1,298 @@
+name: apple-ci
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 2 * * *'
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apple-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apple-preflight:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Select runner default Xcode
+        run: |
+          xcode_version=$(xcodebuild -version | awk '/^Xcode / && !found { print $2; found=1 }')
+          sudo xcode-select -s "/Applications/Xcode_${xcode_version}.app/Contents/Developer"
+          xcode-select -p
+      - name: Run Apple toolchain inventory and builds
+        run: bash ImageGen/ImageGen.E2E.Common/ci/apple-preflight.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: apple-preflight
+          path: reports/apple-preflight/
+          if-no-files-found: warn
+          retention-days: 14
+
+  build-maui-ios:
+    runs-on: macos-26
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+      - name: Install compatible iOS workload
+        run: dotnet workload install maui --version 10.0.302.0
+      - name: Build MAUI iOS Simulator (CI only, unsigned)
+        run: dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-ios -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=false
+      - name: Mark incompatible toolchain as blocked
+        if: failure()
+        run: |
+          echo "::error::blocked: toolchain mismatch (Xcode $(xcodebuild -version | awk '/^Xcode / { print $2; exit }'), workload $(dotnet workload list))"
+          exit 1
+      - name: Package simulator app
+        if: always()
+        run: |
+          app=$(find ImageGen/ImageGen.Maui/bin/Debug/net10.0-ios/iossimulator-arm64 -type d -name '*.app' -print -quit)
+          if [ -n "$app" ]; then
+            plist="$app/Info.plist"
+            executable_dir="$app"
+            if [ ! -f "$plist" ]; then
+              plist="$app/Contents/Info.plist"
+              executable_dir="$app/Contents/MacOS"
+            fi
+            id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")
+            [ "$id" = com.eliseev.imagegen ]
+            executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$plist")
+            lipo -archs "$executable_dir/$executable" | grep -qw arm64
+            mkdir -p artifacts
+            tar -czf artifacts/maui-ios-sim.tar.gz -C "$(dirname "$app")" "$(basename "$app")"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: maui-ios-sim
+          path: artifacts/maui-ios-sim.tar.gz
+          if-no-files-found: warn
+          retention-days: 14
+
+  build-maui-catalyst:
+    runs-on: macos-26
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+      - name: Install compatible Mac Catalyst workload
+        run: dotnet workload install maui --version 10.0.302.0
+      - name: Build MAUI Mac Catalyst (CI only, unsigned)
+        run: dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-maccatalyst -c Debug -r maccatalyst-arm64 -p:EnableCodeSigning=false
+      - name: Mark incompatible toolchain as blocked
+        if: failure()
+        run: |
+          echo "::error::blocked: toolchain mismatch (Xcode $(xcodebuild -version | awk '/^Xcode / { print $2; exit }'), workload $(dotnet workload list))"
+          exit 1
+      - name: Package Mac Catalyst app
+        if: always()
+        run: |
+          app=$(find ImageGen/ImageGen.Maui/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64 -type d -name '*.app' -print -quit)
+          if [ -n "$app" ]; then
+            plist="$app/Info.plist"
+            executable_dir="$app"
+            id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist" 2>/dev/null || true)
+            if [ "$id" != com.eliseev.imagegen ]; then
+              plist="$app/Contents/Info.plist"
+              executable_dir="$app/Contents/MacOS"
+              id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")
+            fi
+            [ "$id" = com.eliseev.imagegen ]
+            executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$plist")
+            lipo -archs "$executable_dir/$executable" | grep -qw arm64
+            mkdir -p artifacts
+            tar -czf artifacts/maui-maccatalyst.tar.gz -C "$(dirname "$app")" "$(basename "$app")"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: maui-maccatalyst
+          path: artifacts/maui-maccatalyst.tar.gz
+          if-no-files-found: warn
+          retention-days: 14
+
+  build-avalonia-ios:
+    runs-on: macos-26
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+      - name: Install compatible iOS workload
+        run: dotnet workload install maui --version 10.0.302.0
+      - name: Build Avalonia iOS Simulator (CI only, unsigned)
+        run: dotnet build ImageGen/ImageGen.Avalonia.iOS/ImageGen.Avalonia.iOS.csproj -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=false -p:TrimMode=copy
+      - name: Verify Avalonia iOS formatting
+        run: dotnet format ImageGen/ImageGen.Avalonia.iOS/ImageGen.Avalonia.iOS.csproj --verify-no-changes
+      - name: Explain simulator build failure
+        if: failure()
+        run: |
+          echo "::notice::Avalonia iOS simulator build failed. Check the build output; the Apple preflight reports toolchain compatibility separately."
+      - name: Package simulator app
+        if: success()
+        run: |
+          app=$(find ImageGen/ImageGen.Avalonia.iOS/bin/Debug/net10.0-ios/iossimulator-arm64 -type d -name '*.app' -print -quit)
+          if [ -n "$app" ]; then
+            id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")
+            [ "$id" = com.eliseev.imagegen.avalonia ]
+            executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Info.plist")
+            lipo -archs "$app/$executable" | grep -qw arm64
+            mkdir -p artifacts
+            tar -czf artifacts/avalonia-ios-sim.tar.gz -C "$(dirname "$app")" "$(basename "$app")"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: avalonia-ios-sim
+          path: artifacts/avalonia-ios-sim.tar.gz
+          if-no-files-found: warn
+          retention-days: 14
+
+  build-avalonia-macos:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Publish Avalonia macOS arm64 (CI only)
+        run: dotnet publish ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj -c Release -r osx-arm64 --self-contained -o publish/osx-arm64
+      - name: Package unsigned app bundle
+        run: |
+          bash ImageGen/ImageGen.E2E.Common/ci/apple-make-app.sh publish/osx-arm64 publish/Omnilite.app com.eliseev.imagegen.avalonia 0.0.0
+          codesign --force --deep -s - publish/Omnilite.app
+          codesign --verify --deep --strict publish/Omnilite.app
+          mkdir -p artifacts
+          tar -czf artifacts/avalonia-macos.tar.gz -C publish Omnilite.app
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: avalonia-macos
+          path: artifacts/avalonia-macos.tar.gz
+          if-no-files-found: warn
+          retention-days: 14
+
+  smoke-ios-maui:
+    needs: build-maui-ios
+    if: always() && github.event_name != 'pull_request'
+    runs-on: macos-26
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download MAUI simulator app
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: maui-ios-sim
+          path: artifacts
+      - name: Run MAUI iOS simulator smoke
+        run: |
+          mkdir -p reports/ios-smoke/maui
+          if [ -f artifacts/maui-ios-sim.tar.gz ]; then
+            bash ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh artifacts/maui-ios-sim.tar.gz com.eliseev.imagegen reports/ios-smoke/maui
+          else
+            printf '{"runtime":"blocked","deviceType":"unknown","launched":false,"aliveAfter15s":false,"crashReports":0}\n' > reports/ios-smoke/maui/summary.json
+            echo 'No MAUI simulator app artifact was produced by its build job.' > reports/ios-smoke/maui/errors.txt
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-smoke-maui
+          path: reports/ios-smoke/maui/
+          if-no-files-found: warn
+          retention-days: 14
+
+  smoke-ios-avalonia:
+    needs: build-avalonia-ios
+    if: always() && github.event_name != 'pull_request'
+    runs-on: macos-26
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Avalonia simulator app
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: avalonia-ios-sim
+          path: artifacts
+      - name: Run Avalonia iOS simulator smoke
+        run: |
+          mkdir -p reports/ios-smoke/avalonia
+          if [ -f artifacts/avalonia-ios-sim.tar.gz ]; then
+            bash ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh artifacts/avalonia-ios-sim.tar.gz com.eliseev.imagegen.avalonia reports/ios-smoke/avalonia
+          else
+            printf '{"runtime":"blocked","deviceType":"unknown","launched":false,"aliveAfter15s":false,"crashReports":0}\n' > reports/ios-smoke/avalonia/summary.json
+            echo 'No Avalonia simulator app artifact was produced by its build job.' > reports/ios-smoke/avalonia/errors.txt
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-smoke-avalonia
+          path: reports/ios-smoke/avalonia/
+          if-no-files-found: warn
+          retention-days: 14
+
+  smoke-macos:
+    needs: [build-avalonia-macos, build-maui-catalyst]
+    if: always() && github.event_name != 'pull_request'
+    runs-on: macos-26
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Avalonia macOS app
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: avalonia-macos
+          path: artifacts/avalonia
+      - name: Download MAUI Mac Catalyst app
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: maui-maccatalyst
+          path: artifacts/catalyst
+      - name: Run macOS GUI preflight and app smoke
+        run: |
+          avalonia=''
+          catalyst=''
+          [ ! -f artifacts/avalonia/avalonia-macos.tar.gz ] || avalonia=artifacts/avalonia/avalonia-macos.tar.gz
+          [ ! -f artifacts/catalyst/maui-maccatalyst.tar.gz ] || catalyst=artifacts/catalyst/maui-maccatalyst.tar.gz
+          bash ImageGen/ImageGen.E2E.Common/ci/apple-macos-preflight.sh reports/macos-preflight "$avalonia" "$catalyst"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-e2e-smoke
+          path: reports/macos-preflight/
+          if-no-files-found: warn
+          retention-days: 14

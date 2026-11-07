@@ -260,6 +260,12 @@ public static class AppResources
 
     public static string SettingsClearLogsConfirm => Get(nameof(SettingsClearLogsConfirm));
 
+    public static string SettingsClearHistory => Get(nameof(SettingsClearHistory));
+
+    public static string SettingsClearHistoryConfirm => Get(nameof(SettingsClearHistoryConfirm));
+
+    public static string SettingsHistoryDeletedFormat => Get(nameof(SettingsHistoryDeletedFormat));
+
     public static string SettingsLogsCleared => Get(nameof(SettingsLogsCleared));
 
     public static string SettingsNoLogs => Get(nameof(SettingsNoLogs));
@@ -438,6 +444,8 @@ public static class AppResources
     public static string ImageViewerOpen => Get(nameof(ImageViewerOpen));
 
     public static string ImageViewerClose => Get(nameof(ImageViewerClose));
+
+    public static string PlayVideo => Get(nameof(PlayVideo));
 
     public static string ImageViewerPrevious => Get(nameof(ImageViewerPrevious));
 

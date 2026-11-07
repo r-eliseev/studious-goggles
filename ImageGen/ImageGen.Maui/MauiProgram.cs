@@ -6,6 +6,9 @@ using ImageGen.Core.Services;
 using ImageGen.Data;
 using ImageGen.Maui.Pages;
 using ImageGen.Maui.Services;
+#if ANDROID
+using ImageGen.Maui.Platforms.Android;
+#endif
 using ImageGen.Presentation;
 using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.Logging;
@@ -95,6 +98,12 @@ public static class MauiProgram
         builder.Services.AddSingleton<IClipboardService, MauiClipboardService>();
         builder.Services.AddSingleton<IImageSaver, MauiImageSaver>();
         builder.Services.AddSingleton<IImageViewerService, MauiImageViewerService>();
+        builder.Services.AddSingleton<IMediaPlayerService, MauiMediaPlayerService>();
+#if ANDROID
+        builder.Services.AddSingleton<IVideoPosterService, AndroidVideoPosterService>();
+#else
+        builder.Services.AddSingleton<IVideoPosterService, UnsupportedVideoPosterService>();
+#endif
         builder.Services.AddSingleton<IImageComparisonService, MauiImageComparisonService>();
 #if ANDROID
         builder.Services.AddSingleton<IMauiFullScreenController, ImageGen.Maui.Platforms.Android.AndroidFullScreenController>();

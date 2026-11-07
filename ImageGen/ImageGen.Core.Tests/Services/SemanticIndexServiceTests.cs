@@ -263,17 +263,21 @@ public class SemanticIndexServiceTests
     }
 
     [Fact]
-    public async Task IndexAsync_ModelMismatch_ReportsExpectedAndReturnedNames()
+    public async Task IndexAsync_ProviderModelNameStoresRequestedModelAndDoesNotReindex()
     {
         var ct = TestContext.Current.CancellationToken;
         var setup = Create([Source(SearchTextKind.Title, "model mismatch")]);
         setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
-            .Returns(new EmbeddingResult([[0.5f]], "other/model", 1, null));
+            .Returns(new EmbeddingResult([[0.5f]], "parasail-bge-m3", 1, 0.00000016m));
 
         await setup.Service.EnableAsync(ct);
-        var status = await WaitForStateAsync(setup.Service, SemanticIndexState.Failed, ct);
+        var status = await WaitForStateAsync(setup.Service, SemanticIndexState.Ready, ct);
 
-        Assert.Equal("response model 'other/model' differs from requested 'baai/bge-m3'", status.ErrorDetail);
+        Assert.Equal(SemanticIndexState.Ready, status.State);
+        Assert.Equal("baai/bge-m3", Assert.Single(setup.Repository.Items.Values).Model);
+        Assert.Equal("baai/bge-m3", Assert.Single(setup.Repository.Expenses).ModelId);
+        await setup.Service.GetStatusAsync(ct);
+        await setup.Client.Received(1).EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
         await setup.Service.DisposeAsync();
     }
 
@@ -289,7 +293,7 @@ public class SemanticIndexServiceTests
         var status = await WaitForStateAsync(setup.Service, SemanticIndexState.Ready, ct);
 
         Assert.Equal(SemanticIndexState.Ready, status.State);
-        Assert.Equal("BAAI/BGE-M3", Assert.Single(setup.Repository.Items.Values).Model);
+        Assert.Equal("baai/bge-m3", Assert.Single(setup.Repository.Items.Values).Model);
         await setup.Service.DisposeAsync();
     }
 

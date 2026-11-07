@@ -136,6 +136,10 @@
                         Content="{markup:Res SettingsClearLogs}"
                         Command="{Binding ClearLogsCommand}"
                         AutomationProperties.Name="{markup:Res SettingsClearLogs}" />
+                <Button Classes="danger"
+                        Content="{markup:Res SettingsClearHistory}"
+                        Command="{Binding ClearHistoryCommand}"
+                        AutomationProperties.Name="{markup:Res SettingsClearHistory}" />
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

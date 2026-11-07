@@ -57,3 +57,5 @@
 - Пока Xcode на раннерах не совпадает с workload, статусы iOS и Catalyst будут «blocked». Это видно в PR, а не спрятано.
 - Появляется третья голова Avalonia (iOS). Её платформенные службы — Keychain, пути, сохранение картинок, шаринг логов — нужно поддерживать.
 - В `docs/product.md` добавляется строка про Avalonia iOS и macOS для CI. Публикации и подписи нет.
+
+Проверено задачей 244 ([run 42369719262](https://github.com/r-eliseev/studious-goggles/actions/runs/42369719262)): на `macos-26` стоит Xcode 26.6; стандартный workload .NET SDK 10.0.403 требует Xcode 27.1 и не собирает iOS/Catalyst. Набор `10.0.302.0` из выпуска `dotnet-10.0.1xx-xcode26.6-10301` собирает обе цели с нулём предупреждений и ошибок, если выбрать установленный Xcode напрямую (`sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer`). Сводка и время — `docs/knowledge/apple-ci.md`.

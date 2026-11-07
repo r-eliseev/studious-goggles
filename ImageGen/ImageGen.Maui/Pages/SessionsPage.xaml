@@ -16,7 +16,7 @@
                     <KeyboardAccelerator Key="N" Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Cmd}" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{x:Static strings:AppResources.MenuSettings}" Command="{Binding OpenSettingsCommand}">
+            <MenuFlyoutItem AutomationId="sessions.settings" Text="{x:Static strings:AppResources.MenuSettings}" Command="{Binding OpenSettingsCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Key="," Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Cmd}" />
                 </MenuFlyoutItem.KeyboardAccelerators>
@@ -30,14 +30,14 @@
     </ContentPage.MenuBarItems>
 
     <Grid x:Name="SessionsLayout" ColumnDefinitions="272,*" ColumnSpacing="16" Padding="16">
-        <controls:SessionsListView Grid.Column="0" x:Name="SessionList" />
+        <controls:SessionsListView AutomationId="sessions.list" Grid.Column="0" x:Name="SessionList" />
 
         <!-- Shown only in the wide layout (SessionsPage.xaml.cs). -->
         <Border x:Name="EmptyState" Grid.Column="1" StyleClass="card" VerticalOptions="Center" HorizontalOptions="Center">
             <VerticalStackLayout Spacing="12" MaximumWidthRequest="440">
                 <Label StyleClass="heading" Text="{x:Static strings:AppResources.EmptyChatTitle}" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" />
                 <Label StyleClass="muted" Text="{x:Static strings:AppResources.EmptyChatHint}" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" />
-                <Button StyleClass="primary"
+                <Button AutomationId="sessions.new" StyleClass="primary"
                         Command="{Binding NewSessionCommand}"
                         HorizontalOptions="Center"
                         SemanticProperties.Description="{x:Static strings:AppResources.NewSession}"

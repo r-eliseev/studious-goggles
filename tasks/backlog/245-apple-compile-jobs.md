@@ -1,8 +1,8 @@
 ---
 id: 245
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: codex-gpt6
+claimed: 2026-11-07T12:08:43Z
 created: 2026-11-07
 ---
 
@@ -52,6 +52,16 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-07, codex-gpt6 (в работе)
+- Добавлен `apple-make-app.sh`: формирует `Omnilite.app/Contents/MacOS`, `Info.plist`, при наличии переносит `.icns`; подпись остаётся шагом CI на macOS.
+- `bash -n ImageGen/ImageGen.E2E.Common/ci/apple-make-app.sh` — успешно.
+- Проверка на фиктивной публикации в `tmp/fake-publish`: исполняемый apphost и все обязательные поля `Info.plist` созданы; успешно.
+- Workflow разделён на четыре build jobs и запускается на pull request, main и расписании. В iOS jobs используется проверенный набор SDK 10.0.302 / workload 10.0.302.0 / Xcode 26.6. Артефакты упаковываются в tar.gz и публикуются при любом результате сборки.
+- Первый workflow [42371375200](https://github.com/r-eliseev/studious-goggles/actions/runs/42371375200): MAUI iOS Simulator собрался и артефакт создался; Avalonia macOS `.app` собрался, подписался ad-hoc и упакован; MAUI Catalyst собрался, но проверка bundle ID прочитала Info.plist не из `Contents`; Avalonia iOS нашла ошибки компиляции, отражённые в отчёте 246. Исправлено: целевые пути app bundle ограничены соответствующей платформой; Catalyst теперь проверяет plist как в корне, так и в `Contents`; iOS-хост получил ожидаемое общими XAML-ресурсами имя сборки.
+- `bash scripts/check.sh`, `git diff --check` — успешно. Повторный workflow с исправлениями и Avalonia iOS фиксом ожидается.
+- Run [42373330934](https://github.com/r-eliseev/studious-goggles/actions/runs/42373330934): MAUI iOS/Catalyst and Avalonia macOS builds passed; `build-avalonia-ios` still fails in ILLink (`IL2104`, `IL2121`, `NETSDK1144`) after C# compilation. The workflow previously labeled every failure as a toolchain block and then failed while packaging a missing app; updated the simulator-only build to use `TrimMode=copy`, made its failure message generic, and skipped packaging after a failed build. Verification is pending.
+- Run [42374038441](https://github.com/r-eliseev/studious-goggles/actions/runs/42374038441): `TrimMode=copy` removed the grouped dependency diagnostics; only `IL2026` from the intentional runtime theme URI remains. Restored the warning suppression within the iOS host project, with a documented finite bundled resource justification; next Apple run will verify.
 
 ## Комментарии
 

@@ -7,7 +7,7 @@
              x:DataType="pm:SettingsPageModel"
              SafeAreaEdges="All"
              Title="{x:Static strings:AppResources.SettingsTitle}">
-    <ScrollView>
+    <ScrollView AutomationId="settings.page">
         <VerticalStackLayout Padding="16" Spacing="20">
             <Button StyleClass="ghost" Text="{x:Static strings:AppResources.SettingsSpending}"
                     Command="{Binding OpenSpendingCommand}"
@@ -118,6 +118,11 @@
                         Command="{Binding ClearLogsCommand}"
                         HorizontalOptions="Start"
                         SemanticProperties.Description="{x:Static strings:AppResources.SettingsClearLogs}" />
+                <Button StyleClass="danger"
+                        Text="{x:Static strings:AppResources.SettingsClearHistory}"
+                        Command="{Binding ClearHistoryCommand}"
+                        HorizontalOptions="Start"
+                        SemanticProperties.Description="{x:Static strings:AppResources.SettingsClearHistory}" />
             </VerticalStackLayout>
         </VerticalStackLayout>
     </ScrollView>

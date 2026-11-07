@@ -1,6 +1,6 @@
 ---
 id: 220
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -56,6 +56,14 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-07, codex-gpt6
+- Добавлены `IVideoPosterService`/`PosterInfo` и unsupported реализация; MAUI Android реализует извлечение кадра на фоне через `MediaMetadataRetriever`, уменьшение до 528 px и атомарный JPEG рядом с видео. Готовый постер переиспользуется; исключения логируют одну Warning без пути, без кадра возвращается `null`.
+- `GenerationItemViewModel` кэширует один запрос постера на карточку, а `ChatPageModel` запускает чтение вне UI-потока и применяет результат на UI-потоке только если карточка и сессия актуальны. Отношения видео берутся из параметров прогона; отсутствующий/auto ratio — 16:9. Успешная обложка задаёт фактические пропорции. Удаление сессии уже рекурсивно удаляет всю папку файлов (`FileImageStore.DeleteSessionFilesAsync`), отдельный код не потребовался.
+- TDD: новые тесты сначала упали — не было контракта и высота оставалась 176; после реализации проверены 9:16 → 352, 16:9/auto → 148.5, фактический постер 1280×720 → 148.5, одна загрузка на карточку и unsupported режим.
+- `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj` — 525/525; `dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj` — 180 пройдено, 2 пропущено для недоступных в Linux системных служб.
+- `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android --no-restore` — 0 предупреждений и ошибок. Форматирование проверено для Presentation, Presentation.Tests и MAUI. `bash scripts/check.sh` выполняется перед коммитом.
+- Ручная проверка кадра на Android не выполнялась в этой среде; добавлена в пункт 140.
 
 ## Комментарии
 

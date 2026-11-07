@@ -1,6 +1,6 @@
 ---
 id: 240
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -58,6 +58,17 @@ bash scripts/check.sh
 
 ## Отчёт
 
+### 2026-11-07, codex-gpt6 (в работе)
+- Добавлены NUnit/MTP Android UI-тесты с Appium, фикстурами для очистки/запуска приложения, видео, logcat, metadata и вложениями Allure. Smoke-сценарии проверяют первый экран, ошибочный ключ и поворот.
+- Добавлен job `test-android`: он запускает preflight и три теста на эмуляторе, сохраняет отчёты и Appium log в `android-e2e`.
+- Версии NuGet выбраны по текущим стабильным пакетам: NUnit 4.6.1, NUnit3TestAdapter 6.3.1, Appium.WebDriver 9.0.0; также добавлены Allure.NUnit 2.15.0 и TRX reporter 2.5.2 для MTP.
+- Проверки: `dotnet build ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj` — успешно, 0 предупреждений и ошибок; `dotnet format ... --verify-no-changes` — успешно; `bash scripts/check.sh` — успешно.
+- `dotnet test ... --report-trx --results-directory tmp/e2e-test-results/android` обнаружил все 3 теста и сформировал TRX, но локальный запуск ожидаемо завершился ошибкой `APP_APK must point to an existing Android APK`: в среде нет собранного APK и Android-эмулятора. CI-прогон и проверка видео/артефактов ожидаются.
+- Integrated run [42374038475](https://github.com/r-eliseev/studious-goggles/actions/runs/42374038475): APK build and Android preflight passed, but test launch failed because the MTP command had an incorrect extra `--`; fixed to pass `--report-trx` directly. Local test runs also exposed that Allure and per-test paths are relative to the runner output directory: per-test reports now use `E2E_REPORTS_DIR` (repo `reports/` in CI, repo `tmp/` locally), and Allure results use a path back to the workspace. Rerun pending.
+- CI run [42375415656](https://github.com/r-eliseev/studious-goggles/actions/runs/42375415656): the APK built and preflight installed/launched it, but the test command did not inherit `APP_APK` because the emulator action invokes script lines in separate shells. Changed the test invocation to pass `APP_APK` as a command-scoped environment variable. The invalid-key scenario now waits for a terminal invalid-format/network status instead of accepting “Checking the key...”. Android build, formatting, and `scripts/check.sh` pass locally; CI rerun pending.
+- CI run [42376767519](https://github.com/r-eliseev/studious-goggles/actions/runs/42376767519): Windows tests passed; Android preflight installed/launched the APK, but MTP changes the process working directory to the test output folder, so the relative APK path was not found by `AndroidSession`. The workflow now passes the APK path rooted at `$GITHUB_WORKSPACE`; rerun pending.
+- CI run [42377863074](https://github.com/r-eliseev/studious-goggles/actions/runs/42377863074): the absolute APK path was resolved and Appium session creation reached capability setup; Appium.WebDriver 9 rejects the generic `app` capability setter and requires `AppiumOptions.App`. Updated `AndroidSession` to use that property. Windows E2E and all application builds passed in this run; Android rerun pending.
+
 ## Комментарии
 
 ### 2026-11-07, claude-audit
@@ -65,3 +76,15 @@ bash scripts/check.sh
 
 ### 2026-11-07, владелец (в чате, записал claude-audit)
 Спецификация UI-тестов прислана владельцем; выбор: NUnit + Allure, сначала smoke, затем мок. План одобрен ранее данным поручением «заапрувь все таски которые будут». Изменение `.github/workflows/` по этой спецификации владелец попросил явно (ADR 0029).
+
+### 2026-11-07, codex-gpt6
+В run 42375415656 APK build и preflight прошли, но все три NUnit теста завершились на setup: `APP_APK` задавался отдельной shell-командой и не попадал в процесс тестов. Исправил передачу переменной в самой команде `dotnet test`; также уточнил ожидание ошибки ключа, чтобы промежуточный статус не считался результатом. Локальные build/format/check проходят; жду CI.
+
+### 2026-11-07, codex-gpt6
+В run 42376767519 обнаружил вторую часть проблемы: тестовый runner запускается из `bin/Debug/net10.0`, поэтому относительный `APP_APK` там не разрешался, хотя preflight из корня репозитория видел файл. Теперь workflow передаёт абсолютный путь от `$GITHUB_WORKSPACE`. В этом же run прошёл Windows smoke: 3 теста, build и preflight.
+
+### 2026-11-07, codex-gpt6
+В run 42377863074 runner нашёл APK и перешёл к созданию AppiumDriver, после чего Appium.WebDriver 9 сообщил, что capability `app` задаётся через `AppiumOptions.App`. Перевёл `AndroidSession` на это свойство; сборка/формат/CI проверка ожидаются.
+
+### 2026-11-07, codex-gpt6
+Run [42378967997](https://github.com/r-eliseev/studious-goggles/actions/runs/42378967997) прошёл: Android build, preflight и три smoke-теста зелёные. В `android-e2e` есть три открываемых H.264 MP4 (320×640), по одному на тест, logcat, metadata и Allure results; TRX подтверждает `Passed` для всех трёх. Отчёт Allure собран.

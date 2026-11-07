@@ -34,6 +34,8 @@ public static partial class AppServices
         services.AddSingleton<IFilePickerService>(new AvaloniaFilePickerService(MainWindowOwner));
         services.AddSingleton<IClipboardService>(new AvaloniaClipboardService(MainWindowOwner));
         services.AddSingleton<IImageSaver>(new AvaloniaImageSaver(MainWindowOwner));
+        services.AddSingleton<IMediaPlayerService, UnsupportedMediaPlayerService>();
+        services.AddSingleton<IVideoPosterService, UnsupportedVideoPosterService>();
         services.AddSingleton<AvaloniaFullScreenController>();
         services.AddSingleton<IImageViewerService>(sp => new AvaloniaImageViewerService(
             MainWindowOwner,

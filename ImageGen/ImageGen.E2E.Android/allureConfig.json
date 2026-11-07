@@ -1,0 +1,5 @@
+{
+  "allure": {
+    "directory": "../../../../../reports/android/allure-results"
+  }
+}

@@ -1,0 +1,214 @@
+name: ui-e2e
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-android:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet workload install maui-android
+      - name: Publish Android APK
+        shell: bash
+        run: dotnet publish ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -c Release -f net10.0-android -p:AndroidPackageFormat=apk -o publish/android
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: publish/android/*-Signed.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet workload install maui-windows
+      - name: Publish unpackaged Windows app
+        shell: bash
+        run: >-
+          dotnet publish ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -c Release
+          -f net10.0-windows10.0.19041.0 -p:ImageGenWindowsRid=win-x64 -p:SelfContained=true
+          -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -o publish/win-x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-app
+          path: publish/win-x64/
+          if-no-files-found: error
+          retention-days: 14
+
+  test-android:
+    needs: build-android
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: publish/android
+      - name: Enable KVM access
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install Appium and UIAutomator2 driver
+        run: |
+          mkdir -p reports/android
+          npm install -g appium@3.9.0
+          appium driver install uiautomator2@8.7.3
+      - name: Start Appium server
+        run: |
+          appium --log reports/android/appium.log &
+          for attempt in $(seq 1 120); do
+            if curl --silent --fail http://127.0.0.1:4723/status >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat reports/android/appium.log
+          exit 1
+      - name: Start emulator, run preflight and UI tests
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          E2E_REPORTS_DIR: ${{ github.workspace }}/reports/android
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          emulator-options: -writable-system -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: |
+            appium driver doctor uiautomator2
+            bash ImageGen/ImageGen.E2E.Common/ci/android-preflight.sh
+            mkdir -p reports/android/allure-results
+            APP_APK="$(find "$GITHUB_WORKSPACE/publish/android" -maxdepth 1 -type f -name '*-Signed.apk' -print -quit)" dotnet test --project ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj --report-trx --results-directory reports/android
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-e2e
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+  test-windows:
+    needs: build-windows
+    runs-on: windows-latest
+    continue-on-error: true
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-app
+          path: publish/win-x64
+      - name: Install FFmpeg
+        run: choco install ffmpeg -y --no-progress
+      - name: Run Windows interactive preflight
+        shell: pwsh
+        run: .\ImageGen\ImageGen.E2E.Common\ci\windows-preflight.ps1
+      - name: Run Windows UI tests
+        shell: pwsh
+        env:
+          APP_EXE: ${{ github.workspace }}\publish\win-x64\ImageGen.Maui.exe
+          E2E_REPORTS_DIR: ${{ github.workspace }}\reports\windows
+        run: |
+          New-Item -ItemType Directory -Force -Path reports/windows/allure-results | Out-Null
+          dotnet test --project ImageGen/ImageGen.E2E.Windows/ImageGen.E2E.Windows.csproj --report-trx --results-directory reports/windows
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-e2e
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+  report:
+    needs: [test-android, test-windows]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: android-e2e
+          path: reports/download/android
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: windows-e2e
+          path: reports/download/windows
+      - name: Merge Allure results and summarize platforms
+        id: collect
+        run: |
+          bash ImageGen/ImageGen.E2E.Common/ci/allure-summary.sh reports/download reports/allure-results
+          if find reports/allure-results -type f -name '*-result.json' -print -quit | grep -q .; then
+            echo 'has-results=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'has-results=false' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-java@v4
+        if: steps.collect.outputs.has-results == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Generate Allure HTML report
+        if: steps.collect.outputs.has-results == 'true'
+        run: npx --yes allure-commandline@2.46.1 generate reports/allure-results --clean -o reports/allure-html
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.collect.outputs.has-results == 'true'
+        with:
+          name: allure-report
+          path: reports/allure-html
+          if-no-files-found: warn
+          retention-days: 14
+
+  preflight-windows:
+    needs: build-windows
+    runs-on: windows-latest
+    continue-on-error: true
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-app
+          path: publish/win-x64
+      - name: Install FFmpeg
+        run: choco install ffmpeg -y --no-progress
+      - name: Run Windows interactive preflight
+        if: always()
+        shell: pwsh
+        run: .\ImageGen\ImageGen.E2E.Common\ci\windows-preflight.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: preflight-windows-reports
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 14

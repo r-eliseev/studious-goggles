@@ -15,4 +15,6 @@ public interface ISessionRepository
 
     /// <summary>Deletes the session with its messages, runs and generations.</summary>
     Task DeleteAsync(Guid id, CancellationToken cancellationToken);
+
+    Task<int> DeleteAllAsync(CancellationToken cancellationToken);
 }

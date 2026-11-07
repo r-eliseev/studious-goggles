@@ -92,4 +92,60 @@ public class SearchTextSourceTests
         Assert.Contains(sources, item => item.SourceKey == $"prompt:{run.Id:D}" && item.Text == "red fox in snow");
         Assert.Empty(empty);
     }
+
+    [Fact]
+    public async Task ListSourcesByKeysAsync_GroupsMixedKeysAndSkipsUnknownOrUnreadableKeys()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var session = TestData.Session();
+        session.Title = "Fox title";
+        await new SessionRepository(test.Database).AddAsync(session, ct);
+        var run = TestData.Run(session.Id, TestData.BaseTime);
+        run.Prompt = "red fox in snow";
+        await new RunRepository(test.Database).AddRunAsync(run, [TestData.Generation(run, 0)], ct);
+        var description = new ImageDescription
+        {
+            Id = Guid.NewGuid(),
+            SessionId = session.Id,
+            SourceGenerationId = Guid.NewGuid(),
+            Mode = DescriptionMode.Description,
+            ProviderId = "openrouter",
+            ModelId = "vision",
+            Text = "a fox sitting on a rock",
+            CreatedAt = TestData.BaseTime,
+        };
+        await new ImageDescriptionRepository(test.Database).AddAsync(description, ct);
+
+        var sources = await new SearchTextSource(test.Database).ListSourcesByKeysAsync(
+            [$"title:{session.Id:D}", $"prompt:{run.Id:D}", $"desc:{description.Id:D}", "other:123", "prompt:not-a-guid"], ct);
+
+        Assert.Equal(3, sources.Count);
+        Assert.Contains(sources, source => source.SourceKey == $"title:{session.Id:D}");
+        Assert.Contains(sources, source => source.SourceKey == $"prompt:{run.Id:D}");
+        Assert.Contains(sources, source => source.SourceKey == $"desc:{description.Id:D}");
+    }
+
+    [Fact]
+    public async Task PromptKeyQueryPlan_SearchesRunsByPrimaryKey()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        await using var connection = await test.Database.OpenAsync(ct);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "EXPLAIN QUERY PLAN " + string.Format(
+            System.Globalization.CultureInfo.InvariantCulture,
+            SearchTextSource.PromptSourcesByKeysQuery,
+            "@k0");
+        command.Parameters.AddWithValue("@k0", Guid.NewGuid().ToString("D"));
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        var details = new List<string>();
+        while (await reader.ReadAsync(ct))
+        {
+            details.Add(reader.GetString(3));
+        }
+
+        Assert.NotEmpty(details);
+        Assert.DoesNotContain(details, detail => detail.Contains("SCAN runs", StringComparison.OrdinalIgnoreCase));
+    }
 }

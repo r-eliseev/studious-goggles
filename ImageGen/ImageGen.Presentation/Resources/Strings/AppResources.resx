@@ -633,6 +633,15 @@
   <data name="SettingsClearLogsConfirm" xml:space="preserve">
     <value>Delete old log files? The current file is kept.</value>
   </data>
+  <data name="SettingsClearHistory" xml:space="preserve">
+    <value>Delete all history</value>
+  </data>
+  <data name="SettingsClearHistoryConfirm" xml:space="preserve">
+    <value>Delete all sessions, images, videos, audio and the search index? Provider keys, settings and spending history are kept. This cannot be undone.</value>
+  </data>
+  <data name="SettingsHistoryDeletedFormat" xml:space="preserve">
+    <value>History deleted: {0} sessions.</value>
+  </data>
   <data name="SettingsLogsCleared" xml:space="preserve">
     <value>Deleted {0} log files. The current file is kept.</value>
   </data>
@@ -743,6 +752,7 @@
   <data name="DescriptionEmptyResponse" xml:space="preserve"><value>The assistant did not return an image description.</value></data>
   <data name="ImageViewerOpen" xml:space="preserve"><value>Open image</value></data>
   <data name="ImageViewerClose" xml:space="preserve"><value>Close</value></data>
+  <data name="PlayVideo" xml:space="preserve"><value>Play video</value></data>
   <data name="ImageViewerPrevious" xml:space="preserve"><value>Previous</value></data>
   <data name="ImageViewerNext" xml:space="preserve"><value>Next</value></data>
   <data name="ImageViewerPositionFormat" xml:space="preserve"><value>{0} of {1}</value></data>

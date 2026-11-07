@@ -1,6 +1,6 @@
 ---
 id: 239
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -56,6 +56,13 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-07, codex-gpt6
+- Добавлены `ImageGen.E2E.Common` и `TestIds` с 15 постоянными id для ApiKey, Sessions, Chat и Settings; новый проект включён в solution и подключён к Presentation.Tests.
+- Все id поставлены строковыми литералами на элементы из плана. `SemanticProperties` не менялись.
+- Тест `AutomationIdsTests.EveryTestId_ExistsExactlyOnceInMauiMarkup` сначала упал (для `apikey.entry` было 0 вхождений), после добавления всех id проверяет, что каждый константный id встречается ровно один раз среди XAML в Pages/Controls и что значения констант уникальны.
+- `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj` — 526/526; `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android` — 0 предупреждений и ошибок.
+- Форматирование проверено для E2E.Common и Presentation.Tests. Харнес запускается перед коммитом.
 
 ## Комментарии
 

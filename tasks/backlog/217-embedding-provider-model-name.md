@@ -1,6 +1,6 @@
 ---
 id: 217
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -60,6 +60,13 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+- Введён общий `SemanticSearchModels.Default` и единое сравнение `IsDefault`. Индекс теперь проверяет форму/размерность, сохраняет `baai/bge-m3` независимо от имени upstream-модели и пишет ответное имя один раз за проход на Debug; расходы индексирования и query связываются с запрошенной моделью.
+- `SemanticSearchService` принимает ответные имена `BAAI/bge-m3` и `parasail-bge-m3`, фильтрует и кэширует индекс по запрошенному id. OpenRouter возвращает `usage.cost` как USD в `EmbeddingResult.CostUsd`.
+- LiveCheck теперь получает клиента через `GetTextEmbeddingClient`, выводит `model` ответа и `provider`; различие имени не считается ошибкой. Факты живой проверки владельца 2026-11-07 и вариативность upstream-модели добавлены в `docs/knowledge/dev-environment.md`.
+- TDD: тесты до исправления воспроизвели потерю цены, отказ индекса по `parasail-bge-m3` и пустой поиск по ответу `BAAI/bge-m3`. После исправления Core tests 809/809, LiveCheck tests 12/12; изменённые Core, Core.Tests, LiveCheck, LiveCheck.Tests прошли `dotnet format --verify-no-changes`; LiveCheck без ключа сформировал `unverified` без запроса.
+- Текущий живой запуск обновлённого LiveCheck с ключом не выполнен: в среде нет `IMAGEGEN_LIVE_OPENROUTER_KEY`. Ранее живой ответ владельца (зафиксирован в описании задачи) подтвердил HTTP 200, размерность 1024, ответ `BAAI/bge-m3` от DeepInfra и `usage.cost` USD; другой лог владельца показал `parasail-bge-m3`. Обновлённый LiveCheck следует повторить с ключом при возможности.
+- Отклонение: дополнительный живой вызов из текущей сессии невозможен без ключа; автоматические тесты и прогон без ключа прошли.
 
 ## Комментарии
 

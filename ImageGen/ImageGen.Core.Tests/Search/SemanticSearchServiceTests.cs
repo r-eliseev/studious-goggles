@@ -42,6 +42,23 @@ public sealed class SemanticSearchServiceTests
     }
 
     [Fact]
+    public async Task SearchAsync_ProviderModelNameStillReturnsResultsAndChargesRequestedModel()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var source = new SearchSource("title:a", Guid.NewGuid(), SearchTextKind.Title, "blue lake");
+        var setup = Create([source], [Embedding("title:a", source.SessionId, SearchTextKind.Title, source.Text, [1f, 0f])]);
+        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(new EmbeddingResult([[1f, 0f]], "BAAI/bge-m3", 2, 0.00000016m));
+
+        var hits = await setup.Service.SearchAsync("blue lake", ct);
+
+        Assert.Single(hits);
+        await setup.Repository.Received(1).UpsertBatchAsync([], Arg.Is<Expense?>(expense =>
+            expense != null && expense.ModelId == "baai/bge-m3" && expense.CostUsd == 0.00000016m), Arg.Any<CancellationToken>());
+        setup.Service.Dispose();
+    }
+
+    [Fact]
     public async Task SearchAsync_ShortQueryOrUnavailableIndex_DoesNotCallProvider()
     {
         var ct = TestContext.Current.CancellationToken;

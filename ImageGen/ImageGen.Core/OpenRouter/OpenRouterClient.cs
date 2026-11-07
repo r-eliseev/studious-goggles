@@ -6,6 +6,7 @@ using ImageGen.Core.Domain.Models;
 using ImageGen.Core.OpenAiCompatible;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
+using ImageGen.Core.Search;
 using ImageGen.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -22,7 +23,6 @@ public sealed class OpenRouterClient(
     : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient, ISynchronousImageTransport, ITextEmbeddingClient, IVideoModelProvider, IQueuedVideoProvider
 {
     private const int PriceRequestParallelism = 4;
-    private const string EmbeddingModel = "baai/bge-m3";
     private readonly ILogger<OpenRouterClient> _logger = logger ?? NullLogger<OpenRouterClient>.Instance;
 
     protected override void Authenticate(HttpRequestMessage request, string apiKey) => AuthenticateBearer(request, apiKey);
@@ -553,7 +553,7 @@ public sealed class OpenRouterClient(
         var input = new JsonArray(texts.Select(text => (JsonNode?)JsonValue.Create(text)).ToArray());
         var body = new JsonObject
         {
-            ["model"] = EmbeddingModel,
+            ["model"] = SemanticSearchModels.Default,
             ["input"] = input,
         };
         using var request = await CreateAuthorizedRequestAsync(HttpMethod.Post, "embeddings", body, cancellationToken);
@@ -562,9 +562,8 @@ public sealed class OpenRouterClient(
         var model = root["model"] is JsonValue modelNode && modelNode.TryGetValue<string>(out var responseModel)
             && !string.IsNullOrWhiteSpace(responseModel)
             ? responseModel
-            : EmbeddingModel;
-        // OpenRouter's usage.cost unit has not been verified for embeddings; do not label an unknown unit as USD.
-        return new EmbeddingResult(vectors, model, vectors[0].Length, null);
+            : SemanticSearchModels.Default;
+        return new EmbeddingResult(vectors, model, vectors[0].Length, ReadCost(root));
     }
 
     private static float[][] ReadEmbeddings(JsonNode root, int expectedCount)

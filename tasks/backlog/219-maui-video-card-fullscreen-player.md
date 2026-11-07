@@ -1,6 +1,6 @@
 ---
 id: 219
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -55,6 +55,15 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-07, codex-gpt6
+- Добавлены общий `IMediaPlayerService` и неподдерживаемая заглушка для Avalonia; MAUI реализует модальную чёрную страницу с одним `MediaElement`. Закрытие вызывает `Stop()` и `Handler?.DisconnectHandler()`, Back и Escape закрывают страницу. Выбран прямой вызов сервиса из `GenerationItemViewModel`, инъекция сервиса проходит из `ChatPageModel`.
+- Видеокарточка теперь показывает постер (путь пока пустой до задачи 220), значок Play и длительность; кнопка доступна только для готового видео при поддерживаемом плеере. Встроенный аудиоплеер сохранён.
+- TDD: `VideoCard_UsesPosterAndPlayButtonInsteadOfInlinePlayer` сначала упал из-за встроенного видео MediaElement, затем стал проходить. Добавлены тесты команды: только готовое доступное медиа вызывает сервис с локальным путём.
+- `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj` — 520/520; `dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj` — 180 пройдено, 2 ожидаемо пропущено (Windows DPAPI и отсутствующая D-Bus Secret Service).
+- `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android` — 0 предупреждений и ошибок. `dotnet build ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj -c Release --no-restore` — 0 предупреждений и ошибок.
+- Форматирование проверено для Presentation, Presentation.Tests и MAUI. Обновлены `docs/knowledge/maui.md`, ручные пункты 140 и 016. README из локального NuGet пакета 10.0.0 не содержит инструкций очистки; это отмечено в knowledge, а вызовы `Stop()` и `DisconnectHandler()` реализованы по плану задачи.
+- Ручной прогон Android/Windows недоступен в этой среде и оставлен в задачах 140/016.
 
 ## Комментарии
 

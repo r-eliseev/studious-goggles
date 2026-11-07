@@ -296,6 +296,27 @@ public sealed class FileImageStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteAllMediaAsync_RemovesImagesAndKeepsOtherData()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var relative = await _store.SaveAsync(Guid.NewGuid(), Guid.NewGuid(), [1], "image/png", ct);
+        var logs = Path.Combine(_directory, "logs");
+        Directory.CreateDirectory(logs);
+        var logFile = Path.Combine(logs, "imagegen.log");
+        var searchFile = Path.Combine(_directory, "search.json");
+        await File.WriteAllTextAsync(logFile, "log", ct);
+        await File.WriteAllTextAsync(searchFile, "{}", ct);
+
+        var count = await _store.DeleteAllMediaAsync(ct);
+
+        Assert.Equal(1, count);
+        Assert.False(Directory.Exists(Path.Combine(_directory, FileImageStore.ImagesFolder)));
+        Assert.True(File.Exists(logFile));
+        Assert.True(File.Exists(searchFile));
+        Assert.False(File.Exists(_store.GetFullPath(relative)));
+    }
+
+    [Fact]
     public void DeleteOrphanedTemporaryFiles_DeletesOnlyOldFilesWithExactPatterns()
     {
         var now = DateTimeOffset.UtcNow;

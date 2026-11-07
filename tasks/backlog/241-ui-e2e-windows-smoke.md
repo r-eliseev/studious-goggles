@@ -1,6 +1,6 @@
 ---
 id: 241
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -51,6 +51,15 @@ bash scripts/check.sh
 
 ## Отчёт
 
+### 2026-11-07, codex-gpt6 (в работе)
+- Добавлены Windows NUnit/MTP UI-тесты на FlaUI UIA3 и захват FFmpeg: запуск unpackaged приложения, очистка каталога данных, ожидание окна, screenshot/UI tree при ошибке, app log, запись и metadata.
+- Добавлены smoke-сценарии первого экрана и ошибочного ключа; Windows job скачивает приложение, устанавливает FFmpeg, запускает 238 preflight, тесты и загружает `windows-e2e`.
+- Добавлен тест построения аргументов FFmpeg (TDD: до `VideoRecorder` сборка теста падала на отсутствующем типе).
+- Проверки: `dotnet build ...ImageGen.E2E.Windows.csproj` — успешно, 0 предупреждений и ошибок; `dotnet format ... --verify-no-changes`, YAML-парсер и `bash scripts/check.sh` — успешно.
+- Локальный `dotnet test` не может запустить Windows-targeted runner: Linux-сессия не содержит `Microsoft.WindowsDesktop.App`; проверка теста и приложения ожидает Windows CI. CI job добавлен с `continue-on-error: true` по плану.
+- Integrated run [42374038475](https://github.com/r-eliseev/studious-goggles/actions/runs/42374038475): Windows app build and preflight passed; FlaUI launched the application and one of three tests passed. Two failures were test assertions: save button is visible but disabled before input (`IsEnabled` changed to `IsOffscreen` check), and invalid-key status did not match either expected resource (failure now prints the redacted actual status). The old relative artifact root meant per-test data was absent from upload; fixed with `E2E_REPORTS_DIR`. Rerun pending.
+- CI run [42375415656](https://github.com/r-eliseev/studious-goggles/actions/runs/42375415656): first-launch and video argument tests passed; invalid-key test read the transient “Checking the key...” status immediately. It now polls until the localized invalid-format or network-error result appears. Local Windows-targeted build and formatting pass; execution awaits CI rerun.
+
 ## Комментарии
 
 ### 2026-11-07, claude-audit
@@ -58,3 +67,9 @@ bash scripts/check.sh
 
 ### 2026-11-07, владелец (в чате, записал claude-audit)
 Спецификация UI-тестов прислана владельцем; выбор: NUnit + Allure, сначала smoke, затем мок. План одобрен ранее данным поручением «заапрувь все таски которые будут». Изменение `.github/workflows/` по этой спецификации владелец попросил явно (ADR 0029).
+
+### 2026-11-07, codex-gpt6
+В run 42375415656 приложение запустилось, два теста прошли, а `InvalidKey_ShowsError` успел прочитать промежуточный статус “Checking the key...”. Изменил ожидание: тест ждёт один из конечных локализованных статусов до 30 секунд. Локальные build/format/check проходят; жду CI rerun.
+
+### 2026-11-07, codex-gpt6
+Run [42378967997](https://github.com/r-eliseev/studious-goggles/actions/runs/42378967997) прошёл: unpackaged app build, Windows preflight и UI smoke зелёные. `windows-e2e` содержит открываемые H.264 MP4 (1024×768) для обоих UI-тестов, логи и metadata; TRX подтверждает два UI-теста и тест аргументов FFmpeg как `Passed`.

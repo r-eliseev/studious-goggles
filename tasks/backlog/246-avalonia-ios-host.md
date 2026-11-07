@@ -1,8 +1,8 @@
 ---
 id: 246
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: codex-gpt6
+claimed: 2026-11-07T11:55:46Z
 created: 2026-11-07
 ---
 
@@ -57,6 +57,14 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-07, codex-gpt6 (в работе)
+- Первый CI build выявил сигнатуру `SecKeyChain.QueryAsRecord` (`SecRecord` возвращается, `SecStatusCode` идёт через `out`), nullable UIKit view и устаревший `UIApplication.KeyWindow`; исправлены.
+- Предупреждение IL2026 из динамической загрузки Avalonia theme resources подавлено локально только в iOS-проекте, где тема выбирается по URI во время выполнения.
+- Второй CI build прошёл компиляцию C#, затем выявил, что XAML-ресурсы ожидают assembly `ImageGen.Avalonia`, как и Android-хост. Исправлено имя сборки iOS-проекта; ожидается повторная сборка и запуск симулятора.
+- Логи повторного прогона: [42371977271](https://github.com/r-eliseev/studious-goggles/actions/runs/42371977271), job `build-avalonia-ios`.
+- Run [42373330934](https://github.com/r-eliseev/studious-goggles/actions/runs/42373330934): host C# compilation succeeds, but the iOS linker fails with `IL2104`/`IL2121` and `NETSDK1144`; package step then failed again because the app was absent. For the CI-only simulator build, switch to `TrimMode=copy` (no size reduction is needed for this smoke artifact), remove the stale broad IL2026 suppression, and avoid labeling arbitrary build errors as a toolchain block. New-run verification pending.
+- Run [42374038441](https://github.com/r-eliseev/studious-goggles/actions/runs/42374038441): `TrimMode=copy` reduced the failure to the single known IL2026 warning for runtime-selected bundled theme XAML. Reinstated its iOS-project-only suppression; CI verification pending.
 
 ## Комментарии
 

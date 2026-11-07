@@ -1,6 +1,6 @@
 ---
 id: 231
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -48,6 +48,12 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-07, codex-gpt6
+- Ключи группируются по `title:`, `prompt:` и `desc:`; нераспознанный префикс, пустой id и id, который нельзя разобрать как GUID, отбрасываются. Для каждой непустой группы выполняется отдельный параметризованный `IN` по первичному ключу соответствующей таблицы; prompt и description сохраняют join к sessions.
+- Добавлены тест смешанной пачки из трёх типов плюс неизвестный/нечитаемый id и тест `EXPLAIN QUERY PLAN`, который гарантирует отсутствие `SCAN runs` для prompt-поиска.
+- TDD для плана запроса: начальный тест не собирался, так как production query ещё не был вынесен в используемую тестом SQL-константу; после добавления константы и реализации тесты прошли.
+- `dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj` — 144/144; `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj` — 809/809. Форматирование Data и Data.Tests проверено; harness запускается перед коммитом.
 
 ## Комментарии
 

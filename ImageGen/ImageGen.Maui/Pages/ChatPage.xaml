@@ -172,21 +172,19 @@
                                                                    IsVisible="{Binding HasImage}"
                                                                    Aspect="AspectFit"
                                                                    AutomationProperties.IsInAccessibleTree="False" />
-                                                            <toolkit:MediaElement Source="{Binding MediaFilePath, Converter={StaticResource FilePathToMediaSource}}"
-                                                                                  HeightRequest="176" WidthRequest="264"
-                                                                                  ShouldAutoPlay="False" ShouldShowPlaybackControls="True"
-                                                                                  IsVisible="False" Loaded="OnMediaElementLoaded" Unloaded="OnMediaElementUnloaded"
-                                                                                  SemanticProperties.Description="{Binding SummaryText}">
-                                                                <toolkit:MediaElement.Triggers>
-                                                                    <MultiTrigger TargetType="toolkit:MediaElement">
-                                                                        <MultiTrigger.Conditions>
-                                                                            <BindingCondition Binding="{Binding IsVideo}" Value="True" />
-                                                                            <BindingCondition Binding="{Binding HasMedia}" Value="True" />
-                                                                        </MultiTrigger.Conditions>
-                                                                        <Setter Property="IsVisible" Value="True" />
-                                                                    </MultiTrigger>
-                                                                </toolkit:MediaElement.Triggers>
-                                                            </toolkit:MediaElement>
+                                                            <Grid IsVisible="{Binding IsVideo}" BackgroundColor="{DynamicResource IgSunkenColor}">
+                                                                <Image Source="{Binding VideoPosterPath, Converter={StaticResource FilePathToImageSource}}"
+                                                                       Aspect="AspectFit" AutomationProperties.IsInAccessibleTree="False" />
+                                                                <Label Text="▶" FontSize="42" TextColor="#FFFFFF" HorizontalOptions="Center" VerticalOptions="Center"
+                                                                       AutomationProperties.IsInAccessibleTree="False" />
+                                                                <Label Text="{Binding DurationText}" TextColor="#FFFFFF" BackgroundColor="#99000000"
+                                                                       Padding="6,2" HorizontalOptions="End" VerticalOptions="End"
+                                                                       AutomationProperties.IsInAccessibleTree="False" />
+                                                                <Button Text="" IsVisible="{Binding CanPlayMedia}"
+                                                                        Command="{Binding PlayMediaCommand}"
+                                                                        HorizontalOptions="Fill" VerticalOptions="Fill" BackgroundColor="Transparent" BorderWidth="0" Padding="0"
+                                                                        SemanticProperties.Description="{x:Static strings:AppResources.PlayVideo}" />
+                                                            </Grid>
                                                             <Grid IsVisible="{Binding IsAudio}" BackgroundColor="{DynamicResource IgSunkenColor}"
                                                                   SemanticProperties.Description="{Binding SummaryText}">
                                                                 <Label StyleClass="icon" FontSize="32" Text="&#xE0C7;" HorizontalOptions="Center" VerticalOptions="Center" />
@@ -250,7 +248,7 @@
                                                             </Border>
                                                         </Grid>
                                                     </Border>
-                                                    <toolkit:MediaElement Source="{Binding MediaFilePath, Converter={StaticResource FilePathToMediaSource}}"
+                                                    <toolkit:MediaElement Source="{Binding AudioFilePath, Converter={StaticResource FilePathToMediaSource}}"
                                                                           HeightRequest="64" ShouldAutoPlay="False" ShouldShowPlaybackControls="True"
                                                                           IsVisible="False" Loaded="OnMediaElementLoaded" Unloaded="OnMediaElementUnloaded"
                                                                           SemanticProperties.Description="{Binding SummaryText}">
@@ -402,7 +400,7 @@
             <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
                 <Label x:Name="ChatTitle" StyleClass="title" Text="{Binding Title}" VerticalOptions="Center"
                        IsVisible="{Binding IsWide}" MaxLines="1" LineBreakMode="TailTruncation" />
-                <Button StyleClass="chip,chip-compact" Text="{Binding ModelsButtonText}"
+                <Button AutomationId="chat.models" StyleClass="chip,chip-compact" Text="{Binding ModelsButtonText}"
                         Command="{Binding OpenModelsCommand}"
                         SemanticProperties.Description="{Binding ModelsButtonText}" />
                 <Border StyleClass="chip,chip-compact" VerticalOptions="Center">
@@ -416,7 +414,7 @@
             </HorizontalStackLayout>
         </ScrollView>
 
-        <CollectionView x:Name="Transcript"
+        <CollectionView AutomationId="chat.feed" x:Name="Transcript"
                         Grid.Row="1"
                         ItemsSource="{Binding Items}"
                         ItemTemplate="{StaticResource ChatItemSelector}"
@@ -463,7 +461,7 @@
                        IsVisible="{Binding HasNextRunEstimate}"
                        Text="{Binding NextRunEstimateText}"
                        SemanticProperties.Description="{Binding NextRunEstimateText}" />
-                <controls:ChatEditor Text="{Binding InputText}"
+                <controls:ChatEditor AutomationId="chat.input" Text="{Binding InputText}"
                         SendCommand="{Binding SendCommand}"
                         Placeholder="{x:Static strings:AppResources.ChatPlaceholder}"
                         AutoSize="TextChanges"
@@ -476,7 +474,7 @@
                             SemanticProperties.Description="{x:Static strings:AppResources.AttachImageButton}" />
                     <Label Grid.Column="1" StyleClass="meta" Text="{Binding AttachmentsText}"
                            VerticalTextAlignment="Center" Margin="8,0,0,0" />
-                    <Button Grid.Column="2"
+                    <Button AutomationId="chat.send" Grid.Column="2"
                             StyleClass="primary,icon" Text="{x:Static appearance:IconGlyphs.Send}" FontFamily="LucideIcons"
                             Command="{Binding SendCommand}"
                             SemanticProperties.Description="{x:Static strings:AppResources.Send}" />

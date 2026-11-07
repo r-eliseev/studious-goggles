@@ -6,6 +6,7 @@ namespace ImageGen.Core.Services;
 public sealed class SessionChangeNotifier(ILogger<SessionChangeNotifier> logger)
 {
     public event EventHandler<Guid>? SessionChanged;
+    public event EventHandler? AllSessionsChanged;
 
     /// <summary>
     /// Notifies every subscriber. A subscriber that throws does not stop the others and does not reach the caller:
@@ -31,6 +32,28 @@ public sealed class SessionChangeNotifier(ILogger<SessionChangeNotifier> logger)
                 // The operational entry carries the session id only; the details stay at Debug.
                 logger.LogWarning("A subscriber of session changes failed for session {SessionId}.", sessionId);
                 logger.LogDebug(ex, "Details of the failure of a subscriber of session changes for session {SessionId}.", sessionId);
+            }
+        }
+    }
+
+    public void NotifyAll()
+    {
+        var handlers = AllSessionsChanged;
+        if (handlers is null)
+        {
+            return;
+        }
+
+        foreach (var handler in handlers.GetInvocationList().Cast<Delegate>())
+        {
+            try
+            {
+                ((EventHandler)handler)(this, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning("A subscriber of all-session changes failed.");
+                logger.LogDebug(ex, "Details of a subscriber failure for all-session changes.");
             }
         }
     }

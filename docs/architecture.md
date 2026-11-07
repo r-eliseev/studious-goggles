@@ -84,6 +84,8 @@ ImageGen/
   ImageGen.Avalonia.Android/       Android (Avalonia 12.1): MobileApp/MainView без окна; использует AppServices.CreateShared,
                                    общие Views, темы и сервисы Avalonia; OverlayHost для диалогов, просмотра и сравнения,
                                    Platform/ для FilesDir, Android Keystore, сохранения в MediaStore и неподдерживаемых папок
+  ImageGen.Avalonia.iOS/           iOS Simulator (Avalonia 12.1): MobileApp/MainView и AppDelegate; общие Views,
+                                   темы и сервисы Avalonia; данные в контейнере приложения, секреты в Keychain
   ImageGen.Maui/                   MAUI: Pages/ (включая GalleryPage и SpendingPage), Controls/ (SessionsListView, StarterExamples, ChatEditor, SessionModelsView — общий экран моделей страницы и панели), PageModels/ (только
                                    ChatItemTemplateSelector), Services/ (MauiSecretStore, MauiAppPaths, MauiMainThread,
                                    Shell-реализации, буфер, выбор файлов, MauiImageSaver, MauiAppearanceApplier, MauiImageViewerService, MauiImageComparisonService, MauiFullScreenController, MauiFolderLauncher, MauiSecretPersistence), Converters/,

@@ -1,6 +1,6 @@
 ---
 id: 229
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -58,6 +58,13 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-07, codex-gpt6
+- Добавлен `HistoryService.ClearAllAsync`: останавливает генерации всех сессий, удаляет сессии одним транзакционным `DELETE FROM sessions`, удаляет папку `images/` (до 3 попыток при IOException), публикует `NotifyAll`, обновляет статус включённого семантического индекса, пишет число сессий и файлов.
+- Добавлены `ISessionRepository.DeleteAllAsync`, `IImageFileStore.DeleteAllMediaAsync`, event `AllSessionsChanged`; список сессий перечитывается. Settings получила destructive confirmation, оба UI action и переход из чата на список после очистки.
+- Добавлены тесты Core (порядок остановки/удаления/события и refresh индекса), Data (каскад, embeddings, расходы остаются; файлы удаляются, logs/search.json сохраняются), Presentation (отмена/подтверждение).
+- Проверки: Core 811/811, Data 146/146, Presentation 528/528, Avalonia 180 passed / 2 skipped (D-Bus и Windows DPAPI); MAUI Android build 0 warnings/errors. Форматирование Core, Core.Tests, Data, Data.Tests, Presentation, Presentation.Tests, Avalonia, Avalonia.Tests и MAUI прошло; `scripts/check.sh` — «все проверки пройдены».
+- Пункты 046 и 140 не выполнялись у физического экрана; добавлен сценарий ручной проверки ниже.
 
 ## Комментарии
 
