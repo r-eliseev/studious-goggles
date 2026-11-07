@@ -52,6 +52,15 @@ bash scripts/check.sh
 
 ## Отчёт
 
+### 2026-11-07, codex-gpt6 (в работе)
+- Настроены Allure results dirs `reports/android/allure-results` и `reports/windows/allure-results`, конфиги копируются в output проектов, который попадает в уже настроенные platform artifacts.
+- Добавлен скрипт объединения вложений и результатов Allure с проверкой конфликтов имён, подсчётом статусов для обеих платформ, Markdown-сводкой и корректным нулевым результатом, если тестовых файлов нет.
+- Добавлен `report` job: оба скачивания артефактов допускают отсутствие файла, Allure CLI закреплён на 2.46.1 с Java 21, HTML загружается отдельным артефактом.
+- Проверено на фикстурах в `tmp/`: passed/failed/skipped считаются по платформам, вложение копируется, одинаковые имена завершаются понятной ошибкой, отсутствие результатов не валит job. `npx allure-commandline@2.46.1 generate ...` создал HTML-отчёт из fixture результатов.
+- `dotnet build` и `dotnet format --verify-no-changes` проектов Android/Windows, `bash scripts/check.sh`, YAML/JSON parsing и `git diff --check` прошли. На Linux нет браузера для проверки `file://`; способ открыть скачанный отчёт через локальный HTTP-сервер записан в knowledge. CI job и PR status visibility ожидают прогона.
+- Проверочный Android MTP run с отсутствующим APK (ожидаемый setup failure) подтвердил, что `[AllureNUnit]` создаёт 3 result JSON и attachments. Конфиг Allure читается из test output, а относительный `directory` считается относительно него; путь `../../../../../reports/<platform>/allure-results` выводит результаты в workspace. Run `42374038475` пока не включал этот конфиг и не запускал report job; интегрированная проверка ожидает повторного CI.
+- `docs/specs/ui-e2e.md` остаётся в статусе «черновик»: пункты 238–242 ещё не прошли полный CI и не закрыты.
+
 ## Комментарии
 
 ### 2026-11-07, claude-audit

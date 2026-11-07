@@ -57,6 +57,7 @@ bash scripts/check.sh
 - Добавлен тест построения аргументов FFmpeg (TDD: до `VideoRecorder` сборка теста падала на отсутствующем типе).
 - Проверки: `dotnet build ...ImageGen.E2E.Windows.csproj` — успешно, 0 предупреждений и ошибок; `dotnet format ... --verify-no-changes`, YAML-парсер и `bash scripts/check.sh` — успешно.
 - Локальный `dotnet test` не может запустить Windows-targeted runner: Linux-сессия не содержит `Microsoft.WindowsDesktop.App`; проверка теста и приложения ожидает Windows CI. CI job добавлен с `continue-on-error: true` по плану.
+- Integrated run [42374038475](https://github.com/r-eliseev/studious-goggles/actions/runs/42374038475): Windows app build and preflight passed; FlaUI launched the application and one of three tests passed. Two failures were test assertions: save button is visible but disabled before input (`IsEnabled` changed to `IsOffscreen` check), and invalid-key status did not match either expected resource (failure now prints the redacted actual status). The old relative artifact root meant per-test data was absent from upload; fixed with `E2E_REPORTS_DIR`. Rerun pending.
 
 ## Комментарии
 

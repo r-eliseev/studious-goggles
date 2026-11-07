@@ -1,8 +1,10 @@
+using Allure.NUnit;
 using NUnit.Framework;
 
 namespace ImageGen.E2E.Windows;
 
 [TestFixture]
+[AllureNUnit]
 [Platform("Win")]
 public sealed class VideoRecorderTests
 {

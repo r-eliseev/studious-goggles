@@ -11,3 +11,11 @@
 ### Android — успешная проверка
 
 [Run 42367302330](https://github.com/r-eliseev/studious-goggles/actions/runs/42367302330), commit `58a2a0d32a40693808d372ac236b4010635fe753`: APK `com.eliseev.imagegen-Signed.apk` собран, установлен и запущен; скриншот показывает экран Connect OpenRouter. `AutomationId` находится в XML как `resource-id="com.eliseev.imagegen:id/apikey.entry"`. `adb root` и `adb remount` успешны; screenshot и recording получены, длительность записи 19.842 с. Workflow завершился успешно, Windows preflight также успешен. Артефакты лежат в `preflight-android-reports` и `preflight-windows-reports` (14 дней).
+
+## Allure отчёт
+
+Workflow собирает Allure результаты Android и Windows в HTML и загружает `allure-report` на 14 дней. Скачайте артефакт из раздела Artifacts нужного Actions run и распакуйте его; для просмотра запустите `python3 -m http.server 8000 --directory <папка-отчёта>` и откройте `http://localhost:8000`. `file://` не проверен: в локальной среде нет браузера.
+
+## Интегрированный прогон 42374038475
+
+Сборки Android APK и unpackaged Windows app прошли; Android preflight установил и запустил APK на API 33. Android UI test не стартовал из-за лишнего `--` в синтаксисе `dotnet test` с MTP. Windows UI test действительно запустил окно через FlaUI и выполнил 3 сценария: один прошёл, два упали из-за проверок доступности/статуса в тестах. Следующий прогон должен подтвердить исправленный синтаксис MTP, UI-проверки и выгрузку per-test артефактов.

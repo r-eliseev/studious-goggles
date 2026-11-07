@@ -19,4 +19,7 @@
     <ProjectReference Include="../ImageGen.E2E.Common/ImageGen.E2E.Common.csproj" />
     <ProjectReference Include="../ImageGen.Presentation/ImageGen.Presentation.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="allureConfig.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

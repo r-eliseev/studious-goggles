@@ -13,7 +13,13 @@ internal sealed class TestArtifacts
     {
         var safeClass = Sanitize(className);
         var safeTest = Sanitize(testName);
-        DirectoryPath = Path.Combine("reports", "android", $"{safeClass}.{safeTest}");
+        var reportsRoot = Environment.GetEnvironmentVariable("E2E_REPORTS_DIR");
+        if (string.IsNullOrWhiteSpace(reportsRoot))
+        {
+            reportsRoot = Path.Combine(FindRepositoryRoot(), "tmp", "reports", "android");
+        }
+
+        DirectoryPath = Path.Combine(reportsRoot, $"{safeClass}.{safeTest}");
         Directory.CreateDirectory(DirectoryPath);
         StartedAt = DateTimeOffset.UtcNow;
         Stopwatch = Stopwatch.StartNew();
@@ -155,4 +161,17 @@ internal sealed class TestArtifacts
     };
 
     private static string Sanitize(string value) => string.Concat(value.Select(character => char.IsLetterOrDigit(character) || character is '.' or '-' or '_' ? character : '_'));
+
+    private static string FindRepositoryRoot()
+    {
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "AGENTS.md")))
+            {
+                return directory.FullName;
+            }
+        }
+
+        return Environment.CurrentDirectory;
+    }
 }

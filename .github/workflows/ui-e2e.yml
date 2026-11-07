@@ -92,6 +92,8 @@ jobs:
           exit 1
       - name: Start emulator, run preflight and UI tests
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          E2E_REPORTS_DIR: ${{ github.workspace }}/reports/android
         with:
           api-level: 33
           target: google_apis
@@ -101,7 +103,8 @@ jobs:
             appium driver doctor uiautomator2
             bash ImageGen/ImageGen.E2E.Common/ci/android-preflight.sh
             export APP_APK="$(find publish/android -maxdepth 1 -type f -name '*-Signed.apk' -print -quit)"
-            dotnet test --project ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj -- --report-trx --results-directory reports/android
+            mkdir -p reports/android/allure-results
+            dotnet test --project ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj --report-trx --results-directory reports/android
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -133,12 +136,56 @@ jobs:
         shell: pwsh
         env:
           APP_EXE: ${{ github.workspace }}\publish\win-x64\ImageGen.Maui.exe
-        run: dotnet test --project ImageGen/ImageGen.E2E.Windows/ImageGen.E2E.Windows.csproj -- --report-trx --results-directory reports/windows
+          E2E_REPORTS_DIR: ${{ github.workspace }}\reports\windows
+        run: |
+          New-Item -ItemType Directory -Force -Path reports/windows/allure-results | Out-Null
+          dotnet test --project ImageGen/ImageGen.E2E.Windows/ImageGen.E2E.Windows.csproj --report-trx --results-directory reports/windows
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: windows-e2e
           path: reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+  report:
+    needs: [test-android, test-windows]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: android-e2e
+          path: reports/download/android
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: windows-e2e
+          path: reports/download/windows
+      - name: Merge Allure results and summarize platforms
+        id: collect
+        run: |
+          bash ImageGen/ImageGen.E2E.Common/ci/allure-summary.sh reports/download reports/allure-results
+          if find reports/allure-results -type f -name '*-result.json' -print -quit | grep -q .; then
+            echo 'has-results=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'has-results=false' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-java@v4
+        if: steps.collect.outputs.has-results == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Generate Allure HTML report
+        if: steps.collect.outputs.has-results == 'true'
+        run: npx --yes allure-commandline@2.46.1 generate reports/allure-results --clean -o reports/allure-html
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.collect.outputs.has-results == 'true'
+        with:
+          name: allure-report
+          path: reports/allure-html
           if-no-files-found: warn
           retention-days: 14
 

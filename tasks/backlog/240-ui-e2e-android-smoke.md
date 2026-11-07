@@ -63,7 +63,8 @@ bash scripts/check.sh
 - Добавлен job `test-android`: он запускает preflight и три теста на эмуляторе, сохраняет отчёты и Appium log в `android-e2e`.
 - Версии NuGet выбраны по текущим стабильным пакетам: NUnit 4.6.1, NUnit3TestAdapter 6.3.1, Appium.WebDriver 9.0.0; также добавлены Allure.NUnit 2.15.0 и TRX reporter 2.5.2 для MTP.
 - Проверки: `dotnet build ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj` — успешно, 0 предупреждений и ошибок; `dotnet format ... --verify-no-changes` — успешно; `bash scripts/check.sh` — успешно.
-- `dotnet test ... -- --report-trx --results-directory tmp/e2e-test-results/android` обнаружил все 3 теста и сформировал TRX, но локальный запуск ожидаемо завершился ошибкой `APP_APK must point to an existing Android APK`: в среде нет собранного APK и Android-эмулятора. CI-прогон и проверка видео/артефактов ожидаются.
+- `dotnet test ... --report-trx --results-directory tmp/e2e-test-results/android` обнаружил все 3 теста и сформировал TRX, но локальный запуск ожидаемо завершился ошибкой `APP_APK must point to an existing Android APK`: в среде нет собранного APK и Android-эмулятора. CI-прогон и проверка видео/артефактов ожидаются.
+- Integrated run [42374038475](https://github.com/r-eliseev/studious-goggles/actions/runs/42374038475): APK build and Android preflight passed, but test launch failed because the MTP command had an incorrect extra `--`; fixed to pass `--report-trx` directly. Local test runs also exposed that Allure and per-test paths are relative to the runner output directory: per-test reports now use `E2E_REPORTS_DIR` (repo `reports/` in CI, repo `tmp/` locally), and Allure results use a path back to the workspace. Rerun pending.
 
 ## Комментарии
 

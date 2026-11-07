@@ -1,4 +1,5 @@
 using System.Globalization;
+using Allure.NUnit;
 using ImageGen.E2E.Common;
 using ImageGen.Presentation.Resources.Strings;
 using NUnit.Framework;
@@ -7,6 +8,7 @@ using OpenQA.Selenium;
 namespace ImageGen.E2E.Android;
 
 [TestFixture]
+[AllureNUnit]
 [NonParallelizable]
 public sealed class FirstRunTests : AndroidTestBase
 {

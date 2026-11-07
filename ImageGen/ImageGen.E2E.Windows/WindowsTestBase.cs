@@ -31,7 +31,13 @@ public abstract class WindowsTestBase
     {
         _errors.Clear();
         var context = TestContext.CurrentContext;
-        _artifactDirectory = Path.Combine("reports", "windows", $"{Sanitize(context.Test.ClassName ?? "Unknown")}.{Sanitize(context.Test.Name)}");
+        var reportsRoot = Environment.GetEnvironmentVariable("E2E_REPORTS_DIR");
+        if (string.IsNullOrWhiteSpace(reportsRoot))
+        {
+            reportsRoot = Path.Combine(FindRepositoryRoot(), "tmp", "reports", "windows");
+        }
+
+        _artifactDirectory = Path.Combine(reportsRoot, $"{Sanitize(context.Test.ClassName ?? "Unknown")}.{Sanitize(context.Test.Name)}");
         Directory.CreateDirectory(_artifactDirectory);
         _stopwatch = Stopwatch.StartNew();
 
@@ -209,4 +215,17 @@ public abstract class WindowsTestBase
 
     private static string Sanitize(string value) =>
         string.Concat(value.Select(character => char.IsLetterOrDigit(character) || character is '.' or '-' or '_' ? character : '_'));
+
+    private static string FindRepositoryRoot()
+    {
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "AGENTS.md")))
+            {
+                return directory.FullName;
+            }
+        }
+
+        return Environment.CurrentDirectory;
+    }
 }

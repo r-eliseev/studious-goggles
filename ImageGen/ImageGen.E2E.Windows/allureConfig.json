@@ -1,0 +1,5 @@
+{
+  "allure": {
+    "directory": "../../../../../reports/windows/allure-results"
+  }
+}

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Allure.NUnit;
 using FlaUI.Core.AutomationElements;
 using ImageGen.E2E.Common;
 using ImageGen.Presentation.Resources.Strings;
@@ -7,6 +8,7 @@ using NUnit.Framework;
 namespace ImageGen.E2E.Windows;
 
 [TestFixture]
+[AllureNUnit]
 [NonParallelizable]
 public sealed class FirstRunTests : WindowsTestBase
 {
@@ -15,8 +17,8 @@ public sealed class FirstRunTests : WindowsTestBase
     [Test]
     public void Launch_ShowsFirstRunKeyScreen()
     {
-        Assert.That(Find(TestIds.ApiKeyEntry).IsEnabled, Is.True);
-        Assert.That(Find(TestIds.ApiKeySave).IsEnabled, Is.True);
+        Assert.That(Find(TestIds.ApiKeyEntry).IsOffscreen, Is.False);
+        Assert.That(Find(TestIds.ApiKeySave).IsOffscreen, Is.False);
     }
 
     [Test]
@@ -32,7 +34,7 @@ public sealed class FirstRunTests : WindowsTestBase
             message.StartsWith(invalidFormat, StringComparison.Ordinal)
             || message.StartsWith(networkError, StringComparison.Ordinal),
             Is.True,
-            "The status should contain the invalid-key or network error resource.");
+            $"Unexpected provider status: '{message.Replace(InvalidKey, "[redacted]", StringComparison.Ordinal)}'.");
         Assert.That(message, Does.Not.Contain(InvalidKey));
     }
 }
