@@ -15,7 +15,8 @@ ADR 0027; заменяет третий этап 167. Выбор аудио-мо
 Среда: Linux (Presentation, Avalonia headless, сборка MAUI Android); проверка — 140, 046.
 
 ## Критерии готовности
-- `SessionModelsPageModel`: раздел «Audio models» (имя, описание в одну строку, «price unknown»), выбор нескольких, сохранение через `UpdateAudioSettingsAsync`; чип моделей в чате учитывает аудио («Models: 1 × 1 · video 1 · audio 1» — формат строки по ресурсу; выбрать короткий вариант, влезающий в компактную шапку 212).
+- `SessionModelsPageModel`: раздел «Audio models» со всеми моделями каталога 221, с группировкой «Music & sound» (`ChatAudio`) и «Speech» (`Speech`), поиском по имени (как у моделей картинок), ценой «$X / 1K chars» у речевых и «price unknown» у остальных, выбор нескольких, сохранение через `UpdateAudioSettingsAsync`; чип моделей в чате учитывает аудио («Models: 1 × 1 · video 1 · audio 1» — формат строки по ресурсу; выбрать короткий вариант, влезающий в компактную шапку 212).
+- `SessionParametersPageModel`: раздел «Audio» с полем «Voice» (текст, пусто = голос провайдера по умолчанию), виден при выбранной речевой модели; подсказка: если провайдер требует голос, без него генерация завершится ошибкой с текстом провайдера.
 - Аудио-карточка (`IsAudio`): значок, модель, цена, статус; действия Repeat, Edit, Save file, Copy prompt; New seed, Run on model, Describe, Compare — скрыты. Отмена во время генерации — предупреждение `StoppedWaiting` (как у видео).
 - MAUI: встроенный аудио-`MediaElement` (уже есть с 205, источник `AudioFilePath` из 218) — проверить, что он показывается только у готового аудио.
 - Avalonia: плеер заблокирован (207) — карточка показывает Save file; кнопка воспроизведения скрыта. Android-голова Avalonia — то же.
@@ -31,7 +32,7 @@ ADR 0027; заменяет третий этап 167. Выбор аудио-мо
 2. Модели страниц, ресурсы.
 3. Разметка обеих оболочек; тесты разметки; сборки; пункты 140 и 046.
 
-Файлы: `ImageGen/ImageGen.Presentation/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/GenerationItemViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Maui/Pages/SessionModelsPage.xaml`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Avalonia/Views/SessionModelsView.axaml`, `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`, тесты `ImageGen/ImageGen.Presentation.Tests/` и `ImageGen/ImageGen.Avalonia.Tests/Views/`, `tasks/backlog/140-android-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`.
+Файлы: `ImageGen/ImageGen.Presentation/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionParametersPageModel.cs`, `ImageGen/ImageGen.Maui/Pages/SessionParametersPage.xaml`, `ImageGen/ImageGen.Avalonia/Views/SessionParametersView.axaml`, `ImageGen/ImageGen.Presentation/PageModels/GenerationItemViewModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Maui/Pages/SessionModelsPage.xaml`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Avalonia/Views/SessionModelsView.axaml`, `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`, тесты `ImageGen/ImageGen.Presentation.Tests/` и `ImageGen/ImageGen.Avalonia.Tests/Views/`, `tasks/backlog/140-android-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`.
 
 ### Проверка
 ```
@@ -62,3 +63,6 @@ bash scripts/check.sh
 
 ### 2026-11-07, владелец (в чате, записал claude-audit)
 План одобрен ранее данным поручением «заапрувь все таски которые будут».
+
+### 2026-11-07, claude-audit
+Все аудио-модели каталога (без списка) с группами «Music & sound» и «Speech»; поле голоса для речевых.
