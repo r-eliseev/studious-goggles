@@ -262,3 +262,38 @@ jobs:
           path: reports/ios-smoke/avalonia/
           if-no-files-found: warn
           retention-days: 14
+
+  smoke-macos:
+    needs: [build-avalonia-macos, build-maui-catalyst]
+    if: always() && github.event_name != 'pull_request'
+    runs-on: macos-26
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Avalonia macOS app
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: avalonia-macos
+          path: artifacts/avalonia
+      - name: Download MAUI Mac Catalyst app
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: maui-maccatalyst
+          path: artifacts/catalyst
+      - name: Run macOS GUI preflight and app smoke
+        run: |
+          avalonia=''
+          catalyst=''
+          [ ! -f artifacts/avalonia/avalonia-macos.tar.gz ] || avalonia=artifacts/avalonia/avalonia-macos.tar.gz
+          [ ! -f artifacts/catalyst/maui-maccatalyst.tar.gz ] || catalyst=artifacts/catalyst/maui-maccatalyst.tar.gz
+          bash ImageGen/ImageGen.E2E.Common/ci/apple-macos-preflight.sh reports/macos-preflight "$avalonia" "$catalyst"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-e2e-smoke
+          path: reports/macos-preflight/
+          if-no-files-found: warn
+          retention-days: 14

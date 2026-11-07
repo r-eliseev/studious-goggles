@@ -10,3 +10,7 @@
 | Совместимый набор | SDK 10.0.302; release `dotnet-10.0.1xx-xcode26.6-10301`; workload set `10.0.302.0`; iOS/Catalyst SDK 26.5.10301 | Сборка успешна, 0 warnings/errors | Сборка успешна, 0 warnings/errors | 158 с |
 
 Для pinned-сборок `xcode-select` должен указывать прямо на `/Applications/Xcode_26.6.app/Contents/Developer`. Выбор symlink `/Applications/Xcode.app/Contents/Developer` привёл к тому, что `xcrun` не нашёл `actool`; после выбора конкретной установленной версии обе сборки прошли. Workflow записывает полный инвентарь, вывод попыток, последние 80 строк каждой попытки и simulator device types/runtimes/devices в артефакт `apple-preflight` (14 дней).
+
+## Раздельные сборки 245
+
+Первый раздельный workflow [42371375200](https://github.com/r-eliseev/studious-goggles/actions/runs/42371375200) подтвердил MAUI iOS Simulator (артефакт `maui-ios-sim`, 12:12:29–12:15:25 UTC) и Avalonia macOS `.app` (12:11:53–12:12:26 UTC). MAUI Mac Catalyst собрался без предупреждений, но упаковочный шаг выбрал неверный `Info.plist` (12:11:47–12:13:56 UTC); Avalonia iOS выявила ошибки C# и XAML, исправления ожидают повторной проверки. Успех общего workflow не означает успех каждой платформы: смотрите отдельные jobs.

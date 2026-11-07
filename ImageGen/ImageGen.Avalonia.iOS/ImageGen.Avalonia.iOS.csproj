@@ -7,7 +7,7 @@
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
-    <AssemblyName>ImageGen.Avalonia.iOS</AssemblyName>
+    <AssemblyName>ImageGen.Avalonia</AssemblyName>
     <RootNamespace>ImageGen.Avalonia</RootNamespace>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!-- Avalonia loads user-selected theme resources by URI at runtime. -->

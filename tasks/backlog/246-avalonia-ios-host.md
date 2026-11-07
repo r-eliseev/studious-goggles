@@ -61,7 +61,8 @@ bash scripts/check.sh
 ### 2026-11-07, codex-gpt6 (в работе)
 - Первый CI build выявил сигнатуру `SecKeyChain.QueryAsRecord` (`SecRecord` возвращается, `SecStatusCode` идёт через `out`), nullable UIKit view и устаревший `UIApplication.KeyWindow`; исправлены.
 - Предупреждение IL2026 из динамической загрузки Avalonia theme resources подавлено локально только в iOS-проекте, где тема выбирается по URI во время выполнения.
-- Сборка CI ожидает повторного прогона. Предыдущий run 42371375200 завершился ошибкой компиляции; детали были в `IosLogSharer`/`IosSecretStore` и предупреждении IL2026.
+- Второй CI build прошёл компиляцию C#, затем выявил, что XAML-ресурсы ожидают assembly `ImageGen.Avalonia`, как и Android-хост. Исправлено имя сборки iOS-проекта; ожидается повторная сборка и запуск симулятора.
+- Логи повторного прогона: [42371977271](https://github.com/r-eliseev/studious-goggles/actions/runs/42371977271), job `build-avalonia-ios`.
 
 ## Комментарии
 
