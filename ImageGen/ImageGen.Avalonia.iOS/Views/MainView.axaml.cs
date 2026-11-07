@@ -3,7 +3,6 @@ using Avalonia.Controls;
 using Avalonia.Controls.Platform;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 using ImageGen.Avalonia.Services;
 using ImageGen.Avalonia.Services.Navigation;
 using ImageGen.Presentation;
@@ -20,7 +19,8 @@ public partial class MainView : UserControl
 
     public MainView()
     {
-        AvaloniaXamlLoader.Load(this);
+        // InitializeComponent also assigns the named controls; on iOS AvaloniaXamlLoader.Load alone left PageHost null.
+        InitializeComponent();
         PageHost.PropertyChanged += (_, args) =>
         {
             if (args.Property == ContentControl.ContentProperty && PageHost.Content is Control page)
