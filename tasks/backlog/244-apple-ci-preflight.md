@@ -1,8 +1,8 @@
 ---
 id: 244
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-07T11:36:10Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -52,6 +52,11 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-07, codex-gpt6
+- Добавлены `apple-ci.yml` и `apple-preflight.sh`: runner inventory, simulator JSON, попытка default workload, автоматический выбор официального workload set для выбранного Xcode, две сборки на каждый вариант, полный лог/последние 80 строк и артефакт на 14 дней.
+- Проверка: [run 42369719262](https://github.com/r-eliseev/studious-goggles/actions/runs/42369719262), `apple-preflight` завершился успешно за 5m 9s. Runner: macos-26 arm64, macOS 26.7.2, Xcode 26.6 (17F113), SDK 10.0.403. Стандартный workload требует Xcode 27.1; обе сборки заблокированы. Совместимый выпуск `dotnet-10.0.1xx-xcode26.6-10301`, workload set 10.0.302.0 / SDK 10.0.302: iOS Simulator и Mac Catalyst собраны успешно, 0 warnings/errors. Для `actool` требовался прямой выбор Xcode 26.6, описан в `docs/knowledge/apple-ci.md`.
+- Локально прошли `bash -n ImageGen/ImageGen.E2E.Common/ci/apple-preflight.sh`, проверка JSON-артефакта и `bash scripts/check.sh`.
 
 ## Комментарии
 
