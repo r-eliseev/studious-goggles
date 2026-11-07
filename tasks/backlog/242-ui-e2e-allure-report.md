@@ -24,6 +24,7 @@ created: 2026-11-07
 - `docs/knowledge/ui-e2e.md`: как открыть отчёт (скачать артефакт, `npx allure-commandline open` или открыть `index.html` через локальный HTTP-сервер — проверить, открывается ли с `file://`).
 
 ## Анализ
+Справочно: исходная спецификация владельца — `docs/specs/ui-e2e-original/` (docx и md); при расхождении действуют ADR 0029 и `docs/specs/ui-e2e.md`.
 `.github/workflows/ui-e2e.yml` (после 240/241), README `Allure.NUnit` (конфиг `allureConfig.json`), ADR 0029.
 
 ## План

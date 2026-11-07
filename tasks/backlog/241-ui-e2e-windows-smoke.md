@@ -23,6 +23,7 @@ Windows-путь спецификации UI-тестов (ADR 0029, `docs/specs
 - В `docs/knowledge/ui-e2e.md` — итог: работают ли тесты и видео на `windows-latest`; если нет — что именно не работает (из логов). Решение снять `continue-on-error` — не в этой задаче, вопрос владельцу в `docs/status.md`, если всё зелёное 3 прогона подряд.
 
 ## Анализ
+Справочно: исходная спецификация владельца — `docs/specs/ui-e2e-original/` (docx и md); при расхождении действуют ADR 0029 и `docs/specs/ui-e2e.md`.
 ADR 0029, `docs/specs/ui-e2e.md`, `docs/knowledge/ui-e2e.md` (238), проект 240, FlaUI README (https://github.com/FlaUI/FlaUI): `Application.Launch`, `UIA3Automation`, `Retry.WhileNull`, `Capture.Element`.
 
 ## План

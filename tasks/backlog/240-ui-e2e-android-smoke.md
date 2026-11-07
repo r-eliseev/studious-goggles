@@ -29,6 +29,7 @@ created: 2026-11-07
 - Прогон в CI зелёный, в артефакте у каждого теста своё `recording.mp4` (открыть и проверить, что видно приложение — записать в «Отчёт»).
 
 ## Анализ
+Справочно: исходная спецификация владельца — `docs/specs/ui-e2e-original/` (docx и md); при расхождении действуют ADR 0029 и `docs/specs/ui-e2e.md`.
 ADR 0029, `docs/specs/ui-e2e.md`, `docs/knowledge/ui-e2e.md` (из 238), `ImageGen/ImageGen.E2E.Common/TestIds.cs` (239), `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx` (тексты ошибок ключа), `Directory.Packages.props`, `global.json`.
 
 ## План

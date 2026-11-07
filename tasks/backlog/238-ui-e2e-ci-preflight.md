@@ -25,6 +25,7 @@ created: 2026-11-07
 - `docs/index.md`: строка про `knowledge/ui-e2e.md`.
 
 ## Анализ
+Справочно: исходная спецификация владельца — `docs/specs/ui-e2e-original/` (docx и md); при расхождении действуют ADR 0029 и `docs/specs/ui-e2e.md`.
 `.github/workflows/release.yml` (строки ≈108–125 — публикация Windows, ≈203–232 — APK), `.github/workflows/build.yml` (комментарий про квоту диска на Ubuntu), ADR 0029, `docs/specs/ui-e2e.md`. Версии (npm, 2026-11-07): `appium` latest 3.9.0; `appium-uiautomator2-driver` 8.7.3 — последняя для Appium 3 (9.x требует Appium 4 beta).
 
 ## План

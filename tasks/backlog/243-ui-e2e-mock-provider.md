@@ -55,6 +55,7 @@ created: 2026-11-07
 - Windows — тот же сценарий в `ImageGen.E2E.Windows`, если 241 работает; иначе пропустить и записать.
 
 ## Анализ
+Справочно: исходная спецификация владельца — `docs/specs/ui-e2e-original/` (docx и md); при расхождении действуют ADR 0029 и `docs/specs/ui-e2e.md`.
 - Ядро: `ImageGen/ImageGen.Core/Providers/ProviderConfigLoader.cs`, `ProviderRegistry.cs`, `builtin-providers.json` (формат), `ImageGen/ImageGen.Core/OpenAiCompatible/OpenAiCompatibleClient.cs`, чат-клиент OpenAI-совместимого провайдера (`rg -n "chat/completions" ImageGen/ImageGen.Core`).
 - Presentation: `ImageGen/ImageGen.Presentation/PageModels/ApiKeyPageModel.cs` (`SaveAsync`, выбор провайдера и модели при первом запуске), `SessionsPageModel.cs` (`OnAppearingAsync`).
 - MAUI: `ImageGen/ImageGen.Maui/Services/MauiAppPaths.cs` (`FileSystem.Current.AppDataDirectory`), `ImageGen/ImageGen.Maui/Platforms/Android/AndroidManifest.xml`.

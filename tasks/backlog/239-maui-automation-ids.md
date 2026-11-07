@@ -28,6 +28,7 @@ created: 2026-11-07
 - Сборка MAUI Android проходит.
 
 ## Анализ
+Справочно: исходная спецификация владельца — `docs/specs/ui-e2e-original/` (docx и md); при расхождении действуют ADR 0029 и `docs/specs/ui-e2e.md`.
 `ImageGen/ImageGen.Maui/Pages/ApiKeyPage.xaml` (Picker/Entry/Button на строках ≈23–53), `SessionsPage.xaml` (строки 14, 19, 33, 41), `ChatPage.xaml`, `SettingsPage.xaml`. Документация MAUI (net-maui-10.0, «UI testing with Appium»): `AutomationId` → Android `MobileBy.Id`, Windows `AccessibilityId`.
 
 ## План
