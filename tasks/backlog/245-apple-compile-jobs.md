@@ -53,6 +53,13 @@ bash scripts/check.sh
 
 ## Отчёт
 
+### 2026-11-07, codex-gpt6 (в работе)
+- Добавлен `apple-make-app.sh`: формирует `Omnilite.app/Contents/MacOS`, `Info.plist`, при наличии переносит `.icns`; подпись остаётся шагом CI на macOS.
+- `bash -n ImageGen/ImageGen.E2E.Common/ci/apple-make-app.sh` — успешно.
+- Проверка на фиктивной публикации в `tmp/fake-publish`: исполняемый apphost и все обязательные поля `Info.plist` созданы; успешно.
+- Workflow разделён на четыре build jobs и запускается на pull request, main и расписании. В iOS jobs используется проверенный набор SDK 10.0.302 / workload 10.0.302.0 / Xcode 26.6. Артефакты упаковываются в tar.gz и публикуются при любом результате сборки.
+- `bash scripts/check.sh`, `git diff --check` — успешно. GitHub Actions ещё не завершён; итог сборок и упаковки требуется внести после прогона.
+
 ## Комментарии
 
 ### 2026-11-07, claude-audit

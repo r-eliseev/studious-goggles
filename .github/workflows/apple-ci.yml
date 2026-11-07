@@ -2,10 +2,11 @@ name: apple-ci
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '17 2 * * *'
+  push:
+    branches: [main]
   pull_request:
-    paths:
-      - '.github/workflows/apple-ci.yml'
-      - 'ImageGen/ImageGen.E2E.Common/ci/apple-*'
 
 permissions:
   contents: read
@@ -30,34 +31,157 @@ jobs:
           xcode-select -p
       - name: Run Apple toolchain inventory and builds
         run: bash ImageGen/ImageGen.E2E.Common/ci/apple-preflight.sh
-      - name: Build Avalonia iOS for simulator
-        run: dotnet build ImageGen/ImageGen.Avalonia.iOS/ImageGen.Avalonia.iOS.csproj -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=false
-      - name: Verify Avalonia iOS formatting
-        run: dotnet format ImageGen/ImageGen.Avalonia.iOS/ImageGen.Avalonia.iOS.csproj --verify-no-changes
-      - name: Launch Avalonia iOS in simulator
-        run: |
-          set -euo pipefail
-          runtime=$(python3 -c 'import json; d=json.load(open("reports/apple-preflight/runtimes.json")); print(next(x["identifier"] for x in d["runtimes"] if x.get("isAvailable") and x["identifier"].startswith("iOS ")))' )
-          device_type=$(python3 -c 'import json; d=json.load(open("reports/apple-preflight/devicetypes.json")); print(next(x["identifier"] for x in d["devicetypes"] if "iPhone 17" in x["name"]))')
-          device=$(xcrun simctl create "Omnilite CI" "$device_type" "$runtime")
-          echo "$device" > reports/apple-preflight/avalonia-simulator-id.txt
-          xcrun simctl boot "$device"
-          xcrun simctl bootstatus "$device" -b
-          app_path=$(find ImageGen/ImageGen.Avalonia.iOS/bin/Debug/net10.0-ios/iossimulator-arm64 -maxdepth 1 -type d -name '*.app' | head -n 1)
-          xcrun simctl install "$device" "$app_path"
-          xcrun simctl launch "$device" com.eliseev.imagegen.avalonia
-          sleep 15
-          xcrun simctl io "$device" screenshot reports/apple-preflight/avalonia-ios-first-run.png
-      - name: Delete Avalonia simulator
-        if: always()
-        run: |
-          if [ -f reports/apple-preflight/avalonia-simulator-id.txt ]; then
-            xcrun simctl delete "$(cat reports/apple-preflight/avalonia-simulator-id.txt)" || true
-          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: apple-preflight
           path: reports/apple-preflight/
+          if-no-files-found: warn
+          retention-days: 14
+
+  build-maui-ios:
+    runs-on: macos-26
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+      - name: Install compatible iOS workload
+        run: dotnet workload install maui --version 10.0.302.0
+      - name: Build MAUI iOS Simulator (CI only, unsigned)
+        run: dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-ios -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=false
+      - name: Mark incompatible toolchain as blocked
+        if: failure()
+        run: |
+          echo "::error::blocked: toolchain mismatch (Xcode $(xcodebuild -version | awk '/^Xcode / { print $2; exit }'), workload $(dotnet workload list))"
+          exit 1
+      - name: Package simulator app
+        if: always()
+        run: |
+          app=$(find ImageGen/ImageGen.Maui/bin -maxdepth 6 -type d -name '*.app' -print -quit)
+          if [ -n "$app" ]; then
+            id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")
+            [ "$id" = com.eliseev.imagegen ]
+            executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Info.plist")
+            lipo -archs "$app/$executable" | grep -qw arm64
+            mkdir -p artifacts
+            tar -czf artifacts/maui-ios-sim.tar.gz -C "$(dirname "$app")" "$(basename "$app")"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: maui-ios-sim
+          path: artifacts/maui-ios-sim.tar.gz
+          if-no-files-found: warn
+          retention-days: 14
+
+  build-maui-catalyst:
+    runs-on: macos-26
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+      - name: Install compatible Mac Catalyst workload
+        run: dotnet workload install maui --version 10.0.302.0
+      - name: Build MAUI Mac Catalyst (CI only, unsigned)
+        run: dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-maccatalyst -c Debug -r maccatalyst-arm64 -p:EnableCodeSigning=false
+      - name: Mark incompatible toolchain as blocked
+        if: failure()
+        run: |
+          echo "::error::blocked: toolchain mismatch (Xcode $(xcodebuild -version | awk '/^Xcode / { print $2; exit }'), workload $(dotnet workload list))"
+          exit 1
+      - name: Package Mac Catalyst app
+        if: always()
+        run: |
+          app=$(find ImageGen/ImageGen.Maui/bin -maxdepth 6 -type d -name '*.app' -print -quit)
+          if [ -n "$app" ]; then
+            id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")
+            [ "$id" = com.eliseev.imagegen ]
+            executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Info.plist")
+            lipo -archs "$app/$executable" | grep -qw arm64
+            mkdir -p artifacts
+            tar -czf artifacts/maui-maccatalyst.tar.gz -C "$(dirname "$app")" "$(basename "$app")"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: maui-maccatalyst
+          path: artifacts/maui-maccatalyst.tar.gz
+          if-no-files-found: warn
+          retention-days: 14
+
+  build-avalonia-ios:
+    runs-on: macos-26
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+      - name: Install compatible iOS workload
+        run: dotnet workload install maui --version 10.0.302.0
+      - name: Build Avalonia iOS Simulator (CI only, unsigned)
+        run: dotnet build ImageGen/ImageGen.Avalonia.iOS/ImageGen.Avalonia.iOS.csproj -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=false
+      - name: Verify Avalonia iOS formatting
+        run: dotnet format ImageGen/ImageGen.Avalonia.iOS/ImageGen.Avalonia.iOS.csproj --verify-no-changes
+      - name: Mark incompatible toolchain as blocked
+        if: failure()
+        run: |
+          echo "::error::blocked: toolchain mismatch (Xcode $(xcodebuild -version | awk '/^Xcode / { print $2; exit }'), workload $(dotnet workload list))"
+          exit 1
+      - name: Package simulator app
+        if: always()
+        run: |
+          app=$(find ImageGen/ImageGen.Avalonia.iOS/bin -maxdepth 6 -type d -name '*.app' -print -quit)
+          if [ -n "$app" ]; then
+            id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")
+            [ "$id" = com.eliseev.imagegen.avalonia ]
+            executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Info.plist")
+            lipo -archs "$app/$executable" | grep -qw arm64
+            mkdir -p artifacts
+            tar -czf artifacts/avalonia-ios-sim.tar.gz -C "$(dirname "$app")" "$(basename "$app")"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: avalonia-ios-sim
+          path: artifacts/avalonia-ios-sim.tar.gz
+          if-no-files-found: warn
+          retention-days: 14
+
+  build-avalonia-macos:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Publish Avalonia macOS arm64 (CI only)
+        run: dotnet publish ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj -c Release -r osx-arm64 --self-contained -o publish/osx-arm64
+      - name: Package unsigned app bundle
+        run: |
+          bash ImageGen/ImageGen.E2E.Common/ci/apple-make-app.sh publish/osx-arm64 publish/Omnilite.app com.eliseev.imagegen.avalonia 0.0.0
+          codesign --force --deep -s - publish/Omnilite.app
+          codesign --verify --deep --strict publish/Omnilite.app
+          mkdir -p artifacts
+          tar -czf artifacts/avalonia-macos.tar.gz -C publish Omnilite.app
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: avalonia-macos
+          path: artifacts/avalonia-macos.tar.gz
           if-no-files-found: warn
           retention-days: 14
