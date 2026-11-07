@@ -58,6 +58,13 @@ bash scripts/check.sh
 
 ## Отчёт
 
+### 2026-11-07, codex-gpt6 (в работе)
+- Добавлены NUnit/MTP Android UI-тесты с Appium, фикстурами для очистки/запуска приложения, видео, logcat, metadata и вложениями Allure. Smoke-сценарии проверяют первый экран, ошибочный ключ и поворот.
+- Добавлен job `test-android`: он запускает preflight и три теста на эмуляторе, сохраняет отчёты и Appium log в `android-e2e`.
+- Версии NuGet выбраны по текущим стабильным пакетам: NUnit 4.6.1, NUnit3TestAdapter 6.3.1, Appium.WebDriver 9.0.0; также добавлены Allure.NUnit 2.15.0 и TRX reporter 2.5.2 для MTP.
+- Проверки: `dotnet build ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj` — успешно, 0 предупреждений и ошибок; `dotnet format ... --verify-no-changes` — успешно; `bash scripts/check.sh` — успешно.
+- `dotnet test ... -- --report-trx --results-directory tmp/e2e-test-results/android` обнаружил все 3 теста и сформировал TRX, но локальный запуск ожидаемо завершился ошибкой `APP_APK must point to an existing Android APK`: в среде нет собранного APK и Android-эмулятора. CI-прогон и проверка видео/артефактов ожидаются.
+
 ## Комментарии
 
 ### 2026-11-07, claude-audit

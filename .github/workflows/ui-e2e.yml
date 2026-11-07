@@ -3,8 +3,8 @@ name: ui-e2e
 on:
   workflow_dispatch:
   pull_request:
-    paths:
-      - '.github/workflows/ui-e2e.yml'
+  push:
+    branches: [main]
 
 permissions:
   contents: read
@@ -53,18 +53,19 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  preflight-android:
+  test-android:
     needs: build-android
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
       - uses: actions/download-artifact@v4
         with:
           name: android-apk
           path: publish/android
-      - name: Prepare report folder
-        run: mkdir -p reports/preflight-android
       - name: Enable KVM access
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -75,9 +76,21 @@ jobs:
           node-version: 24
       - name: Install Appium and UIAutomator2 driver
         run: |
+          mkdir -p reports/android
           npm install -g appium@3.9.0
           appium driver install uiautomator2@8.7.3
-      - name: Start emulator and inspect app
+      - name: Start Appium server
+        run: |
+          appium --log reports/android/appium.log &
+          for attempt in $(seq 1 120); do
+            if curl --silent --fail http://127.0.0.1:4723/status >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat reports/android/appium.log
+          exit 1
+      - name: Start emulator, run preflight and UI tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33
@@ -87,10 +100,12 @@ jobs:
           script: |
             appium driver doctor uiautomator2
             bash ImageGen/ImageGen.E2E.Common/ci/android-preflight.sh
+            export APP_APK="$(find publish/android -maxdepth 1 -type f -name '*-Signed.apk' -print -quit)"
+            dotnet test --project ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj -- --report-trx --results-directory reports/android
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: preflight-android-reports
+          name: android-e2e
           path: reports/
           if-no-files-found: warn
           retention-days: 14

@@ -6,6 +6,7 @@
   <Project Path="ImageGen.Data/ImageGen.Data.csproj" />
   <Project Path="ImageGen.Data.Tests/ImageGen.Data.Tests.csproj" />
   <Project Path="ImageGen.E2E.Common/ImageGen.E2E.Common.csproj" />
+  <Project Path="ImageGen.E2E.Android/ImageGen.E2E.Android.csproj" />
   <Project Path="ImageGen.Presentation/ImageGen.Presentation.csproj" />
   <Project Path="ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj" />
   <Project Path="ImageGen.Avalonia/ImageGen.Avalonia.csproj" />
