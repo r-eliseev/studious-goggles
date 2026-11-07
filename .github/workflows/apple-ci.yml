@@ -65,8 +65,8 @@ jobs:
         run: sudo xcode-select -s "/Applications/Xcode_${{ inputs.ios_toolchain || '26.6' }}.app/Contents/Developer"
       - name: Install compatible iOS workload
         run: dotnet workload install maui --version ${{ inputs.ios_toolchain == '26.4.1' && '10.0.203.1' || '10.0.302.0' }}
-      - name: Build MAUI iOS Simulator (CI only, unsigned)
-        run: dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-ios -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=false
+      - name: Build MAUI iOS Simulator (CI only, SDK signed)
+        run: dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-ios -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=true -p:CodesignRequireProvisioningProfile=true -p:DisableCodesignVerification=true
       - name: Mark incompatible toolchain as blocked
         if: failure()
         run: |
@@ -158,8 +158,8 @@ jobs:
         run: sudo xcode-select -s "/Applications/Xcode_${{ inputs.ios_toolchain || '26.6' }}.app/Contents/Developer"
       - name: Install compatible iOS workload
         run: dotnet workload install maui --version ${{ inputs.ios_toolchain == '26.4.1' && '10.0.203.1' || '10.0.302.0' }}
-      - name: Build Avalonia iOS Simulator (CI only, unsigned)
-        run: dotnet build ImageGen/ImageGen.Avalonia.iOS/ImageGen.Avalonia.iOS.csproj -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=false -p:TrimMode=copy
+      - name: Build Avalonia iOS Simulator (CI only, SDK signed)
+        run: dotnet build ImageGen/ImageGen.Avalonia.iOS/ImageGen.Avalonia.iOS.csproj -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=true -p:CodesignRequireProvisioningProfile=true -p:DisableCodesignVerification=true -p:TrimMode=copy
       - name: Verify Avalonia iOS formatting
         run: dotnet format ImageGen/ImageGen.Avalonia.iOS/ImageGen.Avalonia.iOS.csproj --verify-no-changes
       - name: Explain simulator build failure
