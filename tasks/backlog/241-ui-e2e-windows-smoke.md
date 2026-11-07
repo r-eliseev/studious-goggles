@@ -51,6 +51,13 @@ bash scripts/check.sh
 
 ## Отчёт
 
+### 2026-11-07, codex-gpt6 (в работе)
+- Добавлены Windows NUnit/MTP UI-тесты на FlaUI UIA3 и захват FFmpeg: запуск unpackaged приложения, очистка каталога данных, ожидание окна, screenshot/UI tree при ошибке, app log, запись и metadata.
+- Добавлены smoke-сценарии первого экрана и ошибочного ключа; Windows job скачивает приложение, устанавливает FFmpeg, запускает 238 preflight, тесты и загружает `windows-e2e`.
+- Добавлен тест построения аргументов FFmpeg (TDD: до `VideoRecorder` сборка теста падала на отсутствующем типе).
+- Проверки: `dotnet build ...ImageGen.E2E.Windows.csproj` — успешно, 0 предупреждений и ошибок; `dotnet format ... --verify-no-changes`, YAML-парсер и `bash scripts/check.sh` — успешно.
+- Локальный `dotnet test` не может запустить Windows-targeted runner: Linux-сессия не содержит `Microsoft.WindowsDesktop.App`; проверка теста и приложения ожидает Windows CI. CI job добавлен с `continue-on-error: true` по плану.
+
 ## Комментарии
 
 ### 2026-11-07, claude-audit

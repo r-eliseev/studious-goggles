@@ -110,6 +110,38 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  test-windows:
+    needs: build-windows
+    runs-on: windows-latest
+    continue-on-error: true
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-app
+          path: publish/win-x64
+      - name: Install FFmpeg
+        run: choco install ffmpeg -y --no-progress
+      - name: Run Windows interactive preflight
+        shell: pwsh
+        run: .\ImageGen\ImageGen.E2E.Common\ci\windows-preflight.ps1
+      - name: Run Windows UI tests
+        shell: pwsh
+        env:
+          APP_EXE: ${{ github.workspace }}\publish\win-x64\ImageGen.Maui.exe
+        run: dotnet test --project ImageGen/ImageGen.E2E.Windows/ImageGen.E2E.Windows.csproj -- --report-trx --results-directory reports/windows
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-e2e
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 14
+
   preflight-windows:
     needs: build-windows
     runs-on: windows-latest
