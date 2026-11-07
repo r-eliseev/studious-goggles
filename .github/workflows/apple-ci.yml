@@ -13,7 +13,7 @@ on:
         type: choice
         options:
           - 26.6
-          - 26.4
+          - 26.4.1
         default: 26.6
   schedule:
     - cron: '17 2 * * *'
@@ -60,11 +60,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ inputs.ios_toolchain == '26.4' && '10.0.203' || '10.0.302' }}
+          dotnet-version: ${{ inputs.ios_toolchain == '26.4.1' && '10.0.203' || '10.0.302' }}
       - name: Select compatible Xcode
         run: sudo xcode-select -s "/Applications/Xcode_${{ inputs.ios_toolchain || '26.6' }}.app/Contents/Developer"
       - name: Install compatible iOS workload
-        run: dotnet workload install maui --version ${{ inputs.ios_toolchain == '26.4' && '10.0.203.1' || '10.0.302.0' }}
+        run: dotnet workload install maui --version ${{ inputs.ios_toolchain == '26.4.1' && '10.0.203.1' || '10.0.302.0' }}
       - name: Build MAUI iOS Simulator (CI only, unsigned)
         run: dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-ios -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=false
       - name: Mark incompatible toolchain as blocked
@@ -153,11 +153,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ inputs.ios_toolchain == '26.4' && '10.0.203' || '10.0.302' }}
+          dotnet-version: ${{ inputs.ios_toolchain == '26.4.1' && '10.0.203' || '10.0.302' }}
       - name: Select compatible Xcode
         run: sudo xcode-select -s "/Applications/Xcode_${{ inputs.ios_toolchain || '26.6' }}.app/Contents/Developer"
       - name: Install compatible iOS workload
-        run: dotnet workload install maui --version ${{ inputs.ios_toolchain == '26.4' && '10.0.203.1' || '10.0.302.0' }}
+        run: dotnet workload install maui --version ${{ inputs.ios_toolchain == '26.4.1' && '10.0.203.1' || '10.0.302.0' }}
       - name: Build Avalonia iOS Simulator (CI only, unsigned)
         run: dotnet build ImageGen/ImageGen.Avalonia.iOS/ImageGen.Avalonia.iOS.csproj -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=false -p:TrimMode=copy
       - name: Verify Avalonia iOS formatting
