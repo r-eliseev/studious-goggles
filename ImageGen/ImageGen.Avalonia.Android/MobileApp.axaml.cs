@@ -93,6 +93,7 @@ public sealed class MobileApp : global::Avalonia.Application
         services.AddSingleton<IFilePickerService>(new AvaloniaFilePickerService(() => TopLevel.GetTopLevel(MainView.Current)));
         services.AddSingleton<IClipboardService>(new AvaloniaClipboardService(() => TopLevel.GetTopLevel(MainView.Current)));
         services.AddSingleton<IImageSaver, AndroidImageSaver>();
+        services.AddSingleton<IMediaPlayerService, UnsupportedMediaPlayerService>();
         services.AddSingleton<IFolderLauncher, UnsupportedFolderLauncher>();
         services.AddSingleton<ILogSharer, AndroidLogSharer>();
         services.AddSingleton<OverlayImageViewerService>(sp => new OverlayImageViewerService(

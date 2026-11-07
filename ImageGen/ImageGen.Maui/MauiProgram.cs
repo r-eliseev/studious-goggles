@@ -95,6 +95,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IClipboardService, MauiClipboardService>();
         builder.Services.AddSingleton<IImageSaver, MauiImageSaver>();
         builder.Services.AddSingleton<IImageViewerService, MauiImageViewerService>();
+        builder.Services.AddSingleton<IMediaPlayerService, MauiMediaPlayerService>();
         builder.Services.AddSingleton<IImageComparisonService, MauiImageComparisonService>();
 #if ANDROID
         builder.Services.AddSingleton<IMauiFullScreenController, ImageGen.Maui.Platforms.Android.AndroidFullScreenController>();

@@ -743,6 +743,7 @@
   <data name="DescriptionEmptyResponse" xml:space="preserve"><value>The assistant did not return an image description.</value></data>
   <data name="ImageViewerOpen" xml:space="preserve"><value>Open image</value></data>
   <data name="ImageViewerClose" xml:space="preserve"><value>Close</value></data>
+  <data name="PlayVideo" xml:space="preserve"><value>Play video</value></data>
   <data name="ImageViewerPrevious" xml:space="preserve"><value>Previous</value></data>
   <data name="ImageViewerNext" xml:space="preserve"><value>Next</value></data>
   <data name="ImageViewerPositionFormat" xml:space="preserve"><value>{0} of {1}</value></data>

@@ -20,6 +20,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     private readonly IDialogService _dialogs;
     private readonly IClipboardService _clipboard;
     private readonly IImageSaver _saver;
+    private readonly IMediaPlayerService? _mediaPlayer;
     private readonly Func<GenerationItemViewModel, Task> _repeat;
     private readonly Func<GenerationItemViewModel, Task> _newSeed;
     private readonly Func<GenerationItemViewModel, Task> _edit;
@@ -43,7 +44,8 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         Func<GenerationItemViewModel, DescriptionMode, Task> describe,
         Func<GenerationItemViewModel, Task> otherModel,
         Func<GenerationItemViewModel, Task>? compare = null,
-        Func<GenerationItemViewModel, Task>? cancel = null)
+        Func<GenerationItemViewModel, Task>? cancel = null,
+        IMediaPlayerService? mediaPlayer = null)
     {
         ArgumentNullException.ThrowIfNull(generation);
         ArgumentNullException.ThrowIfNull(files);
@@ -58,6 +60,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         _dialogs = dialogs;
         _clipboard = clipboard;
         _saver = saver;
+        _mediaPlayer = mediaPlayer;
         _repeat = repeat;
         _newSeed = newSeed;
         _edit = edit;
@@ -186,6 +189,9 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     public partial string VideoFilePath { get; set; } = "";
 
     [ObservableProperty]
+    public partial string VideoPosterPath { get; set; } = "";
+
+    [ObservableProperty]
     public partial string AudioFilePath { get; set; } = "";
 
     [ObservableProperty]
@@ -209,6 +215,8 @@ public sealed partial class GenerationItemViewModel : ObservableObject
 
     /// <summary>Caption of the save action in this shell (task 080).</summary>
     public string SaveLabel => IsVideo || IsAudio ? AppResources.SaveFile : _saver.ActionLabel;
+
+    public bool CanPlayMedia => _mediaPlayer?.IsSupported == true && HasMedia && (IsVideo || IsAudio);
 
     /// <summary>«Saved» after a successful save; empty otherwise. Shown on the card as a status line.</summary>
     [ObservableProperty]
@@ -275,6 +283,9 @@ public sealed partial class GenerationItemViewModel : ObservableObject
 
     [RelayCommand(CanExecute = nameof(HasImage))]
     private Task CompareAsync() => _compare?.Invoke(this) ?? Task.CompletedTask;
+
+    [RelayCommand(CanExecute = nameof(CanPlayMedia))]
+    private Task PlayMediaAsync() => _mediaPlayer?.ShowAsync(MediaFilePath, AppResources.PlayVideo, CancellationToken.None) ?? Task.CompletedTask;
 
     [RelayCommand(CanExecute = nameof(CanCancel))]
     private Task CancelAsync() => _cancel?.Invoke(this) ?? Task.CompletedTask;
@@ -427,6 +438,8 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         MediaFilePath = fullPath;
         VideoFilePath = IsVideo && HasMedia ? fullPath : "";
         AudioFilePath = IsAudio && HasMedia ? fullPath : "";
+        OnPropertyChanged(nameof(CanPlayMedia));
+        PlayMediaCommand.NotifyCanExecuteChanged();
         HasImage = HasMedia && generation.Kind == MediaKind.Image;
         ImageFilePath = HasImage ? fullPath : "";
         _mediaType = generation.MediaType ?? "image/png";

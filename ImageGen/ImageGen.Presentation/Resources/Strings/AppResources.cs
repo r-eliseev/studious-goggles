@@ -439,6 +439,8 @@ public static class AppResources
 
     public static string ImageViewerClose => Get(nameof(ImageViewerClose));
 
+    public static string PlayVideo => Get(nameof(PlayVideo));
+
     public static string ImageViewerPrevious => Get(nameof(ImageViewerPrevious));
 
     public static string ImageViewerNext => Get(nameof(ImageViewerNext));

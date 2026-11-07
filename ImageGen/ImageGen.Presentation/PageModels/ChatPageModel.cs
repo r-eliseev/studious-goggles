@@ -41,7 +41,8 @@ public sealed partial class ChatPageModel(
     ErrorAlert errorAlert,
     CostEstimator? costEstimator = null,
     SpendingService? spendingService = null,
-    IImageComparisonService? imageComparison = null) : ObservableObject
+    IImageComparisonService? imageComparison = null,
+    IMediaPlayerService? mediaPlayer = null) : ObservableObject
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
     private readonly CostEstimator? _costEstimator = costEstimator;
@@ -745,7 +746,7 @@ public sealed partial class ChatPageModel(
     private GenerationItemViewModel CreateCard(Generation generation)
     {
         var card = new GenerationItemViewModel(
-            generation, files, dialogs, clipboard, imageSaver, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync, OtherModelCardAsync, CompareCardAsync, CancelCardAsync);
+            generation, files, dialogs, clipboard, imageSaver, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync, OtherModelCardAsync, CompareCardAsync, CancelCardAsync, mediaPlayer);
         _cards[generation.Id] = card;
         return card;
     }

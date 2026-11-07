@@ -86,26 +86,39 @@ public class MauiChatPageMarkupTests
     }
 
     [Fact]
-    public void VideoPlayer_UsesLocalFileWithControlsAndNoAutoplay()
+    public void AudioPlayer_UsesLocalFileWithControlsAndNoAutoplay()
     {
         XNamespace toolkit = "http://schemas.microsoft.com/dotnet/2022/maui/toolkit";
         var document = XDocument.Load(Path.Combine(MauiRoot(), "Pages", "ChatPage.xaml"));
         var players = Assert.IsType<XElement>(document.Root).Descendants()
             .Where(element => element.Name == toolkit + "MediaElement")
             .ToList();
-        Assert.Equal(2, players.Count);
-        var videoPlayer = Assert.Single(players, element => (string?)element.Attribute("HeightRequest") == "176");
         var audioPlayer = Assert.Single(players, element => (string?)element.Attribute("HeightRequest") == "64");
 
-        Assert.Equal("{Binding VideoFilePath, Converter={StaticResource FilePathToMediaSource}}", (string?)videoPlayer.Attribute("Source"));
         Assert.Equal("{Binding AudioFilePath, Converter={StaticResource FilePathToMediaSource}}", (string?)audioPlayer.Attribute("Source"));
-        Assert.Equal("False", (string?)videoPlayer.Attribute("ShouldAutoPlay"));
-        Assert.Equal("True", (string?)videoPlayer.Attribute("ShouldShowPlaybackControls"));
-        Assert.Equal("{Binding SummaryText}", (string?)videoPlayer.Attribute("SemanticProperties.Description"));
-        Assert.Contains(videoPlayer.Descendants(), element =>
+        Assert.Equal("False", (string?)audioPlayer.Attribute("ShouldAutoPlay"));
+        Assert.Equal("True", (string?)audioPlayer.Attribute("ShouldShowPlaybackControls"));
+        Assert.Equal("{Binding SummaryText}", (string?)audioPlayer.Attribute("SemanticProperties.Description"));
+        Assert.Contains(audioPlayer.Descendants(), element =>
             element.Name.LocalName == "BindingCondition"
             && (string?)element.Attribute("Binding") == "{Binding HasMedia}"
             && (string?)element.Attribute("Value") == "True");
+    }
+
+    [Fact]
+    public void VideoCard_UsesPosterAndPlayButtonInsteadOfInlinePlayer()
+    {
+        XNamespace toolkit = "http://schemas.microsoft.com/dotnet/2022/maui/toolkit";
+        var document = XDocument.Load(Path.Combine(MauiRoot(), "Pages", "ChatPage.xaml"));
+        var root = Assert.IsType<XElement>(document.Root);
+        var players = root.Descendants(toolkit + "MediaElement").ToList();
+        Assert.DoesNotContain(players, element => ((string?)element.Attribute("Source"))?.Contains("VideoFilePath", StringComparison.Ordinal) == true);
+        Assert.Contains(root.Descendants(), element =>
+            element.Name.LocalName == "Button"
+            && ((string?)element.Attribute("Command"))?.Contains("PlayMediaCommand", StringComparison.Ordinal) == true
+            && ((string?)element.Attribute("SemanticProperties.Description"))?.Contains("PlayVideo", StringComparison.Ordinal) == true);
+        Assert.Contains(root.Descendants(), element =>
+            element.Name.LocalName == "Image" && ((string?)element.Attribute("Source"))?.Contains("VideoPosterPath", StringComparison.Ordinal) == true);
     }
 
     [Fact]

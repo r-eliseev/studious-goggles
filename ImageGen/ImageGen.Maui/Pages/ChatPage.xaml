@@ -172,21 +172,19 @@
                                                                    IsVisible="{Binding HasImage}"
                                                                    Aspect="AspectFit"
                                                                    AutomationProperties.IsInAccessibleTree="False" />
-                                                            <toolkit:MediaElement Source="{Binding VideoFilePath, Converter={StaticResource FilePathToMediaSource}}"
-                                                                                  HeightRequest="176" WidthRequest="264"
-                                                                                  ShouldAutoPlay="False" ShouldShowPlaybackControls="True"
-                                                                                  IsVisible="False" Loaded="OnMediaElementLoaded" Unloaded="OnMediaElementUnloaded"
-                                                                                  SemanticProperties.Description="{Binding SummaryText}">
-                                                                <toolkit:MediaElement.Triggers>
-                                                                    <MultiTrigger TargetType="toolkit:MediaElement">
-                                                                        <MultiTrigger.Conditions>
-                                                                            <BindingCondition Binding="{Binding IsVideo}" Value="True" />
-                                                                            <BindingCondition Binding="{Binding HasMedia}" Value="True" />
-                                                                        </MultiTrigger.Conditions>
-                                                                        <Setter Property="IsVisible" Value="True" />
-                                                                    </MultiTrigger>
-                                                                </toolkit:MediaElement.Triggers>
-                                                            </toolkit:MediaElement>
+                                                            <Grid IsVisible="{Binding IsVideo}" BackgroundColor="{DynamicResource IgSunkenColor}">
+                                                                <Image Source="{Binding VideoPosterPath, Converter={StaticResource FilePathToImageSource}}"
+                                                                       Aspect="AspectFit" AutomationProperties.IsInAccessibleTree="False" />
+                                                                <Label Text="▶" FontSize="42" TextColor="#FFFFFF" HorizontalOptions="Center" VerticalOptions="Center"
+                                                                       AutomationProperties.IsInAccessibleTree="False" />
+                                                                <Label Text="{Binding DurationText}" TextColor="#FFFFFF" BackgroundColor="#99000000"
+                                                                       Padding="6,2" HorizontalOptions="End" VerticalOptions="End"
+                                                                       AutomationProperties.IsInAccessibleTree="False" />
+                                                                <Button Text="" IsVisible="{Binding CanPlayMedia}"
+                                                                        Command="{Binding PlayMediaCommand}"
+                                                                        HorizontalOptions="Fill" VerticalOptions="Fill" BackgroundColor="Transparent" BorderWidth="0" Padding="0"
+                                                                        SemanticProperties.Description="{x:Static strings:AppResources.PlayVideo}" />
+                                                            </Grid>
                                                             <Grid IsVisible="{Binding IsAudio}" BackgroundColor="{DynamicResource IgSunkenColor}"
                                                                   SemanticProperties.Description="{Binding SummaryText}">
                                                                 <Label StyleClass="icon" FontSize="32" Text="&#xE0C7;" HorizontalOptions="Center" VerticalOptions="Center" />

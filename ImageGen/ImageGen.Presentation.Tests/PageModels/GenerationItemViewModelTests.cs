@@ -39,6 +39,40 @@ public class GenerationItemViewModelTests
     }
 
     [Fact]
+    public async Task PlayMediaCommand_ReadyVideo_OpensDedicatedPlayer()
+    {
+        var generation = BaseGeneration();
+        generation.Kind = MediaKind.Video;
+        generation.ImagePath = "videos/session/video.mp4";
+        var files = Substitute.For<IImageFileStore>();
+        files.GetFullPath(generation.ImagePath).Returns("/data/video.mp4");
+        var player = Substitute.For<IMediaPlayerService>();
+        player.IsSupported.Returns(true);
+        var card = CardOf(generation, files: files, mediaPlayer: player);
+
+        Assert.True(card.PlayMediaCommand.CanExecute(null));
+        await card.PlayMediaCommand.ExecuteAsync(null);
+
+        await player.Received(1).ShowAsync("/data/video.mp4", AppResources.PlayVideo, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public void PlayMediaCommand_UnavailableMediaOrPlayer_CannotExecute()
+    {
+        var image = BaseGeneration();
+        image.ImagePath = "images/session/image.png";
+        var video = BaseGeneration();
+        video.Kind = MediaKind.Video;
+        video.Status = GenerationStatus.Running;
+        video.ImagePath = null;
+        var unsupported = Substitute.For<IMediaPlayerService>();
+        unsupported.IsSupported.Returns(false);
+
+        Assert.False(CardOf(image, mediaPlayer: unsupported).PlayMediaCommand.CanExecute(null));
+        Assert.False(CardOf(video, mediaPlayer: unsupported).PlayMediaCommand.CanExecute(null));
+    }
+
+    [Fact]
     public async Task ShowActions_ChoosesRepeat_RunsRepeat()
     {
         var repeated = false;
@@ -585,7 +619,8 @@ public class GenerationItemViewModelTests
         IDialogService? dialogs = null,
         IClipboardService? clipboard = null,
         Func<GenerationItemViewModel, Task>? cancel = null,
-        IImageFileStore? files = null) => new(
+        IImageFileStore? files = null,
+        IMediaPlayerService? mediaPlayer = null) => new(
         generation,
         files ?? Substitute.For<IImageFileStore>(),
         dialogs ?? Substitute.For<IDialogService>(),
@@ -597,7 +632,8 @@ public class GenerationItemViewModelTests
         (_, _) => Task.CompletedTask,
         _ => Task.CompletedTask,
         null,
-        cancel);
+        cancel,
+        mediaPlayer);
 
     private static GenerationItemViewModel Card(params ParameterOutcome[] outcomes) => Card(outcomes, 0);
 
