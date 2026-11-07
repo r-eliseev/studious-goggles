@@ -64,7 +64,11 @@ cleanup() {
     wait "$launch_pid" >/dev/null 2>&1
   fi
   if [ -n "$udid" ]; then
-    xcrun simctl spawn "$udid" log show --last 5m --predicate 'process CONTAINS "ImageGen" OR process CONTAINS "Omnilite"' >"$out_dir/simulator.log" 2>&1
+    if command -v gtimeout >/dev/null 2>&1; then
+      gtimeout 60 xcrun simctl spawn "$udid" log show --last 5m --predicate 'process CONTAINS "ImageGen" OR process CONTAINS "Omnilite"' >"$out_dir/simulator.log" 2>&1 || echo "simulator log collection timed out or failed" >>"$out_dir/simulator.log"
+    else
+      xcrun simctl spawn "$udid" log show --last 5m --predicate 'process CONTAINS "ImageGen" OR process CONTAINS "Omnilite"' >"$out_dir/simulator.log" 2>&1 || echo "simulator log collection failed" >>"$out_dir/simulator.log"
+    fi
     copy_crash_reports
     xcrun simctl shutdown "$udid" >/dev/null 2>&1
     xcrun simctl delete "$udid" >/dev/null 2>&1
