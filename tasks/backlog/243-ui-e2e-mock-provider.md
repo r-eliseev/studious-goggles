@@ -13,7 +13,7 @@ created: 2026-11-07
 
 Неизвестно (2026-11-07), выяснить первым шагом:
 - как положить `providers.json` в папку данных Release APK. `AppDataDirectory` — внутреннее хранилище, `adb run-as` работает только для отладочных сборок. Предпочтительный путь (обсуждено с владельцем 2026-11-07): эмулятор с образом `google_apis` (без Play) разрешает `adb root`, поэтому файл кладётся прямо в `/data/data/com.eliseev.imagegen/files/`, владелец и права те же, что у папки приложения, плюс `restorecon`. Сборка не меняется. Работает ли это, проверить;
-- пускает ли Release-сборка Android HTTP без TLS к `localhost`. `ProviderRegistry` (строки ≈62–66) разрешает `http` только для хоста `localhost`, поэтому `10.0.2.2` не годится: нужен `adb reverse tcp:5080 tcp:5080` и `baseAddress` `http://localhost:5080`. Android 9+ по умолчанию запрещает cleartext, а в `AndroidManifest.xml` проекта нет ни `usesCleartextTraffic`, ни `networkSecurityConfig`;
+- примет ли Release-сборка HTTPS мока с тестовым корневым сертификатом, установленным в системное хранилище эмулятора. Решение владельца 2026-11-07: мок работает по HTTPS, а не по HTTP. Так не нужны ни исключение для HTTP без TLS в Android, ни правка приложения. Release-приложение с targetSdk 24+ доверяет только системным сертификатам, пользовательские не принимает, поэтому сертификат кладётся в `/system/etc/security/cacerts`. Начиная с API 34 системные сертификаты лежат в APEX `com.android.conscrypt`, и подменить их сложнее. Поэтому эмулятор берётся с API 33 (`google_apis`, x86_64, `-writable-system`); minSdk приложения 26, это подходит;
 - какие запросы приложение делает к провайдеру для проверки ключа, списка моделей, чата с вызовом инструмента генерации и генерации картинки (по коду `OpenAiCompatibleClient` и чат-клиента).
 
 Зависит от: 240 (и 241 — для Windows-варианта сценария).
@@ -27,11 +27,18 @@ created: 2026-11-07
     2. Release со свойством отладки, если такое есть в .NET Android (проверить по документации), и `run-as`;
     3. отдельная отладочная сборка `-c Debug -p:EmbedAssembliesIntoApk=true`.
   - ключ мока подложить нельзя: `SecureStorage` на Android шифрует его ключом Android Keystore устройства. Ключ вводится через экран первого запуска, и это заодно проверяет сам первый запуск;
-  - способ разрешить HTTP. Если без правки приложения нельзя — `network_security_config` только для `localhost`, подключённый только при свойстве сборки `ImageGenE2E=true`, чтобы обычный Release не менялся.
+  - HTTPS (основной путь):
+    1. В начале job создать одноразовый корневой сертификат и сертификат сервера через `openssl` во временной папке runner (`$RUNNER_TEMP`). У сертификата сервера в SAN — `DNS:localhost`. Срок — 2 дня. Закрытые ключи в репозиторий и артефакты не попадают.
+    2. Мок слушает `https://0.0.0.0:5443` с этим сертификатом: `Kestrel:Certificates:Default:Path` / `KeyPath` из переменных окружения.
+    3. В эмуляторе: `adb root`, `adb remount` (если просит перезагрузку — `adb reboot`, дождаться `sys.boot_completed`, затем снова `adb root` и `adb remount`). Затем `adb push <ca>.pem /system/etc/security/cacerts/<hash>.0`, где `<hash>` = `openssl x509 -subject_hash_old -noout -in <ca>.pem`, `chmod 644`, перезагрузка.
+    4. `adb reverse tcp:5443 tcp:5443`, `baseAddress` = `https://localhost:5443/v1`.
+    Проверка: `adb shell` + `curl` в эмуляторе недоступен, поэтому проверяет сам первый шаг сценария: ключ принят, ошибки сети нет. Если `remount` на API 33 не работает, записать вывод и попробовать вариант Б.
+  - Вариант Б (запасной): HTTP на `http://localhost:5080`. `ProviderRegistry` пускает `http` только для `localhost`. Выяснить, пускает ли Release cleartext к `localhost`. Если нет — `network_security_config` только для `localhost` и только при свойстве сборки `ImageGenE2E=true`, чтобы обычный Release не менялся. Это правка сборки, поэтому сначала `blocked` и вопрос владельцу.
+  - Windows (241): корневой сертификат — `Import-Certificate -CertStoreLocation Cert:\LocalMachine\Root` на runner. У runner есть права администратора.
   Выбранный вариант записать в ADR 0029: дописать пункт в «Решение» с датой.
   Если доставка или HTTP требуют правок, которые меняют обычный Release, остановиться: `blocked` и вопрос владельцу.
 - Мок — проект `ImageGen/ImageGen.E2E.MockProvider`:
-  - ASP.NET Core minimal API, `net10.0`, порт из `--urls`;
+  - ASP.NET Core minimal API, `net10.0`, адрес и порт из `--urls`, сертификат HTTPS из переменных окружения (шаг 1);
   - отвечает фиксированными данными на запросы из шага 1: ключ `e2e-mock-key` верный, остальные дают 401;
   - одна чат-модель `e2e/assistant` и одна модель картинок `e2e/image`;
   - на первое сообщение отвечает вызовом инструмента генерации с промптом из сообщения, на результат инструмента — текстом «Done»;
@@ -44,7 +51,7 @@ created: 2026-11-07
   2. на экране сессий нажать `sessions.new`, в чате ввести «a red square» в `chat.input` и нажать `chat.send`;
   3. в `chat.feed` в течение 60 с появляется карточка картинки и текст «Done».
   Если для карточки нет id, добавить его отдельным шагом с константой в `TestIds` и проверкой в `AutomationIdsTests` (как в 239).
-- Workflow: мок запускается в job `test-android` до тестов (`dotnet run --project ImageGen/ImageGen.E2E.MockProvider -- --urls http://0.0.0.0:5080 &`, ожидание готовности), `adb reverse tcp:5080 tcp:5080` (только `localhost`, см. `ProviderRegistry`); лог мока — в артефакт.
+- Workflow: мок запускается в job `test-android` до тестов (`dotnet run --project ImageGen/ImageGen.E2E.MockProvider -- --urls https://0.0.0.0:5443 &` с сертификатом из шага 1, ожидание готовности через `curl --cacert`), установка корневого сертификата в эмулятор, `adb reverse tcp:5443 tcp:5443`; эмулятор этого job — API 33 с `emulator-options: -writable-system -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim`; лог мока — в артефакт.
 - Windows — тот же сценарий в `ImageGen.E2E.Windows`, если 241 работает; иначе пропустить и записать.
 
 ## Анализ
