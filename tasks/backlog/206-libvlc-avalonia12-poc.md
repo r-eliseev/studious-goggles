@@ -1,6 +1,6 @@
 ---
 id: 206
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-06
@@ -52,6 +52,14 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+- Добавлены Desktop- и Android-пробники в `poc/backlog/206-libvlc-avalonia12/` и двухсекундный MP4, созданный через ffmpeg. `LibVLCSharp.Avalonia` 3.10.2 с `VideoView` собирается на Avalonia 12.1.4: `dotnet build .../Desktop.csproj` — 0 предупреждений, 0 ошибок. Дословные диагностические сообщения компилятора отсутствуют.
+- Консольный режим с `--vout=dummy --aout=dummy` получил `Playing` и `EndReached`, напечатал `Length=2000 ms`. Запасной путь с callbacks не понадобился.
+- На Ubuntu 24.04 тест запускался после установки `libvlc5` и `vlc-plugin-base` (транзитивные зависимости устанавливает apt). `libvlc5` содержит `/usr/lib/x86_64-linux-gnu/libvlc.so.5`, `vlc-plugin-base` — MP4 demux plugin. Без пакетов отдельно не запускал: нативная библиотека нужна для `Core.Initialize`, а API LibVLCSharp сообщает об исключении, если её загрузить нельзя.
+- Публикация `win-x64` с `VideoLAN.LibVLC.Windows` 3.0.24 положила 313,798,561 байт в `libvlc/`; подпапка win-x64 занимает 111,588,790 байт, остальные файлы относятся к win-x86 и win-arm64. NuGet nupkg этого пакета — 145,225,266 байт.
+- Android Release APK с `VideoLAN.LibVLC.Android` 3.6.5 — 80,002,206 байт; APK текущей Android-головы без LibVLC — 60,601,783 байта, разница 19,400,423 байта. Сборка успешна, но выдала четыре XA0141: `libvlc.so` и `libc++_shared.so` для arm64 и x86_64 не имеют 16 KB page size alignment. До Android-релиза эти предупреждения надо разрешить; запуск на устройстве не проверял.
+- Рекомендация для задачи 207: использовать `VideoView` на desktop — Avalonia 12 совместима на этапе сборки и нативное декодирование проверено headless. Android-путь пока не подтверждён для выпуска: кроме отсутствия проверки на устройстве, пакет 3.6.5 выдаёт предупреждение о 16 KB страницах. Ручную визуальную проверку desktop также не выполнял из-за отсутствия экрана.
+- Проверки: `dotnet build` Desktop (успешно, без предупреждений); `dotnet run ... -- --play .../test.mp4` (успешно); `dotnet build` Android Release (успешно, четыре XA0141); `dotnet publish` Desktop `-r win-x64` (успешно); `dotnet format` для обоих проектов (успешно); `bash scripts/check.sh` — успешно.
 
 ## Комментарии
 

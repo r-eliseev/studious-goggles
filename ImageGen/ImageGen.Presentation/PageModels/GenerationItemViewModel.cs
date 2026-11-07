@@ -29,6 +29,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     private readonly Func<GenerationItemViewModel, Task>? _cancel;
     private string _mediaType = "image/png";
     private string _generationImagePath = "";
+    private bool _stoppedWaiting;
 
     public GenerationItemViewModel(
         Generation generation,
@@ -167,6 +168,25 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     public partial string ImageDimensionsText { get; set; } = "";
 
     [ObservableProperty]
+    public partial bool IsVideo { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsImage { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsAudio { get; set; }
+
+    [ObservableProperty]
+    public partial string MediaFilePath { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string DurationText { get; set; } = "";
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    public partial bool HasMedia { get; set; }
+
+    [ObservableProperty]
     public partial bool HasImageDimensions { get; set; }
 
     /// <summary>Absolute path of the saved image, or empty when there is no image.</summary>
@@ -179,7 +199,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     public partial bool HasImage { get; set; }
 
     /// <summary>Caption of the save action in this shell (task 080).</summary>
-    public string SaveLabel => _saver.ActionLabel;
+    public string SaveLabel => IsVideo || IsAudio ? AppResources.SaveFile : _saver.ActionLabel;
 
     /// <summary>«Saved» after a successful save; empty otherwise. Shown on the card as a status line.</summary>
     [ObservableProperty]
@@ -226,10 +246,10 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     private Task EditAsync() => _edit(this);
 
     /// <summary>Saves the picture through the shell's saver (task 080). A refusal or a failure shows a message; a cancelled dialog does nothing.</summary>
-    [RelayCommand(CanExecute = nameof(HasImage))]
+    [RelayCommand(CanExecute = nameof(HasMedia))]
     private async Task SaveAsync()
     {
-        var result = await _saver.SaveAsync(ImageFilePath, ImageFileNames.Suggested(Id, _mediaType), _mediaType, CancellationToken.None);
+        var result = await _saver.SaveAsync(MediaFilePath, ImageFileNames.Suggested(Id, _mediaType), _mediaType, CancellationToken.None);
         switch (result)
         {
             case ImageSaveResult.Saved:
@@ -258,12 +278,21 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         HasCancellationStatus = true;
     }
 
+    public void SetStoppedWaiting()
+    {
+        _stoppedWaiting = true;
+        CancellationStatusText = AppResources.StoppedWaitingVideo;
+        HasCancellationStatus = true;
+    }
+
     /// <summary>Describes this picture (task 019): the text is shown, and it goes into the input field only on the user's action.</summary>
-    [RelayCommand(CanExecute = nameof(IsFinished))]
+    [RelayCommand(CanExecute = nameof(CanDescribe))]
     private Task DescribeAsync() => _describe(this, DescriptionMode.Description);
 
-    [RelayCommand(CanExecute = nameof(IsFinished))]
+    [RelayCommand(CanExecute = nameof(CanDescribe))]
     private Task DescribePromptAsync() => _describe(this, DescriptionMode.Prompt);
+
+    private bool CanDescribe() => IsFinished && !IsVideo && !IsAudio;
 
     /// <summary>Shows the full error text of a failed generation (task 076). Only a failed card has it.</summary>
     [RelayCommand(CanExecute = nameof(IsFailed))]
@@ -273,8 +302,10 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     private string ErrorDetailsValue() => TechnicalError.Length > 0 ? TechnicalError : ErrorText;
 
     /// <summary>Opens the model picker to run this prompt and seed on another model (failed or filtered card, task 076).</summary>
-    [RelayCommand(CanExecute = nameof(IsFailedOrFiltered))]
+    [RelayCommand(CanExecute = nameof(CanRunOnOtherModel))]
     private Task OtherModelAsync() => _otherModel(this);
+
+    private bool CanRunOnOtherModel() => IsFailedOrFiltered && !IsVideo && !IsAudio;
 
     /// <summary>Copies the exact prompt to the clipboard (any finished card, task 076).</summary>
     [RelayCommand(CanExecute = nameof(IsFinished))]
@@ -292,10 +323,14 @@ public sealed partial class GenerationItemViewModel : ObservableObject
             (AppResources.Repeat, _repeat),
             (AppResources.NewSeed, _newSeed),
             (AppResources.ActionEditPrompt, _edit),
-            (AppResources.ActionDescribeImage, card => _describe(card, DescriptionMode.Description)),
-            (AppResources.ActionPromptFromImage, card => _describe(card, DescriptionMode.Prompt)),
             (AppResources.CopyPrompt, card => card._clipboard.SetTextAsync(card.Prompt)),
         };
+        if (!IsVideo && !IsAudio)
+        {
+            actions.Insert(3, (AppResources.ActionPromptFromImage, card => _describe(card, DescriptionMode.Prompt)));
+            actions.Insert(3, (AppResources.ActionDescribeImage, card => _describe(card, DescriptionMode.Description)));
+        }
+
         if (HasImage)
         {
             actions.Add((SaveLabel, card => card.SaveAsync()));
@@ -305,7 +340,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
             }
         }
 
-        if (IsFailedOrFiltered)
+        if (IsFailedOrFiltered && !IsVideo && !IsAudio)
         {
             actions.Add((AppResources.OtherModel, card => card._otherModel(card)));
         }
@@ -360,23 +395,38 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         HasNotice = NoticeText.Length > 0;
         CostUsd = generation.CostUsd;
         IsDone = generation.Status == GenerationStatus.Succeeded;
+        IsVideo = generation.Kind == MediaKind.Video;
+        IsImage = generation.Kind == MediaKind.Image;
+        IsAudio = generation.Kind == MediaKind.Audio;
+        DurationText = generation.DurationSeconds is { } seconds
+            ? string.Format(CultureInfo.CurrentCulture, AppResources.VideoDurationFormat, seconds.ToString("0.##", CultureInfo.CurrentCulture))
+            : string.Empty;
         IsQueued = generation.Status == GenerationStatus.Queued;
         IsActive = generation.Status == GenerationStatus.Running;
         IsFailed = generation.Status == GenerationStatus.Failed;
         IsFiltered = generation.Status == GenerationStatus.Filtered;
-        IsFailedOrFiltered = IsFailed || IsFiltered;
+        IsFailedOrFiltered = (IsFailed || IsFiltered) && generation.Kind == MediaKind.Image;
         IsCancelled = generation.Status == GenerationStatus.Cancelled;
         // The text for the code is shown; the provider's own text (generation.ErrorMessage) is kept for the details dialog.
         TechnicalError = generation.ErrorMessage?.Trim() ?? "";
         ErrorText = generation.ErrorKind is { } kind ? ErrorKindText.Of(kind) : TechnicalError;
         HasErrorText = ErrorText.Length > 0;
         HasError = generation.Status == GenerationStatus.Failed && HasErrorText;
-        HasImage = generation.Status == GenerationStatus.Succeeded && !string.IsNullOrEmpty(generation.ImagePath);
-        ImageFilePath = HasImage ? _files.GetFullPath(generation.ImagePath!) : "";
+        HasMedia = generation.Status == GenerationStatus.Succeeded && !string.IsNullOrEmpty(generation.ImagePath);
+        var fullPath = HasMedia ? _files.GetFullPath(generation.ImagePath!) : "";
+        MediaFilePath = fullPath;
+        HasImage = HasMedia && generation.Kind == MediaKind.Image;
+        ImageFilePath = HasImage ? fullPath : "";
         _mediaType = generation.MediaType ?? "image/png";
+        OnPropertyChanged(nameof(SaveLabel));
         IsRunning = generation.Status is GenerationStatus.Queued or GenerationStatus.Running;
         IsCancelRequested = IsRunning && generation.CancelRequestedAt is not null;
-        if (generation.IsFinished || (!IsCancelRequested && CancellationStatusText != AppResources.CancelFailed))
+        if (_stoppedWaiting && IsVideo && IsCancelled)
+        {
+            CancellationStatusText = AppResources.StoppedWaitingVideo;
+            HasCancellationStatus = true;
+        }
+        else if (generation.IsFinished || (!IsCancelRequested && CancellationStatusText != AppResources.CancelFailed))
         {
             CancellationStatusText = "";
             HasCancellationStatus = false;
@@ -387,6 +437,9 @@ public sealed partial class GenerationItemViewModel : ObservableObject
             HasCancellationStatus = true;
         }
         IsFinished = generation.IsFinished;
+        DescribeCommand.NotifyCanExecuteChanged();
+        DescribePromptCommand.NotifyCanExecuteChanged();
+        OtherModelCommand.NotifyCanExecuteChanged();
         UpdateSummaryText();
     }
 
@@ -415,7 +468,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
 
     private void UpdateSummaryText() => SummaryText = string.Join(
         ". ",
-        new[] { StatusText, DetailsText, ImageDimensionsText, ErrorText }.Where(text => text.Length > 0));
+        new[] { StatusText, DetailsText, DurationText, ImageDimensionsText, ErrorText }.Where(text => text.Length > 0));
 
     private static int GreatestCommonDivisor(int left, int right)
     {

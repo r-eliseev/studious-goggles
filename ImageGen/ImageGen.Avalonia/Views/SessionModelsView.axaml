@@ -117,6 +117,29 @@
                     </ItemsControl>
                 </ScrollViewer>
             </TabItem>
+            <TabItem Header="{markup:Res VideoModelsTitle}"
+                     AutomationProperties.Name="{markup:Res VideoModelsTitle}">
+                <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                    <TextBlock Classes="section" Text="{Binding SelectedVideoCountText}" />
+                    <ScrollViewer Grid.Row="1">
+                        <ItemsControl ItemsSource="{Binding VideoModels}">
+                            <ItemsControl.DataTemplates>
+                                <DataTemplate DataType="pm:VideoModelOptionViewModel" x:DataType="pm:VideoModelOptionViewModel">
+                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,2"
+                                              AutomationProperties.Name="{Binding Name}">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" />
+                                            <TextBlock Classes="meta" Text="{Binding PriceText}" />
+                                            <TextBlock Classes="meta" Text="{markup:Res VideoAudioBadge}"
+                                                       IsVisible="{Binding GeneratesAudio}" />
+                                        </StackPanel>
+                                    </CheckBox>
+                                </DataTemplate>
+                            </ItemsControl.DataTemplates>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </TabItem>
         </TabControl>
 
         <UniformGrid x:Name="ButtonRow" Grid.Row="3" Columns="2">

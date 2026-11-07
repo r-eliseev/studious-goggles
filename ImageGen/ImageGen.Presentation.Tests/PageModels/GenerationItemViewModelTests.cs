@@ -192,6 +192,71 @@ public class GenerationItemViewModelTests
         await clipboard.Received(1).SetTextAsync("a red fox in snow");
     }
 
+    [Fact]
+    public void VideoGeneration_Success_HasMediaDetailsAndHidesImageActions()
+    {
+        var generation = BaseGeneration();
+        generation.Kind = MediaKind.Video;
+        generation.Status = GenerationStatus.Succeeded;
+        generation.ImagePath = "videos/session/video.mp4";
+        generation.MediaType = "video/mp4";
+        generation.DurationSeconds = 8;
+        var files = Substitute.For<IImageFileStore>();
+        files.GetFullPath(generation.ImagePath).Returns("/data/videos/session/video.mp4");
+
+        var card = CardOf(generation, files: files);
+
+        Assert.True(card.IsVideo);
+        Assert.False(card.IsAudio);
+        Assert.True(card.HasMedia);
+        Assert.False(card.HasImage);
+        Assert.Empty(card.ImageFilePath);
+        Assert.Equal("/data/videos/session/video.mp4", card.MediaFilePath);
+        Assert.Equal("8 s", card.DurationText);
+        Assert.Equal(AppResources.SaveFile, card.SaveLabel);
+        Assert.False(card.DescribeCommand.CanExecute(null));
+        Assert.False(card.DescribePromptCommand.CanExecute(null));
+        Assert.False(card.OtherModelCommand.CanExecute(null));
+        Assert.False(card.CompareCommand.CanExecute(null));
+        Assert.True(card.RepeatCommand.CanExecute(null));
+        Assert.True(card.NewSeedCommand.CanExecute(null));
+        Assert.True(card.EditCommand.CanExecute(null));
+        Assert.True(card.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void SetStoppedWaiting_ShowsProviderBillingWarning()
+    {
+        var card = CardOf(BaseGeneration());
+
+        card.SetStoppedWaiting();
+
+        Assert.True(card.HasCancellationStatus);
+        Assert.Equal(AppResources.StoppedWaitingVideo, card.CancellationStatusText);
+    }
+
+    [Fact]
+    public async Task SaveCommand_VideoGeneration_UsesMediaTypeAndVideoExtension()
+    {
+        var generation = BaseGeneration();
+        generation.Kind = MediaKind.Video;
+        generation.Status = GenerationStatus.Succeeded;
+        generation.ImagePath = "videos/session/video.mp4";
+        generation.MediaType = "video/mp4";
+        var files = Substitute.For<IImageFileStore>();
+        files.GetFullPath(generation.ImagePath).Returns("/data/videos/session/video.mp4");
+        var saver = Substitute.For<IImageSaver>();
+        saver.SaveAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ImageSaveResult.Saved);
+        var card = new GenerationItemViewModel(generation, files, Substitute.For<IDialogService>(), Substitute.For<IClipboardService>(), saver,
+            _ => Task.CompletedTask, _ => Task.CompletedTask, _ => Task.CompletedTask, (_, _) => Task.CompletedTask, _ => Task.CompletedTask);
+
+        await card.SaveCommand.ExecuteAsync(null);
+
+        await saver.Received(1).SaveAsync("/data/videos/session/video.mp4", Arg.Is<string>(name => name.EndsWith(".mp4", StringComparison.Ordinal)),
+            "video/mp4", Arg.Any<CancellationToken>());
+    }
+
     private static GenerationItemViewModel CardWithActions(
         IDialogService dialogs,
         Func<GenerationItemViewModel, Task>? repeat = null) => new(
@@ -471,9 +536,10 @@ public class GenerationItemViewModelTests
         Generation generation,
         IDialogService? dialogs = null,
         IClipboardService? clipboard = null,
-        Func<GenerationItemViewModel, Task>? cancel = null) => new(
+        Func<GenerationItemViewModel, Task>? cancel = null,
+        IImageFileStore? files = null) => new(
         generation,
-        Substitute.For<IImageFileStore>(),
+        files ?? Substitute.For<IImageFileStore>(),
         dialogs ?? Substitute.For<IDialogService>(),
         clipboard ?? Substitute.For<IClipboardService>(),
         Substitute.For<IImageSaver>(),

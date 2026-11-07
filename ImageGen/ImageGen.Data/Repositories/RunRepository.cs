@@ -9,7 +9,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
     private const string GenerationColumns = """
         g.id, g.run_id, g.session_id, g.provider_id, g.model_id, g.prompt, g.seed, g.seed_applied, g.status,
         g.image_path, g.media_type, g.cost_usd, g.error_kind, g.error_message, g.created_at, g.completed_at, g.sort_order, g.outcomes_json,
-        g.reference_attachment_ids_json, g.job_json, g.cancel_requested_at
+        g.reference_attachment_ids_json, g.job_json, g.cancel_requested_at, g.kind, g.duration_seconds
         """;
 
     public async Task AddRunAsync(Run run, IReadOnlyList<Generation> generations, CancellationToken cancellationToken)
@@ -23,8 +23,8 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
         {
             command.Transaction = transaction;
             command.CommandText = """
-                INSERT INTO runs (id, session_id, prompt, origin, created_at, parameters_json)
-                VALUES (@id, @session_id, @prompt, @origin, @created_at, @parameters_json);
+                INSERT INTO runs (id, session_id, prompt, origin, created_at, parameters_json, video_parameters_json, first_frame_generation_id)
+                VALUES (@id, @session_id, @prompt, @origin, @created_at, @parameters_json, @video_parameters_json, @first_frame_generation_id);
                 """;
             command.Parameters.AddWithValue("@id", SqliteValues.FromGuid(run.Id));
             command.Parameters.AddWithValue("@session_id", SqliteValues.FromGuid(run.SessionId));
@@ -32,6 +32,8 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
             command.Parameters.AddWithValue("@origin", (int)run.Origin);
             command.Parameters.AddWithValue("@created_at", SqliteValues.FromDate(run.CreatedAt));
             command.Parameters.AddWithValue("@parameters_json", ParameterJson.Run(run.Parameters));
+            command.Parameters.AddWithValue("@video_parameters_json", SqliteValues.FromNullableString(ParameterJson.VideoRun(run.VideoParameters)));
+            command.Parameters.AddWithValue("@first_frame_generation_id", SqliteValues.FromNullableGuid(run.FirstFrameGenerationId));
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
 
@@ -42,10 +44,10 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
             command.CommandText = """
                 INSERT INTO generations (id, run_id, session_id, provider_id, model_id, prompt, seed, seed_applied, status,
                     image_path, media_type, cost_usd, error_kind, error_message, created_at, completed_at, sort_order, outcomes_json,
-                    reference_attachment_ids_json, job_json, cancel_requested_at)
+                    reference_attachment_ids_json, job_json, cancel_requested_at, kind, duration_seconds)
                 VALUES (@id, @run_id, @session_id, @provider_id, @model_id, @prompt, @seed, @seed_applied, @status,
                     @image_path, @media_type, @cost_usd, @error_kind, @error_message, @created_at, @completed_at, @sort_order, @outcomes_json,
-                    @reference_attachment_ids_json, @job_json, @cancel_requested_at);
+                    @reference_attachment_ids_json, @job_json, @cancel_requested_at, @kind, @duration_seconds);
                 """;
             AddGenerationParameters(command, generation);
             await command.ExecuteNonQueryAsync(cancellationToken);
@@ -58,7 +60,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
     {
         await using var connection = await database.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT id, session_id, prompt, origin, created_at, parameters_json FROM runs WHERE id = @id;";
+        command.CommandText = "SELECT id, session_id, prompt, origin, created_at, parameters_json, video_parameters_json, first_frame_generation_id FROM runs WHERE id = @id;";
         command.Parameters.AddWithValue("@id", SqliteValues.FromGuid(id));
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         return await reader.ReadAsync(cancellationToken) ? ReadRun(reader) : null;
@@ -84,7 +86,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
         await using var connection = await database.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT id, session_id, prompt, origin, created_at, parameters_json
+            SELECT id, session_id, prompt, origin, created_at, parameters_json, video_parameters_json, first_frame_generation_id
             FROM runs
             WHERE session_id = @session_id
             ORDER BY created_at ASC;
@@ -149,7 +151,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
                     cost_usd = @cost_usd, error_kind = @error_kind, error_message = @error_message,
                     created_at = @created_at, completed_at = @completed_at, sort_order = @sort_order, outcomes_json = @outcomes_json,
                     reference_attachment_ids_json = @reference_attachment_ids_json, job_json = @job_json,
-                    cancel_requested_at = @cancel_requested_at
+                    cancel_requested_at = @cancel_requested_at, kind = @kind, duration_seconds = @duration_seconds
                 WHERE id = @id;
                 """;
                 AddGenerationParameters(command, generation);
@@ -167,7 +169,12 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
                 await ExpenseRepository.UpsertAsync(connection, transaction, new ImageGen.Core.Domain.Expenses.Expense
                 {
                     OperationId = $"gen:{generation.Id:D}",
-                    Kind = ImageGen.Core.Domain.Expenses.ExpenseKind.Image,
+                    Kind = generation.Kind switch
+                    {
+                        MediaKind.Video => ImageGen.Core.Domain.Expenses.ExpenseKind.Video,
+                        MediaKind.Audio => ImageGen.Core.Domain.Expenses.ExpenseKind.Music,
+                        _ => ImageGen.Core.Domain.Expenses.ExpenseKind.Image,
+                    },
                     ProviderId = generation.ProviderId,
                     ModelId = generation.ModelId,
                     CostUsd = cost,
@@ -254,6 +261,8 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
         command.Parameters.AddWithValue("@reference_attachment_ids_json", ParameterJson.References(generation.ReferenceAttachmentIds));
         command.Parameters.AddWithValue("@job_json", (object?)generation.JobJson ?? DBNull.Value);
         command.Parameters.AddWithValue("@cancel_requested_at", SqliteValues.FromNullableDate(generation.CancelRequestedAt));
+        command.Parameters.AddWithValue("@kind", (int)generation.Kind);
+        command.Parameters.AddWithValue("@duration_seconds", (object?)generation.DurationSeconds ?? DBNull.Value);
     }
 
     private static Run ReadRun(SqliteDataReader reader) => new()
@@ -264,6 +273,8 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
         Origin = (RunOrigin)SqliteValues.GetInt32(reader, "origin"),
         CreatedAt = SqliteValues.GetDate(reader, "created_at"),
         Parameters = ParameterJson.ReadRun(SqliteValues.GetNullableString(reader, "parameters_json")),
+        VideoParameters = ParameterJson.ReadVideoRun(SqliteValues.GetNullableString(reader, "video_parameters_json")),
+        FirstFrameGenerationId = SqliteValues.GetNullableGuid(reader, "first_frame_generation_id"),
     };
 
     private static Generation ReadGeneration(SqliteDataReader reader)
@@ -282,6 +293,10 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
             Status = (GenerationStatus)SqliteValues.GetInt32(reader, "status"),
             ImagePath = SqliteValues.GetNullableString(reader, "image_path"),
             MediaType = SqliteValues.GetNullableString(reader, "media_type"),
+            Kind = (MediaKind)SqliteValues.GetInt32(reader, "kind"),
+            DurationSeconds = reader.IsDBNull(reader.GetOrdinal("duration_seconds"))
+                ? null
+                : reader.GetDouble(reader.GetOrdinal("duration_seconds")),
             CostUsd = SqliteValues.GetNullableDecimal(reader, "cost_usd"),
             ErrorKind = errorKind.HasValue ? (ErrorKind)errorKind.Value : null,
             ErrorMessage = SqliteValues.GetNullableString(reader, "error_message"),

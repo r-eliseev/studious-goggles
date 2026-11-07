@@ -75,6 +75,37 @@ public class AvaloniaNavigationServiceTests
     }
 
     [AvaloniaFact]
+    public async Task AttachHost_WithNewHost_MovesCurrentPageAndKeepsBackStackUsable()
+    {
+        var firstHost = new ContentControl();
+        var secondHost = new ContentControl();
+        var navigation = new AvaloniaNavigationService(Routes());
+        navigation.AttachHost(firstHost);
+        await navigation.GoToAsync("first");
+        var first = Assert.IsType<CountingPage>(firstHost.Content);
+        await navigation.GoToAsync("second");
+        var second = Assert.IsType<CountingPage>(firstHost.Content);
+
+        navigation.AttachHost(secondHost);
+
+        Assert.Null(firstHost.Content);
+        Assert.Same(second, secondHost.Content);
+        Assert.Equal(2, second.Appearances);
+
+        navigation.AttachHost(secondHost);
+        Assert.Same(second, secondHost.Content);
+        Assert.Equal(2, second.Appearances);
+        Assert.Equal(0, second.Disappearances);
+
+        await navigation.GoBackAsync();
+
+        Assert.Same(first, secondHost.Content);
+        Assert.Equal(2, first.Appearances);
+        Assert.Equal(1, first.Disappearances);
+        Assert.Equal(1, second.Disappearances);
+    }
+
+    [AvaloniaFact]
     public async Task ReplaceAsync_ShowsNewPageInPlaceOfCurrentOne()
     {
         var host = new ContentControl();

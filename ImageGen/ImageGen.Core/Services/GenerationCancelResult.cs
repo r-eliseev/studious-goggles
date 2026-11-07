@@ -7,6 +7,7 @@ public enum GenerationCancelResult
     Cancelled,
     CancellationRequested,
     CancelFailed,
+    StoppedWaiting,
 }
 
 /// <summary>Cancellation outcome associated with the generation id in a run-level request.</summary>

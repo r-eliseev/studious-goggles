@@ -1,4 +1,5 @@
 using ImageGen.Core.Domain.Chat;
+using ImageGen.Core.Domain.Expenses;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Data.Repositories;
 
@@ -29,6 +30,31 @@ public class ExpenseRepositoryTests
         Assert.Equal(0.25m, await expenses.SumAsync(ct));
         await sessions.DeleteAsync(session.Id, ct);
         Assert.Equal(0.25m, await expenses.SumAsync(ct));
+    }
+
+    [Theory]
+    [InlineData(MediaKind.Video, ExpenseKind.Video)]
+    [InlineData(MediaKind.Audio, ExpenseKind.Music)]
+    public async Task RunRepository_UpdateMediaGeneration_UsesMatchingExpenseKind(MediaKind mediaKind, ExpenseKind expectedExpenseKind)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var session = TestData.Session();
+        await new SessionRepository(test.Database).AddAsync(session, ct);
+        var runs = new RunRepository(test.Database);
+        var run = TestData.Run(session.Id, TestData.BaseTime);
+        var generation = TestData.Generation(run, 0);
+        generation.Kind = mediaKind;
+        await runs.AddRunAsync(run, [generation], ct);
+        generation.Status = GenerationStatus.Succeeded;
+        generation.CostUsd = 0.25m;
+        generation.CompletedAt = TestData.BaseTime.AddMinutes(1);
+
+        await runs.UpdateGenerationAsync(generation, ct);
+
+        var expenses = await new ExpenseRepository(test.Database).ListAsync(
+            TestData.BaseTime, TestData.BaseTime.AddHours(1), ct);
+        Assert.Equal(expectedExpenseKind, Assert.Single(expenses).Kind);
     }
 
     [Fact]

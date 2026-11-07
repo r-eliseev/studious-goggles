@@ -390,6 +390,39 @@ public class ChatPageModelTests
     }
 
     [Fact]
+    public async Task OnAppearingAsync_VideoModelsAreIncludedInNextRunEstimate()
+    {
+        _session.Settings.VideoModels = [new ModelRef(ProviderIds.OpenRouter, "google/veo")];
+        _session.Settings.VideoParameters = new VideoParameters
+        {
+            DurationSeconds = 8,
+            Resolution = "1080p",
+            GenerateAudio = true,
+        };
+        var videoRepository = Substitute.For<IVideoModelRepository>();
+        videoRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(
+            [new VideoModel
+            {
+                ProviderId = ProviderIds.OpenRouter,
+                Id = "google/veo",
+                Name = "Veo",
+                Durations = [8],
+                Resolutions = ["1080p"],
+                AspectRatios = ["16:9"],
+                FrameImages = [],
+                PriceSkus = new Dictionary<string, decimal> { ["duration_seconds_with_audio_1080p"] = 0.1m },
+                FetchedAt = Now,
+            }]);
+        var router = ProviderDoubles.Router();
+        var videoCatalog = new VideoModelCatalogService(router, videoRepository, NullLogger<VideoModelCatalogService>.Instance);
+        var model = CreateModel(_session.Id, new CostEstimator(Catalog, videoCatalog));
+
+        await model.OnAppearingAsync();
+
+        Assert.Contains("$0.8", model.NextRunEstimateText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task OnAppearingAsync_EmptySession_ShowsTitleModelsButtonAndNoItems()
     {
         await _model.OnAppearingAsync();

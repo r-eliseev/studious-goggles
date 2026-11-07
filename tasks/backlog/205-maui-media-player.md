@@ -1,6 +1,6 @@
 ---
 id: 205
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-06
@@ -52,7 +52,16 @@ Windows-цель MAUI — CI.
 
 ## Отчёт
 
+- Подключён `CommunityToolkit.Maui.MediaElement` 10.0.0 и его инициализация. Добавлен конвертер локального пути в `MediaSource.FromFile`; готовые видео используют плеер высотой 176 dp, аудио — панель высотой 64 dp. Controls включены, autoplay выключен, видимость зависит от типа медиа и наличия сохранённого файла.
+- При уходе со страницы и выгрузке элемента playback останавливается. Android Activity настроена на `ResizeableActivity`/`SingleTask` по документации пакета.
+- Пакет требует Android API 26; Android minimum поднят с 21 до 26, чтобы соответствовать поддерживаемой платформе и analyzer. Обновлены `docs/knowledge/maui.md`, `docs/specs/media-generation.md`, ручные проверки 016 и 140.
+- Проверки: Presentation 499/499; `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android --no-restore` passed без предупреждений; форматирование MAUI и Presentation.Tests прошло. Воспроизведение требует ручной проверки на Android/Windows и включено в 140/016.
+- Фактическое воспроизведение в этой Linux-среде не запускалось: устройства нет. Windows-сборка ожидается в CI; плеер проверяется владельцем вручную по задачам 016 и 140.
+
 ## Комментарии
+
+### 2026-11-06, codex-gpt6
+После CI PR #80 на Ubuntu и Windows упал только `ChatDisappearing_StopsMediaPlayback`: проверка исходного текста ожидала `foreach (var player in _mediaPlayers)`, хотя код перебирает `_mediaPlayers.ToArray()` перед остановкой плееров. Исправлена проверка на актуальный безопасный снимок коллекции; поведение приложения не менялось.
 
 ### 2026-11-06, claude-audit
 Создано по поручению владельца («распланируй звук и видео»; выбрано: всё через OpenRouter, LibVLC в Avalonia сразу). ADR 0027, исследование — `docs/knowledge/media-generation.md`. План для Luna, ждёт одобрения.

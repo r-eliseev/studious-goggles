@@ -4,6 +4,7 @@ using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.OpenAiCompatible;
 using ImageGen.Core.OpenRouter;
 using ImageGen.Core.Platform;
+using Microsoft.Extensions.Logging;
 
 namespace ImageGen.Core.Providers;
 
@@ -12,7 +13,8 @@ public sealed class ProviderRouter(
     ProviderRegistry registry,
     IHttpClientFactory httpClientFactory,
     ISecretStore secretStore,
-    TimeProvider timeProvider) : IProviderRouter
+    TimeProvider timeProvider,
+    ILoggerFactory? loggerFactory = null) : IProviderRouter
 {
     private readonly ConcurrentDictionary<string, IProviderConnection> _connections = new(StringComparer.Ordinal);
 
@@ -45,9 +47,31 @@ public sealed class ProviderRouter(
         GetConnection(providerId) as ITextEmbeddingClient
         ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support text embeddings.");
 
+    public IVideoModelProvider GetVideoModelProvider(string providerId)
+    {
+        if (registry.Get(providerId).Kind != ProviderKind.OpenRouter)
+        {
+            throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support video models.");
+        }
+
+        return GetConnection(providerId) as IVideoModelProvider
+            ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support video models.");
+    }
+
+    public IQueuedVideoProvider GetQueuedVideoProvider(string providerId)
+    {
+        if (registry.Get(providerId).Kind != ProviderKind.OpenRouter)
+        {
+            throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support queued video generation.");
+        }
+
+        return GetConnection(providerId) as IQueuedVideoProvider
+            ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support queued video generation.");
+    }
+
     private IProviderConnection Create(ProviderConfig config) => config.Kind switch
     {
-        ProviderKind.OpenRouter => Wrap(new OpenRouterClient(config, httpClientFactory, secretStore, timeProvider), config.Id),
+        ProviderKind.OpenRouter => Wrap(new OpenRouterClient(config, httpClientFactory, secretStore, timeProvider, loggerFactory?.CreateLogger<OpenRouterClient>()), config.Id),
         ProviderKind.OpenAiCompatible => Wrap(new OpenAiCompatibleClient(config, httpClientFactory, secretStore, timeProvider), config.Id),
         ProviderKind.AnthropicCompatible => new AnthropicCompatibleClient(config, httpClientFactory, secretStore, timeProvider),
         ProviderKind.Fal => new ImageGen.Core.Fal.FalImageProvider(config, httpClientFactory, secretStore, timeProvider),

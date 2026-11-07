@@ -162,8 +162,16 @@ public sealed class AssistantService(
 
             toolCallCount = reply.ToolCalls.Count;
             logger.LogDebug("Assistant reply in session {SessionId}: {Text}", sessionId, reply.Text);
-            var call = reply.ToolCalls.FirstOrDefault(c => c.Name == AssistantPrompts.GenerateImagesToolName);
-            if (call is not null)
+            var generationCalls = reply.ToolCalls
+                .Where(call => call.Name is AssistantPrompts.GenerateImagesToolName or AssistantPrompts.GenerateVideoToolName)
+                .ToList();
+            if (generationCalls.Select(generationCall => generationCall.Name).Distinct(StringComparer.Ordinal).Count() > 1)
+            {
+                logger.LogWarning("Assistant requested both image and video generation in session {SessionId}; running the first tool call.", sessionId);
+            }
+
+            var call = generationCalls.FirstOrDefault();
+            if (call?.Name == AssistantPrompts.GenerateImagesToolName)
             {
                 var prompt = ReadPrompt(call.ArgumentsJson);
                 if (prompt is null)
@@ -173,6 +181,31 @@ public sealed class AssistantService(
 
                 var runReply = await StartRunReplyAsync(session, reply.Text, prompt, attachmentIds, cancellationToken);
                 return new AcceptedTurnOutcome(runReply.Run, runReply.Text, runReply.Error, messageCount, toolCallCount);
+            }
+
+            if (call?.Name == AssistantPrompts.GenerateVideoToolName)
+            {
+                if (session.Settings.VideoModels.Count == 0
+                    || !TryReadVideoArguments(call.ArgumentsJson, out var prompt, out var firstFrameGenerationId))
+                {
+                    return new AcceptedTurnOutcome(null, string.Empty, ErrorKind.InvalidToolCall, messageCount, toolCallCount);
+                }
+
+                try
+                {
+                    var run = await generations.StartVideoRunAsync(
+                        session.Id,
+                        prompt,
+                        session.Settings.VideoModels,
+                        session.Settings.VideoParameters,
+                        firstFrameGenerationId,
+                        cancellationToken);
+                    return new AcceptedTurnOutcome(run, AssistantPrompts.RunMessage(reply.Text), null, messageCount, toolCallCount);
+                }
+                catch (ArgumentException)
+                {
+                    return new AcceptedTurnOutcome(null, string.Empty, ErrorKind.InvalidToolCall, messageCount, toolCallCount);
+                }
             }
 
             return string.IsNullOrWhiteSpace(reply.Text)
@@ -271,6 +304,49 @@ public sealed class AssistantService(
         }
     }
 
+    private static bool TryReadVideoArguments(string argumentsJson, out string prompt, out Guid? firstFrameGenerationId)
+    {
+        prompt = string.Empty;
+        firstFrameGenerationId = null;
+        if (string.IsNullOrWhiteSpace(argumentsJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(argumentsJson);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object
+                || !root.TryGetProperty("prompt", out var promptValue)
+                || promptValue.ValueKind != JsonValueKind.String
+                || string.IsNullOrWhiteSpace(promptValue.GetString()))
+            {
+                return false;
+            }
+
+            prompt = promptValue.GetString()!.Trim();
+            if (!root.TryGetProperty("first_frame_image_id", out var firstFrameValue))
+            {
+                return true;
+            }
+
+            if (firstFrameValue.ValueKind != JsonValueKind.String
+                || !Guid.TryParse(firstFrameValue.GetString(), out var firstFrameId)
+                || firstFrameId == Guid.Empty)
+            {
+                return false;
+            }
+
+            firstFrameGenerationId = firstFrameId;
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
     private async Task<(Run? Run, string Text, ErrorKind? Error)> StartRunReplyAsync(
         Session session,
         string? assistantText,
@@ -345,7 +421,8 @@ public sealed class AssistantService(
         var cappedLastRun = lastRunCandidates.Take(AttachmentService.MaxAttachmentsPerMessage - cappedUser.Count).ToList();
         var cappedTotal = cappedUser.Count + cappedLastRun.Count;
 
-        var fixedTokens = AssistantPrompts.FixedTokens(currentLine);
+        var includeVideoTool = session.Settings.VideoModels.Count > 0;
+        var fixedTokens = AssistantPrompts.FixedTokens(currentLine, includeVideoTool);
         var summaryTokens = summary is null ? 0 : TokenEstimator.Estimate(AssistantPrompts.SummaryLine(summary.Text));
         var contextLength = await chatModels.ContextLengthAsync(assistantModel, cancellationToken);
         var factor = correction.FactorFor(assistantModel);
@@ -405,8 +482,13 @@ public sealed class AssistantService(
         var chat = new List<AssistantChatMessage>
         {
             AssistantChatMessage.System(AssistantPrompts.System),
-            AssistantChatMessage.System(currentLine),
         };
+        if (includeVideoTool)
+        {
+            chat.Add(AssistantChatMessage.System(AssistantPrompts.VideoSystemInstruction));
+        }
+
+        chat.Add(AssistantChatMessage.System(currentLine));
         if (summary is not null)
         {
             chat.Add(AssistantChatMessage.System(AssistantPrompts.SummaryLine(summary.Text)));
@@ -429,10 +511,19 @@ public sealed class AssistantService(
             AssistantPrompts.GenerateImagesToolName,
             AssistantPrompts.GenerateImagesToolDescription,
             AssistantPrompts.GenerateImagesToolSchema);
+        var tools = new List<AssistantTool> { tool };
+        if (includeVideoTool)
+        {
+            tools.Add(new AssistantTool(
+                AssistantPrompts.GenerateVideoToolName,
+                AssistantPrompts.GenerateVideoToolDescription,
+                AssistantPrompts.GenerateVideoToolSchema));
+        }
+
         var estimated = fixedTokens + summaryTokens
             + selected.Sum(m => TokenEstimator.Estimate(m.Text))
             + TokenEstimator.EstimateImages(attachedImages.Count);
-        return new BuiltRequest(new AssistantChatRequest(assistantModel.ModelId, chat, [tool]), estimated);
+        return new BuiltRequest(new AssistantChatRequest(assistantModel.ModelId, chat, tools), estimated);
     }
 
     /// <summary>C1.3: the history after the part a summary covers. A summary whose last message is gone covers nothing.</summary>

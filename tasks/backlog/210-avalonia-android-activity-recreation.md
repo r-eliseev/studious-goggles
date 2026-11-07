@@ -1,6 +1,6 @@
 ---
 id: 210
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-06
@@ -62,6 +62,13 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+- `AvaloniaNavigationService.AttachHost` теперь переносит верхнюю страницу стека в новый ContentControl, очищает старый host, вызывает `OnAppearing` при повторном показе и ничего не делает при повторном подключении того же host. Добавлен headless-тест с переходом назад после переноса.
+- При откреплении `MainView` по очереди закрывает все открытые диалоги, просмотр и сравнение изображений; каждый overlay-сервис опрашивается до пустого стека.
+- `AndroidImageSaver` теперь получает `ILogger<AndroidImageSaver>`. Публикация MediaStore выполняется внутри защищённого блока; отмена удаляет pending запись и пробрасывается, ошибки доступа и IO чистят запись, Java exception чистит её, возвращает `Failed` и пишет одну Warning только с типом исключения. Прочие исключения чистят запись и пробрасываются. Удаление pending записи не маскирует исходную ошибку.
+- В задачу 198 добавлена ручная проверка поворота, split-screen, изменения шрифта, возврата назад и закрытия overlay после пересоздания Activity.
+- Проверки: Avalonia headless — 180 passed, 2 skipped (Windows DPAPI и недоступная D-Bus-служба); Android Release build — 0 warnings/0 errors; `dotnet format` для Avalonia, Avalonia.Tests и Avalonia.Android — успешно; `bash scripts/check.sh` — успешно.
+- Ручной запуск на Android-устройстве не выполнялся в этой среде; сценарий внесён в пункт 198.
 
 ## Комментарии
 

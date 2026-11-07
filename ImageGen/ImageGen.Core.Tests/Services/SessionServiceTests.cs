@@ -52,6 +52,32 @@ public class SessionServiceTests
         Settings = SessionSettings.CreateDefault(),
     };
 
+    private SessionService ServiceWithVideoCatalog(params VideoModel[] models)
+    {
+        var repository = Substitute.For<IVideoModelRepository>();
+        repository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<VideoModel>>(models));
+        var provider = Substitute.For<IVideoModelProvider>();
+        var providers = Substitute.For<IProviderRouter>();
+        providers.GetVideoModelProvider(ProviderIds.OpenRouter).Returns(provider);
+        return new SessionService(_sessions, _messages, _runs, _files, Catalog(AssistantWithTools), TimeProvider.System,
+            _summaries, _changes, _generationCoordinator, DefaultAssistantModels.Create(),
+            new VideoModelCatalogService(providers, repository, NullLogger<VideoModelCatalogService>.Instance));
+    }
+
+    private static VideoModel Video(string id, IReadOnlyList<int> durations) => new()
+    {
+        ProviderId = ProviderIds.OpenRouter,
+        Id = id,
+        Name = id,
+        Durations = durations,
+        Resolutions = [],
+        AspectRatios = [],
+        FrameImages = [],
+        PriceSkus = new Dictionary<string, decimal>(),
+        FetchedAt = Now,
+    };
+
     [Fact]
     public async Task CreateAsync_NewSession_HasDefaultTitleAndSettings()
     {
@@ -389,6 +415,49 @@ public class SessionServiceTests
         Assert.Equal(models, saved.Settings.ImageModels);
         Assert.Equal(SessionSettings.MinRunsPerModel, saved.Settings.RunsPerModel);
         await _sessions.Received(1).UpdateAsync(session, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateVideoSettingsAsync_ValidModelsAndDuration_SavesSettings()
+    {
+        var session = ExistingSession();
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        var models = new[] { new ModelRef(ProviderIds.OpenRouter, "video"), new ModelRef(ProviderIds.OpenRouter, "video2") };
+        var service = ServiceWithVideoCatalog(Video("video", [5, 8]), Video("video2", [8, 10]));
+        var parameters = new VideoParameters { DurationSeconds = 8, Resolution = "1080p", GenerateAudio = true };
+
+        var updated = await service.UpdateVideoSettingsAsync(session.Id, models, parameters, TestContext.Current.CancellationToken);
+
+        Assert.Equal(models, updated.Settings.VideoModels);
+        Assert.Equal(parameters, updated.Settings.VideoParameters);
+        await _sessions.Received(1).UpdateAsync(session, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateVideoSettingsAsync_UnknownModel_ThrowsWithoutSaving()
+    {
+        var session = ExistingSession();
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        var service = ServiceWithVideoCatalog();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.UpdateVideoSettingsAsync(
+            session.Id, [new ModelRef(ProviderIds.OpenRouter, "unknown")], VideoParameters.Default, TestContext.Current.CancellationToken));
+
+        await _sessions.DidNotReceive().UpdateAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateVideoSettingsAsync_UnsupportedDuration_ThrowsWithoutSaving()
+    {
+        var session = ExistingSession();
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        var service = ServiceWithVideoCatalog(Video("video", [8]));
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.UpdateVideoSettingsAsync(
+            session.Id, [new ModelRef(ProviderIds.OpenRouter, "video")], new VideoParameters { DurationSeconds = 5 },
+            TestContext.Current.CancellationToken));
+
+        await _sessions.DidNotReceive().UpdateAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>());
     }
 
     [Theory]

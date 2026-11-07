@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using CommunityToolkit.Maui.Views;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Utilities;
 
@@ -12,6 +13,7 @@ public partial class ChatPage : ContentPage, IQueryAttributable
     private readonly ChatPageModel _model;
     private readonly SessionsPageModel _sessions;
     private readonly TranscriptFollower _follower = new();
+    private readonly HashSet<MediaElement> _mediaPlayers = [];
     private bool _scrollPending;
     private bool _programmaticScroll;
     private bool _active;
@@ -82,11 +84,33 @@ public partial class ChatPage : ContentPage, IQueryAttributable
     {
         base.OnDisappearing();
         _active = false;
+        foreach (var player in _mediaPlayers.ToArray())
+        {
+            player.Stop();
+        }
+
         _model.Items.CollectionChanged -= OnItemsChanged;
         _model.CardUpdated -= OnCardUpdated;
         Transcript.Scrolled -= OnTranscriptScrolled;
         Transcript.SizeChanged -= OnTranscriptSizeChanged;
         _model.OnDisappearing();
+    }
+
+    private void OnMediaElementLoaded(object? sender, EventArgs e)
+    {
+        if (sender is MediaElement player)
+        {
+            _mediaPlayers.Add(player);
+        }
+    }
+
+    private void OnMediaElementUnloaded(object? sender, EventArgs e)
+    {
+        if (sender is MediaElement player)
+        {
+            player.Stop();
+            _mediaPlayers.Remove(player);
+        }
     }
 
     private void OnItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)

@@ -23,7 +23,25 @@ public sealed class AvaloniaNavigationService(PageRoutes routes, ILogger<Avaloni
     public void AttachHost(ContentControl host)
     {
         ArgumentNullException.ThrowIfNull(host);
+
+        if (ReferenceEquals(_host, host))
+        {
+            return;
+        }
+
+        var previousHost = _host;
         _host = host;
+        if (_stack.Count == 0)
+        {
+            return;
+        }
+
+        if (previousHost is not null)
+        {
+            previousHost.Content = null;
+        }
+
+        Show(host, _stack[^1].View);
     }
 
     public Task GoToAsync(string route)

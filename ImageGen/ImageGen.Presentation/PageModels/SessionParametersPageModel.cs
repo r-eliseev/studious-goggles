@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
+using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
@@ -18,9 +19,11 @@ public sealed partial class SessionParametersPageModel(
     SessionService sessionService,
     ModelCatalogService catalog,
     INavigationService navigation,
-    ErrorAlert errorAlert) : ObservableObject
+    ErrorAlert errorAlert,
+    VideoModelCatalogService? videoCatalog = null) : ObservableObject
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
+    private readonly VideoModelCatalogService? _videoCatalog = videoCatalog;
     /// <summary>Output formats the service accepts (see <c>SessionService</c>).</summary>
     private static readonly string[] OutputFormats = ["png", "jpeg", "webp"];
 
@@ -40,6 +43,12 @@ public sealed partial class SessionParametersPageModel(
 
     public ObservableCollection<ParameterOption> QualityOptions { get; } = [];
 
+    public ObservableCollection<ParameterOption> VideoDurationOptions { get; } = [];
+
+    public ObservableCollection<ParameterOption> VideoResolutionOptions { get; } = [];
+
+    public ObservableCollection<ParameterOption> VideoAspectRatioOptions { get; } = [];
+
     [ObservableProperty]
     public partial ParameterOption? SelectedAspectRatio { get; set; }
 
@@ -51,6 +60,21 @@ public sealed partial class SessionParametersPageModel(
 
     [ObservableProperty]
     public partial ParameterOption? SelectedQuality { get; set; }
+
+    [ObservableProperty]
+    public partial ParameterOption? SelectedVideoDuration { get; set; }
+
+    [ObservableProperty]
+    public partial ParameterOption? SelectedVideoResolution { get; set; }
+
+    [ObservableProperty]
+    public partial ParameterOption? SelectedVideoAspectRatio { get; set; }
+
+    [ObservableProperty]
+    public partial bool GenerateVideoAudio { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsVideoAudioOptionVisible { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
@@ -94,6 +118,8 @@ public sealed partial class SessionParametersPageModel(
     {
         try
         {
+            var session = await sessionService.GetAsync(_sessionId, CancellationToken.None)
+                ?? throw new InvalidOperationException($"Session {_sessionId} not found.");
             var parameters = new GenerationParameters
             {
                 AspectRatio = SelectedAspectRatio?.Value,
@@ -102,6 +128,22 @@ public sealed partial class SessionParametersPageModel(
                 Quality = SelectedQuality?.Value,
             };
             await sessionService.UpdateGenerationParametersAsync(_sessionId, parameters, CancellationToken.None);
+            if (_videoCatalog is not null)
+            {
+                var videoParameters = new VideoParameters
+                {
+                    DurationSeconds = int.TryParse(SelectedVideoDuration?.Value, System.Globalization.NumberStyles.Integer,
+                        System.Globalization.CultureInfo.InvariantCulture, out var duration)
+                        ? duration
+                        : session.Settings.VideoParameters.DurationSeconds,
+                    Resolution = SelectedVideoResolution?.Value,
+                    AspectRatio = SelectedVideoAspectRatio?.Value,
+                    GenerateAudio = GenerateVideoAudio,
+                };
+                await sessionService.UpdateVideoSettingsAsync(
+                    _sessionId, session.Settings.VideoModels, videoParameters, CancellationToken.None);
+            }
+
             await CloseAsync();
         }
         catch (Exception ex)
@@ -129,6 +171,39 @@ public sealed partial class SessionParametersPageModel(
             SelectedResolution = FillWith(ResolutionOptions, CatalogValues(models, GenerationParameterPlanner.ResolutionName), saved.Resolution);
             SelectedOutputFormat = FillWith(OutputFormatOptions, OutputFormats, saved.OutputFormat);
             SelectedQuality = FillWith(QualityOptions, CatalogValues(models, GenerationParameterPlanner.QualityName), saved.Quality);
+
+            var savedVideo = session.Settings.VideoParameters;
+            var selectedVideoRefs = session.Settings.VideoModels.ToHashSet();
+            IReadOnlyList<ImageGen.Core.Domain.Models.VideoModel> videoModels = [];
+            if (_videoCatalog is not null)
+            {
+                try
+                {
+                    videoModels = await _videoCatalog.GetVideoModelsAsync(forceRefresh: false, CancellationToken.None);
+                }
+                catch (ProviderException)
+                {
+                    // The image parameter page remains usable when the optional video catalog is unavailable.
+                }
+            }
+            var selectedVideoModels = videoModels.Where(model => selectedVideoRefs.Contains(new ModelRef(model.ProviderId, model.Id))).ToList();
+            var commonDurations = CommonInts(selectedVideoModels.Select(model => model.Durations));
+            if (selectedVideoModels.Count == 0 && _videoCatalog is not null)
+            {
+                commonDurations = [savedVideo.DurationSeconds];
+            }
+
+            SelectedVideoDuration = FillVideoDurations(commonDurations, savedVideo.DurationSeconds);
+            SelectedVideoResolution = FillVideoOptions(
+                VideoResolutionOptions,
+                CommonStrings(selectedVideoModels.Select(model => model.Resolutions)),
+                savedVideo.Resolution);
+            SelectedVideoAspectRatio = FillVideoOptions(
+                VideoAspectRatioOptions,
+                CommonStrings(selectedVideoModels.Select(model => model.AspectRatios)),
+                savedVideo.AspectRatio);
+            IsVideoAudioOptionVisible = selectedVideoModels.Any(model => model.GeneratesAudio == true);
+            GenerateVideoAudio = savedVideo.GenerateAudio;
         }
         catch (Exception ex)
         {
@@ -165,5 +240,72 @@ public sealed partial class SessionParametersPageModel(
         return savedValue is null
             ? defaultOption
             : target.FirstOrDefault(o => string.Equals(o.Value, savedValue, StringComparison.OrdinalIgnoreCase)) ?? defaultOption;
+    }
+
+    private static IReadOnlyList<int> CommonInts(IEnumerable<IReadOnlyList<int>> values)
+    {
+        using var iterator = values.GetEnumerator();
+        if (!iterator.MoveNext())
+        {
+            return [];
+        }
+
+        var common = iterator.Current.ToHashSet();
+        while (iterator.MoveNext())
+        {
+            common.IntersectWith(iterator.Current);
+        }
+
+        return common.Order().ToList();
+    }
+
+    private static IReadOnlyList<string> CommonStrings(IEnumerable<IReadOnlyList<string>> values)
+    {
+        using var iterator = values.GetEnumerator();
+        if (!iterator.MoveNext())
+        {
+            return [];
+        }
+
+        var common = iterator.Current.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        while (iterator.MoveNext())
+        {
+            common.IntersectWith(iterator.Current);
+        }
+
+        return common.Order(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private ParameterOption? FillVideoDurations(IEnumerable<int> values, int savedValue)
+    {
+        var options = values.Distinct().Order().ToList();
+        VideoDurationOptions.Clear();
+        foreach (var value in options)
+        {
+            VideoDurationOptions.Add(new ParameterOption(value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                string.Format(System.Globalization.CultureInfo.CurrentCulture, AppResources.VideoDurationFormat, value)));
+        }
+
+        return VideoDurationOptions.FirstOrDefault(option => option.Value == savedValue.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            ?? VideoDurationOptions.FirstOrDefault();
+    }
+
+    private static ParameterOption FillVideoOptions(
+        ObservableCollection<ParameterOption> target,
+        IEnumerable<string> values,
+        string? savedValue)
+    {
+        var distinct = values.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        target.Clear();
+        var defaultOption = new ParameterOption(null, AppResources.ParameterModelDefault);
+        target.Add(defaultOption);
+        foreach (var value in distinct)
+        {
+            target.Add(new ParameterOption(value, value));
+        }
+
+        return savedValue is null
+            ? defaultOption
+            : target.FirstOrDefault(option => string.Equals(option.Value, savedValue, StringComparison.OrdinalIgnoreCase)) ?? defaultOption;
     }
 }

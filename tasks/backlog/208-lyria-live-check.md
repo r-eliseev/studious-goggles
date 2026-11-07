@@ -1,6 +1,6 @@
 ---
 id: 208
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-06
@@ -36,7 +36,7 @@ dotnet test --project ImageGen/ImageGen.LiveCheck.Tests/ImageGen.LiveCheck.Tests
 dotnet format ImageGen/ImageGen.LiveCheck/ImageGen.LiveCheck.csproj --verify-no-changes
 bash scripts/check.sh
 ```
-Живой запуск (владелец): `dotnet run --project ImageGen/ImageGen.LiveCheck -- --budget-usd 0.2 --scenario music` (имя параметра сценария сверить с текущим `LiveCheckRunner`).
+Живой запуск (владелец): `dotnet run --project ImageGen/ImageGen.LiveCheck -- --budget-usd 0.2 --only music`; задать `IMAGEGEN_LIVE_OPENROUTER_KEY` в окружении. Повтор в WAV автоматически выполняется только после ошибки о формате/голосе и при наличии места в лимите запросов.
 
 ### Порядок исполнения (для Luna)
 - Сначала прочитай только файлы из строки «Файлы» и названные тесты; сигнатуры сверяй с текущим `main`.
@@ -48,7 +48,16 @@ bash scripts/check.sh
 
 ## Отчёт
 
+- Добавлен изолированный `--only music` сценарий для `google/lyria-3-clip-preview`: потоковый POST без поля `voice`, mp3 по умолчанию, повтор с wav только после ошибки формата/голоса и при свободном лимите запроса. Резервирует $0.10, decodes `delta.audio.data` в файл под `tmp/live-check/<UTC-дата>/`, собирает usage и признак транскрипта. Trace содержит status/formats и первые/последние stream events с длиной аудио, но не base64.
+- Offline-тесты: три синтетических SSE-события дают ожидаемые байты; отсутствие аудио даёт понятную ошибку; проверены тело запроса, Bearer auth и повтор mp3 → wav. Все 11 тестов LiveCheck passed.
+- Режим `--only music` без ключа проверен без сети: отчёт показывает `Key not supplied`, запрос не отправляется. Для запуска владельцем: задать `IMAGEGEN_LIVE_OPENROUTER_KEY`, выполнить `dotnet run --project ImageGen/ImageGen.LiveCheck -- --budget-usd 0.2 --only music`.
+- Живой запрос не выполнял: он требует ключ владельца и может тарифицироваться. После запуска владельцу нужно дополнить этот отчёт и `docs/knowledge/media-generation.md` фактическими параметрами, форматом/размером/длительностью, usage, ценой и временем.
+- Проверки: LiveCheck.Tests — 11/11; `dotnet format` для LiveCheck и LiveCheck.Tests — успешно; `bash scripts/check.sh` — успешно. Команда из первоначальной карточки `--scenario music` заменена на текущий поддерживаемый фильтр `--only music`.
+
 ## Комментарии
+
+### 2026-11-06, codex-gpt6
+Кодовая часть готова; ручной платный запрос оставлен владельцу согласно строке «Среда» и критериям задачи. Команда запуска приведена выше.
 
 ### 2026-11-06, claude-audit
 Создано по поручению владельца («распланируй звук и видео»; выбрано: всё через OpenRouter, LibVLC в Avalonia сразу). ADR 0027, исследование — `docs/knowledge/media-generation.md`. План для Luna, ждёт одобрения.

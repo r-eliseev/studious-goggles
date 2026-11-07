@@ -20,6 +20,7 @@ public class AssistantServiceTests
     private const string ImageModel = "vendor/image";
     private const string AssistantModel = "vendor/assistant";
     private const string GenerateImages = AssistantPrompts.GenerateImagesToolName;
+    private const string GenerateVideo = AssistantPrompts.GenerateVideoToolName;
     private static readonly byte[] Image = [1, 2, 3];
 
     private readonly ISessionRepository _sessions = Substitute.For<ISessionRepository>();
@@ -31,6 +32,7 @@ public class AssistantServiceTests
     private readonly ISeedSource _seeds = Substitute.For<ISeedSource>();
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
     private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
+    private readonly IQueuedVideoProvider _videoProvider = Substitute.For<IQueuedVideoProvider, IVideoModelProvider>();
     private readonly List<ChatMessage> _stored = [];
     private readonly List<Run> _storedRuns = [];
     private readonly List<Generation> _storedGenerations = [];
@@ -50,6 +52,12 @@ public class AssistantServiceTests
             [ModelCatalogServiceTests.Model(ImageModel, "Image")]);
         _providers.ImageProviderIds.Returns([ProviderIds.OpenRouter]);
         _providers.GetImageProvider(ProviderIds.OpenRouter).Returns(Substitute.For<IModelProvider>());
+        _providers.GetQueuedVideoProvider(ProviderIds.OpenRouter).Returns(_videoProvider);
+        _videoProvider.SubmitAsync(Arg.Any<VideoGenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new ProviderJobHandle(ProviderIds.OpenRouter, "video-job", "https://openrouter.ai/api/v1/videos/video-job",
+                "https://openrouter.ai/api/v1/videos/video-job/content?index=0", string.Empty));
+        _videoProvider.PollAsync(Arg.Any<ProviderJobHandle>(), Arg.Any<CancellationToken>())
+            .Returns(new VideoJobUpdate(JobState.Failed, ErrorKind: ErrorKind.Unknown, ErrorMessage: "test completion"));
         _providers.GetChatClient(ProviderIds.OpenRouter).Returns(_chat);
         var catalog = new ModelCatalogService(_providers, _modelRepository, NullLogger<ModelCatalogService>.Instance);
         _seeds.NextSeed().Returns(7L);
@@ -93,6 +101,7 @@ public class AssistantServiceTests
             .Returns(ci =>
             {
                 _storedRuns.Add(ci.Arg<Run>());
+                _storedGenerations.AddRange(ci.Arg<IReadOnlyList<Generation>>());
                 return Task.CompletedTask;
             });
         _runs.ListRunsBySessionAsync(_session.Id, Arg.Any<CancellationToken>())
@@ -778,6 +787,110 @@ public class AssistantServiceTests
         Assert.Equal(GenerateImages, tool.Name);
         Assert.Equal(AssistantPrompts.GenerateImagesToolDescription, tool.Description);
         Assert.Equal(AssistantPrompts.GenerateImagesToolSchema, tool.ParametersJsonSchema);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_NoVideoModels_OnlyOffersImageTool()
+    {
+        ReplyWith(new AssistantChatResult("ok", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
+
+        Assert.Equal([GenerateImages], LastRequest.Tools.Select(tool => tool.Name));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_VideoModels_OffersImageAndVideoTools()
+    {
+        _session.Settings.VideoModels = [new ModelRef(ProviderIds.OpenRouter, "vendor/video")];
+        ReplyWith(new AssistantChatResult("ok", [], null));
+
+        await _service.SendUserMessageAsync(_session.Id, "a film", TestContext.Current.CancellationToken);
+
+        Assert.Equal([GenerateImages, GenerateVideo], LastRequest.Tools.Select(tool => tool.Name));
+        Assert.Contains(LastRequest.Messages, message => message.Text == AssistantPrompts.VideoSystemInstruction);
+        Assert.Equal(AssistantPrompts.GenerateVideoToolDescription, LastRequest.Tools[1].Description);
+        Assert.Equal(AssistantPrompts.GenerateVideoToolSchema, LastRequest.Tools[1].ParametersJsonSchema);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_VideoToolCall_StartsVideoRunWithSessionSettings()
+    {
+        var parameters = new VideoParameters { DurationSeconds = 8, Resolution = "1080p", GenerateAudio = false };
+        var model = new ModelRef(ProviderIds.OpenRouter, "vendor/video");
+        _session.Settings.VideoModels = [model];
+        _session.Settings.VideoParameters = parameters;
+        ReplyWith(new AssistantChatResult("Starting", [new AssistantToolCall(GenerateVideo, "{\"prompt\":\"a film\"}")], null));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "make a film", TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result.Run);
+        Assert.Equal(MediaKind.Video, Assert.Single(_storedGenerations).Kind);
+        Assert.Equal("a film", result.Run.Prompt);
+        Assert.Equal(parameters, result.Run.VideoParameters);
+        Assert.Equal([model], _storedGenerations.Select(g => new ModelRef(g.ProviderId, g.ModelId)));
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_VideoToolCall_InvalidFirstFrameId_ReturnsInvalidToolCall()
+    {
+        _session.Settings.VideoModels = [new ModelRef(ProviderIds.OpenRouter, "vendor/video")];
+        ReplyWith(new AssistantChatResult(null,
+            [new AssistantToolCall(GenerateVideo, "{\"prompt\":\"a film\",\"first_frame_image_id\":\"bad-id\"}")], null));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "make a film", TestContext.Current.CancellationToken);
+
+        Assert.Equal(ErrorKind.InvalidToolCall, result.AssistantMessage.ErrorKind);
+        Assert.Empty(_storedRuns);
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_VideoToolCall_UsesSuccessfulImageFromSessionAsFirstFrame()
+    {
+        var firstFrameId = Guid.NewGuid();
+        _session.Settings.VideoModels = [new ModelRef(ProviderIds.OpenRouter, "vendor/video")];
+        _runs.GetGenerationAsync(firstFrameId, Arg.Any<CancellationToken>()).Returns(new Generation
+        {
+            Id = firstFrameId,
+            RunId = Guid.NewGuid(),
+            SessionId = _session.Id,
+            ProviderId = ProviderIds.OpenRouter,
+            ModelId = ImageModel,
+            Prompt = "frame",
+            Seed = 1,
+            SeedApplied = true,
+            Status = GenerationStatus.Succeeded,
+            Kind = MediaKind.Image,
+            ImagePath = "images/session/frame.png",
+            MediaType = "image/png",
+            CreatedAt = Now,
+            SortOrder = 0,
+        });
+        var arguments = System.Text.Json.JsonSerializer.Serialize(new { prompt = "a film", first_frame_image_id = firstFrameId.ToString() });
+        ReplyWith(new AssistantChatResult(null, [new AssistantToolCall(GenerateVideo, arguments)], null));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "make a film", TestContext.Current.CancellationToken);
+
+        Assert.Equal(firstFrameId, result.Run!.FirstFrameGenerationId);
+        await _generations.WhenIdleAsync();
+        await _videoProvider.Received(1).SubmitAsync(
+            Arg.Is<VideoGenerationRequest>(request => request.FirstFrame != null), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SendUserMessageAsync_BothGenerationTools_ExecutesFirstAndWarns()
+    {
+        _session.Settings.VideoModels = [new ModelRef(ProviderIds.OpenRouter, "vendor/video")];
+        ReplyWith(new AssistantChatResult("Starting", [
+            new AssistantToolCall(GenerateVideo, "{\"prompt\":\"first\"}"),
+            new AssistantToolCall(GenerateImages, "{\"prompt\":\"second\"}"),
+        ], null));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "make it", TestContext.Current.CancellationToken);
+
+        Assert.Equal(MediaKind.Video, Assert.Single(_storedGenerations).Kind);
+        Assert.Equal("first", result.Run!.Prompt);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Warning && entry.Message.Contains("both", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

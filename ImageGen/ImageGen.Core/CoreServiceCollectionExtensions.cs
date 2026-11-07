@@ -52,6 +52,7 @@ public static class CoreServiceCollectionExtensions
         services.TryAddSingleton<IAsyncDelay, SystemAsyncDelay>();
         services.AddSingleton<ApiKeyService>();
         services.AddSingleton<ModelCatalogService>();
+        services.AddSingleton<VideoModelCatalogService>();
         services.AddSingleton<CostEstimator>();
         services.AddSingleton<SessionService>();
         services.AddSingleton<SessionChangeNotifier>();

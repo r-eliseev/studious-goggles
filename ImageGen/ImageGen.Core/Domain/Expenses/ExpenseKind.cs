@@ -7,4 +7,6 @@ public enum ExpenseKind
     Summary,
     Description,
     Embedding,
+    Video,
+    Music,
 }

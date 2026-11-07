@@ -1,10 +1,21 @@
 using System.Text;
+using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Providers;
 
 namespace ImageGen.Core.Tests.Providers;
 
 public sealed class BoundedBase64ImageDecoderTests
 {
+    [Fact]
+    public void MediaKindAndResponseCaps_PreserveStableValues()
+    {
+        Assert.Equal(0, (int)MediaKind.Image);
+        Assert.Equal(1, (int)MediaKind.Video);
+        Assert.Equal(2, (int)MediaKind.Audio);
+        Assert.Equal(500L * 1024 * 1024, ProviderResponseLimits.Video);
+        Assert.Equal(100L * 1024 * 1024, ProviderResponseLimits.Audio);
+    }
+
     [Theory]
     [InlineData("AQID", 3)]
     [InlineData(" \tAQ\r\nID\n", 3)]

@@ -2,6 +2,7 @@ using Android.Content;
 using Android.Provider;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using Microsoft.Extensions.Logging;
 
 namespace ImageGen.Avalonia.Platform;
 
@@ -9,6 +10,10 @@ namespace ImageGen.Avalonia.Platform;
 public sealed class AndroidImageSaver : IImageSaver
 {
     private const string GalleryFolder = "Pictures/Omnilite";
+
+    private readonly ILogger<AndroidImageSaver> _logger;
+
+    public AndroidImageSaver(ILogger<AndroidImageSaver> logger) => _logger = logger;
 
     public string ActionLabel => AppResources.SaveToGallery;
 
@@ -46,26 +51,49 @@ public sealed class AndroidImageSaver : IImageSaver
             using var target = resolver.OpenOutputStream(uri) ?? throw new IOException("MediaStore did not open the image.");
             await using var source = File.OpenRead(sourcePath);
             await source.CopyToAsync(target, cancellationToken);
+
+            var published = new ContentValues();
+            published.Put(MediaStore.IMediaColumns.IsPending, 0);
+            resolver.Update(uri, published, null, null);
+            return ImageSaveResult.Saved;
         }
         catch (OperationCanceledException)
         {
-            resolver.Delete(uri, null, null);
+            DeletePending(resolver, uri);
             throw;
         }
         catch (UnauthorizedAccessException)
         {
-            resolver.Delete(uri, null, null);
+            DeletePending(resolver, uri);
             return ImageSaveResult.PermissionDenied;
         }
         catch (IOException)
         {
-            resolver.Delete(uri, null, null);
+            DeletePending(resolver, uri);
             return ImageSaveResult.Failed;
         }
+        catch (Java.Lang.Exception exception)
+        {
+            DeletePending(resolver, uri);
+            _logger.LogWarning("Saving image to MediaStore failed with {ExceptionType}.", exception.GetType().Name);
+            return ImageSaveResult.Failed;
+        }
+        catch
+        {
+            DeletePending(resolver, uri);
+            throw;
+        }
+    }
 
-        var published = new ContentValues();
-        published.Put(MediaStore.IMediaColumns.IsPending, 0);
-        resolver.Update(uri, published, null, null);
-        return ImageSaveResult.Saved;
+    private static void DeletePending(ContentResolver resolver, global::Android.Net.Uri uri)
+    {
+        try
+        {
+            resolver.Delete(uri, null, null);
+        }
+        catch (Exception)
+        {
+            // Preserve the original cancellation or save failure if cleanup itself fails.
+        }
     }
 }

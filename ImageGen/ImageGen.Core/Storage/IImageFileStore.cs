@@ -5,6 +5,15 @@ public interface IImageFileStore
     /// <summary>Writes the image and returns its path relative to the data directory.</summary>
     Task<string> SaveAsync(Guid sessionId, Guid generationId, byte[] content, string mediaType, CancellationToken cancellationToken);
 
+    /// <summary>Streams a generated video or audio file to storage, enforcing a maximum size.</summary>
+    Task<string> SaveMediaStreamAsync(
+        Guid sessionId,
+        Guid generationId,
+        Stream content,
+        string mediaType,
+        long maxBytes,
+        CancellationToken cancellationToken);
+
     /// <summary>Writes a file the user attached; it goes to the session's attachment folder, not to a generation.</summary>
     Task<string> SaveAttachmentAsync(Guid sessionId, Guid attachmentId, byte[] content, string mediaType, CancellationToken cancellationToken);
 

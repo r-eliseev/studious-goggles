@@ -23,7 +23,7 @@
                            IsVisible="{Binding IsBusy}"
                            VerticalOptions="Start" />
 
-        <Grid Grid.Row="2" ColumnDefinitions="*,*" RowDefinitions="Auto,2">
+        <Grid Grid.Row="2" ColumnDefinitions="*,*,*" RowDefinitions="Auto,2">
             <Button Grid.Column="0"
                     StyleClass="ghost"
                     Text="{x:Static strings:AppResources.ImageModelsTab}"
@@ -34,6 +34,11 @@
                     Text="{x:Static strings:AppResources.AssistantModelTitle}"
                     Command="{Binding ShowAssistantModelCommand}"
                     SemanticProperties.Description="{Binding AssistantTabAutomationName}" />
+            <Button Grid.Column="2"
+                    StyleClass="ghost"
+                    Text="{x:Static strings:AppResources.VideoModelsTitle}"
+                    Command="{Binding ShowVideoModelsCommand}"
+                    SemanticProperties.Description="{Binding VideoModelsTabAutomationName}" />
             <BoxView Grid.Row="1"
                      Grid.Column="0"
                      Color="{DynamicResource IgAccentColor}"
@@ -42,6 +47,8 @@
                      Grid.Column="1"
                      Color="{DynamicResource IgAccentColor}"
                      IsVisible="{Binding IsAssistantTabSelected}" />
+            <BoxView Grid.Row="1" Grid.Column="2" Color="{DynamicResource IgAccentColor}"
+                     IsVisible="{Binding IsVideoModelsTabSelected}" />
         </Grid>
 
         <Grid Grid.Row="3">
@@ -143,6 +150,27 @@
                     </BindableLayout.ItemTemplate>
                 </VerticalStackLayout>
             </ScrollView>
+            <Grid RowDefinitions="Auto,*" IsVisible="{Binding IsVideoModelsTabSelected}">
+                <Label StyleClass="section" Text="{Binding SelectedVideoCountText}" />
+                <ScrollView Grid.Row="1">
+                    <VerticalStackLayout Spacing="4" BindableLayout.ItemsSource="{Binding VideoModels}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="pm:VideoModelOptionViewModel">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="0,4">
+                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                              SemanticProperties.Description="{Binding Name}" />
+                                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                        <Label Text="{Binding Name}" />
+                                        <Label StyleClass="meta" Text="{Binding PriceText}" />
+                                        <Label StyleClass="meta" Text="{x:Static strings:AppResources.VideoAudioBadge}"
+                                               IsVisible="{Binding GeneratesAudio}" />
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </ScrollView>
+            </Grid>
         </Grid>
 
         <Grid x:Name="ButtonRow" Grid.Row="4" ColumnDefinitions="*,*" ColumnSpacing="8">

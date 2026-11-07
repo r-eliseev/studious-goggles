@@ -16,7 +16,8 @@ public sealed class SessionService(
     IConversationSummaryRepository summaries,
     SessionChangeNotifier changes,
     ISessionGenerationCoordinator generationCoordinator,
-    IDefaultAssistantModel defaultAssistantModel)
+    IDefaultAssistantModel defaultAssistantModel,
+    VideoModelCatalogService? videoModels = null)
 {
     public async Task<Session> CreateAsync(CancellationToken cancellationToken)
     {
@@ -79,6 +80,8 @@ public sealed class SessionService(
             AssistantModel = settings.AssistantModel,
             // The parameters are saved by UpdateGenerationParametersAsync; this screen does not change them.
             Parameters = session.Settings.Parameters,
+            VideoModels = session.Settings.VideoModels,
+            VideoParameters = session.Settings.VideoParameters,
         };
         session.UpdatedAt = timeProvider.GetUtcNow();
         await sessions.UpdateAsync(session, cancellationToken);
@@ -116,6 +119,48 @@ public sealed class SessionService(
         var session = await sessions.GetAsync(sessionId, cancellationToken)
             ?? throw new InvalidOperationException($"Session {sessionId} not found.");
         session.Settings.Parameters = parameters;
+        session.UpdatedAt = timeProvider.GetUtcNow();
+        await sessions.UpdateAsync(session, cancellationToken);
+        changes.Notify(sessionId);
+        return session;
+    }
+
+    /// <summary>Validates and saves the selected video models and their shared generation parameters.</summary>
+    public async Task<Session> UpdateVideoSettingsAsync(
+        Guid sessionId,
+        IReadOnlyList<ModelRef> models,
+        VideoParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(models);
+        ArgumentNullException.ThrowIfNull(parameters);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(parameters.DurationSeconds);
+        if (videoModels is null)
+        {
+            throw new InvalidOperationException("The video model catalog is not configured.");
+        }
+
+        var selected = models.Distinct().ToList();
+        foreach (var reference in selected)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var model = await videoModels.FindAsync(reference, cancellationToken);
+            if (model is null)
+            {
+                throw new ArgumentException($"Video model {reference} is not available.", nameof(models));
+            }
+
+            if (!model.Durations.Contains(parameters.DurationSeconds))
+            {
+                throw new ArgumentException(
+                    $"Video model {reference} does not support {parameters.DurationSeconds} seconds.", nameof(parameters));
+            }
+        }
+
+        var session = await sessions.GetAsync(sessionId, cancellationToken)
+            ?? throw new InvalidOperationException($"Session {sessionId} not found.");
+        session.Settings.VideoModels = selected;
+        session.Settings.VideoParameters = parameters;
         session.UpdatedAt = timeProvider.GetUtcNow();
         await sessions.UpdateAsync(session, cancellationToken);
         changes.Notify(sessionId);

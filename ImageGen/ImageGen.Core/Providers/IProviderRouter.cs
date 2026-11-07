@@ -18,4 +18,8 @@ public interface IProviderRouter
     IAssistantChatClient GetChatClient(string providerId);
 
     ITextEmbeddingClient GetTextEmbeddingClient(string providerId);
+
+    IVideoModelProvider GetVideoModelProvider(string providerId);
+
+    IQueuedVideoProvider GetQueuedVideoProvider(string providerId);
 }

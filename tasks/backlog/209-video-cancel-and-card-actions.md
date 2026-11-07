@@ -1,6 +1,6 @@
 ---
 id: 209
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-06
@@ -48,6 +48,11 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+- Добавил локальную остановку polling для отправленных видео-задач с результатом `StoppedWaiting`, сохранением статуса `Cancelled` и предупреждением в журнале. Незавершённые до отправки задачи используют общий путь отмены.
+- `RepeatAsync`, `NewSeedAsync` и `EditAsync` запускают новый видео-прогон с исходной моделью, настройками и первым кадром; Repeat/Edit сохраняют seed, New seed получает новый. `RunOnModelAsync` для видео завершается `InvalidOperationException` до записи.
+- Добавил тесты одиночной и групповой отмены, действий над видео и отказа Run on model. Обновил `docs/specs/media-generation.md`.
+- Проверки: `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj` — 789 passed; `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj` — 489 passed; `dotnet format ImageGen/ImageGen.Core/ImageGen.Core.csproj --verify-no-changes` и `dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-no-changes` — успешно. `scripts/check.sh` выполняю перед коммитом.
 
 ## Комментарии
 

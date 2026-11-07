@@ -29,6 +29,10 @@ public sealed class Generation
 
     public string? MediaType { get; set; }
 
+    public MediaKind Kind { get; set; }
+
+    public double? DurationSeconds { get; set; }
+
     public decimal? CostUsd { get; set; }
 
     public ErrorKind? ErrorKind { get; set; }

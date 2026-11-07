@@ -1,8 +1,8 @@
 ---
 id: 170
-status: in-progress
-assignee: codex
-claimed: 2026-10-31T14:13:14Z
+status: done
+assignee:
+claimed:
 created: 2026-10-31
 ---
 
@@ -44,6 +44,10 @@ created: 2026-10-31
 Инструмент `ImageGen.LiveCheck` и тесты подготовлены. Добавлен запуск с ключами из аргументов или переменных `IMAGEGEN_LIVE_*_KEY`, ограничение бюджета/числа запросов, выбор моделей, сценарии OpenRouter/fal/Together и конфигурируемых OpenAI-compatible/Anthropic клиентов. Отчёт и безопасный HTTP trace записываются в каталог `--out`; все клиенты приложения создаются через `AddImageGenCore` и `LoggingHttpHandler`. Описания запуска добавлены в `docs/knowledge/dev-environment.md`, структура — в `docs/architecture.md`.
 
 Проверено: `dotnet build ImageGen/ImageGen.LiveCheck/ImageGen.LiveCheck.csproj --no-restore`; `dotnet test --project ImageGen/ImageGen.LiveCheck.Tests/ImageGen.LiveCheck.Tests.csproj --no-restore` (8/8); `dotnet format` обоих новых проектов (`--verify-no-changes --no-restore`); CLI отклоняет нулевой бюджет без вывода значения ключа. Для `input_references` и image description используется валидный встроенный PNG 8×8; тест проверяет сигнатуру, размеры и распаковывание данных. Оценка image-запроса игнорирует несопоставимые токенные цены, консервативно выбирает максимальную стоимость по Image/Request/Megapixel или резерв $1; известная фактическая `CostUsd` заменяет оценку в лимите до дальнейших запросов. Живые API и оплата не проверялись: прогон с ключами выполняет владелец. Сверка реальных ответов с trace/stub, факты для knowledge/ADR и задачи по расхождениям оформляются после live-отчёта. Намеренно невалидный платный chat-запрос не отправляется.
+
+Повторная проверка 2026-11-06: `dotnet test --project ImageGen/ImageGen.LiveCheck.Tests/ImageGen.LiveCheck.Tests.csproj --no-restore` (11/11); формат обоих проектов проходит. Запуск без ключей создал `tmp/live-check-no-keys/2026-11-06/report.md`: OpenRouter, fal и Together пропущены как `unverified`, платные запросы не отправлялись. Для OpenAI-compatible/Anthropic нужны конфигурация и ключи владельца.
+
+Живые ответы, фактические цены и формы ответов остаются не проверены, поскольку ключи доступны только владельцу. После запуска владельцем утверждённого сценария и передачи безопасного отчёта/trace расхождения следует оформить отдельными задачами, а подтверждённые факты внести в knowledge/ADR. Намеренно невалидный платный chat-запрос не отправляется.
 
 ## Комментарии
 
