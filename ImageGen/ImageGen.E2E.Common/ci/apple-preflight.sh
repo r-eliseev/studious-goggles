@@ -11,6 +11,7 @@ inventory="$report_dir/inventory.txt"
   xcodebuild -version
   xcode-select -p
   ls /Applications | grep Xcode || true
+  xcrun --sdk macosx --find actool || true
   xcrun simctl list runtimes
   dotnet --info
   dotnet workload list
@@ -90,6 +91,14 @@ if [ "$release_found" = true ]; then
   {
     cat "$release_info"
     printf 'Selected Xcode: %s\n' "$xcode_version"
+    xcode_app="/Applications/Xcode_${xcode_version}.app/Contents/Developer"
+    if [ -d "$xcode_app" ]; then
+      sudo xcode-select -s "$xcode_app"
+      xcode-select -p
+      xcrun --sdk macosx --find actool || true
+    else
+      echo "No versioned Xcode directory at $xcode_app"
+    fi
     if ! curl -fsSL --retry 3 https://dot.net/v1/dotnet-install.sh -o "$report_dir/dotnet-install.sh"; then
       echo 'Could not download dotnet-install.sh'
     elif bash "$report_dir/dotnet-install.sh" --version "$sdk_pinned" --install-dir "$pinned_dotnet"; then
@@ -112,19 +121,26 @@ pinned_duration=$(( $(date +%s) - pinned_started ))
 tail -n 80 "$default_log" >"$report_dir/attempt-default-tail.txt"
 tail -n 80 "$pinned_log" >"$report_dir/attempt-pinned-tail.txt"
 
-default_error=$(grep -Eim1 'error |requires Xcode|Xcode .*required|Xcode version|NETSDK1147' "$default_log" || true)
-pinned_error=$(grep -Eim1 'error |requires Xcode|Xcode .*required|Xcode version|NETSDK1147' "$pinned_log" || true)
-if [ -z "$default_error" ]; then default_error="no compatible build result recorded; see attempt-default-tail.txt"; fi
-if [ -z "$pinned_error" ]; then pinned_error="no compatible build result recorded; see attempt-pinned-tail.txt"; fi
+default_ios_error=$(awk '/error |requires Xcode|Xcode .*required|Xcode version|NETSDK1147/ && index($0, "TargetFramework=net10.0-ios") && !found { print; found=1 }' "$default_log")
+default_catalyst_error=$(awk '/error |requires Xcode|Xcode .*required|Xcode version|NETSDK1147/ && index($0, "TargetFramework=net10.0-maccatalyst") && !found { print; found=1 }' "$default_log")
+pinned_ios_error=$(awk '/error |requires Xcode|Xcode .*required|Xcode version|NETSDK1147/ && index($0, "TargetFramework=net10.0-ios") && !found { print; found=1 }' "$pinned_log")
+pinned_catalyst_error=$(awk '/error |requires Xcode|Xcode .*required|Xcode version|NETSDK1147/ && index($0, "TargetFramework=net10.0-maccatalyst") && !found { print; found=1 }' "$pinned_log")
+if [ -z "$default_ios_error" ]; then default_ios_error="no compatible build result recorded; see attempt-default-tail.txt"; fi
+if [ -z "$default_catalyst_error" ]; then default_catalyst_error="no compatible build result recorded; see attempt-default-tail.txt"; fi
+if [ -z "$pinned_ios_error" ]; then pinned_ios_error="no compatible build result recorded; see attempt-pinned-tail.txt"; fi
+if [ -z "$pinned_catalyst_error" ]; then pinned_catalyst_error="no compatible build result recorded; see attempt-pinned-tail.txt"; fi
 default_ios_status="$default_ios"
 default_catalyst_status="$default_catalyst"
 pinned_ios_status="$pinned_ios"
 pinned_catalyst_status="$pinned_catalyst"
-if [ "$default_ios" != ok ]; then default_ios_status="blocked: toolchain mismatch ($default_error; Xcode $xcode_version, default workload)"; fi
-if [ "$default_catalyst" != ok ]; then default_catalyst_status="blocked: toolchain mismatch ($default_error; Xcode $xcode_version, default workload)"; fi
-if [ "$release_found" != true ]; then pinned_error="no published macios release matching $release_prefix"; fi
-if [ "$pinned_ios" != ok ]; then pinned_ios_status="blocked: toolchain mismatch ($pinned_error; Xcode $xcode_version, workload $workload_set)"; fi
-if [ "$pinned_catalyst" != ok ]; then pinned_catalyst_status="blocked: toolchain mismatch ($pinned_error; Xcode $xcode_version, workload $workload_set)"; fi
+if [ "$default_ios" != ok ]; then default_ios_status="blocked: toolchain mismatch ($default_ios_error; Xcode $xcode_version, default workload)"; fi
+if [ "$default_catalyst" != ok ]; then default_catalyst_status="blocked: toolchain mismatch ($default_catalyst_error; Xcode $xcode_version, default workload)"; fi
+if [ "$release_found" != true ]; then
+  pinned_ios_error="no published macios release matching $release_prefix"
+  pinned_catalyst_error="$pinned_ios_error"
+fi
+if [ "$pinned_ios" != ok ]; then pinned_ios_status="blocked: toolchain mismatch ($pinned_ios_error; Xcode $xcode_version, workload $workload_set)"; fi
+if [ "$pinned_catalyst" != ok ]; then pinned_catalyst_status="blocked: toolchain mismatch ($pinned_catalyst_error; Xcode $xcode_version, workload $workload_set)"; fi
 
 python3 - "$report_dir/summary.json" "$xcode_version" "$sdk_version" "$workload_set" "$default_ios_status" "$default_catalyst_status" "$default_duration" "$pinned_ios_status" "$pinned_catalyst_status" "$pinned_duration" "$release_found" <<'PY'
 import json

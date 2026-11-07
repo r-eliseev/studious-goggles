@@ -24,7 +24,10 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - name: Select runner default Xcode
-        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+        run: |
+          xcode_version=$(xcodebuild -version | awk '/^Xcode / && !found { print $2; found=1 }')
+          sudo xcode-select -s "/Applications/Xcode_${xcode_version}.app/Contents/Developer"
+          xcode-select -p
       - name: Run Apple toolchain inventory and builds
         run: bash ImageGen/ImageGen.E2E.Common/ci/apple-preflight.sh
       - uses: actions/upload-artifact@v4
