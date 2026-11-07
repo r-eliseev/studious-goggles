@@ -192,3 +192,21 @@
 - 195 | backlog | done | 2026-11-06 | Android-голова Avalonia: проект, запуск, ключи | `tasks/backlog/195-avalonia-android-head.md`
 - 196 | backlog | done | 2026-11-06 | Android-голова Avalonia: «Share logs» | `tasks/backlog/196-avalonia-android-log-sharing.md`
 - 197 | backlog | done | 2026-11-06 | Android-голова Avalonia: сборка в CI и APK в релизе | `tasks/backlog/197-avalonia-android-ci-release.md`
+- 170 | backlog | done | 2026-11-06 | Проверка живых API провайдеров с ключами владельца | `tasks/backlog/170-live-api-verification.md`
+- 199 | backlog | done | 2026-11-06 | Вид результата генерации и потоковое сохранение видео/аудио | `tasks/backlog/199-media-kind-and-file-storage.md`
+- 200 | backlog | done | 2026-11-06 | OpenRouter: каталог видео-моделей и цена до запуска | `tasks/backlog/200-openrouter-video-catalog.md`
+- 201 | backlog | done | 2026-11-06 | OpenRouter: задания генерации видео (отправка, опрос, скачивание) | `tasks/backlog/201-openrouter-video-jobs.md`
+- 202 | backlog | done | 2026-11-06 | GenerationService: запуск, ожидание и сохранение видео | `tasks/backlog/202-generation-service-video.md`
+- 203 | backlog | done | 2026-11-06 | Видео в сессии: модели, параметры, инструмент ассистента, оценка цены | `tasks/backlog/203-video-session-settings-and-tool.md`
+- 204 | backlog | done | 2026-11-06 | Видео в интерфейсе: выбор моделей, параметры, карточка без плеера | `tasks/backlog/204-video-presentation.md`
+- 205 | backlog | done | 2026-11-06 | MAUI: воспроизведение видео и аудио в карточке (MediaElement) | `tasks/backlog/205-maui-media-player.md`
+- 206 | backlog | done | 2026-11-06 | Пробник: LibVLCSharp на Avalonia 12 (desktop и Android) | `tasks/backlog/206-libvlc-avalonia12-poc.md`
+- 208 | backlog | done | 2026-11-06 | Музыка: живая проверка Lyria 3 через OpenRouter | `tasks/backlog/208-lyria-live-check.md`
+- 209 | backlog | done | 2026-11-06 | Видео: отмена, Repeat, New seed, Edit | `tasks/backlog/209-video-cancel-and-card-actions.md`
+- 210 | backlog | done | 2026-11-06 | Avalonia Android: пересоздание активности и сохранение в галерею | `tasks/backlog/210-avalonia-android-activity-recreation.md`
+- 211 | backlog | done | 2026-11-07 | MAUI: кнопки и долгое нажатие карточки не работают на Android (TouchBehavior) | `tasks/backlog/211-maui-card-children-tappable.md`
+- 212 | backlog | done | 2026-11-07 | MAUI: компактная шапка чата на телефоне | `tasks/backlog/212-maui-chat-header-compact.md`
+- 213 | backlog | done | 2026-11-07 | Картинка в карточке — в исходных пропорциях, без обрезки | `tasks/backlog/213-card-image-aspect-ratio.md`
+- 214 | backlog | done | 2026-11-07 | MAUI: нажатие на сессию открывает её, а не кнопки Rename/Delete | `tasks/backlog/214-maui-session-row-tap.md`
+- 215 | backlog | done | 2026-11-07 | Семантический индекс: понятная причина сбоя и проверка эмбеддингов вживую | `tasks/backlog/215-semantic-index-failure-diagnostics.md`
+- 216 | backlog | done | 2026-11-07 | MAUI: ресурсы оформления не того типа (предупреждения в журнале) | `tasks/backlog/216-maui-resource-type-warnings.md`
