@@ -188,6 +188,8 @@ public sealed partial class SessionsPageModel(
         semanticIndex.StatusChanged += OnSemanticIndexStatusChanged;
         changes.SessionChanged -= OnSessionChanged;
         changes.SessionChanged += OnSessionChanged;
+        changes.AllSessionsChanged -= OnAllSessionsChanged;
+        changes.AllSessionsChanged += OnAllSessionsChanged;
         IsBusy = true;
         try
         {
@@ -242,6 +244,9 @@ public sealed partial class SessionsPageModel(
 
     private void OnSessionChanged(object? sender, Guid sessionId) =>
         mainThread.BeginInvokeOnMainThread(() => RefreshSessionAsync(sessionId).FireAndForgetSafeAsync());
+
+    private void OnAllSessionsChanged(object? sender, EventArgs args) =>
+        mainThread.BeginInvokeOnMainThread(() => OnAppearingAsync().FireAndForgetSafeAsync());
 
     private async Task RefreshSessionAsync(Guid sessionId)
     {

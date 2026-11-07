@@ -30,7 +30,9 @@ public sealed partial class SettingsPageModel(
     ChatModelCatalogService chatModels,
     IDefaultAssistantModel defaultAssistantModel,
     ISemanticIndexController semanticIndex,
-    IMainThread mainThread) : ObservableObject, IDisposable
+    IMainThread mainThread,
+    HistoryService history,
+    ICurrentSessionTracker currentSessionTracker) : ObservableObject, IDisposable
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
     private bool _listeningForSemanticStatus;
@@ -194,6 +196,35 @@ public sealed partial class SettingsPageModel(
 
             var deleted = LogFiles.DeleteAllExceptNewest(LogsFolder);
             await dialogs.AlertAsync(AppResources.SettingsLogs, string.Format(AppResources.SettingsLogsCleared, deleted));
+        }
+        catch (Exception exception)
+        {
+            await _errorAlert.ShowAsync(exception);
+        }
+    }
+
+    [RelayCommand]
+    private async Task ClearHistoryAsync()
+    {
+        try
+        {
+            var confirmed = await dialogs.ConfirmAsync(
+                AppResources.SettingsClearHistory,
+                AppResources.SettingsClearHistoryConfirm,
+                AppResources.SettingsClearHistory,
+                AppResources.Cancel,
+                destructive: true);
+            if (!confirmed)
+            {
+                return;
+            }
+
+            var deleted = await history.ClearAllAsync(CancellationToken.None);
+            currentSessionTracker.CurrentId = null;
+            await navigation.GoToAsync(Routes.Sessions);
+            await dialogs.AlertAsync(
+                AppResources.SettingsClearHistory,
+                string.Format(System.Globalization.CultureInfo.CurrentCulture, AppResources.SettingsHistoryDeletedFormat, deleted));
         }
         catch (Exception exception)
         {

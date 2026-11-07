@@ -1,6 +1,8 @@
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
+using ImageGen.Core.Domain.Expenses;
+using ImageGen.Core.Search;
 using ImageGen.Data.Repositories;
 
 namespace ImageGen.Data.Tests.Repositories;
@@ -114,5 +116,42 @@ public class SessionRepositoryTests
         Assert.Empty(await messages.ListBySessionAsync(session.Id, ct));
         Assert.Null(await runs.GetRunAsync(run.Id, ct));
         Assert.Null(await runs.GetGenerationAsync(generation.Id, ct));
+    }
+
+    [Fact]
+    public async Task DeleteAllAsync_DeletesHistoryAndKeepsExpenses()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var sessions = new SessionRepository(test.Database);
+        var messages = new ChatMessageRepository(test.Database);
+        var runs = new RunRepository(test.Database);
+        var first = TestData.Session();
+        var second = TestData.Session();
+        await sessions.AddAsync(first, ct);
+        await sessions.AddAsync(second, ct);
+        await messages.AddAsync(TestData.Message(first.Id, TestData.BaseTime), ct);
+        var run = TestData.Run(first.Id, TestData.BaseTime);
+        await runs.AddRunAsync(run, [TestData.Generation(run, 0)], ct);
+        var embeddings = new TextEmbeddingRepository(test.Database);
+        await embeddings.UpsertBatchAsync([
+            new TextEmbedding($"title:{first.Id:D}", first.Id, SearchTextKind.Title, "hash", "model", 1, [1], TestData.BaseTime)
+        ], null, ct);
+        await using (var connection = await test.Database.OpenAsync(ct))
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "INSERT INTO expenses (operation_id, kind, provider_id, model_id, cost_usd, occurred_at) VALUES ('keep', 0, 'openrouter', 'model', '0.25', @occurred);";
+            command.Parameters.AddWithValue("@occurred", SqliteValues.FromDate(TestData.BaseTime));
+            await command.ExecuteNonQueryAsync(ct);
+        }
+
+        var deleted = await sessions.DeleteAllAsync(ct);
+
+        Assert.Equal(2, deleted);
+        Assert.Empty(await sessions.ListAsync(ct));
+        Assert.Empty(await messages.ListBySessionAsync(first.Id, ct));
+        Assert.Empty(await runs.ListRunsBySessionAsync(first.Id, ct));
+        Assert.Empty(await embeddings.ListAllAsync(ct));
+        Assert.Equal(1, await new ExpenseRepository(test.Database).CountAsync(ct));
     }
 }

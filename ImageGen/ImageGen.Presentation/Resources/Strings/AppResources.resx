@@ -633,6 +633,15 @@
   <data name="SettingsClearLogsConfirm" xml:space="preserve">
     <value>Delete old log files? The current file is kept.</value>
   </data>
+  <data name="SettingsClearHistory" xml:space="preserve">
+    <value>Delete all history</value>
+  </data>
+  <data name="SettingsClearHistoryConfirm" xml:space="preserve">
+    <value>Delete all sessions, images, videos, audio and the search index? Provider keys, settings and spending history are kept. This cannot be undone.</value>
+  </data>
+  <data name="SettingsHistoryDeletedFormat" xml:space="preserve">
+    <value>History deleted: {0} sessions.</value>
+  </data>
   <data name="SettingsLogsCleared" xml:space="preserve">
     <value>Deleted {0} log files. The current file is kept.</value>
   </data>

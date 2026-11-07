@@ -4,6 +4,7 @@ using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Search;
 using ImageGen.Core.Services;
+using ImageGen.Core.Storage;
 using ImageGen.Presentation;
 using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.Logging;
@@ -28,6 +29,13 @@ public sealed class SettingsPageModelTests : IDisposable
     private readonly IDefaultAssistantModel _defaultAssistantModel = DefaultAssistantModels.Create();
     private readonly ISemanticIndexController _semanticIndex = Substitute.For<ISemanticIndexController>();
     private readonly IMainThread _mainThread = Substitute.For<IMainThread>();
+    private readonly ISessionRepository _sessions = Substitute.For<ISessionRepository>();
+    private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
+    private readonly ISessionGenerationCoordinator _generationCoordinator = Substitute.For<ISessionGenerationCoordinator>();
+    private readonly SessionChangeNotifier _changes = new(NullLogger<SessionChangeNotifier>.Instance);
+    private readonly ISemanticIndexStatusProvider _indexStatus = Substitute.For<ISemanticIndexStatusProvider>();
+    private HistoryService CreateHistory() => new(_sessions, _files, _generationCoordinator, _changes, NullLogger<HistoryService>.Instance, _indexStatus);
+    private readonly CurrentSessionTracker _currentSession = new();
     private readonly ProviderRegistry _registry = new([
         new ProviderConfig(ProviderIds.OpenRouter, ProviderKind.OpenRouter, "OpenRouter", new Uri("https://openrouter.ai/api/v1/"), TimeSpan.FromSeconds(10), []),
         new ProviderConfig(ProviderIds.Fal, ProviderKind.Fal, "fal.ai", new Uri("https://queue.fal.run/"), TimeSpan.FromSeconds(10), []),
@@ -43,6 +51,7 @@ public sealed class SettingsPageModelTests : IDisposable
         _appearance = new AppearanceService(new TestPaths(_directory), NullLogger<AppearanceService>.Instance);
         _semanticIndex.GetStatusAsync(Arg.Any<CancellationToken>()).Returns(new SemanticIndexStatus(false, 0, 0, SemanticIndexState.Off));
         _semanticIndex.GetSourceCountAsync(Arg.Any<CancellationToken>()).Returns(0);
+        _indexStatus.GetStatusSnapshot().Returns(new SemanticIndexStatus(false, 0, 0, SemanticIndexState.Off));
         _mainThread.When(thread => thread.BeginInvokeOnMainThread(Arg.Any<Action>())).Do(call => call.Arg<Action>().Invoke());
     }
 
@@ -366,6 +375,38 @@ public sealed class SettingsPageModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ClearHistory_Cancel_KeepsHistory()
+    {
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(false);
+
+        await CreateModel().ClearHistoryCommand.ExecuteAsync(null);
+
+        Assert.Null(_currentSession.CurrentId);
+        await _sessions.DidNotReceive().DeleteAllAsync(Arg.Any<CancellationToken>());
+        await _navigation.DidNotReceive().GoToAsync(Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task ClearHistory_Confirmed_DeletesHistoryClearsCurrentSessionAndNavigatesToSessions()
+    {
+        _currentSession.CurrentId = Guid.NewGuid();
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+        _sessions.ListAsync(Arg.Any<CancellationToken>()).Returns([]);
+        _sessions.DeleteAllAsync(Arg.Any<CancellationToken>()).Returns(3);
+        _files.DeleteAllMediaAsync(Arg.Any<CancellationToken>()).Returns(7);
+        var model = CreateModel();
+
+        await model.ClearHistoryCommand.ExecuteAsync(null);
+
+        Assert.Null(_currentSession.CurrentId);
+        await _sessions.Received(1).DeleteAllAsync(Arg.Any<CancellationToken>());
+        await _files.Received(1).DeleteAllMediaAsync(Arg.Any<CancellationToken>());
+        await _navigation.Received(1).GoToAsync(Routes.Sessions);
+        await _dialogs.Received(1).AlertAsync(AppResources.SettingsClearHistory,
+            string.Format(System.Globalization.CultureInfo.CurrentCulture, AppResources.SettingsHistoryDeletedFormat, 3));
+    }
+
+    [Fact]
     public void CanOpenLogs_FollowsLauncher()
     {
         _folders.IsSupported.Returns(false);
@@ -377,7 +418,7 @@ public sealed class SettingsPageModelTests : IDisposable
 
     private SettingsPageModel CreateModel() => new(_appearance, _keyService, _registry, _navigation, _folders, _logSharer, new TestPaths(_directory), _dialogs,
         ErrorAlerts.Create(_dialogs), new ChatModelCatalogService(_router, NullLogger<ChatModelCatalogService>.Instance), _defaultAssistantModel,
-        _semanticIndex, _mainThread);
+        _semanticIndex, _mainThread, CreateHistory(), _currentSession);
 
     private string[] CreateLogFiles(params string[] names)
     {

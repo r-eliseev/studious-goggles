@@ -118,6 +118,11 @@
                         Command="{Binding ClearLogsCommand}"
                         HorizontalOptions="Start"
                         SemanticProperties.Description="{x:Static strings:AppResources.SettingsClearLogs}" />
+                <Button StyleClass="danger"
+                        Text="{x:Static strings:AppResources.SettingsClearHistory}"
+                        Command="{Binding ClearHistoryCommand}"
+                        HorizontalOptions="Start"
+                        SemanticProperties.Description="{x:Static strings:AppResources.SettingsClearHistory}" />
             </VerticalStackLayout>
         </VerticalStackLayout>
     </ScrollView>

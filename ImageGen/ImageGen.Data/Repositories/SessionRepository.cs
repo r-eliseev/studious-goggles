@@ -71,6 +71,18 @@ public sealed class SessionRepository(SqliteDatabase database) : ISessionReposit
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    public async Task<int> DeleteAllAsync(CancellationToken cancellationToken)
+    {
+        await using var connection = await database.OpenAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.Transaction = (SqliteTransaction)transaction;
+        command.CommandText = "DELETE FROM sessions;";
+        var deleted = await command.ExecuteNonQueryAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return deleted;
+    }
+
     private static void AddParameters(SqliteCommand command, Session session)
     {
         command.Parameters.AddWithValue("@id", SqliteValues.FromGuid(session.Id));

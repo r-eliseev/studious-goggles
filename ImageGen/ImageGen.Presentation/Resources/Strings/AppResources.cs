@@ -260,6 +260,12 @@ public static class AppResources
 
     public static string SettingsClearLogsConfirm => Get(nameof(SettingsClearLogsConfirm));
 
+    public static string SettingsClearHistory => Get(nameof(SettingsClearHistory));
+
+    public static string SettingsClearHistoryConfirm => Get(nameof(SettingsClearHistoryConfirm));
+
+    public static string SettingsHistoryDeletedFormat => Get(nameof(SettingsHistoryDeletedFormat));
+
     public static string SettingsLogsCleared => Get(nameof(SettingsLogsCleared));
 
     public static string SettingsNoLogs => Get(nameof(SettingsNoLogs));
