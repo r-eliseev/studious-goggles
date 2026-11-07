@@ -118,7 +118,9 @@ public class MauiChatPageMarkupTests
             && ((string?)element.Attribute("Command"))?.Contains("PlayMediaCommand", StringComparison.Ordinal) == true
             && ((string?)element.Attribute("SemanticProperties.Description"))?.Contains("PlayVideo", StringComparison.Ordinal) == true);
         Assert.Contains(root.Descendants(), element =>
-            element.Name.LocalName == "Image" && ((string?)element.Attribute("Source"))?.Contains("VideoPosterPath", StringComparison.Ordinal) == true);
+            element.Name.LocalName == "Image"
+            && ((string?)element.Attribute("Source"))?.Contains("VideoPosterPath", StringComparison.Ordinal) == true
+            && (string?)element.Attribute("Aspect") == "AspectFit");
     }
 
     [Fact]

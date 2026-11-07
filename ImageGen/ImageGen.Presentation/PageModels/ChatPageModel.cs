@@ -42,7 +42,8 @@ public sealed partial class ChatPageModel(
     CostEstimator? costEstimator = null,
     SpendingService? spendingService = null,
     IImageComparisonService? imageComparison = null,
-    IMediaPlayerService? mediaPlayer = null) : ObservableObject
+    IMediaPlayerService? mediaPlayer = null,
+    IVideoPosterService? videoPosterService = null) : ObservableObject
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
     private readonly CostEstimator? _costEstimator = costEstimator;
@@ -252,13 +253,14 @@ public sealed partial class ChatPageModel(
                 }
                 else if (entry.Run is { } run)
                 {
-                    var cards = entry.Generations.Select(CreateCard).ToList();
+                    var cards = entry.Generations.Select(generation => CreateCard(generation, entry.Run.VideoParameters?.AspectRatio)).ToList();
                     Items.Add(new RunItemViewModel(run, cards, new CopyTextAction(clipboard, mainThread, run.Prompt), CancelRunAsync));
                     foreach (var generation in entry.Generations)
                     {
                         if (_cards.TryGetValue(generation.Id, out var card))
                         {
                             StartImageDimensionsRead(generation, card, sessionId, epoch);
+                            StartVideoPosterRead(generation, card, sessionId, epoch);
                         }
                     }
                 }
@@ -743,10 +745,10 @@ public sealed partial class ChatPageModel(
         generation.SeedApplied ? generation.Seed.ToString(CultureInfo.CurrentCulture) : AppResources.SeedNotSupported,
         generation.CostUsd is { } cost ? "$" + cost.ToString("0.####", CultureInfo.CurrentCulture) : AppResources.DescriptionCostUnknown);
 
-    private GenerationItemViewModel CreateCard(Generation generation)
+    private GenerationItemViewModel CreateCard(Generation generation, string? videoAspectRatio)
     {
         var card = new GenerationItemViewModel(
-            generation, files, dialogs, clipboard, imageSaver, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync, OtherModelCardAsync, CompareCardAsync, CancelCardAsync, mediaPlayer);
+            generation, files, dialogs, clipboard, imageSaver, RepeatCardAsync, NewSeedCardAsync, EditCardAsync, DescribeCardAsync, OtherModelCardAsync, CompareCardAsync, CancelCardAsync, mediaPlayer, videoPosterService, videoAspectRatio);
         _cards[generation.Id] = card;
         return card;
     }
@@ -818,6 +820,7 @@ public sealed partial class ChatPageModel(
             {
                 card.Update(generation);
                 StartImageDimensionsRead(generation, card, sessionId, epoch);
+                StartVideoPosterRead(generation, card, sessionId, epoch);
                 CardUpdated?.Invoke(this, EventArgs.Empty);
             }
         });
@@ -904,6 +907,55 @@ public sealed partial class ChatPageModel(
             }
 
             card.ApplyImageDimensions(dimensions);
+            CardUpdated?.Invoke(this, EventArgs.Empty);
+        });
+    }
+
+    private void StartVideoPosterRead(Generation generation, GenerationItemViewModel card, Guid sessionId, int epoch)
+    {
+        if (generation.Status != GenerationStatus.Succeeded || !card.IsVideo || !card.HasMedia || videoPosterService?.IsSupported != true)
+        {
+            return;
+        }
+
+        var cancellationToken = _imageDimensionsCancellation.Token;
+        AppTaskExtensions.FireAndForgetSafeAsync(ApplyVideoPosterWhenReadyAsync(
+            card.GetVideoPosterAsync(cancellationToken), generation.Id, card, sessionId, epoch, cancellationToken));
+    }
+
+    private async Task ApplyVideoPosterWhenReadyAsync(
+        Task<PosterInfo?> read,
+        Guid generationId,
+        GenerationItemViewModel card,
+        Guid sessionId,
+        int epoch,
+        CancellationToken cancellationToken)
+    {
+        PosterInfo? poster;
+        try
+        {
+            poster = await read;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        mainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (cancellationToken.IsCancellationRequested
+                || epoch != _imageDimensionsEpoch
+                || sessionId != _sessionId
+                || !_cards.TryGetValue(generationId, out var currentCard)
+                || !ReferenceEquals(currentCard, card)
+                || !card.IsDone
+                || !card.IsVideo
+                || !card.HasMedia)
+            {
+                return;
+            }
+
+            card.ApplyVideoPoster(poster);
             CardUpdated?.Invoke(this, EventArgs.Empty);
         });
     }

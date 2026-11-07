@@ -21,6 +21,10 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     private readonly IClipboardService _clipboard;
     private readonly IImageSaver _saver;
     private readonly IMediaPlayerService? _mediaPlayer;
+    private readonly IVideoPosterService? _videoPosterService;
+    private readonly string? _videoAspectRatio;
+    private readonly object _videoPosterLock = new();
+    private Task<PosterInfo?>? _videoPosterRead;
     private readonly Func<GenerationItemViewModel, Task> _repeat;
     private readonly Func<GenerationItemViewModel, Task> _newSeed;
     private readonly Func<GenerationItemViewModel, Task> _edit;
@@ -45,7 +49,9 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         Func<GenerationItemViewModel, Task> otherModel,
         Func<GenerationItemViewModel, Task>? compare = null,
         Func<GenerationItemViewModel, Task>? cancel = null,
-        IMediaPlayerService? mediaPlayer = null)
+        IMediaPlayerService? mediaPlayer = null,
+        IVideoPosterService? videoPosterService = null,
+        string? videoAspectRatio = null)
     {
         ArgumentNullException.ThrowIfNull(generation);
         ArgumentNullException.ThrowIfNull(files);
@@ -61,6 +67,8 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         _clipboard = clipboard;
         _saver = saver;
         _mediaPlayer = mediaPlayer;
+        _videoPosterService = videoPosterService;
+        _videoAspectRatio = videoAspectRatio;
         _repeat = repeat;
         _newSeed = newSeed;
         _edit = edit;
@@ -217,6 +225,31 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     public string SaveLabel => IsVideo || IsAudio ? AppResources.SaveFile : _saver.ActionLabel;
 
     public bool CanPlayMedia => _mediaPlayer?.IsSupported == true && HasMedia && (IsVideo || IsAudio);
+
+    public async Task<PosterInfo?> GetVideoPosterAsync(CancellationToken cancellationToken)
+    {
+        if (_videoPosterService?.IsSupported != true || !IsVideo || !HasMedia || string.IsNullOrWhiteSpace(VideoFilePath))
+        {
+            return null;
+        }
+
+        Task<PosterInfo?> read;
+        lock (_videoPosterLock)
+        {
+            _videoPosterRead ??= _videoPosterService.GetPosterAsync(VideoFilePath, cancellationToken);
+            read = _videoPosterRead;
+        }
+
+        return await read;
+    }
+
+    public void ApplyVideoPoster(PosterInfo? poster)
+    {
+        VideoPosterPath = poster?.Path ?? "";
+        ImageAreaHeight = poster is { Width: > 0, Height: > 0 }
+            ? CardImageLayout.HeightFor(poster.Width, poster.Height)
+            : VideoHeightForAspectRatio(_videoAspectRatio);
+    }
 
     /// <summary>«Saved» after a successful save; empty otherwise. Shown on the card as a status line.</summary>
     [ObservableProperty]
@@ -396,12 +429,17 @@ public sealed partial class GenerationItemViewModel : ObservableObject
             throw new ArgumentException("The generation does not belong to this card.", nameof(generation));
         }
 
+        IsVideo = generation.Kind == MediaKind.Video;
+        IsImage = generation.Kind == MediaKind.Image;
+        IsAudio = generation.Kind == MediaKind.Audio;
         var imagePath = generation.Status == GenerationStatus.Succeeded ? generation.ImagePath ?? "" : "";
         if (!string.Equals(imagePath, _generationImagePath, StringComparison.Ordinal))
         {
             ImageDimensionsText = "";
             HasImageDimensions = false;
-            ImageAreaHeight = CardImageLayout.HeightFor(null, null);
+            VideoPosterPath = "";
+            ImageAreaHeight = IsVideo ? VideoHeightForAspectRatio(_videoAspectRatio) : CardImageLayout.HeightFor(null, null);
+            lock (_videoPosterLock) _videoPosterRead = null;
         }
         _generationImagePath = imagePath;
 
@@ -416,9 +454,6 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         HasNotice = NoticeText.Length > 0;
         CostUsd = generation.CostUsd;
         IsDone = generation.Status == GenerationStatus.Succeeded;
-        IsVideo = generation.Kind == MediaKind.Video;
-        IsImage = generation.Kind == MediaKind.Image;
-        IsAudio = generation.Kind == MediaKind.Audio;
         DurationText = generation.DurationSeconds is { } seconds
             ? string.Format(CultureInfo.CurrentCulture, AppResources.VideoDurationFormat, seconds.ToString("0.##", CultureInfo.CurrentCulture))
             : string.Empty;
@@ -438,6 +473,10 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         MediaFilePath = fullPath;
         VideoFilePath = IsVideo && HasMedia ? fullPath : "";
         AudioFilePath = IsAudio && HasMedia ? fullPath : "";
+        if (IsVideo && VideoPosterPath.Length == 0)
+        {
+            ImageAreaHeight = VideoHeightForAspectRatio(_videoAspectRatio);
+        }
         OnPropertyChanged(nameof(CanPlayMedia));
         PlayMediaCommand.NotifyCanExecuteChanged();
         HasImage = HasMedia && generation.Kind == MediaKind.Image;
@@ -504,6 +543,21 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         }
 
         return left;
+    }
+
+    private static double VideoHeightForAspectRatio(string? aspectRatio)
+    {
+        var parts = aspectRatio?.Split(':', StringSplitOptions.TrimEntries);
+        if (parts is { Length: 2 }
+            && int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var width)
+            && int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var height)
+            && width > 0
+            && height > 0)
+        {
+            return CardImageLayout.HeightFor(width, height);
+        }
+
+        return CardImageLayout.HeightFor(16, 9);
     }
 
     private static GenerationStatusKind StatusKindOf(GenerationStatus status) => status switch

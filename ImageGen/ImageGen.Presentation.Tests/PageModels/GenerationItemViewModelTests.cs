@@ -72,6 +72,63 @@ public class GenerationItemViewModelTests
         Assert.False(CardOf(video, mediaPlayer: unsupported).PlayMediaCommand.CanExecute(null));
     }
 
+    [Theory]
+    [InlineData("9:16", 352d)]
+    [InlineData("16:9", 148.5d)]
+    [InlineData("auto", 148.5d)]
+    public void VideoCard_UsesRequestedAspectRatioUntilPosterArrives(string? aspectRatio, double expectedHeight)
+    {
+        var generation = BaseGeneration();
+        generation.Kind = MediaKind.Video;
+        generation.Status = GenerationStatus.Running;
+        var card = CardOf(generation, videoAspectRatio: aspectRatio);
+
+        Assert.Equal(expectedHeight, card.ImageAreaHeight);
+
+        generation.Status = GenerationStatus.Succeeded;
+        generation.ImagePath = "videos/session/video.mp4";
+        card.Update(generation);
+        card.ApplyVideoPoster(new PosterInfo("/data/video.mp4.poster.jpg", 1280, 720));
+
+        Assert.Equal("/data/video.mp4.poster.jpg", card.VideoPosterPath);
+        Assert.Equal(148.5d, card.ImageAreaHeight);
+    }
+
+    [Fact]
+    public async Task GetVideoPosterAsync_CachesOneRequestPerCard()
+    {
+        var generation = BaseGeneration();
+        generation.Kind = MediaKind.Video;
+        generation.ImagePath = "videos/session/video.mp4";
+        var files = Substitute.For<IImageFileStore>();
+        files.GetFullPath(generation.ImagePath).Returns("/data/video.mp4");
+        var posters = Substitute.For<IVideoPosterService>();
+        posters.IsSupported.Returns(true);
+        posters.GetPosterAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new PosterInfo("/data/video.jpg", 1280, 720));
+        var card = CardOf(generation, files: files, videoPosterService: posters);
+
+        var results = await Task.WhenAll(card.GetVideoPosterAsync(CancellationToken.None), card.GetVideoPosterAsync(CancellationToken.None));
+
+        Assert.All(results, result => Assert.Equal("/data/video.jpg", result?.Path));
+        await posters.Received(1).GetPosterAsync("/data/video.mp4", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetVideoPosterAsync_UnsupportedService_LeavesIconPlaceholder()
+    {
+        var generation = BaseGeneration();
+        generation.Kind = MediaKind.Video;
+        generation.ImagePath = "videos/session/video.mp4";
+        var posters = Substitute.For<IVideoPosterService>();
+        posters.IsSupported.Returns(false);
+        var card = CardOf(generation, videoPosterService: posters);
+
+        Assert.Null(await card.GetVideoPosterAsync(CancellationToken.None));
+        Assert.Empty(card.VideoPosterPath);
+        await posters.DidNotReceive().GetPosterAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public async Task ShowActions_ChoosesRepeat_RunsRepeat()
     {
@@ -620,7 +677,9 @@ public class GenerationItemViewModelTests
         IClipboardService? clipboard = null,
         Func<GenerationItemViewModel, Task>? cancel = null,
         IImageFileStore? files = null,
-        IMediaPlayerService? mediaPlayer = null) => new(
+        IMediaPlayerService? mediaPlayer = null,
+        IVideoPosterService? videoPosterService = null,
+        string? videoAspectRatio = null) => new(
         generation,
         files ?? Substitute.For<IImageFileStore>(),
         dialogs ?? Substitute.For<IDialogService>(),
@@ -633,7 +692,9 @@ public class GenerationItemViewModelTests
         _ => Task.CompletedTask,
         null,
         cancel,
-        mediaPlayer);
+        mediaPlayer,
+        videoPosterService,
+        videoAspectRatio);
 
     private static GenerationItemViewModel Card(params ParameterOutcome[] outcomes) => Card(outcomes, 0);
 
