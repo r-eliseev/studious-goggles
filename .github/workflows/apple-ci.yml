@@ -1,0 +1,36 @@
+name: apple-ci
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/apple-ci.yml'
+      - 'ImageGen/ImageGen.E2E.Common/ci/apple-*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apple-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apple-preflight:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Select runner default Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+      - name: Run Apple toolchain inventory and builds
+        run: bash ImageGen/ImageGen.E2E.Common/ci/apple-preflight.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: apple-preflight
+          path: reports/apple-preflight/
+          if-no-files-found: warn
+          retention-days: 14
