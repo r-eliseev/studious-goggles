@@ -1,8 +1,8 @@
 ---
 id: 238
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-07T10:57:02Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -50,6 +50,12 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-07, codex-gpt6
+- Добавлены `.github/workflows/ui-e2e.yml` и Android/Windows preflight scripts. Исправлен порядок doctor: запуск после старта эмулятора.
+- Успешный workflow: [run 42367302330](https://github.com/r-eliseev/studious-goggles/actions/runs/42367302330), commit `58a2a0d32a40693808d372ac236b4010635fe753`. Android: `resource-id="com.eliseev.imagegen:id/apikey.entry"`, `adb root=true`, `adb remount=true`, screenshot/recording получены, MP4 19.842 с. Windows: console session active, 1024×768, окно и AutomationId найдены, кадр >99% non-uniform, FFmpeg MP4 10 с, data dir `C:\\Users\\runneradmin\\AppData\\Local\\User Name\\com.eliseev.imagegen\\Data`.
+- Тесты и проверка артефактов: Android APK/UI dump/screenshot/video/logcat; Windows screenshot/video/summary. Факты перенесены в `docs/knowledge/ui-e2e.md` и ADR 0029.
+- Первый Android запуск (run 42366566469) падал только на doctor до эмулятора; исправлено и повторный run зелёный.
 
 ### 2026-11-07, codex-gpt6 (частично)
 - Workflow собрал Android APK и unpackaged Windows app. Windows preflight успешен в двух запусках: активная console-сессия, окно и `apikey.entry` найдены, resolution 1024×768, non-uniform ratio 0.992126/0.994568, FFmpeg создал MP4 10 секунд, data dir `C:\\Users\\runneradmin\\AppData\\Local\\User Name\\com.eliseev.imagegen\\Data`. Артефакты: runs 42366477520 и 42366566469.

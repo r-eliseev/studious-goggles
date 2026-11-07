@@ -388,18 +388,30 @@ public sealed class FileImageStore : IImageFileStore
         return Task.CompletedTask;
     }
 
-    public Task<int> DeleteAllMediaAsync(CancellationToken cancellationToken)
+    public async Task<int> DeleteAllMediaAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var images = Path.Combine(appPaths.DataDirectory, ImagesFolder);
         if (!Directory.Exists(images))
         {
-            return Task.FromResult(0);
+            return 0;
         }
 
         var fileCount = Directory.GetFiles(images, "*", SearchOption.AllDirectories).Length;
-        Directory.Delete(images, recursive: true);
-        return Task.FromResult(fileCount);
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                Directory.Delete(images, recursive: true);
+                break;
+            }
+            catch (IOException) when (attempt < 3)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(100 * attempt), cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        return fileCount;
     }
 
     /// <summary>Maps a media type to a file extension with a leading dot. Unknown types get <c>.bin</c>.</summary>

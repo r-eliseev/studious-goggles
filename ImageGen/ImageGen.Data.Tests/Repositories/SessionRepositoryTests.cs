@@ -1,7 +1,7 @@
+using ImageGen.Core.Domain.Expenses;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Sessions;
-using ImageGen.Core.Domain.Expenses;
 using ImageGen.Core.Search;
 using ImageGen.Data.Repositories;
 
