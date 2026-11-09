@@ -1,35 +1,35 @@
-# 0014. Три стиля интерфейса, переключаемые настройкой
+# 0014. Three UI styles switched by a setting
 
-Статус: принято
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: 2026-10-28
+Status: accepted
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: 2026-10-28
 
-Решение владельца — пункт 1 «Решения»; остальное предложил исполнитель задачи 051, владелец утвердил вместе с макетами 2026-10-28 («мне всё нравится»).
+The owner's decision is item 1 of "Decision"; the rest was proposed by the executor of task 051 and approved by the owner together with the mockups on 2026-10-28 ("I like everything").
 
-## Контекст
-Задача 051 предложила три направления дизайна (`docs/design/directions.html`): A — тихий инструмент, B — галерея, C — журнал опытов. Владелец (2026-10-28): «мне нравятся все три, они выглядят довольно подобно в большинстве мест; давай сделаем все три и будем переключать настройкой».
+## Context
+Task 051 proposed three design directions (`docs/design/directions.html`): A — a quiet tool, B — a gallery, C — an experiment journal. The owner (2026-10-28): "I like all three, they look quite similar in most places; let's do all three and switch them with a setting".
 
-Ограничения: две оболочки с разной разметкой (MAUI и Avalonia, ADR 0006), общий слой `ImageGen.Presentation`; светлая и тёмная тема (F10.1); каждая экранная задача делается в обеих оболочках. Каждый стиль, отличающийся разметкой, умножает работу на каждом экране, поэтому различия надо держать в узких рамках.
+Constraints: two heads with different markup (MAUI and Avalonia, ADR 0006), the shared `ImageGen.Presentation` layer; a light and a dark theme (F10.1); every screen task is done in both heads. Every style that differs in markup multiplies the work on each screen, so the differences must be kept within narrow limits.
 
-## Решение
-1. **Три стиля — пользовательская настройка.** «Стиль» (Quiet, Gallery, Notebook) и «Тема» (как в системе, светлая, тёмная) — две независимые настройки внешнего вида, итого шесть сочетаний. Настройки устройства, не сессии; хранятся в Preferences (не секрет). Смена применяется сразу, без перезапуска.
-2. **Стиль — это токены плюс закрытый список вариантов разметки.** Всё, чем стили отличаются, описано в `docs/design/tokens.json` (формат W3C Design Tokens 2025.10):
-   - токены: цвета (по теме), шрифты, радиусы, размер основного текста на десктопе, зазор между карточками;
-   - варианты разметки (`$extensions.com.imagegen.variants`), ровно пять: вид сообщения пользователя (`label`, `bubble`, `label-mono`), рамка прогона (`none`, `framed`), вид промпта (`italic`, `filled`, `mono`), карточка (`bordered`, `borderless`), данные на карточке (`full`, `short-overlay`).
-   Новый вариант разметки добавляется только через новый ADR или правку этого: иначе стили расползутся и каждый экран придётся верстать трижды.
-3. **Общие для всех стилей:** раскладка экранов, порядок и состав элементов, тексты, значки, размеры областей нажатия, шкала шрифтов по платформе (`core` в `tokens.json`), семантика статусов (отфильтровано — янтарный, не красный), правила доступности.
-4. **Механизм в оболочках (предложение, проверяется пробным кодом в задаче на общие ресурсы темы):** шесть словарей ресурсов (стиль × тема) с одинаковыми ключами, подключённые через `DynamicResource`; при смене настройки или системной темы приложение подменяет словарь в `MergedDictionaries`. Варианты разметки — ресурсы-значения, которые читают стили элементов (Avalonia — классы на корневом элементе и селекторы; MAUI — привязка к ресурсу или `DataTemplateSelector`). Словари генерируются из `tokens.json` или пишутся вручную по нему — решение в той же задаче.
-5. **Шрифты:** Onest (B), IBM Plex Sans и IBM Plex Mono (C) — лицензия OFL, кириллица есть; поставляются в обеих оболочках. A — системный шрифт; на Linux, где единого системного шрифта нет, запасной шрифт выбирается в задаче на ресурсы темы.
-6. **Стиль по умолчанию — A** (допущение исполнителя: самый родной на всех платформах; владелец может выбрать другой).
+## Decision
+1. **Three styles are a user setting.** "Style" (Quiet, Gallery, Notebook) and "Theme" (as in the system, light, dark) are two independent appearance settings, six combinations in total. Device settings, not session settings; stored in Preferences (not a secret). A change applies immediately, without a restart.
+2. **A style is tokens plus a closed list of markup variants.** Everything the styles differ in is described in `docs/design/tokens.json` (W3C Design Tokens format 2025.10):
+   - tokens: colors (per theme), fonts, radii, the size of body text on the desktop, the gap between cards;
+   - markup variants (`$extensions.com.imagegen.variants`), exactly five: the look of a user message (`label`, `bubble`, `label-mono`), the run frame (`none`, `framed`), the look of the prompt (`italic`, `filled`, `mono`), the card (`bordered`, `borderless`), the data on the card (`full`, `short-overlay`).
+   A new markup variant is added only through a new ADR or an edit of this one: otherwise the styles drift apart and every screen has to be laid out three times.
+3. **Shared by all styles:** screen layouts, the order and set of elements, texts, icons, touch target sizes, the font scale per platform (`core` in `tokens.json`), status semantics (filtered — amber, not red), accessibility rules.
+4. **The mechanism in the heads (a proposal, checked by proof-of-concept code in the shared theme resources task):** six resource dictionaries (style × theme) with the same keys, connected through `DynamicResource`; when the setting or the system theme changes, the app swaps the dictionary in `MergedDictionaries`. Markup variants are value resources read by element styles (Avalonia — classes on the root element and selectors; MAUI — a binding to a resource or a `DataTemplateSelector`). The dictionaries are generated from `tokens.json` or written by hand from it — decided in the same task.
+5. **Fonts:** Onest (B), IBM Plex Sans and IBM Plex Mono (C) — OFL license, with Cyrillic; shipped in both heads. A uses the system font; on Linux, where there is no single system font, the fallback font is chosen in the theme resources task.
+6. **The default style is A** (the executor's assumption: the most native on all platforms; the owner may choose another).
 
-## Альтернативы
-- **Выбрать один стиль:** меньше работы, но владелец хочет все три.
-- **Свободные отличия разметки между стилями:** стили выразительнее, но каждый экран верстается трижды в двух оболочках, тесты и ручные проверки умножаются.
-- **Только цветовые темы (без шрифтов и вариантов разметки):** дёшево, но стили B и C теряют то, чем они отличаются (пузыри, данные поверх картинки, моноширинные данные).
+## Alternatives
+- **Choose one style:** less work, but the owner wants all three.
+- **Free markup differences between styles:** more expressive styles, but every screen is laid out three times in two heads, tests and manual checks multiply.
+- **Only color themes (without fonts and markup variants):** cheap, but styles B and C lose what distinguishes them (bubbles, data over the picture, monospace data).
 
-## Последствия
-- Нужен экран настроек (сейчас есть только страница ключа): ключ, стиль, тема; позже язык (задача 028).
-- Каждый макет и каждая экранная задача проверяются в трёх стилях и двух темах; прототип в `docs/design/` переключает их так же, как приложение.
-- Три шрифта увеличивают размер сборок (порядок сотен килобайт на начертание; точный размер — при вёрстке).
-- Контраст проверяется для каждой из шести палитр (WCAG AA): текст 4.5:1, рамки полей 3:1 (токен `control`).
-- Неизвестно, переключает ли MAUI все словари без перезапуска на всех платформах (Windows, Android, iOS, Mac Catalyst): проверить пробным кодом.
+## Consequences
+- A settings screen is needed (now there is only the key page): key, style, theme; later the language (task 028).
+- Every mockup and every screen task is checked in three styles and two themes; the prototype in `docs/design/` switches them the same way as the app.
+- Three fonts increase the build size (on the order of hundreds of kilobytes per face; the exact size is found during layout).
+- Contrast is checked for each of the six palettes (WCAG AA): text 4.5:1, field borders 3:1 (the `control` token).
+- Whether MAUI switches all dictionaries without a restart on all platforms (Windows, Android, iOS, Mac Catalyst) is unknown: check with proof-of-concept code.
