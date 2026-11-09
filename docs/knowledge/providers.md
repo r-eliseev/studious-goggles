@@ -1,12 +1,12 @@
-# Провайдеры: конфигурация и проверенные факты
+# Providers: configuration and verified facts
 
-## Together AI: конфигурация и контракт изображений
+## Together AI: configuration and the image contract
 
-Сверено с официальной документацией 2026-10-30. Together AI встроен в приложение как image-only OpenAI-compatible provider с base URL `https://api.together.ai/v1`; живой ответ и фактическое списание не проверялись. API использует Bearer key; ключ хранится в зашифрованном хранилище приложения и не указывается в конфиге.
+Reconciled with the official documentation on 2026-10-30. Together AI is built into the app as an image-only OpenAI-compatible provider with the base URL `https://api.together.ai/v1`; a live response and actual billing were not checked. The API uses a Bearer key; the key is stored in the app's encrypted store and is not given in the config.
 
-## Конфигурация
+## Configuration
 
-Пользовательский `providers.json` не нужен для включения Together. Встроенный каталог содержит четыре модели ниже; пользовательская запись с `id: together` заменяет встроенную целиком по общим правилам config override.
+A user `providers.json` is not needed to enable Together. The built-in catalog contains the four models below; a user entry with `id: together` replaces the built-in one entirely by the common config override rules.
 
 ```json
 {
@@ -31,40 +31,40 @@
 }
 ```
 
-`imageResponseFormat` допускает `base64` и `b64_json`; `imageOutputFormat` — `png` и `jpeg`. Поля опциональны: если их нет или они `null`, клиент сохраняет прежнее поведение OpenAI-compatible провайдера. Пустые строки, неправильный JSON-тип и значения вне списка запрещены. Эти поля доступны только для `openAiCompatible`.
+`imageResponseFormat` allows `base64` and `b64_json`; `imageOutputFormat` — `png` and `jpeg`. The fields are optional: if they are missing or `null`, the client keeps the old behavior of an OpenAI-compatible provider. Empty strings, a wrong JSON type and values outside the list are forbidden. These fields are available only for `openAiCompatible`.
 
-Для изображений клиент отправляет `POST images/generations`, `model`, `prompt`, `n=1`, опциональный `seed` и заданные параметры формата. Ответ `response_format=base64` содержит `data[0].b64_json`; клиент декодирует его локально. `imageOutputFormat` задаёт media type результата (`image/png` или `image/jpeg`). Без параметров ответ с URL не поддерживается: клиент не скачивает второй URL.
+For images the client sends `POST images/generations`, `model`, `prompt`, `n=1`, an optional `seed` and the configured format parameters. A `response_format=base64` response contains `data[0].b64_json`; the client decodes it locally. `imageOutputFormat` sets the media type of the result (`image/png` or `image/jpeg`). Without the parameters a response with a URL is not supported: the client does not download a second URL.
 
-Проверка ключа вызывает `GET models` с Bearer authorization; тело ответа проверки ключа не читается и не журналируется. Секреты нельзя помещать в этот пример или пользовательский конфиг.
+The key check calls `GET models` with Bearer authorization; the body of the key check response is not read or logged. Secrets must not be put into this example or a user config.
 
-## Доступные модели и ориентиры цен
+## Available models and price guidelines
 
-Каталог и цена меняются; значения ниже — данные официального каталога на дату проверки. Цены, помеченные `+`, зависят от параметров запроса и не являются фактической стоимостью конкретного результата.
+The catalog and the price change; the values below are the data of the official catalog on the check date. Prices marked `+` depend on the request parameters and are not the actual cost of a specific result.
 
-| Модель | API id | Цена из каталога | Примечание |
+| Model | API id | Catalog price | Note |
 |---|---|---:|---|
-| FLUX.1 Kontext Pro | `black-forest-labs/FLUX.1-kontext-pro` | $0.04/MP | цена за мегапиксель |
-| FLUX.1.1 Pro | `black-forest-labs/FLUX.1.1-pro` | $0.04/MP | цена за мегапиксель |
-| FLUX.2 Dev | `black-forest-labs/FLUX.2-dev` | $0.0154+/изображение | цена зависит от параметров; начинается с указанной суммы |
-| FLUX.2 Flex | `black-forest-labs/FLUX.2-flex` | $0.03+/изображение | цена зависит от параметров; начинается с указанной суммы |
-| FLUX.2 Pro | `black-forest-labs/FLUX.2-pro` | $0.03+/изображение | цена зависит от параметров; начинается с указанной суммы |
-| FLUX.2 Max | `black-forest-labs/FLUX.2-max` | $0.07/MP при 50 шагах | зависит от разрешения и шагов |
+| FLUX.1 Kontext Pro | `black-forest-labs/FLUX.1-kontext-pro` | $0.04/MP | price per megapixel |
+| FLUX.1.1 Pro | `black-forest-labs/FLUX.1.1-pro` | $0.04/MP | price per megapixel |
+| FLUX.2 Dev | `black-forest-labs/FLUX.2-dev` | $0.0154+/image | the price depends on parameters; starts at the given amount |
+| FLUX.2 Flex | `black-forest-labs/FLUX.2-flex` | $0.03+/image | the price depends on parameters; starts at the given amount |
+| FLUX.2 Pro | `black-forest-labs/FLUX.2-pro` | $0.03+/image | the price depends on parameters; starts at the given amount |
+| FLUX.2 Max | `black-forest-labs/FLUX.2-max` | $0.07/MP at 50 steps | depends on resolution and steps |
 
-Встроенные модели: FLUX.1.1 Pro, FLUX.2 Dev, FLUX.2 Flex и FLUX.2 Pro. Для каждой включён seed; стартовое подключение ограничено text-to-image и одной картинкой на запрос. Каталог Together требует положительный баланс. Все тарифы выше — снимок официального каталога на дату проверки, не гарантированная текущая цена.
+Built-in models: FLUX.1.1 Pro, FLUX.2 Dev, FLUX.2 Flex and FLUX.2 Pro. Seed is enabled for each; the initial connection is limited to text-to-image and one picture per request. The Together catalog requires a positive balance. All rates above are a snapshot of the official catalog on the check date, not a guaranteed current price.
 
-В документированном формате ответа image generation фактическая стоимость отсутствует. Клиент оставляет `CostUsd = null`; тариф каталога с `+` — минимальная/переменная цена, не стоимость результата. UI не показывает её как фактическую цену.
+The documented image generation response format has no actual cost. The client leaves `CostUsd = null`; a catalog rate with `+` is a minimum/variable price, not the cost of the result. The UI does not show it as the actual price.
 
-## Ограничения начальной интеграции
+## Limits of the initial integration
 
-- Только текст-в-изображение: dimensions, `aspect_ratio`, `steps`, `negative_prompt` и reference images сейчас не передаются; они требуют отдельной capability задачи.
-- `seed` поддерживается контрактом, но Together описывает его как best-effort: повторяемость между репликами/версиями модели не гарантируется.
-- Together описывает safety checker как ответ HTTP 422, но не задаёт надёжный уникальный маркер moderation в error body. Пока 422 классифицируется как `Unknown`, не как `Moderated`/`Filtered`.
-- Живой запрос с ключом и фактическое списание не проверялись; контракт покрыт HTTP заглушками.
+- Text-to-image only: dimensions, `aspect_ratio`, `steps`, `negative_prompt` and reference images are not passed now; they need a separate capability task.
+- `seed` is supported by the contract, but Together describes it as best-effort: repeatability across replicas/model versions is not guaranteed.
+- Together describes the safety checker as an HTTP 422 response, but does not define a reliable unique moderation marker in the error body. For now 422 is classified as `Unknown`, not as `Moderated`/`Filtered`.
+- A live request with a key and actual billing were not checked; the contract is covered by HTTP stubs.
 
-## Источники
+## Sources
 
-- [OpenAI compatibility: base URL, models и совместимость](https://docs.together.ai/docs/inference/openai-compatibility)
-- [Image generation parameters: response/output formats, seed и safety checker](https://docs.together.ai/docs/inference/images/parameters)
-- [Serverless model catalog: модели и цены](https://docs.together.ai/docs/serverless/models)
+- [OpenAI compatibility: base URL, models and compatibility](https://docs.together.ai/docs/inference/openai-compatibility)
+- [Image generation parameters: response/output formats, seed and the safety checker](https://docs.together.ai/docs/inference/images/parameters)
+- [Serverless model catalog: models and prices](https://docs.together.ai/docs/serverless/models)
 - [Text-to-image API](https://docs.together.ai/docs/inference/images/text-to-image)
 - [Error codes](https://docs.together.ai/docs/error-codes)
