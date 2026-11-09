@@ -1,32 +1,32 @@
-# 0027. Генерация видео и музыки
+# 0027. Video and music generation
 
-Статус: принято
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: 2026-11-06
+Status: accepted
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: 2026-11-06
 
-П. 7 для Avalonia уточнён ADR [0028](0028-avalonia-media-playback.md): desktop — LibVLC в отдельном окне, Android — встроенный плеер Android (Media3).
+Item 7 for Avalonia is refined by ADR [0028](0028-avalonia-media-playback.md): desktop — LibVLC in a separate window, Android — the built-in Android player (Media3).
 
-## Контекст
-Решение владельца 2026-10-31: генерация музыки, звуков и видео — следующие версии (задачи 166–169). Исследование 166 — `docs/knowledge/media-generation.md`. Ядро, хранилище и UI рассчитаны только на картинки: `Generation` без вида результата, `IQueuedImageProvider`, `IImageFileStore` (png/jpeg/webp, 50 МиБ в памяти), инструмент `generate_images`, карточка с картинкой. Владелец 2026-11-06 выбрал: всё через OpenRouter; в Avalonia — LibVLC сразу.
+## Context
+The owner's decision of 2026-10-31: generation of music, sounds and video is for later versions (tasks 166–169). Research 166 is `docs/knowledge/media-generation.md`. The core, storage and UI are designed only for pictures: `Generation` without a result kind, `IQueuedImageProvider`, `IImageFileStore` (png/jpeg/webp, 50 MiB in memory), the `generate_images` tool, a card with a picture. The owner chose on 2026-11-06: everything through OpenRouter; in Avalonia — LibVLC right away.
 
-## Решение
-1. **Провайдер — OpenRouter.** Видео — `POST/GET /api/v1/videos` и каталог `/api/v1/videos/models`. Музыка — Lyria 3 (`google/lyria-3-clip-preview`, `google/lyria-3-pro-preview`) через `chat/completions` с аудио-потоком, после живой проверки формата (208). Звуковых эффектов на OpenRouter нет — задача 168 ждёт появления модели.
-2. **Вид результата в домене.** `MediaKind { Image, Video, Audio }` и `Generation.Kind` (по умолчанию `Image`, миграция с `DEFAULT 0`), `Generation.DurationSeconds`. Путь файла — прежнее поле `ImagePath` (переименование отложено: оно затронуло бы весь код ради имени).
-3. **Файлы.** Видео и аудио пишутся в хранилище потоком (`SaveMediaStreamAsync`), не целиком в памяти, атомарно (временный файл + переименование, как картинки) и сразу после готовности. Типы: `video/mp4`, `video/webm`, `audio/mpeg`, `audio/wav`, `audio/ogg`, `audio/flac`. Лимиты: видео 500 МиБ, аудио 100 МиБ (`ProviderResponseLimits`); больше — ошибка, частичный файл удаляется.
-4. **Видео — та же очередь заданий**, что у картинок: `JobJson` для восстановления после перезапуска, опрос с нарастающим интервалом, статусы приводятся к единой модели. Отмены у OpenRouter нет: «Отмена» перестаёт ждать и ставит `Cancelled`, карточка предупреждает, что провайдер может взять плату.
-5. **Каталог видео-моделей** — отдельный тип `VideoModel` и свой кэш (таблица `video_models`, JSON модели). Цена до запуска считается по `pricing_skus` для известных ключей (`duration_seconds*`, `cents_per_*second*`, `minimum_cents_per_generation`); `video_tokens*` и прочие — «price unknown».
-6. **Сессия и ассистент.** `SessionSettings.VideoModels` и `VideoParameters` (длительность, разрешение, соотношение сторон, звук), хранятся в `settings_json`. Отдельный инструмент ассистента `generate_video` (промпт; первый кадр — по id готовой картинки сессии). Ассистент запускает его без подтверждения, как картинки (S2.2); предупреждения о расходах (021) — до отправки сообщения.
-7. **Воспроизведение.** MAUI — `CommunityToolkit.Maui.MediaElement` 10.0.0 (MIT) в карточке. Avalonia — LibVLC (`LibVLCSharp` + `LibVLCSharp.Avalonia`, LGPL-2.1+), сначала пробник на Avalonia 12 (206); если `VideoView` несовместим — вывод кадров в `WriteableBitmap` через колбэки LibVLC, решение фиксируется по итогам 206. Нативная libvlc — пакеты VideoLAN для Windows, macOS, Android; на Linux — системная (зависимость описывается в README).
-8. **Расходы.** `ExpenseKind.Video` и `ExpenseKind.Music` в журнале 021.
+## Decision
+1. **The provider is OpenRouter.** Video — `POST/GET /api/v1/videos` and the `/api/v1/videos/models` catalog. Music — Lyria 3 (`google/lyria-3-clip-preview`, `google/lyria-3-pro-preview`) through `chat/completions` with an audio stream, after a live check of the format (208). OpenRouter has no sound effects — task 168 waits for a model.
+2. **The result kind in the domain.** `MediaKind { Image, Video, Audio }` and `Generation.Kind` (`Image` by default, a migration with `DEFAULT 0`), `Generation.DurationSeconds`. The file path is the old `ImagePath` field (renaming is postponed: it would touch all code for the sake of a name).
+3. **Files.** Video and audio are written to the store as a stream (`SaveMediaStreamAsync`), not whole in memory, atomically (a temporary file + rename, as for pictures) and right after they are ready. Types: `video/mp4`, `video/webm`, `audio/mpeg`, `audio/wav`, `audio/ogg`, `audio/flac`. Limits: video 500 MiB, audio 100 MiB (`ProviderResponseLimits`); larger is an error, the partial file is deleted.
+4. **Video uses the same job queue** as pictures: `JobJson` for recovery after a restart, polling with an increasing interval, statuses are mapped to the common model. OpenRouter has no cancellation: "Cancel" stops waiting and sets `Cancelled`, the card warns that the provider may charge.
+5. **The video model catalog** is a separate `VideoModel` type and its own cache (the `video_models` table, the model's JSON). The price before the run is computed from `pricing_skus` for known keys (`duration_seconds*`, `cents_per_*second*`, `minimum_cents_per_generation`); `video_tokens*` and others are "price unknown".
+6. **Session and assistant.** `SessionSettings.VideoModels` and `VideoParameters` (duration, resolution, aspect ratio, sound), stored in `settings_json`. A separate assistant tool `generate_video` (prompt; the first frame — by the id of a finished picture of the session). The assistant starts it without confirmation, as for pictures (S2.2); spending warnings (021) come before the message is sent.
+7. **Playback.** MAUI — `CommunityToolkit.Maui.MediaElement` 10.0.0 (MIT) in the card. Avalonia — LibVLC (`LibVLCSharp` + `LibVLCSharp.Avalonia`, LGPL-2.1+), first a probe on Avalonia 12 (206); if `VideoView` is incompatible — frame output into a `WriteableBitmap` through LibVLC callbacks, decided after 206. The native libvlc comes from the VideoLAN packages for Windows, macOS, Android; on Linux the system one (the dependency is described in the README).
+8. **Spending.** `ExpenseKind.Video` and `ExpenseKind.Music` in the 021 ledger.
 
-## Альтернативы
-- **Видео через OpenRouter, аудио через fal** — больше моделей аудио и звуковые эффекты, но у каждой модели fal своя схема полей; отклонено владельцем.
-- **Всё через fal** — один провайдер с очередью, но схемы моделей разные, цены только с ключом; отклонено.
-- **Системный плеер в Avalonia** вместо LibVLC — без новых пакетов, но без плеера в карточке; отклонено владельцем.
-- **Обобщить `Image*`-типы переименованием** (`ImageModel` → `MediaModel` и т. д.) — чище, но огромная правка без изменения поведения; отложено.
+## Alternatives
+- **Video through OpenRouter, audio through fal** — more audio models and sound effects, but every fal model has its own field schema; rejected by the owner.
+- **Everything through fal** — one provider with a queue, but the model schemas differ and prices come only with a key; rejected.
+- **The system player in Avalonia** instead of LibVLC — no new packages, but no player in the card; rejected by the owner.
+- **Generalize the `Image*` types by renaming** (`ImageModel` → `MediaModel` etc.) — cleaner, but a huge edit without a behavior change; postponed.
 
-## Последствия
-- Картинки работают как раньше: `Kind = Image` по умолчанию для старых записей.
-- Галерея (022) по-прежнему показывает только картинки (фильтр `Kind = Image`), пока не будет отдельного решения.
-- Пакеты Avalonia растут на размер libvlc (десятки МБ на платформу); LGPL требует указать лицензию и не запрещает распространение с динамической библиотекой.
-- Неизвестно до живых запросов: поля ответа видео, единица `usage.cost`, формат файла, формат и параметры Lyria.
+## Consequences
+- Pictures work as before: `Kind = Image` by default for old records.
+- The gallery (022) still shows only pictures (the `Kind = Image` filter) until a separate decision.
+- Avalonia packages grow by the size of libvlc (tens of MB per platform); LGPL requires stating the license and does not forbid distribution with a dynamic library.
+- Unknown until live requests: the video response fields, the `usage.cost` unit, the file format, the Lyria format and parameters.
