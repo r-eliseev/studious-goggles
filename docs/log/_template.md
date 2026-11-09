@@ -1,11 +1,11 @@
-# YYYY-MM-DD: тема
+# YYYY-MM-DD: topic
 
-Файл называйте `YYYY-MM-DD-тема.md`.
+Name the file `YYYY-MM-DD-topic.md`.
 
-## Сделано
+## Done
 
-## Решения и причины
+## Decisions and reasons
 
-## Не закончено
+## Not finished
 
-## На что обратить внимание
+## Points of attention

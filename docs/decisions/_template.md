@@ -1,19 +1,19 @@
-# NNNN. Название решения
+# NNNN. Decision title
 
-Статус: предложено
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: YYYY-MM-DD
+Status: proposed
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: YYYY-MM-DD
 
-Файл называйте `NNNN-короткое-название.md` (0001, 0002, ...).
+Name the file `NNNN-short-title.md` (0001, 0002, ...).
 
-## Контекст
-Какая проблема, какие ограничения.
+## Context
+What the problem is and what the constraints are.
 
-## Решение
-Что выбрали.
+## Decision
+What was chosen.
 
-## Альтернативы
-Что рассматривали и почему не взяли.
+## Alternatives
+What was considered and why it was not chosen.
 
-## Последствия
-Что становится проще, что сложнее.
+## Consequences
+What becomes easier and what becomes harder.

@@ -1,18 +1,18 @@
-# Оглавление документации
+# Documentation index
 
-| Файл | О чём | Когда читать |
+| File | About | When to read |
 |---|---|---|
-| product.md | цели, границы и решения владельца | в начале работы |
-| architecture.md | модули и потоки | при изменении структуры |
-| conventions.md | стиль C#/MAUI, тесты и запреты | перед написанием кода |
-| status.md | открытые вопросы, очередь и проблемы | в начале работы |
-| tasks.md | работа с задачами, аудит и вспомогательные агенты | перед задачами или аудитом |
-| history.md | краткая история завершённых работ | при поиске контекста |
-| knowledge/ | среда и факты .NET, MAUI, Avalonia, провайдеров; [Avalonia mobile](knowledge/avalonia-mobile.md) | перед платформенной работой |
-| knowledge/docker.md | сборка, запуск и хранение данных Web-хоста в Docker | при self-hosted запуске Web |
-| knowledge/ui-e2e.md | факты о среде E2E тестов MAUI в GitHub Actions | при работе с E2E-инфраструктурой |
-| knowledge/apple-ci.md | проверенные версии Xcode/.NET и сборки Apple в GitHub Actions | перед Apple-сборками и iOS E2E |
-| design/ | рекомендации платформ и токены дизайна (`implementation.md`, `tokens.json`) | перед вёрсткой |
-| decisions/ | ADR и шаблон `_template.md` | при спорных изменениях |
-| specs/ | спецификации функций (`image-client.md`, `chat-sessions.md`, `media-generation.md`, `ui-e2e.md`, `apple-ci-e2e.md`, `acceptance-scenarios.md`) и шаблон `_template.md` | при изменении поведения |
-| log/ | отчёты аудита и шаблон `_template.md` | при поиске результатов аудита |
+| product.md | owner's goals, boundaries and decisions | at the start of work |
+| architecture.md | modules and flows | when changing the structure |
+| conventions.md | C#/MAUI style, tests, language and prohibitions | before writing code |
+| status.md | open questions, queue and problems | at the start of work |
+| tasks.md | working with tasks, audits and helper agents | before tasks or an audit |
+| history.md | short history of finished work | when looking for context |
+| knowledge/ | environment and facts about .NET, MAUI, Avalonia, providers; [Avalonia mobile](knowledge/avalonia-mobile.md) | before platform work |
+| knowledge/docker.md | building, running and storing data of the Web host in Docker | for a self-hosted Web run |
+| knowledge/ui-e2e.md | facts about the MAUI E2E test environment in GitHub Actions | when working on the E2E infrastructure |
+| knowledge/apple-ci.md | verified Xcode/.NET versions and Apple builds in GitHub Actions | before Apple builds and iOS E2E |
+| design/ | platform guidelines and design tokens (`implementation.md`, `tokens.json`) | before layout work |
+| decisions/ | ADRs and the `_template.md` template | for contested changes |
+| specs/ | feature specifications (`image-client.md`, `chat-sessions.md`, `media-generation.md`, `ui-e2e.md`, `apple-ci-e2e.md`, `acceptance-scenarios.md`) and the `_template.md` template | when changing behavior |
+| log/ | audit reports and the `_template.md` template | when looking for audit results |
