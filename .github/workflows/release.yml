@@ -1,9 +1,17 @@
 name: release
 on:
   # Every push or merge to main publishes the next patch release (vX.Y.Z+1 after the latest stable tag).
+  # Only commits that change the shipped C# code start a release (owner's decision of 2026-11-09): documentation,
+  # tasks, scripts, workflows and test-only changes do not. GitHub does not evaluate path filters for tag pushes,
+  # so a manual vX.Y.Z tag still releases. Changes skipped here are included in the next release's notes.
   push:
     branches: [main]
     tags: ['v[0-9]+.[0-9]+.[0-9]+']
+    paths:
+      - 'ImageGen/**'
+      - '!ImageGen/*.Tests/**'
+      - '!ImageGen/ImageGen.E2E.*/**'
+      - 'global.json'
   # Manual run: builds every package as workflow artifacts without creating a GitHub release (dry run).
   workflow_dispatch:
 

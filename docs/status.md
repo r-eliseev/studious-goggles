@@ -6,7 +6,7 @@ Here are open questions, known problems, CI and the task queue; product decision
 
 The main scenario is sessions with an assistant (`docs/specs/chat-sessions.md`, ADR 0004). Tasks: `tasks/v0.1/` — the walking skeleton on OpenRouter and MAUI; `tasks/backlog/` — further releases, detailed after the skeleton. Where each task can be done: `docs/knowledge/dev-environment.md`.
 
-CI: `.github/workflows/build.yml` (the `core` job on Ubuntu: formatting, build, tests; `avalonia` on Ubuntu: build and headless tests; `avalonia-android` on Ubuntu: Android Release build; `windows-tests` on Windows; the `maui` job on Windows: build for Windows and Android), `release.yml` (Avalonia Android APK, MAUI APK and the other release packages on a `v*` tag/push to `main`) and `harness.yml`/`harness-audit.yml`. The `maui-android` workload on ubuntu-latest failed with "Disk quota exceeded" (with 24 GB free, the cause is not known), so Android is built on Windows.
+CI: `.github/workflows/build.yml` (the `core` job on Ubuntu: formatting, build, tests; `avalonia` on Ubuntu: build and headless tests; `avalonia-android` on Ubuntu: Android Release build; `windows-tests` on Windows; the `maui` job on Windows: build for Windows and Android), `release.yml` (Avalonia Android APK, MAUI APK and the other release packages on a `v*` tag or a push to `main` that changes the shipped code in `ImageGen/`) and `harness.yml`/`harness-audit.yml`. The `maui-android` workload on ubuntu-latest failed with "Disk quota exceeded" (with 24 GB free, the cause is not known), so Android is built on Windows.
 
 ## Order of work
 
