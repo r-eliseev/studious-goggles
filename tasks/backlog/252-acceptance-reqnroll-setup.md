@@ -1,85 +1,87 @@
 ---
 id: 252
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-11-09
 ---
 
-# Приёмочные сценарии: Reqnroll, проект и headless Avalonia
+# Acceptance scenarios: Reqnroll, the project and headless Avalonia
 
-## Описание
-Просьба владельца 2026-11-09: подключить «что-то типа Cucumber» для тестов. Решение — ADR 0031 (Reqnroll на xUnit v3, headless Avalonia, русский Gherkin), каталог сценариев — `docs/specs/acceptance-scenarios.md`.
+## Description
+The owner's request of 2026-11-09: adopt "something like Cucumber" for tests. The decision is ADR 0031 (Reqnroll on xUnit v3, headless Avalonia, English Gherkin), the scenario catalog is `docs/specs/acceptance-scenarios.md`.
 
-Эта задача создаёт пустой, но рабочий каркас: проект `ImageGen/ImageGen.Acceptance.Tests`, Reqnroll, запуск headless-сессии Avalonia из хуков Reqnroll и один сквозной сценарий KEY-01 («первый запуск без ключа → экран ключа»). Мир со сценарным фейком сети — задача 253.
+This task creates an empty but working skeleton: the project `ImageGen/ImageGen.Acceptance.Tests`, Reqnroll, starting the Avalonia headless session from Reqnroll hooks, one end-to-end scenario KEY-01 ("first launch without a key → the key screen") and the CI step. The world with the scenario network fake is task 253.
 
-Неизвестно (2026-11-09), выяснить первым шагом:
-- работает ли `Reqnroll.xunit.v3` 3.3.4 с `xunit.v3` 4.0.2 из `Directory.Packages.props`. `Avalonia.Headless.XUnit` 12.1.4 с 4.x не работает, поэтому `ImageGen.Avalonia.Tests` закреплён на 3.2.2 (`VersionOverride`, комментарий в csproj);
-- можно ли из привязок Reqnroll выполнять код на потоке Avalonia через `HeadlessUnitTestSession` (пакет `Avalonia.Headless`, без `Avalonia.Headless.XUnit`, потому что Reqnroll сам генерирует `[Fact]`, а не `[AvaloniaFact]`);
-- генерирует ли Reqnroll тесты из русского Gherkin (`# language: ru`) с привязками `[Given]/[When]/[Then]` на русском тексте.
+Unknown (2026-11-09), find out in the first step:
+- whether `Reqnroll.xunit.v3` 3.3.4 works with `xunit.v3` 4.0.2 from `Directory.Packages.props`. `Avalonia.Headless.XUnit` 12.1.4 does not work with 4.x, so `ImageGen.Avalonia.Tests` is pinned to 3.2.2 (`VersionOverride`, ADR 0007);
+- whether Reqnroll bindings can run code on the Avalonia thread through `HeadlessUnitTestSession` (the `Avalonia.Headless` package, without `Avalonia.Headless.XUnit`, because Reqnroll generates `[Fact]` itself, not `[AvaloniaFact]`).
 
-Зависит от: —
-Среда: Linux или Windows (headless, без дисплея).
+Depends on: —
+Environment: Linux or Windows (headless, no display).
 
-## Критерии готовности
-- Шаг 1, пробный код в `poc/backlog/252-acceptance-reqnroll-setup/` (правила `poc/README.md`): минимальный проект с одним русским сценарием, который в хуке поднимает `HeadlessUnitTestSession` с `TestAppBuilder`-подобным `AppBuilder` и в шаге проверяет, что код выполнен на UI-потоке (`Dispatcher.UIThread.CheckAccess()`). Проверить с `xunit.v3` 4.0.2 и, если не работает, с 3.2.2. Вывод (версии, что работает, текст ошибки) — в «Комментарии» и в новый файл `docs/knowledge/acceptance-tests.md`.
-  - Если не работает ни одна версия — `blocked`, вопрос владельцу: переходить ли на `Reqnroll.NUnit` (ADR 0031, п. 1).
-- Проект `ImageGen/ImageGen.Acceptance.Tests` (`net10.0`, `OutputType` как у `ImageGen.Avalonia.Tests`), ссылка на `ImageGen.Avalonia`; пакеты `Reqnroll.xunit.v3`, `Avalonia.Headless` (версии в `Directory.Packages.props`), версия xunit.v3 — по итогам шага 1 с комментарием в csproj, как в `ImageGen.Avalonia.Tests`.
-- `reqnroll.json`: язык фич `ru`, привязки из сборки проекта. Раскладка: `Features/`, `Steps/`, `Support/`.
-- `Support/HeadlessApp` (имя — по итогам шага 1): запуск одной headless-сессии на прогон (хук `[BeforeTestRun]`), остановка в `[AfterTestRun]`, метод для выполнения асинхронного кода шага на UI-потоке с таймаутом. Папка данных — временная, как в `ImageGen.Avalonia.Tests/TestAppBuilder.cs` (настоящая папка и хранилище ключей не открываются, задача 048).
-- Сценарий KEY-01 в `Features/FirstRunAndKeys.feature` зелёный. Для него хватает композиции `AppServices.Create` с заглушкой OpenRouter и подменой диалогов (как `ShellHarness`); полный мир — в 253, здесь его не делать.
-- Тест-самопроверка (обычный xUnit-тест в проекте, не Gherkin): сценарий Reqnroll с несуществующим шагом падает, а не пропускается (настройка `missingOrPendingStepsOutcome` = `Error`).
-- Сценарии выполняются последовательно (одна headless-сессия на процесс); параллельность xUnit для проекта выключена.
-- Документация:
-  - `AGENTS.md`, раздел «Команды», строка «Тесты»: добавить `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` (headless, на Linux);
-  - `docs/conventions.md`, раздел тестов: Reqnroll только в `ImageGen.Acceptance.Tests`, русский Gherkin, теги из каталога, ссылка на ADR 0031;
-  - `docs/architecture.md` — только если раскладка тестовых проектов там описана (проверить);
-  - ADR 0031: дописать в «Решение» найденную версию xunit.v3 с датой;
-  - `docs/index.md`: строка про `knowledge/acceptance-tests.md`.
-- CI: шаг `dotnet test` проекта в job `avalonia` файла `.github/workflows/build.yml` — **только если владелец явно разрешил правку workflow** (вопрос задан в чате 2026-11-09; ответ искать в «Комментариях»). Без разрешения не трогать и записать в «Отчёт».
-- `ImageGen.slnx` содержит проект.
+## Acceptance criteria
+- Step 1, proof-of-concept code in `poc/backlog/252-acceptance-reqnroll-setup/` (rules in `poc/README.md`): a minimal project with one English scenario that starts a `HeadlessUnitTestSession` with an `AppBuilder` like `TestAppBuilder` in a hook and checks in a step that the code runs on the UI thread (`Dispatcher.UIThread.CheckAccess()`). Check with `xunit.v3` 4.0.2 and, if it does not work, with 3.2.2. The conclusion (versions, what works, the error text) goes into "Comments" and a new file `docs/knowledge/acceptance-tests.md`.
+  - If no version works — `blocked`, a question to the owner: move to `Reqnroll.NUnit` (ADR 0031, item 1)?
+- The project `ImageGen/ImageGen.Acceptance.Tests` (`net10.0`, `OutputType` as in `ImageGen.Avalonia.Tests`), a reference to `ImageGen.Avalonia`; the packages `Reqnroll.xunit.v3`, `Avalonia.Headless` (versions in `Directory.Packages.props`), the xunit.v3 version per step 1 with a comment in the csproj, as in `ImageGen.Avalonia.Tests`.
+- `reqnroll.json`: the default (English) feature language, bindings from the project assembly. Layout: `Features/`, `Steps/`, `Support/`.
+- `Support/HeadlessApp` (the name per step 1): one headless session per run (the `[BeforeTestRun]` hook), stopped in `[AfterTestRun]`, a method that runs a step's asynchronous code on the UI thread with a timeout. The data folder is temporary, as in `ImageGen.Avalonia.Tests/TestAppBuilder.cs` (the real folder and key store are never opened, task 048).
+- Scenario KEY-01 in `Features/FirstRunAndKeys.feature` is green. For it the composition `AppServices.Create` with an OpenRouter stub and substituted dialogs (as in `ShellHarness`) is enough; the full world is in 253, do not build it here.
+- A self-check (an ordinary xUnit test in the project, not Gherkin): a Reqnroll scenario with an undefined step fails instead of being skipped (`missingOrPendingStepsOutcome` = `Error`).
+- Scenarios run sequentially (one headless session per process); xUnit parallelism is off for the project.
+- CI: a `dotnet test` step for the project in the `avalonia` job of `.github/workflows/build.yml`, after the Avalonia tests (the owner allowed this change on 2026-11-09). Also in the `windows-tests` job, if the project passes on Windows locally in CI; otherwise record why in the "Report".
+- Documentation:
+  - `AGENTS.md`, "Commands": the command already lists the project (added 2026-11-09) — remove "after task 252";
+  - `docs/conventions.md`, "Tests": already describes Reqnroll — check that it matches what was built;
+  - ADR 0031: add the found xunit.v3 version with a date to "Decision";
+  - `docs/index.md`: a line for `knowledge/acceptance-tests.md`.
+- `ImageGen.slnx` contains the project.
+- Everything new is in English (`docs/conventions.md`, "Language"); `scripts/check.sh` passes.
 
-## Анализ
-- Образец композиции и headless: `ImageGen/ImageGen.Avalonia.Tests/TestAppBuilder.cs` (временная папка, `App.HostOverrides`), `ImageGen/ImageGen.Avalonia.Tests/TestDoubles/ShellHarness.cs` (`AppServices.Create`, `AvaloniaNavigationService.AttachHost`, `StartAsync`, `WaitUntilAsync`), `ImageGen/ImageGen.Avalonia.Tests/TestDoubles/TempAppPaths.cs`, `StubHttpMessageHandler.cs`, `OpenRouterFakes.cs`.
-- Сценарий KEY-01 уже проверяется кодом в `ImageGen/ImageGen.Avalonia.Tests/Flows/StartFlowTests.cs` — сверить ожидания; потоковый тест не удалять (ADR 0031, п. 7).
-- Двойники из `ImageGen.Avalonia.Tests` в этой задаче не переносить и не делать общими: тестовый проект на тестовый проект не ссылается. Нужное для KEY-01 — минимальная копия в `Support/` с пометкой «заменяется миром 253».
-- `ImageGen.Avalonia.Tests.csproj` объясняет закрепление xunit.v3 3.2.2 — тот же риск у Reqnroll.
+## Analysis
+- The composition and headless model: `ImageGen/ImageGen.Avalonia.Tests/TestAppBuilder.cs` (a temporary folder, `App.HostOverrides`), `ImageGen/ImageGen.Avalonia.Tests/TestDoubles/ShellHarness.cs` (`AppServices.Create`, `AvaloniaNavigationService.AttachHost`, `StartAsync`, `WaitUntilAsync`), `ImageGen/ImageGen.Avalonia.Tests/TestDoubles/TempAppPaths.cs`, `StubHttpMessageHandler.cs`, `OpenRouterFakes.cs`.
+- Scenario KEY-01 is already checked in code in `ImageGen/ImageGen.Avalonia.Tests/Flows/StartFlowTests.cs` — compare the expectations; do not delete the flow test (that is task 267).
+- Do not move the doubles from `ImageGen.Avalonia.Tests` in this task: a test project does not reference a test project. What KEY-01 needs is a minimal copy in `Support/` marked "replaced by the world of 253".
+- `ImageGen.Avalonia.Tests.csproj` explains the xunit.v3 3.2.2 pin — Reqnroll has the same risk.
 
-## План
-1. POC (шаг 1), вывод в «Комментарии» и `docs/knowledge/acceptance-tests.md`; при неудаче — `blocked`.
-2. Проект, пакеты, `reqnroll.json`, решение; пустой прогон `dotnet test` (0 тестов) проходит.
-3. Самопроверка «неизвестный шаг = ошибка» (сначала тест, потом настройка).
-4. `HeadlessApp` и хуки; KEY-01: сначала `.feature` (падает — шаги не привязаны), затем привязки.
-5. Документация; CI — только с разрешения.
+## Plan
+1. POC (step 1), the conclusion into "Comments" and `docs/knowledge/acceptance-tests.md`; on failure — `blocked`.
+2. The project, packages, `reqnroll.json`, the solution; an empty `dotnet test` run (0 tests) passes.
+3. The self-check "an undefined step is an error" (the test first, then the setting).
+4. `HeadlessApp` and the hooks; KEY-01: the `.feature` first (it fails — the steps are not bound), then the bindings.
+5. The CI step; documentation.
 
-Файлы:
-- `poc/backlog/252-acceptance-reqnroll-setup/` (новый);
-- `ImageGen/ImageGen.Acceptance.Tests/` (новый): `ImageGen.Acceptance.Tests.csproj`, `reqnroll.json`, `Features/FirstRunAndKeys.feature`, `Steps/FirstRunSteps.cs`, `Support/HeadlessApp.cs`, `Support/Hooks.cs`, `ReqnrollSetupTests.cs`;
-- `ImageGen/Directory.Packages.props`, `ImageGen/ImageGen.slnx`;
-- `AGENTS.md`, `docs/conventions.md`, `docs/decisions/0031-bdd-acceptance-reqnroll.md`, `docs/knowledge/acceptance-tests.md` (новый), `docs/index.md`, `docs/specs/acceptance-scenarios.md` (статус KEY-01);
-- при разрешении владельца: `.github/workflows/build.yml`.
+Files:
+- `poc/backlog/252-acceptance-reqnroll-setup/` (new);
+- `ImageGen/ImageGen.Acceptance.Tests/` (new): `ImageGen.Acceptance.Tests.csproj`, `reqnroll.json`, `Features/FirstRunAndKeys.feature`, `Steps/FirstRunSteps.cs`, `Support/HeadlessApp.cs`, `Support/Hooks.cs`, `ReqnrollSetupTests.cs`;
+- `ImageGen/Directory.Packages.props`, `ImageGen/ImageGen.slnx`, `.github/workflows/build.yml`;
+- `AGENTS.md`, `docs/conventions.md`, `docs/decisions/0031-bdd-acceptance-reqnroll.md`, `docs/knowledge/acceptance-tests.md` (new), `docs/index.md`, `docs/specs/acceptance-scenarios.md` (the KEY-01 status).
 
-### Проверка
+### Verification
 ```
 dotnet build ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj
 dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj
 dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj
 dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes
 bash scripts/check.sh
+# in GitHub Actions: build.yml, the avalonia job is green with the new step
 ```
 
-### Порядок исполнения (для Luna)
-- Сначала прочитай только файлы из строки «Файлы» и раздела «Анализ»; сигнатуры сверяй с текущим `main`.
-- Шаг 1 (POC) обязателен до любого кода в `ImageGen/`. Версии пакетов не выдумывай: бери с nuget.org и записывай, откуда.
-- Шаги строго по порядку (ub-mode): падающий тест → запуск, убедиться, что он падает именно по описанной причине → минимальный код → тест зелёный.
-- Не меняй файлы вне строки «Файлы»; `ImageGen.Avalonia.Tests` не трогай; `.github/workflows/` — только с разрешения владельца.
-- Если код расходится с планом, не импровизируй: остановись и запиши вопрос в «Комментарии».
-- Команды `dotnet` выполняй по одной, не параллельно. После каждого изменённого проекта — `dotnet format <проект> --verify-no-changes`.
-- В «Отчёте»: что изменено, версии пакетов, команды и результаты, отличия от плана.
+### Execution order (for Luna)
+- First read only the files of the "Files" line and the "Analysis" section; check signatures against the current `main`.
+- Step 1 (POC) is mandatory before any code in `ImageGen/`. Do not invent package versions: take them from nuget.org and write down where from.
+- Steps strictly in order (ub-mode): a failing test → run it, make sure it fails exactly for the described reason → minimal code → the test is green.
+- Do not change files outside the "Files" line; do not touch `ImageGen.Avalonia.Tests`.
+- If the code differs from the plan, do not improvise: stop and write a question in "Comments".
+- Run `dotnet` commands one at a time, not in parallel. After each changed project — `dotnet format <project> --verify-no-changes`.
+- Write everything in English. In the "Report": what changed, package versions, commands and results, differences from the plan.
 
-## Отчёт
+## Report
 
-## Комментарии
+## Comments
 
 ### 2026-11-09, claude-bdd-plan
-Создано по просьбе владельца «подключим что-то типа Cucumber» и «спланируй как таски для GPT Luna». Версии Reqnroll 3.3.4 и Allure.Reqnroll 2.15.0 проверены на nuget.org 2026-11-09; совместимость с xunit.v3 4.0.2 не проверялась — первый шаг. План ждёт одобрения владельца.
+Created at the owner's request "let's adopt something like Cucumber" and "plan them as tasks for GPT Luna". The Reqnroll 3.3.4 and Allure.Reqnroll 2.15.0 versions were checked on nuget.org on 2026-11-09; compatibility with xunit.v3 4.0.2 was not checked — the first step.
+
+### 2026-11-09, owner (in the chat, recorded by claude-bdd-plan)
+Plan approved. The acceptance tests go to CI (the change of `.github/workflows/build.yml` is allowed). Everything in English, including the Gherkin. The task was rewritten in English accordingly: English Gherkin instead of `# language: ru`, the CI step is no longer conditional; status `approved`.

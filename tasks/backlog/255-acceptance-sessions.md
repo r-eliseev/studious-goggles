@@ -1,6 +1,6 @@
 ---
 id: 255
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-11-09
@@ -60,3 +60,6 @@ bash scripts/check.sh
 
 ### 2026-11-09, claude-bdd-plan
 Создано по просьбе владельца распланировать тест-сценарии приложения для исполнения GPT Luna. Сценарии и ожидания — в `docs/specs/acceptance-scenarios.md`. План ждёт одобрения.
+
+### 2026-11-09, owner (in the chat, recorded by claude-bdd-plan)
+Plan approved, status `approved`. Changes of the same day apply: the Gherkin scenarios, step texts, bindings, comments and the "Report" are in English (`docs/conventions.md`, "Language"; ADR 0031 is accepted); a "Structure of a scenario" in this plan is a `Scenario Outline`. Scenario expectations and wording are in the English catalog `docs/specs/acceptance-scenarios.md`. The acceptance project runs in CI (task 252). The flow tests in `ImageGen.Avalonia.Tests/Flows` that a scenario of this task covers are deleted by task 267, not here.
