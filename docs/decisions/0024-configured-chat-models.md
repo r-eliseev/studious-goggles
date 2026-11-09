@@ -1,16 +1,16 @@
-# 0024. Каталог чат-моделей в конфигурации провайдера
+# 0024. The chat model catalog in the provider configuration
 
-Статус: принято (2026-10-31)
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: 2026-10-31
+Status: accepted (2026-10-31)
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: 2026-10-31
 
-## Контекст
-Интерфейс ассистента должен показывать чат-модели всех настроенных провайдеров, которые умеют чат (решение владельца, задача 156). OpenRouter предоставляет каталог через свой API. У OpenAI-совместимых и Anthropic-совместимых API загрузчик `/models` не описывает необходимые возможности моделей; клиентский запрос также потребовал бы ключ провайдера.
+## Context
+The assistant UI must show the chat models of all configured providers that can chat (the owner's decision, task 156). OpenRouter provides a catalog through its API. For OpenAI-compatible and Anthropic-compatible APIs, the `/models` loader does not describe the needed model capabilities; a client request would also need the provider's key.
 
-## Решение
-Списки моделей для `openAiCompatible` и `anthropicCompatible` задаются в `providers.json` через `chatModels`. Запись модели содержит `id`, необязательное `name` (по умолчанию `id`), необязательный `supportsImageInput` (по умолчанию `false`) и необязательный положительный `contextLength`. Модель, объявленная в `chatModels`, считается поддерживающей tools; цена неизвестна. OpenRouter продолжает получать каталог из API. Встроенный Together остаётся без `chatModels` и не предлагается как ассистент.
+## Decision
+Model lists for `openAiCompatible` and `anthropicCompatible` are set in `providers.json` through `chatModels`. A model entry contains `id`, an optional `name` (defaults to `id`), an optional `supportsImageInput` (defaults to `false`) and an optional positive `contextLength`. A model declared in `chatModels` is considered to support tools; its price is unknown. OpenRouter keeps getting its catalog from the API. The built-in Together stays without `chatModels` and is not offered as an assistant.
 
-Пример:
+Example:
 
 ```json
 {
@@ -29,9 +29,9 @@
 }
 ```
 
-## Альтернативы
-- Запрашивать `/models`: отклонено, потому что API не сообщает capabilities модели (tools, изображения, контекст), а у Anthropic-совместимых серверов endpoint не проверен.
-- Добавить отдельный флаг `chat`: избыточно, так как отсутствие `chatModels` уже означает, что каталог не задан.
+## Alternatives
+- Request `/models`: rejected, because the API does not report model capabilities (tools, images, context), and the endpoint is not verified for Anthropic-compatible servers.
+- Add a separate `chat` flag: redundant, since a missing `chatModels` already means the catalog is not set.
 
-## Последствия
-Каталоги настроенных провайдеров не требуют HTTP-запросов или ключей. Владелец конфигурации отвечает за точность capabilities. Успешный выбор сохраняет пару provider id и model id; ошибки каталога одного API не скрывают модели остальных.
+## Consequences
+The catalogs of configured providers need no HTTP requests or keys. The owner of the configuration is responsible for the accuracy of the capabilities. A successful choice stores the provider id and model id pair; catalog errors of one API do not hide the models of the others.
