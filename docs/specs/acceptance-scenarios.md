@@ -1,179 +1,185 @@
-# Приёмочные сценарии (Gherkin)
+# Acceptance scenarios (Gherkin)
 
-Статус: черновик
-Код: `ImageGen/ImageGen.Acceptance.Tests` (задачи 252–265)
+Status: draft
+Code: `ImageGen/ImageGen.Acceptance.Tests` (tasks 252–265); E2E runs: `ImageGen/ImageGen.E2E.*` (task 266)
 
-## Цель
-Собрать в одном месте пользовательские сценарии приложения, чтобы:
-- владелец читал их как спецификацию поведения;
-- каждый сценарий исполнялся автоматически на Linux без ключей, сети и денег;
-- было видно, какие требования спецификаций (`chat-sessions.md`, `image-client.md`, `media-generation.md`) покрыты.
+## Goal
+Collect the app's user scenarios in one place, so that:
+- the owner reads them as a behavior specification;
+- every scenario runs automatically on Linux without keys, network or money;
+- it is visible which requirements of the specifications (`chat-sessions.md`, `image-client.md`, `media-generation.md`) are covered.
 
-Инструмент и уровень — ADR 0031: Reqnroll на xUnit v3, headless Avalonia, настоящая композиция приложения, сеть — сценарный фейк.
+Tool and level: ADR 0031 — Reqnroll on xUnit v3, headless Avalonia, the real app composition, the network is a scenario fake. Scenarios tagged `@e2e` additionally run in the built MAUI apps through `Reqnroll.NUnit` over Appium/FlaUI (task 266).
 
-## Требования
-1. Один `.feature`-файл на область (таблица ниже), русский Gherkin (`# language: ru`). Тексты интерфейса в кавычках — как в `AppResources`.
-2. У сценария постоянный id из каталога и теги: `@<id>` и номера требований (`@S3.2`, `@F1.2`). Id не переиспользуются; удалённый сценарий помечается в каталоге «удалён».
-3. Шаги описывают действия и наблюдения пользователя («нажимает New chat», «видит карточку в состоянии Ready»), а не внутренние вызовы. Подготовка мира («провайдер отвечает ошибкой 500») — шаги «Дано».
-4. Сценарий не зависит от порядка запуска, текущей даты, культуры и случайности: время — `FakeTimeProvider`, сиды — подменённый `ISeedSource`, культура — инвариантная, если сценарий не задаёт свою.
-5. Ни одного реального сетевого запроса: неизвестный адрес проваливает сценарий.
-6. Ожидание сценария — из спецификации. Если код ведёт себя иначе, сценарий не подгоняется под код и код не правится в той же задаче: тег `@ignore @bug-NNN`, новая задача с шагами воспроизведения, в каталоге статус «расхождение (NNN)».
-7. Шаг, общий для нескольких областей, живёт в `Steps/CommonSteps.cs`; формулировку не дублировать синонимами.
+## Requirements
+1. One `.feature` file per area (the table below), English Gherkin. UI texts in quotes are as in `AppResources`.
+2. A scenario has a permanent id from the catalog and tags: `@<id>` and the requirement numbers (`@S3.2`, `@F1.2`). Ids are not reused; a removed scenario is marked "removed" in the catalog.
+3. Steps describe the user's actions and observations ("taps New chat", "sees the card in the Ready state"), not internal calls. Preparing the world ("the provider answers with error 500") is done by `Given` steps.
+4. A scenario does not depend on the run order, the current date, the culture or randomness: time is a `FakeTimeProvider`, seeds a substituted `ISeedSource`, the culture invariant unless the scenario sets its own.
+5. Not a single real network request: an unknown address fails the scenario.
+6. A scenario's expectation comes from the specification. If the code behaves differently, the scenario is not adjusted to the code and the code is not fixed in the same task: tag `@ignore @bug-NNN`, a new task with reproduction steps, status "discrepancy (NNN)" in the catalog.
+7. A step shared by several areas lives in `Steps/CommonSteps.cs`; do not duplicate a wording with synonyms.
+8. `@e2e` marks scenarios that also run on the built apps; their steps must be expressible through `AutomationId`s (`ImageGen.E2E.Common/TestIds.cs`). `@e2e-only` marks scenarios that make sense only on a device (rotation) and are skipped by the headless run.
 
-## Словарь мира (общие шаги, задача 253)
-- «Дано приложение запущено впервые» — пустая папка данных, ключей нет.
-- «Дано у пользователя сохранён ключ OpenRouter» — ключ в хранилище, проверка ключа фейком проходит, модель ассистента по умолчанию выбрана.
-- «Дано каталог моделей картинок OpenRouter: …» (таблица: id, имя, seed, цена за МП).
-- «Дано провайдер отвечает на генерацию модели X: картинкой | ошибкой N «текст» | фильтрацией | не отвечает до команды».
-- «Дано ассистент отвечает текстом «…» | вызовом generate_images с промптом «…» | ошибкой N».
-- «Когда пользователь перезапускает приложение» — та же папка данных и то же хранилище ключей, новая композиция.
-- «Тогда приложение не отправляло запросов, кроме: …» — проверка журнала фейка.
+## World vocabulary (shared steps, task 253)
+- "Given the app is launched for the first time" — an empty data folder, no keys.
+- "Given the user has a saved OpenRouter key" — the key is in the store, the key check passes in the fake, the default assistant model is chosen.
+- "Given the OpenRouter image model catalog: …" (a table: id, name, seed, price per MP).
+- "Given the provider answers the generation of model X with: a picture | error N "text" | filtering | nothing until released".
+- "Given the assistant answers with: the text "…" | a generate_images call with the prompt "…" | error N".
+- "When the user restarts the app" — the same data folder and the same key store, a new composition.
+- "Then the app sent no requests except: …" — a check of the fake's log.
 
-## Каталог
-Статус: «план» — сценарий описан, не автоматизирован; «есть» — в `.feature`, зелёный; «после NNN» — ждёт фичи; «расхождение (NNN)».
+## Catalog
+Status: "planned" — the scenario is described, not automated; "done" — in a `.feature`, green; "after NNN" — waits for a feature; "discrepancy (NNN)".
 
-### Первый запуск и ключи (`FirstRunAndKeys.feature`, задача 254)
-| id | Сценарий: условие → ожидание | Требования | Статус |
+### First launch and keys (`FirstRunAndKeys.feature`, task 254)
+| id | Scenario: condition → expectation | Requirements | Status |
 |---|---|---|---|
-| KEY-01 | Первый запуск без ключа → открывается экран ключа, а не список сессий | S1, F1.1 | план |
-| KEY-02 | Верный ключ OpenRouter → статус «работает», затем выбор модели ассистента; после выбора — список сессий | F1.2, S1.3 | план |
-| KEY-03 | Неверный ключ (401) → сообщение «неверный ключ» с именем провайдера, остаёмся на экране ключа, ключ не сохранён | F1.2 | план |
-| KEY-04 | Нет связи → сообщение «нет связи», ключ не сохранён | F1.2 | план |
-| KEY-05 | Текст ошибки и журнал приложения не содержат введённого ключа | F1.3, F10.3 | план |
-| KEY-06 | Ключ сохранён, перезапуск → экран ключа не появляется, открывается список сессий | F10.3 | план |
-| KEY-07 | Settings: у OpenRouter видны только последние четыре символа ключа; у ненастроенного провайдера — «Not connected» | F1.3, S6.4 | план |
-| KEY-08 | Settings: замена ключа на неверный → ошибка, прежний ключ остаётся рабочим | F1.3 | план |
-| KEY-09 | Settings: удаление ключа OpenRouter → провайдер «Not connected»; при следующем открытии списка сессий — экран ключа | F1.3 | план |
-| KEY-10 | Любой сценарий: запросов к адресам вне фейка нет (самопроверка мира) | ADR 0031 | план |
+| KEY-01 | First launch without a key → the key screen opens, not the session list (`@e2e`, replaces `FirstRunTests.Launch_ShowsFirstRunKeyScreen`) | S1, F1.1 | planned |
+| KEY-02 | A valid OpenRouter key → status "works", then the assistant model choice; after choosing — the session list | F1.2, S1.3 | planned |
+| KEY-03 | An invalid key (401) → an "invalid key" message with the provider's name, we stay on the key screen, the key is not saved (`@e2e`, replaces `FirstRunTests.InvalidKey_ShowsError`; on a device the message may also be "no connection") | F1.2 | planned |
+| KEY-04 | No connection → a "no connection" message, the key is not saved | F1.2 | planned |
+| KEY-05 | The error text and the app log do not contain the entered key | F1.3, F10.3 | planned |
+| KEY-06 | A saved key, restart → the key screen does not appear, the session list opens | F10.3 | planned |
+| KEY-07 | Settings: OpenRouter shows only the last four characters of the key; an unconfigured provider shows "Not connected" | F1.3, S6.4 | planned |
+| KEY-08 | Settings: replacing the key with an invalid one → an error, the old key keeps working | F1.3 | planned |
+| KEY-09 | Settings: deleting the OpenRouter key → the provider is "Not connected"; the next time the session list opens — the key screen | F1.3 | planned |
+| KEY-10 | Any scenario: no requests to addresses outside the fake (self-check of the world) | ADR 0031 | planned |
+| KEY-11 | The key screen is rotated to landscape and back → the key field stays visible (`@e2e-only`, replaces `FirstRunTests.Rotate_KeepsKeyScreen`) | F10.1 | planned |
 
-### Сессии (`Sessions.feature`, задача 255)
-| id | Сценарий | Требования | Статус |
+### Sessions (`Sessions.feature`, task 255)
+| id | Scenario | Requirements | Status |
 |---|---|---|---|
-| SES-01 | Новая сессия → пустой чат; в списке сессий она сверху | S1.1 | план |
-| SES-02 | Первое сообщение длиннее 40 символов → название сессии — первые 40 символов | S1.2 | план |
-| SES-03 | Переименование: новое название видно в списке и чате; порядок списка не меняется | S1.2 | план |
-| SES-04 | Переименование в пустую строку или длиннее 40 символов не принимается | S1.2 | план |
-| SES-05 | Удаление с подтверждением → сессии нет в списке и после перезапуска; отказ в подтверждении → сессия остаётся | S1.1 | план |
-| SES-06 | Новая сессия получает настройки по умолчанию: одна модель `black-forest-labs/flux.2-klein-4b`, один запуск, модель ассистента из Settings | S1.3 | план |
-| SES-07 | Смена модели ассистента по умолчанию в Settings действует только на новые сессии | S1.3 | план |
-| SES-08 | Строка списка показывает число прогонов («· 2 runs») после двух прогонов | S1.2 | план |
-| SES-09 | Сессии сгруппированы: сегодняшние — в «Today», старые — в «Earlier» (время из `FakeTimeProvider`) | S1.1 | план |
-| SES-10 | Пример из пустого списка запускает новую сессию с этим текстом | S1.1 | план |
-| SES-11 | Удаление всей истории из Settings: сессии и файлы удалены, ключи и настройки остались | S1.4 | после 229 |
+| SES-01 | A new session → an empty chat; it is at the top of the session list | S1.1 | planned |
+| SES-02 | A first message longer than 40 characters → the session title is the first 40 characters | S1.2 | planned |
+| SES-03 | Renaming: the new title is visible in the list and the chat; the list order does not change | S1.2 | planned |
+| SES-04 | Renaming to an empty string or to more than 40 characters is not accepted | S1.2 | planned |
+| SES-05 | Deleting with confirmation → the session is not in the list, also after a restart; declining the confirmation → the session stays | S1.1 | planned |
+| SES-06 | A new session gets the default settings: one model `black-forest-labs/flux.2-klein-4b`, one run, the assistant model from Settings | S1.3 | planned |
+| SES-07 | Changing the default assistant model in Settings affects only new sessions | S1.3 | planned |
+| SES-08 | The list row shows the number of runs ("· 2 runs") after two runs | S1.2 | planned |
+| SES-09 | Sessions are grouped: today's in "Today", older ones in "Earlier" (time from `FakeTimeProvider`) | S1.1 | planned |
+| SES-10 | An example from the empty list starts a new session with this text | S1.1 | planned |
+| SES-11 | Clearing the whole history from Settings: sessions and files deleted, keys and settings kept | S1.4 | after 229 |
 
-### Чат и ассистент (`ChatAssistant.feature`, задача 256)
-| id | Сценарий | Требования | Статус |
+### Chat and assistant (`ChatAssistant.feature`, task 256)
+| id | Scenario | Requirements | Status |
 |---|---|---|---|
-| CHAT-01 | Ассистент отвечает текстом → сообщение ассистента в ленте, прогона нет | S2.2 | план |
-| CHAT-02 | Ассистент вызывает `generate_images` → в ленте блок прогона с точным промптом инструмента, у карточки тот же промпт | S2.2, S2.3, F9.4 | план |
-| CHAT-03 | Ассистенту уходят системный промпт и промпт последнего прогона (проверка тела запроса фейком) | S2.1 | план |
-| CHAT-04 | Ошибка ассистента (500, 429, 401) → отдельное сообщение с причиной; сообщение пользователя не потеряно; можно отправить снова | S2.5 | план |
-| CHAT-05 | Пустое сообщение не отправляется (команда недоступна) | S2.1 | план |
-| CHAT-06 | Повтор после ошибки ассистента: второй ответ нормальный → прогон запускается | S2.5 | план |
-| CHAT-07 | Модель ассистента сессии видна в чате | S1.3 | план |
-| CHAT-08 | Вложение картинки уходит в генерацию как reference, если модель их поддерживает | F4.5 | план |
+| CHAT-01 | The assistant answers with text → an assistant message in the feed, no run | S2.2 | planned |
+| CHAT-02 | The assistant calls `generate_images` → a run block in the feed with the exact prompt of the tool, the card has the same prompt (`@e2e` after 243, replaces `MockSessionTests.FirstRunWithMock_GeneratesImage`) | S2.2, S2.3, F9.4 | planned |
+| CHAT-03 | The assistant receives the system prompt and the prompt of the last run (the fake checks the request body) | S2.1 | planned |
+| CHAT-04 | An assistant error (500, 429, 401) → a separate message with the reason; the user's message is not lost; it can be sent again | S2.5 | planned |
+| CHAT-05 | An empty message is not sent (the command is unavailable) | S2.1 | planned |
+| CHAT-06 | Retry after an assistant error: the second answer is normal → the run starts | S2.5 | planned |
+| CHAT-07 | The session's assistant model is visible in the chat | S1.3 | planned |
+| CHAT-08 | A picture attachment goes into the generation as a reference if the model supports them | F4.5 | planned |
 
-### Прогон и генерации (`Runs.feature`, задача 257)
-| id | Сценарий | Требования | Статус |
+### Runs and generations (`Runs.feature`, task 257)
+| id | Scenario | Requirements | Status |
 |---|---|---|---|
-| GEN-01 | Две модели × два запуска → четыре карточки; сиды одинаковы для обеих моделей и различны между запусками | S3.1, S3.2 | план |
-| GEN-02 | Модель без seed → seed не отправляется (тело запроса), на карточке «seed not supported» | S3.3 | план |
-| GEN-03 | Одна генерация падает (500), другая готова → у первой «ошибка» с короткой причиной, вторая «готово» | S3.4, S3.5 | план |
-| GEN-04 | Провайдер отфильтровал → состояние «отфильтровано», не «ошибка» | S3.5, F6.5, F9.2 | план |
-| GEN-05 | Пока провайдер не ответил → карточка «идёт»; после ответа — «готово» с картинкой | S3.5 | план |
-| GEN-06 | Картинка сохранена в файл и в БД до показа: файл существует, после перезапуска карточка с той же картинкой | S3.6, F7.2 | план |
-| GEN-07 | Карточка показывает модель, сид, цену (`usage.cost`) и время | S3.7 | план |
-| GEN-08 | Сводка прогона: число моделей, запусков, завершённых и сумма известных цен; обновляется по мере завершения | S3.9 | план |
-| GEN-09 | Размер картинки на карточке: `W×H px · соотношение` | S3.10 | план |
-| GEN-10 | Смена моделей сессии во время прогона не меняет уже запущенный прогон | S3.1, S5.2 | план |
-| GEN-11 | Оценка следующего прогона в чате — сумма известных цен выбранных моделей | F4.4 | план |
+| GEN-01 | Two models × two runs → four cards; the seeds are equal for both models and differ between runs | S3.1, S3.2 | planned |
+| GEN-02 | A model without seed → the seed is not sent (request body), the card shows "seed not supported" | S3.3 | planned |
+| GEN-03 | One generation fails (500), another is done → the first is "failed" with a short reason, the second "done" | S3.4, S3.5 | planned |
+| GEN-04 | The provider filtered → the state is "filtered", not "failed" | S3.5, F6.5, F9.2 | planned |
+| GEN-05 | While the provider has not answered → the card is "running"; after the answer — "done" with the picture (`@e2e` after 243) | S3.5 | planned |
+| GEN-06 | The picture is saved to a file and the DB before it is shown: the file exists; after a restart the card shows the same picture | S3.6, F7.2 | planned |
+| GEN-07 | The card shows the model, seed, price (`usage.cost`) and time | S3.7 | planned |
+| GEN-08 | The run summary: number of models, runs, finished ones and the sum of known prices; updated as generations finish | S3.9 | planned |
+| GEN-09 | Picture size on the card: `W×H px · ratio` | S3.10 | planned |
+| GEN-10 | Changing the session models during a run does not change the run already started | S3.1, S5.2 | planned |
+| GEN-11 | The next run estimate in the chat is the sum of the known prices of the selected models | F4.4 | planned |
 
-### Отмена и восстановление (`CancelAndRecovery.feature`, задача 258)
-| id | Сценарий | Требования | Статус |
+### Cancellation and recovery (`CancelAndRecovery.feature`, task 258)
+| id | Scenario | Requirements | Status |
 |---|---|---|---|
-| CAN-01 | Отмена одной активной генерации → «отменено», остальные продолжаются | S3.5.1, F5.4 | план |
-| CAN-02 | Отмена всего прогона → все активные «отменено», завершённые не меняются | S3.5.1, S3.5.2 | план |
-| CAN-03 | Результат пришёл раньше отмены → карточка остаётся «готово» | S3.5.2 | план |
-| CAN-04 | Генерация не завершилась, приложение перезапущено → «Interrupted» (ошибка) | S3.8 | план |
-| CAN-05 | Время запроса отмены сохраняется и видно после перезапуска | S3.5.3 | план |
+| CAN-01 | Cancelling one active generation → "cancelled", the others continue | S3.5.1, F5.4 | planned |
+| CAN-02 | Cancelling the whole run → all active ones "cancelled", finished ones do not change | S3.5.1, S3.5.2 | planned |
+| CAN-03 | The result arrived before the cancellation → the card stays "done" | S3.5.2 | planned |
+| CAN-04 | A generation did not finish, the app was restarted → "Interrupted" (failed) | S3.8 | planned |
+| CAN-05 | The time of the cancellation request is stored and visible after a restart | S3.5.3 | planned |
 
-### Действия над генерацией (`CardActions.feature`, задача 259)
-| id | Сценарий | Требования | Статус |
+### Card actions (`CardActions.feature`, task 259)
+| id | Scenario | Requirements | Status |
 |---|---|---|---|
-| ACT-01 | Repeat → новый прогон из одной генерации: тот же промпт, модель и сид | S4.1, S4.4 | план |
-| ACT-02 | New seed → тот же промпт и модель, другой сид | S4.2 | план |
-| ACT-03 | Edit → промпт открыт для правки, после подтверждения — прогон с исправленным промптом без ассистента | S4.3 | план |
-| ACT-04 | Other model… у ошибки → экран выбора модели; «Used in this session» сверху; выбор запускает прогон на выбранной модели | S4.5 | план |
-| ACT-05 | Copy prompt → в буфере обмена точный промпт | S4.6 | план |
-| ACT-06 | Details у ошибки → исходный текст ошибки; на карточке — короткая причина | S4.7, F9.1 | план |
-| ACT-07 | Save image → диалог сохранения с именем `imagegen-<8 символов id>.<расширение>` | S4.8 | план |
-| ACT-08 | Действия недоступны там, где спецификация их не даёт (Details у готовой, Save у ошибки) | S4.5–S4.8 | план |
+| ACT-01 | Repeat → a new run of one generation: the same prompt, model and seed | S4.1, S4.4 | planned |
+| ACT-02 | New seed → the same prompt and model, another seed | S4.2 | planned |
+| ACT-03 | Edit → the prompt opens for editing; after confirmation — a run with the edited prompt without the assistant | S4.3 | planned |
+| ACT-04 | Other model… on an error → the model picker; "Used in this session" on top; the choice starts a run on the chosen model | S4.5 | planned |
+| ACT-05 | Copy prompt → the clipboard holds the exact prompt | S4.6 | planned |
+| ACT-06 | Details on an error → the original error text; the card shows a short reason | S4.7, F9.1 | planned |
+| ACT-07 | Save image → a save dialog with the name `imagegen-<8 characters of id>.<extension>` | S4.8 | planned |
+| ACT-08 | Actions are unavailable where the specification does not give them (Details on a done card, Save on an error) | S4.5–S4.8 | planned |
 
-### Модели и параметры сессии (`SessionModels.feature`, задача 260)
-| id | Сценарий | Требования | Статус |
+### Session models and parameters (`SessionModels.feature`, task 260)
+| id | Scenario | Requirements | Status |
 |---|---|---|---|
-| MOD-01 | Выбор двух моделей и трёх запусков → следующий прогон на двух моделях × 3 | S5.1, S5.2 | план |
-| MOD-02 | Число запусков ограничено 1–10 | S5.1 | план |
-| MOD-03 | Поиск в списке моделей сужает список по имени и id | S5.1 | план |
-| MOD-04 | Модели сгруппированы по производителю из префикса id | S5.5 | план |
-| MOD-05 | Цена в строке модели — только `output_image`; без цены — «price unknown» | S5.6 | план |
-| MOD-06 | Refresh перезапрашивает каталог и цены; без Refresh повторное открытие берёт кэш (нет запросов) | S5.6 | план |
-| MOD-07 | Cancel не сохраняет изменения | S5.1 | план |
-| MOD-08 | Параметры сессии (соотношение сторон, разрешение, формат) уходят в тело запроса генерации | F4.2 | план |
-| MOD-09 | Выбранная модель пропала из каталога → видно и можно убрать | — | после 236 |
+| MOD-01 | Choosing two models and three runs → the next run is two models × 3 | S5.1, S5.2 | planned |
+| MOD-02 | The number of runs is limited to 1–10 | S5.1 | planned |
+| MOD-03 | Search in the model list narrows the list by name and id | S5.1 | planned |
+| MOD-04 | Models are grouped by vendor from the id prefix | S5.5 | planned |
+| MOD-05 | The price in a model row is only `output_image`; without a price — "price unknown" | S5.6 | planned |
+| MOD-06 | Refresh re-requests the catalog and prices; without Refresh reopening uses the cache (no requests) | S5.6 | planned |
+| MOD-07 | Cancel does not save the changes | S5.1 | planned |
+| MOD-08 | Session parameters (aspect ratio, resolution, format) go into the generation request body | F4.2 | planned |
+| MOD-09 | A selected model vanished from the catalog → this is visible and it can be removed | — | after 236 |
 
-### Настройки и внешний вид (`Settings.feature`, задача 261)
-| id | Сценарий | Требования | Статус |
+### Settings and appearance (`Settings.feature`, task 261)
+| id | Scenario | Requirements | Status |
 |---|---|---|---|
-| SET-01 | Стиль по умолчанию — Quiet, тема — как в системе | S6.1, S6.2 | план |
-| SET-02 | Смена стиля и темы применяется сразу и сохраняется после перезапуска | S6.3 | план |
-| SET-03 | Вход в Settings — с экрана сессий; экран называется «Settings» | S6.4 | план |
-| SET-04 | Clear logs удаляет файлы журнала, приложение продолжает писать журнал | — | после 232 |
+| SET-01 | The default style is Quiet, the theme is as in the system | S6.1, S6.2 | planned |
+| SET-02 | Changing the style and the theme applies immediately and is kept after a restart | S6.3 | planned |
+| SET-03 | Settings is entered from the sessions screen; the screen is called "Settings" | S6.4 | planned |
+| SET-04 | Clear logs deletes the log files, the app keeps writing the log | — | after 232 |
 
-### Расходы (`Spending.feature`, задача 262)
-| id | Сценарий | Требования | Статус |
+### Spending (`Spending.feature`, task 262)
+| id | Scenario | Requirements | Status |
 |---|---|---|---|
-| SPD-01 | Две готовые генерации с ценой → итог за день — их сумма, группировка по провайдеру и модели | F8.3 | план |
-| SPD-02 | Генерация без цены → считается в «операциях с неизвестной ценой», не в сумме | F8.3 | план |
-| SPD-03 | Неделя — ISO, с понедельника; генерация прошлого воскресенья не входит в текущую неделю | F8.3 | план |
-| SPD-04 | Порог «дорогой запуск» выключен по умолчанию; при включённом пороге ниже оценки ассистент предупреждает до отправки | F8.4 | план |
-| SPD-05 | Месячный лимит сохраняется после перезапуска | F8.4 | план |
+| SPD-01 | Two finished generations with a price → the total for the day is their sum, grouped by provider and model | F8.3 | planned |
+| SPD-02 | A generation without a price → counted in "operations with unknown price", not in the sum | F8.3 | planned |
+| SPD-03 | The week is ISO, from Monday; a generation of last Sunday is not in the current week | F8.3 | planned |
+| SPD-04 | The "expensive run" threshold is off by default; with a threshold below the estimate the assistant warns before sending | F8.4 | planned |
+| SPD-05 | The monthly limit is kept after a restart | F8.4 | planned |
 
-### Поиск (`Search.feature`, задача 263)
-| id | Сценарий | Требования | Статус |
+### Search (`Search.feature`, task 263)
+| id | Scenario | Requirements | Status |
 |---|---|---|---|
-| SRCH-01 | Words: поиск по названию сессии и по промпту генерации находит сессию | S1.4 | план |
-| SRCH-02 | Words: ничего не найдено → состояние «нет результатов»; очистка поиска возвращает список | S1.4 | план |
-| SRCH-03 | Meaning выключен по умолчанию; включение в Settings индексирует историю (эмбеддинги из фейка) | S1.4 | план |
-| SRCH-04 | Meaning: результаты не смешиваются с Words | S1.4 | план |
-| SRCH-05 | Статус индекса и выбор модели эмбеддингов | — | после 226–228 |
+| SRCH-01 | Words: searching by a session title and by a generation prompt finds the session | S1.4 | planned |
+| SRCH-02 | Words: nothing found → the "no results" state; clearing the search returns the list | S1.4 | planned |
+| SRCH-03 | Meaning is off by default; turning it on in Settings indexes the history (embeddings from the fake) | S1.4 | planned |
+| SRCH-04 | Meaning: results are not mixed with Words | S1.4 | planned |
+| SRCH-05 | The index status and the choice of the embedding model | — | after 226–228 |
 
-### Галерея, просмотр и сравнение (`Gallery.feature`, задача 264)
-| id | Сценарий | Требования | Статус |
+### Gallery, viewer and comparison (`Gallery.feature`, task 264)
+| id | Scenario | Requirements | Status |
 |---|---|---|---|
-| GAL-01 | Галерея показывает только успешные картинки всех сессий, новые сверху | F7.3 | план |
-| GAL-02 | Фильтр по модели и периоду (7 и 30 дней) | F7.4 | план |
-| GAL-03 | Открытие картинки из галереи открывает исходную сессию | F7.3 | план |
-| GAL-04 | Просмотрщик: листание только внутри одного прогона | F6.2 | план |
-| GAL-05 | Сравнение двух успешных картинок одной сессии: режимы рядом и поверх; масштаб общий | F6.3 | план |
+| GAL-01 | The gallery shows only successful pictures of all sessions, newest first | F7.3 | planned |
+| GAL-02 | Filter by model and period (7 and 30 days) | F7.4 | planned |
+| GAL-03 | Opening a picture from the gallery opens its source session | F7.3 | planned |
+| GAL-04 | Viewer: paging only within one run | F6.2 | planned |
+| GAL-05 | Comparing two successful pictures of one session: side-by-side and overlay modes; the zoom is shared | F6.3 | planned |
 
-### Видео (`Video.feature`, задача 265)
-| id | Сценарий | Требования | Статус |
+### Video (`Video.feature`, task 265)
+| id | Scenario | Requirements | Status |
 |---|---|---|---|
-| VID-01 | Без выбранных видео-моделей ассистенту не предлагается `generate_video` (тело запроса) | media-generation | план |
-| VID-02 | С видео-моделью: вызов `generate_video` → асинхронное задание, опрос, карточка «готово» с видеофайлом | media-generation | план |
-| VID-03 | Ошибка скачивания видео → «ошибка», частичного файла нет | media-generation | план |
-| VID-04 | Отмена видео → «отменено» с предупреждением, что провайдер может продолжить | media-generation | план |
-| VID-05 | Аудио | — | после 221–223 |
+| VID-01 | Without selected video models the assistant is not offered `generate_video` (request body) | media-generation | planned |
+| VID-02 | With a video model: a `generate_video` call → an asynchronous job, polling, the card is "done" with a video file | media-generation | planned |
+| VID-03 | A video download error → "failed", no partial file | media-generation | planned |
+| VID-04 | Cancelling a video → "cancelled" with a warning that the provider may continue | media-generation | planned |
+| VID-05 | Audio | — | after 221–223 |
 
-## Критерии готовности
-- Каждый сценарий со статусом «план» автоматизирован или переведён в «расхождение (NNN)».
-- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` зелёный на Linux.
+### Migrated flow tests (task 267)
+Task 267 maps every test of `ImageGen.Avalonia.Tests/Flows/*FlowTests.cs` to a scenario above; flow tests without a matching scenario get new rows here (next free id in the area) before they are deleted.
 
-## Ограничения и вне рамок
-- Разметка MAUI и платформенное поведение (Android, Windows, iOS) — не здесь: `Presentation.Tests/Design`, E2E (ADR 0029, 0030), ручные 016, 046, 140.
-- Живые провайдеры не вызываются. Формы ответов фейка — по `OpenRouterFakes` и коду клиентов; расхождения с реальными сервисами остаются открытыми вопросами `docs/status.md`.
-- Провайдеры fal и Together — только сценарии ключей, пока фейк их не умеет (задача 253 решает, хватает ли).
+## Acceptance criteria
+- Every scenario with the status "planned" is automated or moved to "discrepancy (NNN)".
+- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` is green on Linux and in CI.
+- `@e2e` scenarios are green in `ui-e2e.yml` (task 266).
 
-## Тесты
-`ImageGen/ImageGen.Acceptance.Tests/Features/*.feature`, привязки — `Steps/`, мир — `Support/`.
+## Constraints and out of scope
+- MAUI markup and platform behavior (Android, Windows, iOS) are not here, except `@e2e`: `Presentation.Tests/Design`, E2E (ADR 0029, 0030), manual 016, 046, 140.
+- Live providers are not called. The fake's response shapes follow `OpenRouterFakes` and the client code; discrepancies with real services stay open questions in `docs/status.md`.
+- The fal and Together providers — only key scenarios, while the fake cannot do them (task 253 decides whether that is enough).
+
+## Tests
+`ImageGen/ImageGen.Acceptance.Tests/Features/*.feature`, bindings in `Steps/`, the world in `Support/`.
