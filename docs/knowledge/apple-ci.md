@@ -17,7 +17,7 @@ The first separate workflow [42371375200](https://github.com/r-eliseev/studious-
 
 ### Avalonia iOS Simulator — ILLink
 
-В run [42373330934](https://github.com/r-eliseev/studious-goggles/actions/runs/42373330934), job `build-avalonia-ios`, C# compilation succeeded but ILLink ended with `IL2104`, `IL2121`, and `NETSDK1144`. This is separate from the Xcode/workload compatibility check: MAUI iOS/Catalyst and Avalonia macOS jobs passed in the same run. The CI-only simulator build now uses `TrimMode=copy` so the smoke app does not depend on size trimming, and package verification runs only after a successful build. New-run result pending.
+In run [42373330934](https://github.com/r-eliseev/studious-goggles/actions/runs/42373330934), job `build-avalonia-ios`, C# compilation succeeded but ILLink ended with `IL2104`, `IL2121`, and `NETSDK1144`. This is separate from the Xcode/workload compatibility check: MAUI iOS/Catalyst and Avalonia macOS jobs passed in the same run. The CI-only simulator build now uses `TrimMode=copy` so the smoke app does not depend on size trimming, and package verification runs only after a successful build. New-run result pending.
 
 Run [42374038441](https://github.com/r-eliseev/studious-goggles/actions/runs/42374038441) confirmed `TrimMode=copy` removes the grouped dependency/SDK diagnostics and exposes only IL2026 on `AvaloniaAppearanceApplier.Apply`, which dynamically selects one of the bundled theme resource URIs. The iOS host now suppresses that one linker warning locally; this differs from the previous broad build failure and awaits another runner check.
 

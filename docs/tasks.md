@@ -4,7 +4,7 @@ Rules for agents.
 
 Tasks live in `tasks/<release|backlog>/NNN-name.md`. One task — one file: description, acceptance criteria, analysis, plan, report, comments. Several agents may work on the repository at the same time.
 
-Section names. Task files are being translated to English (task 269). Until then the scripts and old task files use the Russian section names; they mean the same: «Описание» = Description, «Критерии готовности» = Acceptance criteria, «Анализ» = Analysis, «План» = Plan, «Отчёт» = Report, «Комментарии» = Comments, «Зависит от» = Depends on, «Среда» = Environment, «Файлы» = Files, «Проверка» = Verification. Use the names of the file you edit; task 269 switches the template, the scripts and all files at once.
+Section names. Task files are being translated to English (task 269). Until then the template `tasks/_template.md`, the scripts and the old task files keep the original section names; in the same order they mean: Description, Acceptance criteria, Analysis, Plan, Report, Comments; inside the Description the lines "Depends on" and "Environment", inside the Plan the lines "Files:" and "Verification". Use the names of the file you edit; task 269 switches the template, the scripts and all files at once.
 
 ## Executor name
 Your name is the `AGENT_NAME` environment variable or the name the user gave. If there is none, invent a unique one, for example `claude-4f2a`. Names of different agents must not coincide.
