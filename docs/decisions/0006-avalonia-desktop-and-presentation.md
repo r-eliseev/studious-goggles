@@ -1,34 +1,34 @@
-# 0006. Avalonia — третья оболочка, общий слой представления
+# 0006. Avalonia as the third head, a shared presentation layer
 
-Статус: принято
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: 2026-10-28
+Status: accepted
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: 2026-10-28
 
-Дополняет ADR 0001 (ядро и оболочки). Пересматривает решение владельца 2026-10-27 «Linux: отложено» (`docs/status.md`).
+Extends ADR 0001 (core and heads). Revises the owner's decision of 2026-10-27 "Linux: postponed" (`docs/status.md`).
 
-## Контекст
-MAUI не поддерживает Linux, а его Windows-цель собирается только на Windows (`docs/knowledge/dev-environment.md`). Поэтому все экранные задачи сейчас требуют Windows-машину, а облачные сессии и VPS, где работают агенты, интерфейс не собирают. Владелец (2026-10-28) решил добавить третью оболочку на Avalonia и ответил на вопросы:
-- платформы Avalonia — десктоп: Linux, Windows, macOS;
-- MAUI остаётся на всех своих платформах (Windows, macOS, Android, iOS), то есть Windows и macOS обслуживают обе оболочки;
-- код экранов делится через общий проект, а не дублируется;
-- ключи — в системных хранилищах, без них ключ живёт только в памяти;
-- работа идёт сразу после задачи 035, до остальной очереди.
+## Context
+MAUI does not support Linux, and its Windows target builds only on Windows (`docs/knowledge/dev-environment.md`). So all screen tasks currently need a Windows machine, while the cloud sessions and the VPS where agents work cannot build the UI. The owner (2026-10-28) decided to add a third head on Avalonia and answered the questions:
+- Avalonia platforms are desktop: Linux, Windows, macOS;
+- MAUI stays on all its platforms (Windows, macOS, Android, iOS), so Windows and macOS are served by both heads;
+- screen code is shared through a common project, not duplicated;
+- keys go to the system stores; without them the key lives only in memory;
+- the work goes right after task 035, before the rest of the queue.
 
-Факты (проверено 2026-10-28 на nuget.org): Avalonia 12.1.4 (обновлено 2026-10-09) собирается под `net10.0`; `Avalonia.Headless.XUnit` 12.1.4 зависит от `xunit.v3.extensibility.core` (>= 3.2.2), то есть рассчитан на xUnit v3, как тесты проекта. Совместимость с закреплённой в проекте версией xUnit v3 не проверена.
+Facts (checked 2026-10-28 on nuget.org): Avalonia 12.1.4 (updated 2026-10-09) builds for `net10.0`; `Avalonia.Headless.XUnit` 12.1.4 depends on `xunit.v3.extensibility.core` (>= 3.2.2), that is, it targets xUnit v3 like the project's tests. Compatibility with the xUnit v3 version pinned in the project was not checked.
 
-## Решение
-1. **Общий слой представления `ImageGen.Presentation`** (`net10.0`, без MAUI и Avalonia): модели страниц и строк (PageModels, ItemViewModels), интерфейсы `INavigationService`, `IDialogService`, `IMainThread`, маршруты (`Routes`), однократная инициализация (`AppInitializer`), строки интерфейса (`.resx` и класс доступа). Зависимости: `Presentation → Data → Core`, `Presentation → Core`; пакет `CommunityToolkit.Mvvm`. Тесты — `ImageGen.Presentation.Tests`; подключение файлов MAUI в тестовые проекты ссылками (`MauiLinked/`) убирается.
-2. **Оболочки держат только своё:** разметку страниц, конвертеры, реализации навигации, диалогов, UI-потока и платформенных сервисов (`IAppPaths`, `ISecretStore`). `ImageGen.Maui` и `ImageGen.Avalonia` ссылаются на `Presentation`.
-3. **`ImageGen.Avalonia`** — десктоп (Linux, Windows, macOS), Avalonia 12.x, тема Fluent, компилируемые привязки по умолчанию, DI через `Microsoft.Extensions.DependencyInjection`. Навигация — свой маршрутизатор по тем же строкам `Routes`, что у Shell в MAUI (стек страниц в главном окне). Тесты интерфейса — `ImageGen.Avalonia.Tests` на `Avalonia.Headless.XUnit`, без экрана, на Linux и в CI.
-4. **Ключи в Avalonia:** Windows — DPAPI (файл в папке данных, зашифрованный для текущего пользователя), macOS — Keychain, Linux — Secret Service (gnome-keyring, KWallet) через D-Bus. Если хранилища нет (например, Linux без Secret Service), ключ хранится только в памяти процесса, и пользователь видит, что после закрытия ключ придётся ввести снова. Открытым текстом ключ на диск не пишется. Выбор библиотек — отдельным ADR после пробного кода.
-5. **Каждая экранная фича делается в обеих оболочках:** логика — один раз в `Presentation`, разметка — в MAUI и в Avalonia.
+## Decision
+1. **A shared presentation layer `ImageGen.Presentation`** (`net10.0`, without MAUI and Avalonia): page and row models (PageModels, ItemViewModels), the interfaces `INavigationService`, `IDialogService`, `IMainThread`, routes (`Routes`), one-time initialization (`AppInitializer`), UI strings (`.resx` and the accessor class). Dependencies: `Presentation → Data → Core`, `Presentation → Core`; the `CommunityToolkit.Mvvm` package. Tests are `ImageGen.Presentation.Tests`; linking MAUI files into test projects (`MauiLinked/`) is removed.
+2. **Heads keep only their own things:** page markup, converters, implementations of navigation, dialogs, the UI thread and platform services (`IAppPaths`, `ISecretStore`). `ImageGen.Maui` and `ImageGen.Avalonia` reference `Presentation`.
+3. **`ImageGen.Avalonia`** is the desktop (Linux, Windows, macOS), Avalonia 12.x, the Fluent theme, compiled bindings by default, DI through `Microsoft.Extensions.DependencyInjection`. Navigation is our own router over the same `Routes` strings as Shell in MAUI (a page stack in the main window). UI tests are `ImageGen.Avalonia.Tests` on `Avalonia.Headless.XUnit`, without a screen, on Linux and in CI.
+4. **Keys in Avalonia:** Windows — DPAPI (a file in the data folder encrypted for the current user), macOS — Keychain, Linux — Secret Service (gnome-keyring, KWallet) through D-Bus. If there is no store (for example, Linux without Secret Service), the key is kept only in process memory, and the user sees that the key will have to be entered again after closing. The key is never written to disk in plain text. The choice of libraries is a separate ADR after proof-of-concept code.
+5. **Every screen feature is done in both heads:** the logic once in `Presentation`, the markup in MAUI and in Avalonia.
 
-## Альтернативы
-- **Avalonia вместо MAUI на десктопе** (MAUI только для телефонов): меньше дублирования разметки, но владелец оставил MAUI на всех платформах.
-- **Avalonia везде, без MAUI:** один UI-стек, но мобильная Avalonia требует отдельной проверки зрелости.
-- **Свои модели страниц в каждой оболочке:** свободнее, но логика экранов и тесты дублируются.
-- **MAUI-код на Linux через Avalonia MAUI Backend (`Avalonia.Controls.Maui`, полный хостинг `UseAvaloniaApp`)** — дописано 2026-10-28 после принятия, решение не меняет: одна разметка вместо двух и браузер через WebAssembly, но на 2026-10-28 только предрелиз (`11.0.0-rc.3`), нужен .NET 11 и MAUI 11, а у наших API (`MainThread`, `SecureStorage`, доступность, Shell) в бэкенде известные ограничения. Разбор и условия пересмотра: `docs/knowledge/avalonia-maui-backend.md`.
-- **Ключ в файле, зашифрованном мастер-паролем:** работает без Secret Service, но требует ввода пароля при каждом запуске и решения про криптографию; владелец выбрал память как запасной вариант.
+## Alternatives
+- **Avalonia instead of MAUI on the desktop** (MAUI only for phones): less duplicated markup, but the owner kept MAUI on all platforms.
+- **Avalonia everywhere, without MAUI:** one UI stack, but mobile Avalonia needs a separate maturity check.
+- **Own page models in each head:** more freedom, but the screen logic and tests are duplicated.
+- **MAUI code on Linux through the Avalonia MAUI Backend (`Avalonia.Controls.Maui`, full hosting with `UseAvaloniaApp`)** — added 2026-10-28 after acceptance, does not change the decision: one markup instead of two and the browser through WebAssembly, but as of 2026-10-28 only a prerelease (`11.0.0-rc.3`), it needs .NET 11 and MAUI 11, and the backend has known limits for our APIs (`MainThread`, `SecureStorage`, accessibility, Shell). Analysis and conditions for revisiting: `docs/knowledge/avalonia-maui-backend.md`.
+- **A key in a file encrypted with a master password:** works without Secret Service, but requires entering the password on every start and a cryptography decision; the owner chose memory as the fallback.
 
-## Последствия
-Проще: интерфейс собирается и тестируется на Linux и в облачной сессии; логика экранов живёт в одном месте и тестируется обычными unit-тестами; появляется Linux-десктоп. Сложнее: каждую экранную фичу размечать дважды; на Windows и macOS две оболочки с одной функциональностью; macOS-сборку и Keychain проверить негде, пока у проекта нет macOS-машины (неизвестно, будет ли). Порядок задач: `docs/status.md`, «Порядок работ».
+## Consequences
+Easier: the UI builds and is tested on Linux and in a cloud session; the screen logic lives in one place and is tested by ordinary unit tests; a Linux desktop appears. Harder: every screen feature is marked up twice; Windows and macOS have two heads with the same functionality; there is nowhere to check the macOS build and Keychain while the project has no macOS machine (unknown whether it will). Task order: `docs/status.md`, "Order of work".

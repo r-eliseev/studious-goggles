@@ -1,19 +1,19 @@
-# 0001. Общее ядро и несколько оболочек
+# 0001. A shared core and several heads
 
-Статус: принято (2026-10-28)
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: 2026-10-27
+Status: accepted (2026-10-28)
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: 2026-10-27
 
-## Контекст
-Заметки владельца описывают одно ядро (Provider, Generation, Config) и несколько UI: Android/iOS, Win/Linux/macOS и Web API со статическим Vue. MAUI не поддерживает Linux и не работает в Docker, а в проекте-примере вся логика и модели лежат в одном MAUI-проекте и частично завязаны на UI-типы (`Brush`, `Color`) и MAUI Essentials (`Preferences`, `FileSystem`).
+## Context
+The owner's notes describe one core (Provider, Generation, Config) and several UIs: Android/iOS, Win/Linux/macOS and a Web API with static Vue. MAUI does not support Linux and does not run in Docker, while in the sample project all logic and models live in one MAUI project and are partly tied to UI types (`Brush`, `Color`) and MAUI Essentials (`Preferences`, `FileSystem`).
 
-## Решение
-Вынести ядро в отдельную библиотеку `net10.0` без UI-зависимостей, а MAUI и Web сделать оболочками над ней. Платформенные вещи (секреты, настройки, папка данных, галерея) описать интерфейсами в ядре, реализации держать в оболочках. Раскладка проектов в `docs/architecture.md`.
+## Decision
+Move the core into a separate `net10.0` library without UI dependencies and make MAUI and Web heads over it. Describe platform things (secrets, settings, data folder, gallery) as interfaces in the core and keep the implementations in the heads. The project layout is in `docs/architecture.md`.
 
-## Альтернативы
-- Всё в одном MAUI-проекте, как в примере: проще, но Web и Docker невозможны без дублирования.
-- Только Web (Vue) без MAUI: закрывает Linux и Docker, но не закрывает сохранение в галерею Android и нативные клиенты из заметок.
-- Blazor Hybrid или другой UI-стек: не рассматривалось, в заметках его нет.
+## Alternatives
+- Everything in one MAUI project, as in the sample: simpler, but Web and Docker are impossible without duplication.
+- Only Web (Vue) without MAUI: covers Linux and Docker, but not saving to the Android gallery and the native clients from the notes.
+- Blazor Hybrid or another UI stack: not considered, it is not in the notes.
 
-## Последствия
-Проще: общая бизнес-логика, тесты ядра без эмулятора, Docker-сборка Web. Сложнее: больше проектов, интерфейсы для платформенных функций, правило «Core не ссылается на UI» нужно проверять автоматически. Решение зависит от ответов на открытые вопросы в `docs/status.md` (Linux, Img2Text, репозиторий результатов).
+## Consequences
+Easier: shared business logic, core tests without an emulator, a Docker build of Web. Harder: more projects, interfaces for platform functions, the rule "Core does not reference UI" must be checked automatically. The decision depends on the answers to the open questions in `docs/status.md` (Linux, Img2Text, result repository).

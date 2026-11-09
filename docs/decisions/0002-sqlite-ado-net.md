@@ -1,23 +1,23 @@
-# 0002. SQLite через ADO.NET и свои миграции
+# 0002. SQLite through ADO.NET and our own migrations
 
-Статус: принято
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: 2026-10-27
+Status: accepted
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: 2026-10-27
 
-## Контекст
-Репозиторий результатов по решению владельца — локальная БД и файлы за интерфейсом в Core (на сервере то же в томе Docker). Хранилище нужно MAUI (Android, iOS с trimming и AOT, Mac Catalyst, Windows) и Web. Проект-пример уже работает на `Microsoft.Data.Sqlite`, но дублирует CRUD, читает колонки по индексам, не имеет миграций и использует `DropTable`.
+## Context
+The result repository, by the owner's decision, is a local DB and files behind an interface in Core (on the server the same in a Docker volume). The storage is needed by MAUI (Android, iOS with trimming and AOT, Mac Catalyst, Windows) and Web. The sample project already runs on `Microsoft.Data.Sqlite`, but duplicates CRUD, reads columns by index, has no migrations and uses `DropTable`.
 
-## Решение
-Отдельный проект `ImageGen.Data` на `Microsoft.Data.Sqlite` (ADO.NET) реализует интерфейсы из `Core/Results` и кеш каталога.
-- Общий помощник для команд с параметрами и чтения колонок по имени, а не по индексу.
-- Миграции: упорядоченный список SQL-скриптов, версия схемы в `PRAGMA user_version`, применение в транзакции при старте. Выпущенные миграции не меняются, только новые.
-- Одно соединение на единицу работы, запись под транзакцией; WAL-режим.
-- Файлы результатов лежат в каталоге из `IAppPaths`, в БД хранится относительный путь. Сначала пишется файл, затем запись в БД; осиротевшие файлы убирает проверка при старте.
-- Удаление картинки не удаляет запись о расходах (F7.7).
+## Decision
+A separate `ImageGen.Data` project on `Microsoft.Data.Sqlite` (ADO.NET) implements the interfaces from `Core/Results` and the catalog cache.
+- A shared helper for commands with parameters and reading columns by name, not by index.
+- Migrations: an ordered list of SQL scripts, the schema version in `PRAGMA user_version`, applied in a transaction at startup. Released migrations are not changed, only new ones are added.
+- One connection per unit of work, writes in a transaction; WAL mode.
+- Result files live in the folder from `IAppPaths`, the DB stores a relative path. The file is written first, then the DB record; orphaned files are removed by a check at startup.
+- Deleting a picture does not delete the spending record (F7.7).
 
-## Альтернативы
-- EF Core: миграции и LINQ из коробки, но тяжелее на мобильных и с оговорками по trimming и AOT на iOS.
-- Dapper: меньше шаблонного кода, но маппинг на рефлексии, на iOS с AOT нужна осторожность.
+## Alternatives
+- EF Core: migrations and LINQ out of the box, but heavier on mobile and with caveats on trimming and AOT on iOS.
+- Dapper: less boilerplate, but mapping is reflection-based; on iOS with AOT it needs care.
 
-## Последствия
-Проще: нет рефлексии, предсказуемый SQL, один и тот же код на всех платформах и в Docker. Сложнее: маппинг и миграции пишутся вручную, их нужно покрыть тестами (`ImageGen.Data.Tests` на временной БД).
+## Consequences
+Easier: no reflection, predictable SQL, the same code on all platforms and in Docker. Harder: mapping and migrations are written by hand and must be covered by tests (`ImageGen.Data.Tests` on a temporary DB).

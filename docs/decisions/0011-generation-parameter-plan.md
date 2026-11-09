@@ -1,28 +1,28 @@
-# 0011. План параметров генерации записывается в генерацию
+# 0011. The generation parameter plan is stored in the generation
 
-Статус: принято
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: 2026-10-28
+Status: accepted
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: 2026-10-28
 
-Задача: `tasks/backlog/020-generation-parameters.md`. Решения владельца в её «Комментариях» (2026-10-28).
+Task: `tasks/backlog/020-generation-parameters.md`. The owner's decisions are in its "Comments" (2026-10-28).
 
-## Контекст
-Пользователь задаёт соотношение сторон, разрешение, формат и качество один раз на сессию. Модели по-разному их принимают: одна не знает `webp`, другая знает только несколько соотношений сторон. Нужно: отправить то, что модель примет; показать на карточке, что заменено и что отброшено; сохранить это в записи генерации (F4.3).
+## Context
+The user sets the aspect ratio, resolution, format and quality once per session. Models accept them differently: one does not know `webp`, another knows only a few aspect ratios. Needed: send what the model accepts; show on the card what was replaced and what was dropped; store it in the generation record (F4.3).
 
-## Решение
-- Планировщик `GenerationParameterPlanner` — чистая функция: по параметрам запроса и каталогу модели строит исход для каждого параметра: `Applied`, `Replaced` (ближайшее допустимое) или `Dropped` (с причиной).
-- Исходы хранятся в самой генерации (`generations.outcomes_json`), параметры прогона — в `runs.parameters_json`. Repeat, New seed и Edit берут параметры прогона-источника, а не текущие настройки сессии.
-- В запрос к провайдеру уходит только то, что план принял (`Applied` и `Replaced`). Запись и отправка не расходятся, потому что обе берутся из одного плана.
-- Каталог модели хранит параметры как объявил провайдер (`supported_parameters`). `null` значит «неизвестно» (строка кеша до миграции), пустой список — «не объявлено».
-- Правила ближайшего значения: соотношение сторон — по логарифму отношения сторон (`auto` в сравнение не входит); разрешение — по числу, `K` означает тысячи; формат и качество — только точное совпадение. При равенстве побеждает значение, которое раньше в каталоге.
-- Количество картинок не становится параметром: это уже существующий `RunsPerModel`.
+## Decision
+- The planner `GenerationParameterPlanner` is a pure function: from the request's parameters and the model's catalog it builds an outcome for each parameter: `Applied`, `Replaced` (the nearest allowed value) or `Dropped` (with a reason).
+- The outcomes are stored in the generation itself (`generations.outcomes_json`), the run's parameters in `runs.parameters_json`. Repeat, New seed and Edit take the parameters of the source run, not the current session settings.
+- Only what the plan accepted (`Applied` and `Replaced`) goes into the provider request. Storage and sending do not diverge, because both come from one plan.
+- The model catalog stores parameters as the provider declared them (`supported_parameters`). `null` means "unknown" (a cache row from before the migration), an empty list means "not declared".
+- Nearest-value rules: aspect ratio — by the logarithm of the side ratio (`auto` does not take part in the comparison); resolution — by the number, `K` means thousands; format and quality — exact match only. On a tie the value that comes earlier in the catalog wins.
+- The number of pictures does not become a parameter: it is the existing `RunsPerModel`.
 
-## Альтернативы
-- **План только в памяти, без записи.** Карточка после перезапуска не покажет замену. Отклонено: критерий задачи требует сохранения.
-- **Параметры в отдельной таблице.** Лишняя таблица и соединения ради трёх полей JSON. Отклонено: JSON тем же способом, что уже сделано для настроек сессии и каталога.
-- **Проверка параметров до запуска (как в спецификации, раздел «Применение параметров к моделям»).** Требует подтверждения пользователя перед каждым прогоном. Отклонено владельцем: замены показываются на карточке после запуска.
+## Alternatives
+- **The plan only in memory, not stored.** After a restart the card would not show a replacement. Rejected: the task's criterion requires storing.
+- **Parameters in a separate table.** An extra table and joins for three JSON fields. Rejected: JSON in the same way as already done for session settings and the catalog.
+- **Checking parameters before the run (as in the specification, section "Applying parameters to models").** Requires the user's confirmation before every run. Rejected by the owner: replacements are shown on the card after the run.
 
-## Последствия
-- Форма тела `POST /api/v1/images` для `aspect_ratio`, `resolution`, `output_format` и `quality` (имена на верхнем уровне) проверена только тестами на заглушке. Реальный сервис может принимать их иначе. Проверка одним платным запросом — ручная, в `docs/status.md` (открытые вопросы).
-- Значения `512` и `768` у разрешения трактуются как пиксели стороны; единица не подтверждена.
-- Старые записи (до миграции `0003`) читаются без параметров и исходов: на карточке нет строк о параметрах.
+## Consequences
+- The body shape of `POST /api/v1/images` for `aspect_ratio`, `resolution`, `output_format` and `quality` (names at the top level) is checked only by tests against a stub. The real service may accept them differently. A check with one paid request is manual, in `docs/status.md` (open questions).
+- The resolution values `512` and `768` are treated as pixels of a side; the unit is not confirmed.
+- Old records (from before migration `0003`) are read without parameters and outcomes: the card has no parameter lines.
