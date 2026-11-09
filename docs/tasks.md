@@ -1,72 +1,75 @@
-# Работа с задачами
+# Working with tasks
 
-Правила для агентов.
+Rules for agents.
 
-Задачи лежат в `tasks/<релиз|backlog>/NNN-имя.md`. Одна задача — один файл: описание, критерии готовности, анализ, план, отчёт, комментарии. Над репозиторием могут работать несколько агентов одновременно.
+Tasks live in `tasks/<release|backlog>/NNN-name.md`. One task — one file: description, acceptance criteria, analysis, plan, report, comments. Several agents may work on the repository at the same time.
 
-## Имя исполнителя
-Твоё имя — переменная окружения `AGENT_NAME` или имя, которое назвал пользователь. Если имени нет, придумай уникальное, например `claude-4f2a`. Имена разных агентов не должны совпадать.
+Section names. Task files are being translated to English (task 269). Until then the scripts and old task files use the Russian section names; they mean the same: «Описание» = Description, «Критерии готовности» = Acceptance criteria, «Анализ» = Analysis, «План» = Plan, «Отчёт» = Report, «Комментарии» = Comments, «Зависит от» = Depends on, «Среда» = Environment, «Файлы» = Files, «Проверка» = Verification. Use the names of the file you edit; task 269 switches the template, the scripts and all files at once.
 
-## Начало работы
-1. Прочитай файл задачи целиком, включая «Комментарии».
-2. Проверь строку «Зависит от» в «Описании»: каждая названная там задача должна быть `done` в `main` (`TASKS_BRANCH=main scripts/list-tasks.sh --main done`) или записана в `tasks/DONE.md` (журнал завершённых, `scripts/archive-tasks.sh`). Если хоть одна не готова, задачу не занимай: сообщи пользователю. Порядок очереди — `docs/status.md`, раздел «Порядок работ»; брать задачу вне очереди можно, только если её зависимости готовы и пользователь сам её назвал.
-3. Проверь строку «Среда» в «Описании» задачи (`docs/knowledge/dev-environment.md`). Если твоя среда не подходит (например, задача «только Windows», а ты на Linux или в облачной сессии), задачу не занимай: сообщи пользователю. Если строки нет, задача идёт на Linux или Windows, кроме случаев «только Windows» из `docs/knowledge/dev-environment.md` (запуск MAUI под Windows, `Platforms/Windows`, DPAPI).
-4. Посмотри, что делают другие. Скрипты задач работают с текущей веткой, поэтому чужие занятости видны только через ветки на origin: `git fetch --prune && git branch -r --list 'origin/task/*'`. Ветка `task/NNN-*` на origin значит, что задачей NNN уже кто-то занимается: если это не твоя ветка, остановись и сообщи пользователю. Уже смердженное видно так: `TASKS_BRANCH=main scripts/list-tasks.sh --main in-progress`. Если в «Плане» чужой задачи в работе в строке `Файлы:` есть файлы, которые собираешься менять и ты, не начинай: напиши комментарий в свою задачу и сообщи пользователю.
-5. Создай ветку задачи от свежего origin/main и сразу опубликуй её: `git fetch && git switch -c task/NNN-имя origin/main && git push -u origin task/NNN-имя`. Если ветка `task/NNN-имя` уже есть на origin и она твоя, продолжай в ней (`git switch task/NNN-имя`). Если рядом работают другие агенты на этой машине, используй отдельный worktree: `git worktree add ../wt-NNN -b task/NNN-имя origin/main`.
-6. Займи задачу из ветки задачи: `scripts/claim-task.sh <номер> <твоё-имя>`, затем `git pull --ff-only` (скрипт пушит коммит с занятостью в origin, рабочую копию не трогает). Код 2 значит, что задача уже занята: остановись и сообщи пользователю. Другую задачу сам не бери.
+## Executor name
+Your name is the `AGENT_NAME` environment variable or the name the user gave. If there is none, invent a unique one, for example `claude-4f2a`. Names of different agents must not coincide.
 
-## Что делать, смотря на статус
-- `todo`: прочитай описание и критерии, изучи код и `docs/`. Заполни «Анализ» и «План» (в плане строка `Файлы: ...`), поставь `planned` и остановись. Код в `ImageGen/` не пиши (пробный код — только в `poc/`, см. ниже).
-- `planned`: ждёт ревью человека. Ничего не делай. Если пользователь просит поправить план по комментариям, поправь «План» и ответь комментарием.
-- `approved`: можно реализовывать. `claim-task.sh` сам поставит `in-progress`.
-- `in-progress`: продолжай реализацию.
+## Starting work
+1. Read the whole task file, including "Comments".
+2. Check the "Depends on" line in the "Description": every task named there must be `done` in `main` (`TASKS_BRANCH=main scripts/list-tasks.sh --main done`) or recorded in `tasks/DONE.md` (the log of finished tasks, `scripts/archive-tasks.sh`). If at least one is not ready, do not claim the task: tell the user. The queue order is in `docs/status.md`, section "Order of work"; taking a task out of order is allowed only if its dependencies are ready and the user named it.
+3. Check the "Environment" line in the task's "Description" (`docs/knowledge/dev-environment.md`). If your environment does not fit (for example, the task is "Windows only" and you are on Linux or in a cloud session), do not claim the task: tell the user. If there is no such line, the task runs on Linux or Windows, except the "Windows only" cases from `docs/knowledge/dev-environment.md` (running MAUI on Windows, `Platforms/Windows`, DPAPI).
+4. See what others are doing. The task scripts work with the current branch, so other agents' claims are visible only through branches on origin: `git fetch --prune && git branch -r --list 'origin/task/*'`. A `task/NNN-*` branch on origin means someone is already working on task NNN: if it is not your branch, stop and tell the user. What is already merged is visible like this: `TASKS_BRANCH=main scripts/list-tasks.sh --main in-progress`. If the "Files:" line of the "Plan" of another in-progress task lists files you are going to change too, do not start: write a comment in your task and tell the user.
+5. Create the task branch from a fresh origin/main and publish it right away: `git fetch && git switch -c task/NNN-name origin/main && git push -u origin task/NNN-name`. If the `task/NNN-name` branch already exists on origin and it is yours, continue in it (`git switch task/NNN-name`). If other agents work on this machine, use a separate worktree: `git worktree add ../wt-NNN -b task/NNN-name origin/main`.
+6. Claim the task from the task branch: `scripts/claim-task.sh <number> <your-name>`, then `git pull --ff-only` (the script pushes the claim commit to origin and does not touch the working copy). Exit code 2 means the task is already claimed: stop and tell the user. Do not take another task yourself.
 
-## Что писать в «Плане»
-- Только концепции, а не готовый код: какие типы и члены появляются и за что отвечают, псевдокод алгоритмов, машины состояний, потоки данных, крайние случаи, тест-кейсы словами (условие → ожидаемый результат), команды проверки, строка `Файлы:`.
-- Имена типов, членов и файлов писать можно и нужно: они должны совпадать с `docs/architecture.md`. Тела методов, разметку XAML и содержимое файлов целиком в задачу не вставляй.
-- Если перед планом нужно снять неизвестность (соберётся ли зависимость под Android, что отвечает API, как рендерится компонент), напиши пробный код и положи его отдельными файлами в `poc/<релиз>/<NNN-имя>/` (правила в `poc/README.md`). В задаче только ссылка на папку и вывод. Ради переименований, смены пространств имён, версии языка и подобных мелких правок пробный код не пиши и не правь: опиши правку словами.
-- Пробный код — подсказка, а не источник правды: при реализации сверяйся с текущим кодом и планом.
-- Номер новой миграции в плане не фиксируй: пиши `NNNN_<смысл>.sql`. Номер — следующий свободный в `ImageGen/ImageGen.Data/Migrations/` в момент реализации: параллельные планы иначе претендуют на один номер.
-- Если план меняет те же файлы или таблицы, что и другая незавершённая задача, назови её в «Анализе» и предложи порядок.
-- Если часть работы собирается или проверяется только на Windows (`Platforms/Windows`, WinUI, DPAPI), выдели её в отдельную задачу со строкой «Среда: только Windows», а остальное оставь в задаче «Linux или Windows». Так основная задача закрывается на Linux, а не висит недоделанной. Цель Android к Windows-части не относится: она собирается на Linux с Android SDK.
+## What to do depending on the status
+- `todo`: read the description and criteria, study the code and `docs/`. Fill in "Analysis" and "Plan" (with a `Files: ...` line in the plan), set `planned` and stop. Do not write code in `ImageGen/` (proof-of-concept code only in `poc/`, see below).
+- `planned`: waits for a human review. Do nothing. If the user asks to fix the plan according to comments, fix the "Plan" and answer with a comment.
+- `approved`: may be implemented. `claim-task.sh` sets `in-progress` itself.
+- `in-progress`: continue the implementation.
 
-## Одобрение
-Одобрение плана — это статус `approved`, поставленный человеком, или явное «план одобрен» в чате или в комментариях (тогда поставь `approved` сам). Без одобрения не пиши код.
+## What to write in the "Plan"
+- Only concepts, not finished code: which types and members appear and what they are responsible for, pseudocode of algorithms, state machines, data flows, edge cases, test cases in words (condition → expected result), verification commands, the `Files:` line.
+- Names of types, members and files may and should be written: they must match `docs/architecture.md`. Do not paste method bodies, XAML markup or whole file contents into the task.
+- If an unknown must be removed before the plan (will a dependency build for Android, what does an API answer, how does a component render), write proof-of-concept code and put it in separate files in `poc/<release>/<NNN-name>/` (rules in `poc/README.md`). The task holds only a link to the folder and the conclusion. Do not write or edit proof-of-concept code for renames, namespace changes, language version and similar small edits: describe the edit in words.
+- Proof-of-concept code is a hint, not the source of truth: when implementing, check against the current code and the plan.
+- Do not fix the number of a new migration in the plan: write `NNNN_<meaning>.sql`. The number is the next free one in `ImageGen/ImageGen.Data/Migrations/` at implementation time: otherwise parallel plans claim the same number.
+- If the plan changes the same files or tables as another unfinished task, name it in the "Analysis" and propose an order.
+- If part of the work builds or is checked only on Windows (`Platforms/Windows`, WinUI, DPAPI), move it to a separate task with the line "Environment: Windows only", and keep the rest in a "Linux or Windows" task. Then the main task is closed on Linux instead of hanging unfinished. The Android target does not belong to the Windows part: it builds on Linux with the Android SDK.
+- Write the plan in English (`docs/conventions.md`, "Language").
 
-## Завершение
-1. Запусти тесты и линтер.
-2. Заполни «Отчёт»: что изменено, какие файлы, как проверено, что отличается от плана.
-3. Обнови `docs/`, если поведение или устройство разошлось с описанием: спецификацию, ADR, `docs/architecture.md`. Если сделано как описано, `docs/` не трогай. Прогресс («задача NNN добавила …», «пока не написано») в `docs/` не пиши: он виден по статусам задач и «Отчётам».
-4. Поставь статус `done` и сними занятость: `scripts/release-task.sh NNN`.
-   Если всё, что проверяется сборкой и тестами в твоей среде, прошло, а остались только проверки, которых в ней нет (сборка Windows-цели MAUI — её делает CI, запуск под Windows или macOS, ручной экран, живой запрос с ключом), задачу **не** оставляй в `in-progress`: ставь `done`, в «Отчёте» перечисли, что не проверено и почему, а ручные пункты допиши в задачу ручной проверки (016 — MAUI под Windows, 046 — Avalonia на Linux-рабочем столе и Windows). Задача остаётся `in-progress` только если не готов код или падает проверка, доступная в среде.
-5. Запусти `scripts/check.sh`.
-6. `git fetch && git rebase origin/main`, затем pull request. В сообщениях коммитов указывай файл задачи, например: `001-add-login: добавить форму входа`.
+## Approval
+Approval of a plan is the `approved` status set by a human, or an explicit "plan approved" in the chat or in the comments (then set `approved` yourself). Do not write code without approval.
 
-## Комментарии
-- Дописывай в конец раздела «Комментарии» в виде `### ГГГГ-ММ-ДД, <твоё-имя>` и текст.
-- Чужие комментарии не правь и не удаляй. Ответ на комментарий — новый комментарий.
+## Finishing
+1. Run the tests and the linter.
+2. Fill in the "Report": what changed, which files, how it was verified, what differs from the plan.
+3. Update `docs/` if the behavior or structure diverged from the description: the specification, an ADR, `docs/architecture.md`. If it was done as described, do not touch `docs/`. Do not write progress into `docs/` ("task NNN added …", "not written yet"): it is visible from task statuses and "Reports".
+4. Set the status `done` and release the claim: `scripts/release-task.sh NNN`.
+   If everything that is checked by the build and tests in your environment passed, and only checks your environment lacks remain (building the MAUI Windows target — CI does it, running on Windows or macOS, a manual screen check, a live request with a key), do **not** leave the task `in-progress`: set `done`, list in the "Report" what was not checked and why, and add the manual items to the manual check task (016 — MAUI on Windows, 046 — Avalonia on the Linux desktop and Windows). A task stays `in-progress` only if the code is not ready or a check available in the environment fails.
+5. Run `scripts/check.sh`.
+6. `git fetch && git rebase origin/main`, then a pull request. In commit messages name the task file, for example: `001-add-login: add the login form`.
 
-## Если что-то неясно
-Не переписывай «Описание» и «Критерии готовности». Запиши вопросы в «Комментарии», поставь `blocked` и остановись. Занятость оставь за собой: человек решит, снимать ли её. После ответа человек возвращает задачу в `approved` (или `todo`, если нужен новый анализ).
+## Comments
+- Append to the end of the "Comments" section as `### YYYY-MM-DD, <your-name>` followed by the text.
+- Do not edit or delete other people's comments. An answer to a comment is a new comment.
 
-## Новые задачи
-Заметил проблему вне рамок задачи: не чини, а создай новую задачу `scripts/new-task.sh --publish <релиз|backlog> <имя>` и упомяни её в «Отчёте». С `--publish` задача сразу пушится в текущую ветку, номер берётся следующим после задач этой ветки. В параллельных ветках номера могут совпасть: после `git rebase origin/main` `scripts/check.sh` сообщит о повторяющемся id, тогда перенумеруй свою ещё не смердженную задачу (поле `id` и имя файла) следующим свободным номером.
+## If something is unclear
+Do not rewrite the "Description" and the "Acceptance criteria". Write the questions in "Comments", set `blocked` and stop. Keep the claim: a human decides whether to release it. After the answer, the human returns the task to `approved` (or `todo` if a new analysis is needed).
 
-## Общие файлы
-В общие файлы `docs/` вноси только нужные правки, без переформатирования. При конфликте при `rebase` сохраняй обе версии.
+## New tasks
+If you notice a problem outside the task's scope, do not fix it; create a new task `scripts/new-task.sh --publish <release|backlog> <name>` and mention it in the "Report". With `--publish` the task is pushed to the current branch right away; its number is the next after the tasks of this branch. In parallel branches the numbers may coincide: after `git rebase origin/main`, `scripts/check.sh` reports a duplicate id; then renumber your not yet merged task (the `id` field and the file name) with the next free number.
 
-## Аудит
+## Shared files
+Make only the needed edits in shared `docs/` files, without reformatting. On a conflict during `rebase` keep both versions.
 
-Аудит документации и кода выполняется по просьбе пользователя, обычно раз в неделю или перед релизом. Аудит не меняет код: однозначные расхождения исправляются в документации, требующие кода оформляются задачами, неясные — вопросами в `docs/status.md`. Для каждой находки фиксируются доказательства: файлы документации и кода.
+## Audit
 
-1. Запусти `scripts/audit.sh`; разбери ошибки проверок, давно занятые задачи, ожидающие человека задачи, устаревшие документы и ADR без решения.
-2. Сверь архитектуру, conventions, спецификации с кодом и тестами; проверь слои и запреты, статусы ADR, актуальность `AGENTS.md` и открытые вопросы `docs/status.md`.
-3. Исправь очевидные документационные расхождения. Остальное оформи задачами через `scripts/new-task.sh --publish backlog <имя>` либо вопросами в `docs/status.md`.
-4. Итог запиши в `docs/log/YYYY-MM-DD-audit.md` по шаблону `docs/log/_template.md`: охват, исправления, новые задачи и неясные вопросы.
-5. Повторяющиеся находки автоматизируй: например, архитектурными тестами или проверками в `scripts/check-docs.sh`.
+An audit of documentation and code is done at the user's request, usually once a week or before a release. An audit does not change code: unambiguous discrepancies are fixed in the documentation, those requiring code become tasks, unclear ones become questions in `docs/status.md`. Every finding records its evidence: documentation and code files.
 
-## Вспомогательные агенты
+1. Run `scripts/audit.sh`; go through check errors, tasks claimed for a long time, tasks waiting for a human, stale documents and ADRs without a decision.
+2. Compare the architecture, conventions and specifications with the code and tests; check the layers and prohibitions, ADR statuses, whether `AGENTS.md` is current and the open questions in `docs/status.md`.
+3. Fix obvious documentation discrepancies. Turn the rest into tasks through `scripts/new-task.sh --publish backlog <name>` or into questions in `docs/status.md`.
+4. Write the result to `docs/log/YYYY-MM-DD-audit.md` from the `docs/log/_template.md` template: scope, fixes, new tasks and unclear questions.
+5. Automate recurring findings: for example, with architecture tests or checks in `scripts/check-docs.sh`.
 
-Если инструмент поддерживает делегирование, вспомогательные агенты полезны для разведки, независимого ревью и непересекающихся подзадач. Не делегируй тесно связанную работу, маленькие задачи и решения, для которых нужно понимание всей задачи.
+## Helper agents
 
-Поручение должно содержать цель, нужные файлы и документы, ограничения и ожидаемый формат ответа. Ответственность за задачу остаётся у основного агента: только он занимает задачу, обновляет её план и отчёт. По умолчанию помощник работает только на чтение; при разрешённых правках ему назначаются непересекающиеся файлы или отдельный worktree. Выводы проверяй по названным файлам. Не строй цепочки вложенных помощников.
+If the tool supports delegation, helper agents are useful for exploration, independent review and non-overlapping subtasks. Do not delegate tightly coupled work, small tasks or decisions that need an understanding of the whole task.
+
+An assignment must contain the goal, the needed files and documents, the constraints and the expected answer format. Responsibility for the task stays with the main agent: only it claims the task and updates its plan and report. By default a helper works read-only; when edits are allowed, it gets non-overlapping files or a separate worktree. Verify its conclusions against the named files. Do not build chains of nested helpers.
