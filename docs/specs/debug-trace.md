@@ -1,72 +1,72 @@
-# Отладочный трейс (debug trace)
+# Debug trace
 
-Задача: 085. Назначение: по записи лога написать юнит-тест, который повторяет проблему на моке провайдера.
+Task: 085. Purpose: from a log record, write a unit test that reproduces the problem on a provider mock.
 
-## Включение
+## Enabling
 
-- Выключено по умолчанию. Вне режима не создаётся ни одной записи; обычное логирование (045) не меняется.
-- Переменная `IMAGEGEN_DEBUG_TRACE`: `1`, `true`, `on`, `yes` — включить; любое другое значение — выключить. Важнее файла.
-- Или поле `debugTrace: true` в `logging.json` в папке данных (то же, что для уровня логов, см. `docs/knowledge/dev-environment.md`, раздел «Логи»).
-- Уровень логов (`IMAGEGEN_LOG_LEVEL`) на трейс не влияет.
+- Off by default. Outside the mode not a single record is created; ordinary logging (045) does not change.
+- The `IMAGEGEN_DEBUG_TRACE` variable: `1`, `true`, `on`, `yes` — enable; any other value — disable. It takes precedence over the file.
+- Or the `debugTrace: true` field in `logging.json` in the data folder (the same file as for the log level, see `docs/knowledge/dev-environment.md`, section "Logs").
+- The log level (`IMAGEGEN_LOG_LEVEL`) does not affect the trace.
 
-## Где лежит
+## Where it is
 
-`{папка данных}/debug/<yyyy-MM-dd>/trace.jsonl` (UTC-дата записи). Рядом — файлы изображений.
+`{data folder}/debug/<yyyy-MM-dd>/trace.jsonl` (the UTC date of the record). Image files are next to it.
 
-- Одна строка файла — одна запись (JSON, UTF-8).
-- Изображение — отдельный файл `<имя блоба>.<расширение>` в той же папке, расширение по типу (`png`, `jpg`, `webp`, `gif`, иначе `bin`).
+- One line of the file is one record (JSON, UTF-8).
+- An image is a separate file `<blob name>.<extension>` in the same folder, the extension by type (`png`, `jpg`, `webp`, `gif`, otherwise `bin`).
 
-## Формат: `debug-trace/1`
+## Format: `debug-trace/1`
 
-Поля верхнего уровня каждой строки:
+Top-level fields of every line:
 
-| Поле | Значение |
+| Field | Value |
 |---|---|
-| `schema` | всегда `debug-trace/1` |
-| `time` | время записи, ISO 8601 (`O`) |
-| `kind` | вид записи (см. ниже) |
-| `fields` | объект «ключ → текст»; набор ключей зависит от `kind` |
-| `blobs` | массив `{name, file, mediaType}`; `file` — имя файла в папке дня; у `b64_json` `mediaType` — `application/octet-stream` (тип из ответа не берётся) |
+| `schema` | always `debug-trace/1` |
+| `time` | record time, ISO 8601 (`O`) |
+| `kind` | the kind of record (see below) |
+| `fields` | a "key → text" object; the set of keys depends on `kind` |
+| `blobs` | an array of `{name, file, mediaType}`; `file` is the file name in the day folder; for `b64_json` `mediaType` is `application/octet-stream` (the type is not taken from the response) |
 
-Виды записей (`kind`):
+Record kinds (`kind`):
 
-- `user-input` — ввод в ассистенте. Поля: `session`, `text` (текст сообщения), `attachments` (id вложений через запятую; сами файлы уже лежат в папке данных).
-- `generation-request` — запуск генерации. Поля: `session`, `prompt` (нормализованный), `models` (`провайдер/модель` через запятую), `seeds`, `aspectRatio`, `resolution`, `outputFormat`, `quality`, `attachments`.
-- `http-request` — запрос к провайдеру. Поля: `id` (связывает с ответом), `method`, `path` (без строки запроса), `headers`, `body`.
-- `http-response` — ответ провайдера. Поля: `id`, `method`, `path`, `status`, `elapsedMs`, `headers`, `body`.
+- `user-input` — input to the assistant. Fields: `session`, `text` (the message text), `attachments` (attachment ids separated by commas; the files themselves are already in the data folder).
+- `generation-request` — starting a generation. Fields: `session`, `prompt` (normalized), `models` (`provider/model` separated by commas), `seeds`, `aspectRatio`, `resolution`, `outputFormat`, `quality`, `attachments`.
+- `http-request` — a request to a provider. Fields: `id` (links it to the response), `method`, `path` (without the query string), `headers`, `body`.
+- `http-response` — a provider response. Fields: `id`, `method`, `path`, `status`, `elapsedMs`, `headers`, `body`.
 
-Ключ отсутствует в `fields`, если значения нет (например, `body` у запроса без тела).
+A key is missing from `fields` if there is no value (for example, `body` of a request without a body).
 
-Пример строки ответа с картинкой (переносы добавлены для чтения):
+An example line of a response with a picture (line breaks added for reading):
 
     {"schema":"debug-trace/1","time":"2026-10-29T09:30:00.0000000+00:00","kind":"http-response",
      "fields":{"id":"a1b2c3d4","method":"POST","path":"/api/v1/chat/completions","status":"200",
                "elapsedMs":"812","headers":"Content-Type: application/json","body":"{\"url\":\"blob:a1b2c3d4-response-0\"}"},
      "blobs":[{"name":"a1b2c3d4-response-0","file":"a1b2c3d4-response-0.png","mediaType":"image/png"}]}
 
-В `body` картинка заменена ссылкой `blob:<name>`; её байты — в файле из `blobs[].file`.
+In `body` the picture is replaced by a `blob:<name>` link; its bytes are in the file from `blobs[].file`.
 
-## Что не пишется
+## What is not written
 
-- Заголовки кроме allowlist: `Content-Type`, `Accept`, `User-Agent`, `Content-Length`. `Authorization`, `x-api-key` и любые другие заголовки отбрасываются, а не маскируются.
-- Для проверки ключа (`GET .../key`) и запросов с `SkipResponseBody` запись `http-response` целиком не создаётся (включая статус); тело ответа проверки ключа содержит имя аккаунта.
-- Ключи провайдеров — ни в каком виде (`AGENTS.md`).
-- В теле значения полей аккаунта (`label`, `key`, `api_key`, `*_user_id`) заменяются на `<redacted>`, как в логах 045 (`BodyRedactor.RedactAccountFields`).
-- Тело ответа записывается целиком в пределах `ProviderResponseLimits` (ADR 0022). Если лимит превышен, запрос завершается ошибкой; частичная запись не сохраняется. `BodyRedactor.MaxLength` относится только к строкам обычного лога 045.
-- Изображения не остаются в тексте: data-URL изображений и поля `b64_json` выносятся в файлы. Data-URL, которую не удалось декодировать, остаётся в тексте как есть (это не ключ).
+- Headers except the allowlist: `Content-Type`, `Accept`, `User-Agent`, `Content-Length`. `Authorization`, `x-api-key` and any other headers are dropped, not masked.
+- For the key check (`GET .../key`) and requests with `SkipResponseBody` the `http-response` record is not created at all (including the status); the key check response body contains the account name.
+- Provider keys — in no form (`AGENTS.md`).
+- In a body, the values of account fields (`label`, `key`, `api_key`, `*_user_id`) are replaced with `<redacted>`, as in the 045 logs (`BodyRedactor.RedactAccountFields`).
+- The response body is written whole within `ProviderResponseLimits` (ADR 0022). If the limit is exceeded, the request ends with an error; a partial record is not saved. `BodyRedactor.MaxLength` applies only to lines of the ordinary 045 log.
+- Images do not stay in the text: image data URLs and `b64_json` fields are moved to files. A data URL that could not be decoded stays in the text as is (it is not a key).
 
-## Воспроизведение в тесте
+## Reproducing in a test
 
-Из записи `http-response` собирается мок: `body` с заменой `blob:<name>` на data-URL из файла, `status` из поля `status`. Примеры: `ImageGen.Core.Tests/Diagnostics/DebugTraceProviderReplayTests.cs` (генерация через `OpenRouterClient`, мок из записи) и `DebugTraceHandlerTests.cs` (восстановление ответа на уровне HTTP). Запись `generation-request` даёт модели и сиды для повторного запуска.
+A mock is assembled from an `http-response` record: `body` with `blob:<name>` replaced by a data URL from the file, `status` from the `status` field. Examples: `ImageGen.Core.Tests/Diagnostics/DebugTraceProviderReplayTests.cs` (generation through `OpenRouterClient`, the mock from a record) and `DebugTraceHandlerTests.cs` (restoring the response at the HTTP level). A `generation-request` record gives the models and seeds for a repeated run.
 
-## Реализация
+## Implementation
 
-- `ImageGen.Core/Diagnostics`: `IDebugTrace`, `TraceRecord`, `TraceBlob`, `NullDebugTrace` (по умолчанию), `TraceRedaction` (allowlist заголовков, вынос картинок).
-- `ImageGen.Core/Http/LoggingHttpHandler` пишет `http-request` и `http-response`; `AssistantService` пишет `user-input`; `GenerationService` пишет `generation-request`.
-- `ImageGen.Presentation/Logging`: `DebugTraceSettings` (включение, `Create`), `FileDebugTrace` (запись в файлы).
-- Оболочки: `AppServices.Create(debugTrace:)` в Avalonia, `MauiProgram` регистрирует трейс до `AddImageGenCore`; `AddImageGenCore` ставит `NullDebugTrace`, если трейс не зарегистрирован.
+- `ImageGen.Core/Diagnostics`: `IDebugTrace`, `TraceRecord`, `TraceBlob`, `NullDebugTrace` (the default), `TraceRedaction` (the header allowlist, moving pictures out).
+- `ImageGen.Core/Http/LoggingHttpHandler` writes `http-request` and `http-response`; `AssistantService` writes `user-input`; `GenerationService` writes `generation-request`.
+- `ImageGen.Presentation/Logging`: `DebugTraceSettings` (enabling, `Create`), `FileDebugTrace` (writing to files).
+- Heads: `AppServices.Create(debugTrace:)` in Avalonia, `MauiProgram` registers the trace before `AddImageGenCore`; `AddImageGenCore` sets `NullDebugTrace` if no trace is registered.
 
-## Открытые вопросы
+## Open questions
 
-- Размер папки `debug/`: очистки нет (в отличие от логов, где 14 дней). Неизвестно, нужна ли ротация; пока трейс включается вручную и удаляется пользователем.
-- Изображения-вложения пользователя в `user-input` и `generation-request` записаны ссылками на id, без копий байтов.
+- The size of the `debug/` folder: there is no cleanup (unlike logs, which keep 14 days). Whether rotation is needed is unknown; for now the trace is enabled by hand and deleted by the user.
+- The user's attachment images in `user-input` and `generation-request` are recorded as id references, without copies of the bytes.
