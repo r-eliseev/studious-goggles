@@ -1,84 +1,84 @@
-> Дополнение владельца к спецификации UI-тестов (2026-11-07), без правок, справочно для исполнителя задач 244–250. Действуют поправки из ADR 0030 и `docs/specs/apple-ci-e2e.md`: jobs `unit-tests` и `avalonia-headless` уже есть в `build.yml` (`core`, `avalonia`); на раннерах GitHub сейчас Xcode до 26.6, а workload iOS/Mac Catalyst .NET 10 требует Xcode 27, поэтому сборки iOS/Catalyst начинаются с проверки совместимости; для Appium 3 — `xcuitest@12.22.8` и `mac2@4.6.1`. Папку `docs/specs/ui-e2e-original/` удалить при архивировании задач 238–250.
+> The owner's addendum to the UI test specification (2026-11-07), translated to English on 2026-11-09 without changes in meaning (the unedited original is the `.docx` next to it), for reference for the executor of tasks 244–250. The corrections from ADR 0030 and `docs/specs/apple-ci-e2e.md` apply: the `unit-tests` and `avalonia-headless` jobs already exist in `build.yml` (`core`, `avalonia`); GitHub runners now have Xcode up to 26.6, while the .NET 10 iOS/Mac Catalyst workload requires Xcode 27, so the iOS/Catalyst builds start with a compatibility check; for Appium 3 — `xcuitest@12.22.8` and `mac2@4.6.1`. Delete the `docs/specs/ui-e2e-original/` folder when archiving tasks 238–250.
 
-К документу «UI E2E тестирование .NET MAUI — Windows + Android ·
-GitHub-hosted runners · Видео, логи и Allure» (07.11.2026).
+To the document "UI E2E testing of .NET MAUI — Windows + Android ·
+GitHub-hosted runners · Video, logs and Allure" (07.11.2026).
 
-Репозиторий: https://github.com/r-eliseev/studious-goggles \| Статус:
-спецификация к реализации; не означает, что workflows уже внедрены.
+Repository: https://github.com/r-eliseev/studious-goggles \| Status:
+a specification for implementation; does not mean the workflows are already in place.
 
-# A1. Область действия и принцип аддитивности
+# A1. Scope and the additivity principle
 
-Это отдельное дополнение. Исходные разделы 1–12, существующие
-Windows/Android jobs, их артефакты, NUnit, Allure, video/log contract и
-требования безопасности остаются в силе. Новые Apple jobs не заменяют и
-не изменяют логику существующих релизов. При противоречии по
-Apple-платформам применять это дополнение; по Windows/Android — исходную
-спецификацию.
+This is a separate addendum. The original sections 1–12, the existing
+Windows/Android jobs, their artifacts, NUnit, Allure, the video/log contract and
+the security requirements stay in force. The new Apple jobs do not replace or
+change the logic of the existing releases. On a contradiction about
+Apple platforms apply this addendum; about Windows/Android — the original
+specification.
 
-Цель первого этапа: без Apple ID, Apple Developer Program, сертификатов,
-provisioning profiles и приватных GitHub Secrets получать четыре
-компиляционные проверки, тесты логики, headless UI и smoke-запуск в
-симуляторе там, где это возможно. Неподписанные артефакты не считать
-пригодными для установки на физические iPhone или публичной дистрибуции.
+The goal of the first stage: without an Apple ID, the Apple Developer Program, certificates,
+provisioning profiles and private GitHub Secrets, get four
+compile checks, logic tests, headless UI and a smoke launch in the
+simulator where possible. Do not consider unsigned artifacts
+suitable for installing on physical iPhones or for public distribution.
 
-# A2. Платформенная матрица
+# A2. Platform matrix
 
-| Оболочка | Цель  | Рантайм / формат CI                     | Особенность                                                         |
-|----------|-------|-----------------------------------------|---------------------------------------------------------------------|
-| MAUI     | iOS   | net10.0-ios / iossimulator-arm64        | Simulator .app без distribution signing                             |
-| MAUI     | macOS | net10.0-maccatalyst / maccatalyst-arm64 | Mac Catalyst, не native AppKit                                      |
-| Avalonia | iOS   | Avalonia iOS host / iossimulator-arm64  | Добавить отдельный iOS host, не переиспользовать Desktop entrypoint |
-| Avalonia | macOS | Avalonia desktop / osx-arm64            | Self-contained .app, без Developer ID                               |
+| Head     | Target | Runtime / CI format                     | Specifics                                                           |
+|----------|--------|-----------------------------------------|---------------------------------------------------------------------|
+| MAUI     | iOS    | net10.0-ios / iossimulator-arm64        | A simulator .app without distribution signing                       |
+| MAUI     | macOS  | net10.0-maccatalyst / maccatalyst-arm64 | Mac Catalyst, not native AppKit                                     |
+| Avalonia | iOS    | Avalonia iOS host / iossimulator-arm64  | Add a separate iOS host, do not reuse the Desktop entrypoint        |
+| Avalonia | macOS  | Avalonia desktop / osx-arm64            | A self-contained .app, without a Developer ID                       |
 
-Фактические TFM, имена проектов, bundle IDs и пути определить по csproj
-на момент реализации; таблица — целевая конфигурация. При необходимости
-x64 для macOS добавить отдельные jobs, не смешивать с Apple Silicon.
+Determine the actual TFMs, project names, bundle IDs and paths from the csproj
+at implementation time; the table is the target configuration. If
+x64 for macOS is needed, add separate jobs, do not mix with Apple Silicon.
 
-# A3. Новая архитектура GitHub Actions
+# A3. The new GitHub Actions architecture
 
-Добавить независимый workflow .github/workflows/apple-ci.yml с событиями
-pull_request, push (main) и workflow_dispatch; permissions: contents:
-read. Он не должен публиковать GitHub Release и не должен требовать
-GitHub Secrets. Ресурсозатратные E2E jobs по умолчанию запускать по
-workflow_dispatch / расписанию, а на PR — только после доказанной
-стабильности.
+Add an independent workflow .github/workflows/apple-ci.yml with the events
+pull_request, push (main) and workflow_dispatch; permissions: contents:
+read. It must not publish a GitHub Release and must not require
+GitHub Secrets. Run the resource-heavy E2E jobs by default on
+workflow_dispatch / a schedule, and on a PR only after proven
+stability.
 
-| Job                       | Runner        | Что проверяет                                      | Статус на старте                         |
+| Job                       | Runner        | What it checks                                     | Status at the start                      |
 |---------------------------|---------------|----------------------------------------------------|------------------------------------------|
-| apple-preflight           | macOS hosted  | Xcode, xcrun, SDK, .NET, iOS runtime, capabilities | PR required после стабилизации           |
-| unit-tests                | ubuntu-latest | Общие сервисы, ViewModels, без UI                  | PR required                              |
+| apple-preflight           | macOS hosted  | Xcode, xcrun, SDK, .NET, iOS runtime, capabilities | PR required after stabilization          |
+| unit-tests                | ubuntu-latest | Shared services, ViewModels, without UI            | PR required                              |
 | avalonia-headless         | ubuntu-latest | Controls, bindings, navigation, input              | PR required                              |
-| build-maui-ios            | macOS hosted  | Unsigned simulator .app                            | PR required после preflight              |
-| build-maui-catalyst       | macOS hosted  | Unsigned Catalyst .app                             | PR required после preflight              |
-| build-avalonia-ios        | macOS hosted  | iOS host + simulator .app                          | PR required после создания host          |
+| build-maui-ios            | macOS hosted  | Unsigned simulator .app                            | PR required after the preflight          |
+| build-maui-catalyst       | macOS hosted  | Unsigned Catalyst .app                             | PR required after the preflight          |
+| build-avalonia-ios        | macOS hosted  | iOS host + simulator .app                          | PR required after the host is created    |
 | build-avalonia-macos      | macOS hosted  | Desktop publish + .app packaging                   | PR required                              |
 | smoke-ios-{maui,avalonia} | macOS hosted  | Boot → install → launch → evidence                 | Nightly/manual → PR                      |
 | e2e-ios-{maui,avalonia}   | macOS hosted  | Appium XCUITest + NUnit + evidence                 | Manual/nightly                           |
-| smoke-macos / e2e-macos   | macOS hosted  | Запуск .app; затем platform UI automation          | Preflight отдельно; initially non-gating |
+| smoke-macos / e2e-macos   | macOS hosted  | Launching the .app; then platform UI automation    | Preflight separately; initially non-gating |
 | apple-report              | ubuntu-latest | Allure HTML + aggregate                            | always()                                 |
 
 # A4. Preflight: mandatory fail-fast
 
-- Вывести sw_vers, uname -m, xcodebuild -version, xcode-select -p, xcrun
+- Print sw_vers, uname -m, xcodebuild -version, xcode-select -p, xcrun
   simctl list -j devices available, xcrun simctl list runtimes, dotnet
-  --info, dotnet workload list, список доступных SDK.
+  --info, dotnet workload list, the list of available SDKs.
 
-- Сопоставить версию установленного .NET workload с Xcode.
-  Несовместимость фиксировать явно: «blocked: toolchain mismatch», а не
-  маскировать как падение кода приложения.
+- Match the version of the installed .NET workload against Xcode.
+  Record an incompatibility explicitly: "blocked: toolchain mismatch", and do not
+  mask it as a failure of the app code.
 
-- Убедиться, что доступен iPhone simulator на выбранной архитектуре;
-  обнаруживать device UDID динамически, не hardcode модель/версию iOS.
+- Make sure an iPhone simulator is available on the chosen architecture;
+  find the device UDID dynamically, do not hardcode the model/iOS version.
 
-- Установить timeout для bootstatus и каждого теста; прекращать зависший
-  simulator job с понятной диагностикой.
+- Set a timeout for bootstatus and for each test; stop a hung
+  simulator job with clear diagnostics.
 
-- Для macOS оконной автоматизации провести отдельный preflight: GUI
-  session, Accessibility permissions, возможность найти окно/получить
-  содержательный screenshot. При провале не маркировать UI-тесты
-  успешными.
+- For macOS window automation run a separate preflight: a GUI
+  session, Accessibility permissions, the ability to find a window/get a
+  meaningful screenshot. On failure do not mark UI tests
+  successful.
 
-Пример диагностических команд (не полный workflow):
+Example diagnostic commands (not a full workflow):
 
 xcodebuild -version  
 xcrun simctl list devices available  
@@ -86,12 +86,12 @@ xcrun simctl list runtimes
 dotnet --info  
 dotnet workload list
 
-# A5. Компиляция без подписи
+# A5. Compiling without signing
 
-Build job должен использовать SDK, соответствующий репозиторию (в
-global.json сейчас задаются настройки test runner, поэтому конкретную
-версию SDK закрепить отдельно/в workflow). Команды — пример; правильные
-project paths, TFM и свойства проверить по файлам решения и доступному
+The build job must use the SDK matching the repository (global.json
+currently sets the test runner settings, so pin the specific
+SDK version separately/in the workflow). The commands are an example; check the right
+project paths, TFMs and properties against the solution files and the available
 .NET SDK.
 
 dotnet build \<maui.csproj\> -f net10.0-ios -c Debug \\  
@@ -103,32 +103,32 @@ dotnet build \<maui.csproj\> -f net10.0-maccatalyst -c Debug \\
 dotnet publish \<avalonia-desktop.csproj\> -c Release \\  
 -r osx-arm64 --self-contained true
 
-Для Avalonia iOS создать host-проект по платформенному шаблону,
-подключить общее Avalonia Application и использовать отдельный simulator
-RID. Не переносить в него Avalonia.Desktop/классический desktop
-lifetime. Команду сборки определить после создания host.
+For Avalonia iOS create a host project from the platform template,
+connect the shared Avalonia Application and use a separate simulator
+RID. Do not move Avalonia.Desktop/the classic desktop
+lifetime into it. Determine the build command after the host is created.
 
-Не смешивать unsigned simulator .app с device-ready IPA. Для MAUI Mac
-Catalyst проверять, что артефакт действительно запускается на hosted
-macOS; запуск приложения в CI может ограничиваться GUI-сессией.
+Do not mix an unsigned simulator .app with a device-ready IPA. For MAUI Mac
+Catalyst check that the artifact really launches on hosted
+macOS; launching the app in CI may be limited by the GUI session.
 
-# A6. iOS Simulator smoke: два независимых приложения
+# A6. iOS Simulator smoke: two independent apps
 
-1.  Создать/выбрать iPhone Simulator из доступных, запустить xcrun
-    simctl boot и дождаться bootstatus с timeout.
+1.  Create/choose an iPhone Simulator from the available ones, run xcrun
+    simctl boot and wait for bootstatus with a timeout.
 
-2.  Скачать соответствующий simulator .app как artifact, проверить его
-    структуру, CFBundleIdentifier и целевую архитектуру.
+2.  Download the corresponding simulator .app as an artifact, check its
+    structure, CFBundleIdentifier and target architecture.
 
-3.  Выполнить xcrun simctl install \<UDID\> \<App.app\> и xcrun simctl
+3.  Run xcrun simctl install \<UDID\> \<App.app\> and xcrun simctl
     launch \<UDID\> \<BundleId\>.
 
-4.  Проверить процесс и crash report; сохранить screenshot,
-    simctl/launch logs, syslog/crash diagnostics. Один успешный launch
-    сам по себе не доказывает работоспособность UI.
+4.  Check the process and the crash report; save a screenshot,
+    simctl/launch logs, syslog/crash diagnostics. One successful launch
+    by itself does not prove that the UI works.
 
-5.  Shutdown/delete временный симулятор в always(); сохранять evidence
-    даже при ошибке.
+5.  Shutdown/delete the temporary simulator in always(); keep the evidence
+    even on error.
 
 xcrun simctl boot "\$UDID"  
 xcrun simctl bootstatus "\$UDID" -b  
@@ -136,138 +136,138 @@ xcrun simctl install "\$UDID" "path/to/App.app"
 xcrun simctl launch "\$UDID" "com.example.app"  
 xcrun simctl io "\$UDID" screenshot reports/ios/smoke.png
 
-# A7. UI E2E и диагностика: расширение исходного контракта
+# A7. UI E2E and diagnostics: extending the original contract
 
-Сохранить стэк NUnit + Appium + Allure из исходных разделов 5–8.
-Добавить iOS Appium XCUITest driver. Для MAUI и Avalonia применять общие
-сценарии/контракты тестовых IDs, но платформенные локаторы определять по
-реальному accessibility tree (AutomationId ≠ гарантированно
+Keep the NUnit + Appium + Allure stack from the original sections 5–8.
+Add the iOS Appium XCUITest driver. For MAUI and Avalonia apply shared
+scenarios/test ID contracts, but determine the platform locators from the
+real accessibility tree (AutomationId ≠ a guaranteed
 accessibility id).
 
-- Минимальные сценарии на каждое iOS приложение: boot+launch, главный
-  экран доступен, ввод/навигация, возврат/отмена, восстановление после
-  перезапуска. Сетевая генерация не является обязательной частью smoke;
-  для E2E использовать fixture/mock backend без платных API.
+- Minimal scenarios for each iOS app: boot+launch, the main
+  screen is available, input/navigation, back/cancel, recovery after
+  a restart. Network generation is not a mandatory part of the smoke;
+  for E2E use a fixture/mock backend without paid APIs.
 
-- Каждый тест: отдельная папка reports/ios/\<shell\>/\<Test.ID\>;
-  recording.mp4 (если screen recording поддерживается), screenshot.png
-  при ошибке, ui.xml/page-source, appium.log, simulator.log, TRX, Allure
+- Each test: a separate folder reports/ios/\<shell\>/\<Test.ID\>;
+  recording.mp4 (if screen recording is supported), screenshot.png
+  on error, ui.xml/page-source, appium.log, simulator.log, TRX, Allure
   attachments.
 
-- Для iOS видеозаписи использовать поддерживаемый Appium/XCUITest
-  механизм либо xcrun simctl io recordVideo с корректным завершением;
-  различия .mp4/.mov нормализовать при необходимости. Проверять, что
-  видео не пустое и воспроизводится.
+- For iOS video recording use a supported Appium/XCUITest
+  mechanism or xcrun simctl io recordVideo with a proper stop;
+  normalize the .mp4/.mov differences if needed. Check that
+  the video is not empty and plays.
 
-- Не запускать одновременно несколько E2E с одним simulator:
-  последовательное выполнение и отдельные UDID / изоляция данных. Повтор
-  тестов не должен скрывать flaky результат.
+- Do not run several E2E at once with one simulator:
+  sequential execution and separate UDIDs / data isolation. Retrying
+  tests must not hide a flaky result.
 
-- macOS UI E2E: сначала проверить доступность GUI/Accessibility на
-  hosted runner, затем выбрать Appium Mac2 / подходящий инструмент. Если
-  окружение недоступно — инфраструктурная ошибка с evidence, не green
+- macOS UI E2E: first check the availability of GUI/Accessibility on
+  the hosted runner, then choose Appium Mac2 / a suitable tool. If the
+  environment is unavailable — an infrastructure error with evidence, not a green
   test.
 
-# A8. Артефакты и отчёты
+# A8. Artifacts and reports
 
-| Artifact                          | Что хранит                                                        |
+| Artifact                          | What it keeps                                                     |
 |-----------------------------------|-------------------------------------------------------------------|
 | apple-preflight                   | Toolchain inventory, simulator inventory, diagnostic logs         |
-| maui-ios-sim / avalonia-ios-sim   | Неподписанные simulator .app (в ZIP или tar для сохранения прав)  |
-| maui-maccatalyst / avalonia-macos | Unsigned .app (только CI/диагностика)                             |
+| maui-ios-sim / avalonia-ios-sim   | Unsigned simulator .app (in a ZIP or tar to keep permissions)     |
+| maui-maccatalyst / avalonia-macos | Unsigned .app (CI/diagnostics only)                               |
 | ios-e2e-maui / ios-e2e-avalonia   | TRX, per-test video, PNG, XML, crash/console logs, Allure results |
 | macos-e2e-\*                      | Preflight evidence, UI results where available                    |
-| apple-allure-html                 | Объединённый отчёт без смешивания платформенных labels            |
+| apple-allure-html                 | A merged report without mixing platform labels                    |
 
-Во всех test jobs: upload-artifact при if: always(), retention-days: 14
-(как в исходной спецификации). Report job — always() и устойчивость к
-отсутствующим artifacts. Не загружать пользовательские токены, приватные
-изображения, passwords и API keys в screenshots, XML, видео или логи.
+In all test jobs: upload-artifact with if: always(), retention-days: 14
+(as in the original specification). The report job — always() and resilience to
+missing artifacts. Do not upload user tokens, private
+images, passwords and API keys in screenshots, XML, videos or logs.
 
-# A9. Тестовые данные и условия безопасности
+# A9. Test data and safety conditions
 
-- Строго офлайновые smoke/головные сценарии или отдельный mock/fake
-  provider. Приложение не должно требовать OpenRouter/fal.ai/Together
-  ключей ради успешного CI-теста.
+- Strictly offline smoke/head scenarios or a separate mock/fake
+  provider. The app must not require OpenRouter/fal.ai/Together
+  keys for a successful CI test.
 
-- Если всё же понадобятся реальные сервисы — отдельная будущая
-  спецификация, isolated secrets + budget/quotas; в настоящем этапе
-  запрещать реальные платные запросы.
+- If real services are needed after all — a separate future
+  specification, isolated secrets + budget/quotas; at this stage
+  forbid real paid requests.
 
-- Уникальные Bundle IDs для MAUI и Avalonia iOS и для двух macOS
-  оболочек; независимые каталоги данных и настройки. Идентификаторы
-  выбрать согласованно с текущим Android coexistence.
+- Unique Bundle IDs for MAUI and Avalonia iOS and for the two macOS
+  heads; independent data folders and settings. Choose the identifiers
+  consistently with the current Android coexistence.
 
-- Не делать unattended release, signing или notarization этим workflow.
-  Existing release workflow оставить без изменений, кроме возможной
-  передачи artifact при явно согласованном расширении.
+- Do not do an unattended release, signing or notarization with this workflow.
+  Leave the existing release workflow unchanged, except a possible
+  hand-over of an artifact with an explicitly agreed extension.
 
-# A10. План внедрения без конфликтов с текущей работой
+# A10. An implementation plan without conflicts with the current work
 
-6.  P0: снять инвентаризацию проектов/TFM и инструментов; собрать
-    preflight на hosted macOS. Результат: таблица поддерживаемых
-    комбинаций Xcode/.NET.
+6.  P0: take an inventory of projects/TFMs and tools; build the
+    preflight on hosted macOS. The result: a table of supported
+    Xcode/.NET combinations.
 
-7.  P1: зелёные unit-tests + Avalonia.Headless на Ubuntu; добавить общие
-    UI TestIds, сохранив IDs из исходной спецификации при их наличии.
+7.  P1: green unit-tests + Avalonia.Headless on Ubuntu; add shared
+    UI TestIds, keeping the IDs from the original specification if they exist.
 
-8.  P2: четыре Apple compile jobs. Для Avalonia iOS создать минимальный
-    host, подключающий существующую UI/DI структуру; доказать
-    компиляцию.
+8.  P2: four Apple compile jobs. For Avalonia iOS create a minimal
+    host that connects the existing UI/DI structure; prove the
+    compilation.
 
-9.  P3: iOS smoke через simctl для обоих apps; сохранять
-    screenshot/launch/crash evidence; стабильность 3 последовательных
-    прогонов.
+9.  P3: iOS smoke through simctl for both apps; keep the
+    screenshot/launch/crash evidence; the stability of 3 consecutive
+    runs.
 
-10. P4: Appium XCUITest, NUnit, video + Allure для обоих iOS apps, 3–5
-    стабильных сценариев; затем PR gating.
+10. P4: Appium XCUITest, NUnit, video + Allure for both iOS apps, 3–5
+    stable scenarios; then PR gating.
 
-11. P5: macOS GUI preflight, запуск/скриншот двух .app, по результату —
-    GUI automation. Проблемы hosted runner оформить как blocker и не
-    обещать green E2E.
+11. P5: the macOS GUI preflight, launching/a screenshot of the two .app bundles, depending on the result —
+    GUI automation. Problems of the hosted runner are recorded as a blocker, and a
+    green E2E is not promised.
 
 # A11. Acceptance criteria
 
-- [ ] Windows/Android из исходного документа продолжают работать без
-  регрессии.
+- [ ] Windows/Android from the original document keep working without
+  regression.
 
-- [ ] В Actions нет Apple сертификатов, профилей, Apple ID, ключей и
-  других новых обязательных secrets.
+- [ ] Actions has no Apple certificates, profiles, Apple ID, keys and
+  other new mandatory secrets.
 
-- [ ] Каждая из четырёх платформ имеет отдельный compile status;
-  неготовый Avalonia iOS host не маскируется успехом.
+- [ ] Each of the four platforms has a separate compile status;
+  an unfinished Avalonia iOS host is not masked as a success.
 
-- [ ] При несовместимости Xcode/.NET возникает явный blocker с версиями,
-  а не ложный pass.
+- [ ] On an Xcode/.NET incompatibility an explicit blocker with the versions appears,
+  not a false pass.
 
-- [ ] Оба iOS приложения устанавливаются и открываются в iOS Simulator;
-  evidence сохраняется после failed job.
+- [ ] Both iOS apps install and open in the iOS Simulator;
+  evidence is kept after a failed job.
 
-- [ ] Unit + Avalonia Headless проходят на PR; iOS E2E предоставляет
-  NUnit/TRX/Allure, видео, UI tree и скриншоты.
+- [ ] Unit + Avalonia Headless pass on a PR; iOS E2E provides
+  NUnit/TRX/Allure, video, the UI tree and screenshots.
 
-- [ ] На macOS интерактивный UI-тест не считается успешным до
-  прохождения preflight.
+- [ ] On macOS an interactive UI test is not counted as successful until
+  the preflight passes.
 
-- [ ] Отчёты и видео не содержат реальных токенов или пользовательских
-  секретов.
+- [ ] Reports and videos contain no real tokens or user
+  secrets.
 
-- [ ] Нет публикации IPA/DMG как готового релиза: только неподписанные
+- [ ] No IPA/DMG is published as a ready release: only unsigned
   CI artifacts.
 
-# A12. Зависимости, открытые решения и референсы
+# A12. Dependencies, open decisions and references
 
-До реализации определить актуальные csproj пути, версию SDK в CI,
-валидные macOS runners/Xcode, совместимый iOS Simulator runtime, Bundle
-IDs и уровень тестирования Catalyst. Эти параметры нельзя достоверно
-назначить только по исходной Windows/Android спецификации.
+Before implementation, determine the current csproj paths, the SDK version in CI,
+valid macOS runners/Xcode, a compatible iOS Simulator runtime, Bundle
+IDs and the level of Catalyst testing. These parameters cannot be reliably
+assigned from the original Windows/Android specification alone.
 
-Официальные ориентиры:
+Official references:
 https://docs.github.com/en/actions/using-github-hosted-runners/using-github-hosted-runners
 ; https://learn.microsoft.com/en-us/dotnet/maui/ ;
 https://docs.avaloniaui.net/docs/testing/setting-up-the-headless-platform
 ; https://appium.io/docs/en/latest/ ;
 https://developer.apple.com/documentation/xcode/running-your-app-in-simulator-or-on-a-device
 
-Связь с исходным документом: A3 ↔ §2, §4, §9; A7–A8 ↔ §5–8; A11 ↔ §10;
-A9–A10 ↔ §11. Это приложение не переписывает исходную спецификацию.
+The link to the original document: A3 ↔ §2, §4, §9; A7–A8 ↔ §5–8; A11 ↔ §10;
+A9–A10 ↔ §11. This addendum does not rewrite the original specification.
