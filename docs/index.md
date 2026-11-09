@@ -14,5 +14,5 @@
 | knowledge/apple-ci.md | проверенные версии Xcode/.NET и сборки Apple в GitHub Actions | перед Apple-сборками и iOS E2E |
 | design/ | рекомендации платформ и токены дизайна (`implementation.md`, `tokens.json`) | перед вёрсткой |
 | decisions/ | ADR и шаблон `_template.md` | при спорных изменениях |
-| specs/ | спецификации функций (`image-client.md`, `chat-sessions.md`, `media-generation.md`, `ui-e2e.md`, `apple-ci-e2e.md`) и шаблон `_template.md` | при изменении поведения |
+| specs/ | спецификации функций (`image-client.md`, `chat-sessions.md`, `media-generation.md`, `ui-e2e.md`, `apple-ci-e2e.md`, `acceptance-scenarios.md`) и шаблон `_template.md` | при изменении поведения |
 | log/ | отчёты аудита и шаблон `_template.md` | при поиске результатов аудита |
