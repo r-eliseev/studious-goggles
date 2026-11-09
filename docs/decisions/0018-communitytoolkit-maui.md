@@ -1,19 +1,19 @@
-# 0018. CommunityToolkit.Maui в MAUI-оболочке
+# 0018. CommunityToolkit.Maui in the MAUI head
 
-Статус: принято
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: 2026-10-29
+Status: accepted
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: 2026-10-29
 
-## Контекст
-Пакет `CommunityToolkit.Maui` подключён в `ImageGen.Maui` с начала скелета (задача 011, 2026-10-27; версия в `ImageGen/Directory.Packages.props`), но решения по нему не записано, хотя `docs/conventions.md` («Зависимости») требует ADR на каждый новый пакет. Аудит 2026-10-29 это отметил. Из пакета используются `IsNotNullConverter` и `TouchBehavior` (долгое нажатие и касание карточки); регистрация — `UseMauiCommunityToolkit()` в `MauiProgram`.
+## Context
+The `CommunityToolkit.Maui` package has been referenced in `ImageGen.Maui` since the start of the skeleton (task 011, 2026-10-27; the version is in `ImageGen/Directory.Packages.props`), but no decision about it was recorded, although `docs/conventions.md` ("Dependencies") requires an ADR for every new package. The audit of 2026-10-29 noted it. From the package we use `IsNotNullConverter` and `TouchBehavior` (long press and tap on a card); registration is `UseMauiCommunityToolkit()` in `MauiProgram`.
 
-## Решение
-Владелец (2026-10-29): оставить `CommunityToolkit.Maui` (лицензия MIT, проект .NET Foundation) и оформить это решение задним числом. Пакет используется только в `ImageGen.Maui`; общий код (`Core`, `Presentation`) на него не ссылается.
+## Decision
+The owner (2026-10-29): keep `CommunityToolkit.Maui` (MIT license, a .NET Foundation project) and record this decision retroactively. The package is used only in `ImageGen.Maui`; shared code (`Core`, `Presentation`) does not reference it.
 
-## Альтернативы
-- Свои конвертер и жест: немного кода, но `TouchBehavior` (долгое нажатие на всех платформах MAUI) писать заново дорого.
-- Удалить пакет: потребует переписать долгое нажатие карточки (задачи 069, 076).
+## Alternatives
+- Our own converter and gesture: a little code, but writing `TouchBehavior` (long press on all MAUI platforms) again is expensive.
+- Remove the package: would require rewriting the card long press (tasks 069, 076).
 
-## Последствия
-- Обновления пакета идут вместе с версиями MAUI (несовместимость проявляется ошибкой MCT001 без `UseMauiCommunityToolkit()`, `docs/knowledge/maui.md`).
-- Новые элементы из пакета можно брать без отдельного ADR, пока пакет остаётся в одной оболочке.
+## Consequences
+- Package updates go together with MAUI versions (an incompatibility shows up as error MCT001 without `UseMauiCommunityToolkit()`, `docs/knowledge/maui.md`).
+- New elements from the package may be used without a separate ADR while the package stays in one head.

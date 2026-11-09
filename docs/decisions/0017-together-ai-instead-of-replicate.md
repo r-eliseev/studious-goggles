@@ -1,21 +1,21 @@
-# 0017. Together AI вместо Replicate
+# 0017. Together AI instead of Replicate
 
-Статус: принято
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: 2026-10-29
+Status: accepted
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: 2026-10-29
 
-## Контекст
-ADR 0003 и целевая раскладка в `docs/architecture.md` называли третьим провайдером картинок Replicate. Задача 047 (исследование, `tasks/DONE.md`) сравнила замены: Together AI, Black Forest Labs, Stability AI, Ideogram. Рекомендация задачи — Together AI: `POST https://api.together.ai/v1/images/generations` с `Authorization: Bearer` в формате OpenAI, ответ `data[]` с `b64_json`, есть модели FLUX. Цены взяты только у агрегаторов и расходятся почти вдвое; тестового вызова с ключом не было.
+## Context
+ADR 0003 and the target layout in `docs/architecture.md` named Replicate as the third image provider. Task 047 (research, `tasks/DONE.md`) compared replacements: Together AI, Black Forest Labs, Stability AI, Ideogram. The task's recommendation was Together AI: `POST https://api.together.ai/v1/images/generations` with `Authorization: Bearer` in the OpenAI format, the answer `data[]` with `b64_json`, FLUX models available. Prices were taken only from aggregators and differ almost twofold; there was no test call with a key.
 
-## Решение
-Владелец (2026-10-29): третий провайдер — Together AI вместо Replicate. Подключается как OpenAI-совместимый провайдер в `providers.json` (ADR 0009, клиент `OpenAiCompatibleClient`, ответ `b64_json`), без отдельного клиента. Контракт ADR 0003 не меняется; эта запись уточняет только выбор провайдера.
+## Decision
+The owner (2026-10-29): the third provider is Together AI instead of Replicate. It is connected as an OpenAI-compatible provider in `providers.json` (ADR 0009, the `OpenAiCompatibleClient` client, the `b64_json` answer), without a separate client. The ADR 0003 contract does not change; this record only refines the choice of provider.
 
-## Альтернативы
-- Replicate: нужен отдельный клиент для асинхронных предсказаний.
-- Black Forest Labs, Stability AI: свои эндпоинты и схемы, отдельные клиенты; формы ответов не проверены.
-- Ideogram: ответ ссылкой с ограниченным сроком жизни, отдельный клиент.
+## Alternatives
+- Replicate: needs a separate client for asynchronous predictions.
+- Black Forest Labs, Stability AI: their own endpoints and schemas, separate clients; response shapes not verified.
+- Ideogram: answers with a link with a limited lifetime, a separate client.
 
-## Последствия
-- Новый клиент не нужен; задача на подключение — запись провайдера в конфиге, проверка цены на `together.ai/pricing` и один тестовый вызов с ключом владельца.
-- Цена и форма ответа на живом сервисе не проверены (`docs/status.md`, «Открытые вопросы»).
-- Together отвечает синхронно, как OpenRouter: в очереди fal (ADR 0003) он не участвует.
+## Consequences
+- No new client is needed; the connection task is a provider entry in the config, a price check on `together.ai/pricing` and one test call with the owner's key.
+- The price and the response shape on the live service are not verified (`docs/status.md`, "Open questions").
+- Together answers synchronously, like OpenRouter: it does not take part in the fal queue (ADR 0003).

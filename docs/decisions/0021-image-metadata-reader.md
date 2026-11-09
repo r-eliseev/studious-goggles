@@ -1,19 +1,19 @@
-# 0021. MetadataExtractor для чтения размеров изображений
+# 0021. MetadataExtractor for reading image dimensions
 
-Статус: принято
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: 2026-10-30
+Status: accepted
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: 2026-10-30
 
-## Контекст
-Карточке генерации нужны фактические пиксельные размеры сохранённого файла для PNG, JPEG, WebP и GIF. Размеры должны читаться без полной декодировки изображения, а слой Presentation не должен зависеть от форматов файлов.
+## Context
+The generation card needs the actual pixel dimensions of the saved file for PNG, JPEG, WebP and GIF. The dimensions must be read without fully decoding the image, and the Presentation layer must not depend on file formats.
 
-## Решение
-Использовать MetadataExtractor 2.9.3 только в `ImageGen.Data` для чтения заголовков форматов PNG, JPEG, WebP и GIF. Зафиксировать XmpCore 6.1.10.1 как его транзитивную зависимость и распространять Apache-2.0 и BSD 3-Clause notices обеими оболочками. Результат возвращать как `ImageDimensions` через контракт `IImageFileStore`; не сохранять производные размеры в БД.
+## Decision
+Use MetadataExtractor 2.9.3 only in `ImageGen.Data` to read the headers of PNG, JPEG, WebP and GIF. Pin XmpCore 6.1.10.1 as its transitive dependency and ship the Apache-2.0 and BSD 3-Clause notices with both heads. Return the result as `ImageDimensions` through the `IImageFileStore` contract; do not store derived dimensions in the DB.
 
-## Альтернативы
-- Ручной разбор заголовков: меньше зависимостей, но больше собственного форматного кода и риска неверно обработать варианты форматов.
-- ImageSharp: не выбран из-за Split License.
-- UI-декодеры: связывают чтение метаданных с платформой и требуют декодирования изображения.
+## Alternatives
+- Parsing headers by hand: fewer dependencies, but more of our own format code and a risk of mishandling format variants.
+- ImageSharp: not chosen because of its Split License.
+- UI decoders: tie metadata reading to the platform and require decoding the image.
 
-## Последствия
-Data получает поддерживаемую библиотеку разбора метаданных; для двух оболочек нужно распространять лицензии MetadataExtractor и XmpCore. Metadata I/O выполняется ограниченно и в фоне. EXIF orientation не применяется: показываются записанные в файле размеры растра.
+## Consequences
+Data gets a maintained metadata parsing library; the MetadataExtractor and XmpCore licenses must be shipped with both heads. Metadata I/O runs bounded and in the background. EXIF orientation is not applied: the raster dimensions recorded in the file are shown.
