@@ -1,25 +1,25 @@
-# Web-хост в Docker
+# The Web host in Docker
 
-Корневой `Dockerfile` собирает Vue-клиент и публикует ASP.NET Core Web-хост в отдельных build stages. Итоговый образ содержит опубликованное приложение, runtime .NET и health-check утилиту; исходники, Node.js и .NET SDK остаются в build stages. Контейнер работает как непривилегированный пользователь `app` (`APP_UID` из официального .NET image).
+The root `Dockerfile` builds the Vue client and publishes the ASP.NET Core Web host in separate build stages. The final image contains the published app, the .NET runtime and a health-check utility; the sources, Node.js and the .NET SDK stay in the build stages. The container runs as the unprivileged user `app` (`APP_UID` from the official .NET image).
 
-## Запуск
+## Running
 
-Нужны Docker Engine с Compose v2 и свободный локальный порт 8080. В корне репозитория задайте пароль и запустите Compose:
+You need Docker Engine with Compose v2 and a free local port 8080. At the repository root set a password and start Compose:
 
 ```sh
-export IMAGEGEN_WEB_PASSWORD='длинный-уникальный-пароль'
+export IMAGEGEN_WEB_PASSWORD='a-long-unique-password'
 docker compose up -d --build
 ```
 
-Пароль обязателен, в образ не встраивается и не имеет значения по умолчанию. Compose публикует приложение только на `127.0.0.1:8080`; для доступа из локальной сети измените привязку порта осознанно и настройте TLS и сетевую защиту перед внешней публикацией. Health endpoint: `http://127.0.0.1:8080/api/health`.
+The password is mandatory, is not built into the image and has no default value. Compose publishes the app only on `127.0.0.1:8080`; to give access from the local network, change the port binding deliberately and set up TLS and network protection before publishing externally. Health endpoint: `http://127.0.0.1:8080/api/health`.
 
-Для остановки выполните `docker compose down`. Эта команда сохраняет именованный том `imagegen-data`. Не используйте `docker compose down --volumes`, если данные требуется сохранить. Для обновления образа пересоберите сервис: `docker compose up -d --build`.
+To stop, run `docker compose down`. This command keeps the named volume `imagegen-data`. Do not use `docker compose down --volumes` if the data must be kept. To update the image, rebuild the service: `docker compose up -d --build`.
 
-## Постоянные данные и резервная копия
+## Persistent data and backups
 
-Все данные Web-хоста хранятся под `/data` в томе `imagegen-data`: SQLite база, изображения, зашифрованные ключи провайдеров и ключи ASP.NET Data Protection. Поэтому тот же том нужен для расшифровки сохранённых ключей и действующих auth cookies после пересоздания контейнера. Удаление тома без резервной копии необратимо удаляет эти данные.
+All data of the Web host is stored under `/data` in the `imagegen-data` volume: the SQLite database, images, encrypted provider keys and the ASP.NET Data Protection keys. So the same volume is needed to decrypt the saved keys and the valid auth cookies after the container is recreated. Deleting the volume without a backup irreversibly deletes this data.
 
-Для согласованной копии остановите сервис, сохраните том архивом и затем запустите его снова:
+For a consistent copy, stop the service, save the volume as an archive and then start it again:
 
 ```sh
 docker compose down
@@ -30,7 +30,7 @@ docker run --rm \
 docker compose up -d
 ```
 
-Храните архив как секрет: он включает базу, изображения и материалы для расшифровки ключей. Для восстановления том должен быть пустым либо заранее очищенным, а архив — проверенным:
+Keep the archive as a secret: it includes the database, the images and the material for decrypting the keys. To restore, the volume must be empty or cleaned beforehand, and the archive verified:
 
 ```sh
 docker run --rm \
@@ -39,8 +39,8 @@ docker run --rm \
   alpine:3.22 tar -xzf /backup/imagegen-data.tar.gz -C /data
 ```
 
-Compose использует именованный том, который Docker создаёт с правами, совместимыми с владельцем каталога `/data` в образе. Для bind mount заранее создайте каталог и передайте его UID, используемый образом (`docker run --rm imagegen-imagegen id app` после сборки); не выдавайте каталогу права `777`.
+Compose uses a named volume that Docker creates with permissions compatible with the owner of the `/data` folder in the image. For a bind mount, create the folder beforehand and give it the UID used by the image (`docker run --rm imagegen-imagegen id app` after the build); do not give the folder `777` permissions.
 
-## Смена пароля
+## Changing the password
 
-Измените `IMAGEGEN_WEB_PASSWORD` в окружении, остановите и пересоздайте контейнер (`docker compose down && docker compose up -d`). Новый пароль применяется при старте, старый перестаёт проходить проверку входа. Существующие auth cookies криптографически защищены сохраняемым Data Protection key ring и могут оставаться действительными до истечения срока; при необходимости завершите их сессию удалением тома только если готовы потерять все данные. Не удаляйте key ring отдельно от базы и сохранённых секретов.
+Change `IMAGEGEN_WEB_PASSWORD` in the environment, stop and recreate the container (`docker compose down && docker compose up -d`). The new password applies at startup, the old one stops passing the login check. Existing auth cookies are cryptographically protected by the persistent Data Protection key ring and may stay valid until they expire; if needed, end their session by deleting the volume only if you are ready to lose all data. Do not delete the key ring separately from the database and the saved secrets.

@@ -2,7 +2,7 @@
 
 ## Android
 
-`ImageGen/ImageGen.Avalonia.Android` — Android-оболочка для общих страниц `ImageGen.Avalonia` и моделей `ImageGen.Presentation`. Целевая платформа — `net10.0-android` (SDK API 36), минимальная версия Android API 23. Для сборки на Linux нужны Android SDK и .NET workload `android`:
+`ImageGen/ImageGen.Avalonia.Android` is the Android head for the shared `ImageGen.Avalonia` pages and the `ImageGen.Presentation` models. The target platform is `net10.0-android` (SDK API 36), the minimum Android version is API 23. Building on Linux needs the Android SDK and the .NET `android` workload:
 
 ```bash
 dotnet workload install android
@@ -10,14 +10,14 @@ dotnet build ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj
 dotnet build ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj -c Release
 ```
 
-Идентификатор пакета — `com.eliseev.imagegen.avalonia`, название — «Omnilite Avalonia». Навигацию показывает `Views/MainView`: `PageHost` для страниц и `OverlayHost` для диалогов, просмотра и сравнения. Android-композиция вызывает `AppServices.CreateShared` и регистрирует overlay-службы; страницы и ресурсы Avalonia подключены исходниками из desktop-проекта, отдельная desktop-оболочка и полноэкранный контроллер не включаются.
+The package id is `com.eliseev.imagegen.avalonia`, the name "Omnilite Avalonia". Navigation is shown by `Views/MainView`: `PageHost` for pages and `OverlayHost` for dialogs, viewing and comparison. The Android composition calls `AppServices.CreateShared` and registers the overlay services; the Avalonia pages and resources are included as sources from the desktop project, the separate desktop head and the fullscreen controller are not included.
 
-Данные хранятся в `<FilesDir>/ImageGen`. Секреты зашифрованы AES-256-GCM ключом Android Keystore; IV хранится перед шифротекстом, запись идёт во временный файл с атомарным переименованием. Папка журналов — `<FilesDir>/ImageGen/logs`; формат, retention и уровни общие с остальными оболочками. Ручная проверка установки и навигации на устройстве описана задачей 198 и пока не выполнена.
+Data is stored in `<FilesDir>/ImageGen`. Secrets are encrypted with AES-256-GCM using an Android Keystore key; the IV is stored before the ciphertext, writing goes to a temporary file with an atomic rename. The log folder is `<FilesDir>/ImageGen/logs`; the format, retention and levels are shared with the other heads. A manual check of installation and navigation on a device is described by task 198 and has not been done yet.
 
-Проверка VPS от 2026-11-06: Debug build и Release build прошли без предупреждений и ошибок. Подписанный Release APK размером 60,556,659 байт (примерно 57.7 MiB) собран с локальным Android debug certificate; он не предназначен для обновления или публикации поверх официального релиза. Сборка использовала API 36, min API 23. Запуск на устройстве не проверялся.
+The VPS check of 2026-11-06: the Debug build and the Release build passed without warnings and errors. A signed Release APK of 60,556,659 bytes (about 57.7 MiB) was built with a local Android debug certificate; it is not meant for updating or publishing over the official release. The build used API 36, min API 23. Launching on a device was not checked.
 
 ## iOS
 
-`ImageGen/ImageGen.Avalonia.iOS` — iOS-голова для симулятора на `net10.0-ios`, минимальная версия iOS 15. Точка входа использует `UIApplication.Main` и `AvaloniaAppDelegate<MobileApp>`; `MobileApp` создаёт `MainView` как single-view lifetime и использует общий UI из `ImageGen.Avalonia`.
+`ImageGen/ImageGen.Avalonia.iOS` is the iOS head for the simulator on `net10.0-ios`, minimum iOS 15. The entry point uses `UIApplication.Main` and `AvaloniaAppDelegate<MobileApp>`; `MobileApp` creates `MainView` as a single-view lifetime and uses the shared UI from `ImageGen.Avalonia`.
 
-Данные хранятся в приватной папке приложения `LocalApplicationData/ImageGen`, ключи — в Keychain с доступностью после первой разблокировки устройства. Сохранение изображения использует системный диалог Avalonia, логи отправляются через системный лист действий. Открытие папок и воспроизведение видео на iOS не поддерживаются. Сборка, форматирование и запуск в симуляторе выполняются workflow `apple-ci.yml`; распространение iOS-приложения не настроено.
+Data is stored in the app's private folder `LocalApplicationData/ImageGen`, keys in Keychain with availability after the first device unlock. Saving an image uses the Avalonia system dialog, logs are sent through the system share sheet. Opening folders and playing video are not supported on iOS. The build, formatting and launch in the simulator are done by the `apple-ci.yml` workflow; distribution of the iOS app is not set up.

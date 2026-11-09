@@ -2,18 +2,18 @@
 
 ## Preflight 244
 
-[Успешный прогон 42369719262](https://github.com/r-eliseev/studious-goggles/actions/runs/42369719262), ветка PR #85, job `apple-preflight` — 5 мин 9 с. Runner `macos-26`, архитектура `arm64`, macOS 26.7.2 (build 25G332), Xcode 26.6 (17F113), .NET SDK 10.0.403. Доступны iOS Simulator runtimes 26.2, 26.4 и 26.5.
+[Successful run 42369719262](https://github.com/r-eliseev/studious-goggles/actions/runs/42369719262), the PR #85 branch, job `apple-preflight` — 5 min 9 s. Runner `macos-26`, architecture `arm64`, macOS 26.7.2 (build 25G332), Xcode 26.6 (17F113), .NET SDK 10.0.403. iOS Simulator runtimes 26.2, 26.4 and 26.5 are available.
 
-| Вариант | SDK и workload | MAUI iOS Simulator | MAUI Mac Catalyst | Время |
+| Option | SDK and workload | MAUI iOS Simulator | MAUI Mac Catalyst | Time |
 |---|---|---|---|---:|
-| По умолчанию | .NET SDK 10.0.403, `dotnet workload install maui` (workload manifests 10.0.400) | `blocked`: workload поставил iOS 27.1.10018, требуется Xcode 27.1 | `blocked`: workload поставил Catalyst 27.0.10742, требуется Xcode 27.1 | 85 с |
-| Совместимый набор | SDK 10.0.302; release `dotnet-10.0.1xx-xcode26.6-10301`; workload set `10.0.302.0`; iOS/Catalyst SDK 26.5.10301 | Сборка успешна, 0 warnings/errors | Сборка успешна, 0 warnings/errors | 158 с |
+| Default | .NET SDK 10.0.403, `dotnet workload install maui` (workload manifests 10.0.400) | `blocked`: the workload installed iOS 27.1.10018, Xcode 27.1 is required | `blocked`: the workload installed Catalyst 27.0.10742, Xcode 27.1 is required | 85 s |
+| Compatible set | SDK 10.0.302; release `dotnet-10.0.1xx-xcode26.6-10301`; workload set `10.0.302.0`; iOS/Catalyst SDK 26.5.10301 | Build succeeds, 0 warnings/errors | Build succeeds, 0 warnings/errors | 158 s |
 
-Для pinned-сборок `xcode-select` должен указывать прямо на `/Applications/Xcode_26.6.app/Contents/Developer`. Выбор symlink `/Applications/Xcode.app/Contents/Developer` привёл к тому, что `xcrun` не нашёл `actool`; после выбора конкретной установленной версии обе сборки прошли. Workflow записывает полный инвентарь, вывод попыток, последние 80 строк каждой попытки и simulator device types/runtimes/devices в артефакт `apple-preflight` (14 дней).
+For pinned builds `xcode-select` must point directly to `/Applications/Xcode_26.6.app/Contents/Developer`. Selecting the symlink `/Applications/Xcode.app/Contents/Developer` made `xcrun` fail to find `actool`; after selecting the specific installed version both builds passed. The workflow writes the full inventory, the output of the attempts, the last 80 lines of each attempt and the simulator device types/runtimes/devices into the `apple-preflight` artifact (14 days).
 
-## Раздельные сборки 245
+## Separate builds 245
 
-Первый раздельный workflow [42371375200](https://github.com/r-eliseev/studious-goggles/actions/runs/42371375200) подтвердил MAUI iOS Simulator (артефакт `maui-ios-sim`, 12:12:29–12:15:25 UTC) и Avalonia macOS `.app` (12:11:53–12:12:26 UTC). MAUI Mac Catalyst собрался без предупреждений, но упаковочный шаг выбрал неверный `Info.plist` (12:11:47–12:13:56 UTC); Avalonia iOS выявила ошибки C# и XAML, исправления ожидают повторной проверки. Успех общего workflow не означает успех каждой платформы: смотрите отдельные jobs.
+The first separate workflow [42371375200](https://github.com/r-eliseev/studious-goggles/actions/runs/42371375200) confirmed MAUI iOS Simulator (artifact `maui-ios-sim`, 12:12:29–12:15:25 UTC) and the Avalonia macOS `.app` (12:11:53–12:12:26 UTC). MAUI Mac Catalyst built without warnings, but the packaging step chose the wrong `Info.plist` (12:11:47–12:13:56 UTC); Avalonia iOS revealed C# and XAML errors, the fixes wait for a repeated check. The success of the whole workflow does not mean the success of each platform: look at the separate jobs.
 
 ### Avalonia iOS Simulator — ILLink
 
@@ -31,11 +31,11 @@ The same run confirmed `desktop-metrics.json` reports a nonuniform ratio of `0.9
 
 Run [42392573546](https://github.com/r-eliseev/studious-goggles/actions/runs/42392573546) tested both apps on the installed iOS 26.4 runtime as well as the default iOS 26.5 runtime. Both versions produced the same `dyld_sim` / `CODESIGNING: Invalid Page` failure, so changing only the runtime version is not a fix. A similar open report exists for .NET MAUI on Xcode 26.5/macOS 26.5: [dotnet/maui#35792](https://github.com/dotnet/maui/issues/35792). The first Xcode 26.4 toolchain comparison selected an incomplete `Xcode_26.4.app` alias whose macOS SDK is missing; the workflow now selects the installed `Xcode_26.4.1.app` explicitly. A matching .NET 10.0.203 build/smoke comparison on iOS 26.4 failed because the SDK did not find a signing identity. The workflow now explicitly selects the ad-hoc identity `-`; the run will test SDK-generated signatures without rewriting them after build.
 
-## Avalonia iOS в симуляторе: что мешало запуску (2026-11-07)
+## Avalonia iOS in the simulator: what prevented the launch (2026-11-07)
 
-- **`-p:TrimMode=copy` ломает сопоставление `AppDelegate`.** Рантайм создаёт generic `Avalonia.iOS.AvaloniaAppDelegate\`1`: с регистратором по умолчанию это `MemberAccessException`, со статическим — «because the type is generic». При этом `_OBJC_CLASS_$_AppDelegate` в бинарнике есть (`llvm-nm`). Без `TrimMode=copy` всё работает. Предупреждения линкера, из-за которых флаг добавляли, не должны быть ошибками: `-p:ILLinkTreatWarningsAsErrors=false`, потому что `Directory.Build.props` включает `TreatWarningsAsErrors`.
-- **`AvaloniaXamlLoader.Load(this)` в `MainView` iOS-головы оставлял `PageHost` пустым.** Помогает `InitializeComponent()`.
-- **Ссылки на ресурсы из desktop-проекта.** `Link` должен включать `Fonts/`: `Assets/Fonts/%(RecursiveDir)%(Filename)%(Extension)`. `%(RecursiveDir)` — только часть пути после `**`.
-- **Причину падения показывает `launch.log` артефакта smoke.** При `SIGABRT` от необработанного управляемого исключения отчёта о падении нет (`crashReports=0`).
-- **Проверка процесса на 15 с ненадёжна.** MAUI на 15 с бывал ещё на заставке, поэтому решает проверка на 30 с.
-- **`launchctl list | grep -q` под `pipefail` ложно падает.** `grep -q` выходит на первом совпадении, `simctl spawn` получает `SIGPIPE` («signal 13: Broken pipe»), и проверка считает живое приложение мёртвым (run 42409893841). Вывод сначала сохраняется в переменную. Проверено run [42412288939](https://github.com/r-eliseev/studious-goggles/actions/runs/42412288939): оба iOS smoke зелёные.
+- **`-p:TrimMode=copy` breaks the `AppDelegate` mapping.** The runtime creates the generic `Avalonia.iOS.AvaloniaAppDelegate\`1`: with the default registrar this is a `MemberAccessException`, with the static one "because the type is generic". At the same time `_OBJC_CLASS_$_AppDelegate` is present in the binary (`llvm-nm`). Without `TrimMode=copy` everything works. The linker warnings for which the flag was added must not be errors: `-p:ILLinkTreatWarningsAsErrors=false`, because `Directory.Build.props` enables `TreatWarningsAsErrors`.
+- **`AvaloniaXamlLoader.Load(this)` in the iOS head's `MainView` left `PageHost` empty.** `InitializeComponent()` helps.
+- **Links to resources from the desktop project.** `Link` must include `Fonts/`: `Assets/Fonts/%(RecursiveDir)%(Filename)%(Extension)`. `%(RecursiveDir)` is only the part of the path after `**`.
+- **The cause of a crash is shown by the `launch.log` of the smoke artifact.** On a `SIGABRT` from an unhandled managed exception there is no crash report (`crashReports=0`).
+- **Checking the process at 15 s is unreliable.** MAUI was sometimes still on the splash screen at 15 s, so the check at 30 s decides.
+- **`launchctl list | grep -q` under `pipefail` fails falsely.** `grep -q` exits on the first match, `simctl spawn` gets `SIGPIPE` ("signal 13: Broken pipe"), and the check considers a live app dead (run 42409893841). The output is saved to a variable first. Verified by run [42412288939](https://github.com/r-eliseev/studious-goggles/actions/runs/42412288939): both iOS smokes are green.
