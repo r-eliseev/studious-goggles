@@ -93,6 +93,7 @@ jobs:
             -CA "$tls_dir/root-ca.pem" -CAkey "$tls_dir/root-ca.key" -CAcreateserial \
             -out "$tls_dir/mock-server.pem" -extfile "$tls_dir/mock-server.ext"
           password="$(openssl rand -hex 24)"
+          echo "::add-mask::$password"
           openssl pkcs12 -export -out "$tls_dir/mock-server.pfx" \
             -inkey "$tls_dir/mock-server.key" -in "$tls_dir/mock-server.pem" \
             -certfile "$tls_dir/root-ca.pem" -passout "pass:$password"
@@ -181,6 +182,7 @@ jobs:
           $certificateFile = Export-Certificate -Cert $certificate -FilePath $certificatePath
           Import-Certificate -FilePath $certificateFile.FullName -CertStoreLocation 'Cert:\LocalMachine\Root' | Out-Null
           $password = [guid]::NewGuid().ToString('N')
+          Write-Output "::add-mask::$password"
           $securePassword = ConvertTo-SecureString -String $password -Force -AsPlainText
           $pfxPath = Join-Path $tlsDirectory 'mock-server.pfx'
           Export-PfxCertificate -Cert $certificate -FilePath $pfxPath -Password $securePassword | Out-Null
