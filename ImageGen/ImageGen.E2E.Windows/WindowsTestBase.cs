@@ -182,8 +182,25 @@ public abstract class WindowsTestBase
     {
         var automation = _automation ?? throw new InvalidOperationException("The UI automation session is not available.");
         var element = Retry.WhileNull(
-                () => automation.GetDesktop().FindAllDescendants()
-                    .FirstOrDefault(candidate => candidate.Name.Contains(name, StringComparison.OrdinalIgnoreCase)),
+                () =>
+                {
+                    foreach (var candidate in automation.GetDesktop().FindAllDescendants())
+                    {
+                        try
+                        {
+                            if (candidate.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
+                            {
+                                return candidate;
+                            }
+                        }
+                        catch (FlaUI.Core.Exceptions.PropertyNotSupportedException)
+                        {
+                            // Desktop-wide searches also encounter UIA elements without a Name property.
+                        }
+                    }
+
+                    return null;
+                },
                 timeout ?? ElementTimeout,
                 TimeSpan.FromMilliseconds(250))
             .Result;
