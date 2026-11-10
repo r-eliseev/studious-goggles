@@ -40,9 +40,14 @@ public sealed class FirstRunTests : AndroidTestBase
     [Test]
     public void Rotate_KeepsKeyScreen()
     {
-        Driver.Orientation = ScreenOrientation.Landscape;
-        Driver.Orientation = ScreenOrientation.Portrait;
+        Assert.That(Find(TestIds.ApiKeyEntry).Displayed, Is.True);
 
+        Driver.Orientation = ScreenOrientation.Landscape;
+        Assert.That(Driver.Orientation, Is.EqualTo(ScreenOrientation.Landscape));
+        Assert.That(Find(TestIds.ApiKeyEntry).Displayed, Is.True);
+
+        Driver.Orientation = ScreenOrientation.Portrait;
+        Assert.That(Driver.Orientation, Is.EqualTo(ScreenOrientation.Portrait));
         Assert.That(Find(TestIds.ApiKeyEntry).Displayed, Is.True);
     }
 }

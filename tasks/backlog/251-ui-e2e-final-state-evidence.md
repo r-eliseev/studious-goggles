@@ -41,7 +41,7 @@ created: 2026-11-07
 3. Windows: то же для скриншота и паузы; шаг с вставкой ключа и вывод.
 4. Документация.
 
-Файлы: `ImageGen/ImageGen.E2E.Android/AndroidTestBase.cs`, `ImageGen/ImageGen.E2E.Android/TestArtifacts.cs`, `ImageGen/ImageGen.E2E.Android/FirstRunTests.cs`, `ImageGen/ImageGen.E2E.Windows/WindowsTestBase.cs`, `ImageGen/ImageGen.E2E.Windows/FirstRunTests.cs` (временный тест), `docs/knowledge/ui-e2e.md`, `docs/knowledge/maui.md`.
+Файлы: `ImageGen/ImageGen.E2E.Android/AndroidTestBase.cs`, `ImageGen/ImageGen.E2E.Android/TestArtifacts.cs`, `ImageGen/ImageGen.E2E.Android/FirstRunTests.cs`, `ImageGen/ImageGen.E2E.Windows/WindowsTestBase.cs`, `ImageGen/ImageGen.E2E.Windows/VideoRecorder.cs`, `ImageGen/ImageGen.E2E.Windows/VideoRecorderTests.cs`, `ImageGen/ImageGen.E2E.Windows/FirstRunTests.cs` (временный тест), `docs/knowledge/ui-e2e.md`, `docs/knowledge/maui.md`.
 
 ### Проверка
 ```
