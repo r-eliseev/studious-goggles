@@ -1,8 +1,8 @@
 ---
 id: 254
 status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-10T17:45:16Z
+assignee:
+claimed:
 created: 2026-11-09
 ---
 
@@ -55,6 +55,12 @@ bash scripts/check.sh
 - В «Отчёте»: какие сценарии зелёные, какие `@ignore` и с какими задачами, команды и результаты, отличия от плана. Статусы сценариев в `docs/specs/acceptance-scenarios.md` обнови.
 
 ## Отчёт
+
+- Added executable KEY-03 through KEY-09 scenarios using the real Avalonia pages and the scenario `AppWorld`. Invalid-key responses use resource-backed text; checks cover no secret persistence, masked keys, disconnected providers, replacement preserving the old key, restart persistence, and removal returning to first-run key entry.
+- KEY-02 is tagged `@ignore @bug-272`: the catalog expects the assistant model chooser for OpenRouter, but `ApiKeyPageModel` skips it when the provider already matches the default. Created task 272 with code/spec evidence and requested an owner decision; no behavior was changed.
+- Verification: Acceptance tests 13 passed, 1 expected skip (`@ignore @bug-272`); Acceptance formatting passed; `bash scripts/check.sh` passed.
+
+Status: done
 
 ## Комментарии
 
