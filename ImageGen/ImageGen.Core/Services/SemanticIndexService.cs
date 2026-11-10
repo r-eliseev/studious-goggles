@@ -87,16 +87,13 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
             return off;
         }
 
-        var currentSources = await _sources.ListSourcesAsync(cancellationToken).ConfigureAwait(false);
-        var totalSourceCount = await _sources.CountSourcesAsync(cancellationToken).ConfigureAwait(false);
-        var stored = await _embeddings.ListAllAsync(cancellationToken).ConfigureAwait(false);
-        var indexed = CountCurrent(currentSources, stored);
-        var status = new SemanticIndexStatus(
-            true,
-            indexed,
-            Math.Max(0, Math.Min(currentSources.Count, MaximumIndexedSources) - indexed),
-            SemanticIndexState.Ready,
-                WarningCode: totalSourceCount > MaximumIndexedSources ? "limit_reached" : null);
+        bool completedReadyAtSnapshotStart;
+        lock (_gate)
+        {
+            completedReadyAtSnapshotStart = _indexTask is { IsCompleted: true } && _status.State == SemanticIndexState.Ready;
+        }
+
+        var status = await GetReadyStatusAsync(cancellationToken).ConfigureAwait(false);
 
         if (!await _apiKeys.HasKeyAsync(EmbeddingProviderId, cancellationToken).ConfigureAwait(false))
         {
@@ -105,17 +102,22 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
             return status;
         }
 
+        var refreshCompletedStatus = false;
         lock (_gate)
         {
             if (_indexTask is { IsCompleted: false })
             {
                 status = status with { State = SemanticIndexState.Indexing };
             }
-            else if (_indexTask is { IsCompleted: true } && _status.State == SemanticIndexState.Ready)
+            else if (_status.State == SemanticIndexState.Unavailable
+                && _status.ErrorCode == "missing_key"
+                && !_paused)
             {
-                // The repository snapshot above may have been captured before indexing finished.
-                // Keep the completion status published by the index task instead of replacing it.
-                status = _status;
+                _hasStarted = false;
+                StartIndexingLocked();
+                status = _indexTask?.IsCompleted == true
+                    ? _status
+                    : status with { State = SemanticIndexState.Indexing, ErrorCode = null, ErrorDetail = null };
             }
             else if (!_hasStarted && !_paused)
             {
@@ -128,10 +130,59 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
             {
                 status = status with { State = _status.State, ErrorCode = _status.ErrorCode, ErrorDetail = _status.ErrorDetail };
             }
+            else if (_indexTask is { IsCompleted: true } && _status.State == SemanticIndexState.Ready)
+            {
+                if (!completedReadyAtSnapshotStart)
+                {
+                    refreshCompletedStatus = true;
+                }
+                else if (status.Pending > 0 && !_paused)
+                {
+                    _hasStarted = false;
+                    StartIndexingLocked();
+                    status = _indexTask?.IsCompleted == true ? _status : status with { State = SemanticIndexState.Indexing };
+                }
+            }
+        }
+
+        if (refreshCompletedStatus)
+        {
+            status = await GetReadyStatusAsync(cancellationToken).ConfigureAwait(false);
+            lock (_gate)
+            {
+                if (_indexTask is { IsCompleted: false })
+                {
+                    status = status with { State = SemanticIndexState.Indexing };
+                }
+                else if (_status.State is SemanticIndexState.Failed or SemanticIndexState.Unavailable)
+                {
+                    status = status with { State = _status.State, ErrorCode = _status.ErrorCode, ErrorDetail = _status.ErrorDetail };
+                }
+                else if (status.Pending > 0 && !_paused)
+                {
+                    _hasStarted = false;
+                    StartIndexingLocked();
+                    status = _indexTask?.IsCompleted == true ? _status : status with { State = SemanticIndexState.Indexing };
+                }
+            }
         }
 
         SetStatus(status);
         return status;
+    }
+
+    private async Task<SemanticIndexStatus> GetReadyStatusAsync(CancellationToken cancellationToken)
+    {
+        var sources = await _sources.ListSourcesAsync(cancellationToken).ConfigureAwait(false);
+        var totalSourceCount = await _sources.CountSourcesAsync(cancellationToken).ConfigureAwait(false);
+        var embeddings = await _embeddings.ListAllAsync(cancellationToken).ConfigureAwait(false);
+        var indexed = CountCurrent(sources, embeddings);
+        return new SemanticIndexStatus(
+            true,
+            indexed,
+            Math.Max(0, Math.Min(sources.Count, MaximumIndexedSources) - indexed),
+            SemanticIndexState.Ready,
+            WarningCode: totalSourceCount > MaximumIndexedSources ? "limit_reached" : null);
     }
 
     public async Task EnableAsync(CancellationToken cancellationToken)
