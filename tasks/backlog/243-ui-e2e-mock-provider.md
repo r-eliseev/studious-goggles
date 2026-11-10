@@ -68,10 +68,10 @@ created: 2026-11-07
 5. Windows-сценарий (если 241 зелёный).
 
 Файлы:
-- проект мока: `ImageGen/ImageGen.E2E.MockProvider/` (новый) и `ImageGen/ImageGen.E2E.MockProvider.Tests/` (новый);
+- проект мока: `ImageGen/ImageGen.E2E.MockProvider/` (новый) и `ImageGen/ImageGen.E2E.MockProvider.Tests/` (новый), включая их `.csproj`, endpoint code, embedded PNG resource, and WebApplicationFactory tests;
 - `ImageGen/ImageGen.E2E.Common/e2e-providers.json` (новый), `ImageGen/ImageGen.E2E.Common/TestIds.cs`;
-- тесты: `ImageGen/ImageGen.Core.Tests/Providers/E2eProvidersConfigTests.cs` (новый), `ImageGen/ImageGen.Presentation.Tests/E2E/AutomationIdsTests.cs`;
-- E2E: `ImageGen/ImageGen.E2E.Android/MockSessionTests.cs` (новый), `ImageGen/ImageGen.E2E.Windows/MockSessionTests.cs` (новый);
+- тесты: `ImageGen/ImageGen.Core.Tests/Providers/E2eProvidersConfigTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`, `ImageGen/ImageGen.Presentation.Tests/E2E/AutomationIdsTests.cs`;
+- E2E: `ImageGen/ImageGen.E2E.Android/MockSessionTests.cs` (новый), `ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj`, `ImageGen/ImageGen.E2E.Windows/MockSessionTests.cs` (новый);
 - при варианте с конфигом сети: `ImageGen/ImageGen.Maui/ImageGen.Maui.csproj`, `ImageGen/ImageGen.Maui/Platforms/Android/Resources/xml/e2e_network_security_config.xml` (новый);
 - `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml` (id карточки);
 - общие: `ImageGen/Directory.Packages.props`, `ImageGen/ImageGen.slnx`, `.github/workflows/ui-e2e.yml`;
@@ -98,6 +98,13 @@ bash scripts/check.sh
 
 ## Отчёт
 
+### 2026-11-10, codex-gpt6 (in progress)
+- Recorded the OpenAI-compatible request/response contract in `docs/knowledge/ui-e2e.md` and the HTTPS-only API 33 emulator choice in ADR 0029. Existing task 238 evidence confirms root/remount on that emulator; Android release trust and config delivery remain for integrated CI verification.
+- Added the minimal API mock with bearer-key validation, fixed chat/image model IDs, an echoed `generate_images` tool call, and an embedded 64×64 PNG. The four WebApplicationFactory tests failed first with 404 against the empty host, then passed after endpoint implementation.
+- Added and validated `e2e-providers.json` through `ProviderConfigLoader`; added `chat.run` and `chat.generation` automation IDs. The automation ID test failed first for the missing generation-card ID, then passed after the XAML change.
+- Added the Android first-run scenario and per-reset provider config installation. `dotnet build ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj --no-restore` and Android-target MAUI build succeeded (0 warnings/errors). The hosted emulator scenario has not run yet; this local environment has no emulator binary or connected device.
+- Passed targeted `dotnet test` for `E2eProvidersConfigTests` and `AutomationIdsTests`, all 4 mock endpoint tests, and `dotnet format --verify-no-changes` for the mock, mock tests, E2E Common, E2E Android, Core.Tests, Presentation.Tests and MAUI projects. CI is pending.
+
 ## Комментарии
 
 ### 2026-11-07, claude-audit
@@ -114,3 +121,6 @@ bash scripts/check.sh
 
 ### 2026-11-10, codex-gpt6
 Claim удалён при сверке статусов: подтверждённой ветки и текущей реализации задачи нет. Зависимости 240 и 241 уже закрыты, поэтому задача остаётся `approved` и свободна для взятия.
+
+### 2026-11-10, codex-gpt6
+Re-claimed after confirming tasks 240 and 241 are done in main. Source inspection confirms `GET /v1/models` key-check semantics, configured (not fetched) model catalogs, `POST /v1/chat/completions` tool-call fields, and `POST /v1/images/generations` base64 response. Selected the planned API 33 system-CA + HTTPS + `adb reverse` route; Release trust and app-data delivery still require the integrated CI check. The local executor has no Android emulator binary, so device behavior must be verified by GitHub Actions.

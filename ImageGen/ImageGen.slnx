@@ -6,6 +6,8 @@
   <Project Path="ImageGen.Data/ImageGen.Data.csproj" />
   <Project Path="ImageGen.Data.Tests/ImageGen.Data.Tests.csproj" />
   <Project Path="ImageGen.E2E.Common/ImageGen.E2E.Common.csproj" />
+  <Project Path="ImageGen.E2E.MockProvider/ImageGen.E2E.MockProvider.csproj" />
+  <Project Path="ImageGen.E2E.MockProvider.Tests/ImageGen.E2E.MockProvider.Tests.csproj" />
   <Project Path="ImageGen.E2E.Android/ImageGen.E2E.Android.csproj" />
   <Project Path="ImageGen.E2E.Windows/ImageGen.E2E.Windows.csproj" />
   <Project Path="ImageGen.Presentation/ImageGen.Presentation.csproj" />

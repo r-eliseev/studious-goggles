@@ -22,7 +22,7 @@
             <toolkit:IsNotNullConverter x:Key="IsNotNull" />
 
             <DataTemplate x:Key="GenerationCardTemplate" x:DataType="pm:GenerationItemViewModel">
-                                            <Border x:Name="CardRoot" WidthRequest="280" HorizontalOptions="Center" Margin="0" Padding="8"
+                                            <Border x:Name="CardRoot" AutomationId="chat.generation" WidthRequest="280" HorizontalOptions="Center" Margin="0" Padding="8"
                                                     Background="{DynamicResource IgCardBackgroundBrush}"
                                                     StrokeThickness="{DynamicResource IgCardBorderThickness}"
                                                     Stroke="{DynamicResource IgLineColor}"
@@ -318,7 +318,7 @@
 
                 <pmui:ChatItemTemplateSelector.RunTemplate>
                     <DataTemplate x:DataType="pm:RunItemViewModel">
-                        <Border StrokeThickness="{DynamicResource IgRunBorderThickness}"
+                        <Border AutomationId="chat.run" StrokeThickness="{DynamicResource IgRunBorderThickness}"
                                 Stroke="{DynamicResource IgLineColor}"
                                 Padding="{DynamicResource IgRunPadding}"
                                 Margin="0,4"

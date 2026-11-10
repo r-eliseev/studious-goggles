@@ -21,5 +21,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Update="allureConfig.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../ImageGen.E2E.Common/e2e-providers.json" Link="e2e-providers.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

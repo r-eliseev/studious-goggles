@@ -1,5 +1,15 @@
 # Knowledge about MAUI UI E2E
 
+## OpenAI-compatible mock contract (task 243)
+
+The route and payload shapes below are confirmed from `OpenAiCompatibleClient` and `OpenAiChatWire`:
+
+- `GET /v1/models` with `Authorization: Bearer <key>` checks the key. HTTP 200 is valid; 401/403 are invalid; other statuses are network errors. The response body is not read. Configured chat and image models come from `providers.json`; no model-list response is needed.
+- `POST /v1/chat/completions` sends `model`, `messages`, and, when present, `tools` plus `tool_choice: "auto"`. The mock response needs `choices[0].message.tool_calls[]` with `function.name` and JSON `function.arguments`; the assistant call is `generate_images` with a `prompt`.
+- `POST /v1/images/generations` sends `model`, `prompt`, `n: 1` and optional image-format/seed fields. The supported response is `data[0].b64_json`; URL-only responses are not supported.
+
+The E2E provider config is delivered after each `mobile: clearApp`, because clearing the app removes its private data. The API 33 `google_apis` emulator is already used by `ui-e2e.yml`; task 238 verified that `adb root` and `adb remount` work there. Task 243 uses a one-off root CA and a `localhost` server certificate, installs the CA into the API 33 system trust store, and connects the emulator to the host mock with `adb reverse`. The Release app's trust of this installed certificate and the private-file copy are verified by the integrated CI scenario, not by the local environment.
+
 ## Preflight 238
 
 The first two runs through `workflow_dispatch` on the branch `task/217-embedding-provider-model-name`, commit `fa3187de662ca9fa6a0e25a78466c746245fac79`: [run 42366477520](https://github.com/r-eliseev/studious-goggles/actions/runs/42366477520), [run 42366566469](https://github.com/r-eliseev/studious-goggles/actions/runs/42366566469). The Android APK and the unpackaged Windows app were built in both runs. The Windows preflight succeeded in both. The Android preflight of the second run installed Appium 3.9.0 and UiAutomator2 8.7.3, but doctor exited with code 1, because the emulator was not yet in PATH before emulator-runner. Fixed by running doctor after the emulator starts.

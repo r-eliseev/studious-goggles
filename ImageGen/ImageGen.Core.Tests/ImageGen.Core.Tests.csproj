@@ -19,5 +19,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Update="OpenRouter/Fixtures/video-models.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../ImageGen.E2E.Common/e2e-providers.json" Link="Fixtures/e2e-providers.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
