@@ -66,6 +66,8 @@ Running Avalonia needs a graphical session:
 dotnet run --project ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj
 ```
 
+Avalonia desktop video and audio playback uses LibVLC. On Debian or Ubuntu, install `libvlc5` and `vlc-plugin-base`; without the native library, the Play action is hidden. The Windows and macOS builds include their LibVLC runtime packages.
+
 ## Documentation and plans
 
 - [Architecture](docs/architecture.md), [product goals](docs/product.md) and [specification](docs/specs/image-client.md).
@@ -76,4 +78,4 @@ The Web API and the Vue client are part of the current source code. The Web host
 
 ## License
 
-[MIT](LICENSE).
+[MIT](LICENSE). Avalonia desktop playback also uses LibVLC and LibVLCSharp under LGPL-2.1-or-later; the license text is included in `ImageGen/ImageGen.Avalonia/Assets/Licenses/LibVLCSharp-LGPL-2.1-or-later.txt`. Windows packages include only the LibVLC runtime matching the package architecture.
