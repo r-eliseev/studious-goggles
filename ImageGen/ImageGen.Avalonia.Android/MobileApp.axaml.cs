@@ -94,7 +94,7 @@ public sealed class MobileApp : global::Avalonia.Application
         services.AddSingleton<IClipboardService>(new AvaloniaClipboardService(() => TopLevel.GetTopLevel(MainView.Current)));
         services.AddSingleton(new AvaloniaImageSaver(() => TopLevel.GetTopLevel(MainView.Current)));
         services.AddSingleton<IImageSaver, AndroidImageSaver>();
-        services.AddSingleton<IMediaPlayerService, UnsupportedMediaPlayerService>();
+        services.AddSingleton<IMediaPlayerService, AndroidMediaPlayerService>();
         services.AddSingleton<IVideoPosterService, UnsupportedVideoPosterService>();
         services.AddSingleton<IFolderLauncher, UnsupportedFolderLauncher>();
         services.AddSingleton<ILogSharer, AndroidLogSharer>();
