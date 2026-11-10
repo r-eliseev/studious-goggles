@@ -80,3 +80,6 @@ Please amend the approved plan to:
 - retain the current rule against changing product behavior to make an acceptance scenario pass. If investigation confirms a product/specification discrepancy, record it with `@ignore @bug-NNN` and a follow-up task.
 
 Until this plan update is approved, the implementation remains limited to SES-01, SES-06 and SES-09.
+
+### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan) — plan amendment approved
+The requested amendment is approved: `Support/FakePlatform.cs` may queue a `PromptAsync` result for SES-03/04; the acceptance harness and steps may be investigated and fixed so that SES-02 and SES-05 run through the UI/page-model flow. The rule stays: no product changes to make a scenario pass; a confirmed product/specification discrepancy becomes `@ignore @bug-NNN` and a new task. SES-11 is not part of this task (task 273, after 255).
