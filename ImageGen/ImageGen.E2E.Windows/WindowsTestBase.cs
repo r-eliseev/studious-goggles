@@ -188,7 +188,7 @@ public abstract class WindowsTestBase
                     {
                         try
                         {
-                            if (candidate.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
+                            if (candidate.Name?.Contains(name, StringComparison.OrdinalIgnoreCase) == true)
                             {
                                 return candidate;
                             }

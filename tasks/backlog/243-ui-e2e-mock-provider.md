@@ -112,6 +112,7 @@ bash scripts/check.sh
 - The next Windows run selected the provider and assistant model and reached the Sessions page. FlaUI did not expose the `sessions.new` AutomationId even though the button is visible, so the scenario now selects the button by its accessible name (`New session`) through the desktop-level lookup. The next CI run will validate the rest of the flow.
 - The latest Android run installed the system CA, connected to the HTTPS mock, and passed the existing first-run tests; the new scenario failed because the native Picker row text is `E2E Mock (e2e-mock)`, not exactly `E2E Mock`. Changed the locator to match the visible prefix. Windows will use the same PR's updated button-name lookup.
 - The latest Windows run reached the session page but the desktop UI tree contains controls that do not expose the UIA Name property. The desktop lookup now skips those unsupported properties while scanning for the requested accessible name.
+- The following hosted Windows run showed `NullReferenceException` in the same lookup: some UIA elements return a null `Name` instead of throwing `PropertyNotSupportedException`. The screenshot confirms the `New session` button is visible. Updated the lookup to ignore null names too; awaiting the next hosted run.
 - Passed targeted `dotnet test` for `E2eProvidersConfigTests` and `AutomationIdsTests`, all 4 mock endpoint tests, and `dotnet format --verify-no-changes` for the mock, mock tests, E2E Common, E2E Android, Core.Tests, Presentation.Tests and MAUI projects. CI is pending.
 
 ## Комментарии
