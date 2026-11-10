@@ -58,7 +58,7 @@ public sealed class MockSessionTests : AndroidTestBase
         Driver.FindElement(By.XPath("//*[contains(@text, 'E2E Assistant')]")).Click();
         Find(TestIds.ApiKeyUseModel).Click();
 
-        Driver.FindElement(By.XPath("//*[@text='New session']")).Click();
+        Driver.FindElement(MobileBy.AccessibilityId("New session")).Click();
         Find(TestIds.ChatModels).Click();
         Driver.FindElement(By.ClassName("android.widget.EditText")).SendKeys("e2e/image");
         Driver.FindElement(MobileBy.AccessibilityId("E2E Image, E2E Mock (e2e-mock)")).Click();

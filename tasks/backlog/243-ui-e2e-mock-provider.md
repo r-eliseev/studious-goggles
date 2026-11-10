@@ -115,6 +115,7 @@ bash scripts/check.sh
 - The following hosted Windows run showed `NullReferenceException` in the same lookup: some UIA elements return a null `Name` instead of throwing `PropertyNotSupportedException`. The screenshot confirms the `New session` button is visible. Updated the lookup to ignore null names too; awaiting the next hosted run.
 - The next Windows run passed the first-run provider/key/model selection and reached the session model picker. Its screenshot shows provider groups, with `e2e (1)` collapsed; the test incorrectly expected an `All models` option. Changed the scenario to expand the e2e provider group and select its image model.
 - The next Windows screenshot confirmed that the e2e group expanded and the image model was selected, but the test stayed on the model page because it did not press `Save`. Added the save action before looking for the chat input.
+- The Android run then failed at the `New session` locator. Its captured UI hierarchy exposes the visible button with `content-desc="New session"`, while XPath by visible text returned no element. Changed the Android test to locate it by Appium AccessibilityId.
 - Passed targeted `dotnet test` for `E2eProvidersConfigTests` and `AutomationIdsTests`, all 4 mock endpoint tests, and `dotnet format --verify-no-changes` for the mock, mock tests, E2E Common, E2E Android, Core.Tests, Presentation.Tests and MAUI projects. CI is pending.
 
 ## Комментарии
