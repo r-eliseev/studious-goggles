@@ -21,10 +21,11 @@ claim() {  # <корень копии $T_REMOTE/$T_BRANCH>
     [ "$cur" = "$CL_WHO" ] && return 100
     echo "Задача $CL_ID уже занята: $cur (с $(task_field "$f" claimed))" >&2; return 2
   fi
-  case "$st" in todo|planned|approved) ;; *) echo "Задачу в статусе '$st' занять нельзя" >&2; return 4 ;; esac
+  # Only the executor claims, and only an approved task (ADR 0032): planning is done without a claim.
+  case "$st" in approved) ;; *) echo "Only an 'approved' task can be claimed (status '$st'); planning needs no claim" >&2; return 4 ;; esac
   task_set "$f" assignee "$CL_WHO"
   task_set "$f" claimed "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  if [ "$st" = "approved" ]; then task_set "$f" status in-progress; fi
+  task_set "$f" status in-progress
   return 0
 }
 

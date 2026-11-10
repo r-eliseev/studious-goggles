@@ -6,7 +6,8 @@
 | architecture.md | modules and flows | when changing the structure |
 | conventions.md | C#/MAUI style, tests, language and prohibitions | before writing code |
 | status.md | open questions, queue and problems | at the start of work |
-| tasks.md | working with tasks, audits and helper agents | before tasks or an audit |
+| tasks.md | roles, statuses, working with tasks, reviews, audits and helper agents | before tasks or an audit (planner) |
+| executor.md | the complete rules of the executor role | before executing a task (executor) |
 | history.md | short history of finished work | when looking for context |
 | knowledge/ | environment and facts about .NET, MAUI, Avalonia, providers; [Avalonia mobile](knowledge/avalonia-mobile.md) | before platform work |
 | knowledge/docker.md | building, running and storing data of the Web host in Docker | for a self-hosted Web run |

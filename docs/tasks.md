@@ -2,14 +2,45 @@
 
 Rules for agents.
 
-Tasks live in `tasks/<release|backlog>/NNN-name.md`. One task — one file: description, acceptance criteria, analysis, plan, report, comments. Several agents may work on the repository at the same time.
+Tasks live in `tasks/<release|backlog>/NNN-name.md`. One task — one file: description, acceptance criteria, analysis, plan, report, review, comments. Several agents may work on the repository at the same time.
 
-Section names. Task files are being translated to English (task 269). Until then the template `tasks/_template.md`, the scripts and the old task files keep the original section names; in the same order they mean: Description, Acceptance criteria, Analysis, Plan, Report, Comments; inside the Description the lines "Depends on" and "Environment", inside the Plan the lines "Files:" and "Verification". Use the names of the file you edit; task 269 switches the template, the scripts and all files at once.
+## Roles (ADR 0032)
+Every agent works in one of two roles; the user names it at the start of the session. Without a named role the agent is the **planner** and does not change `ImageGen/`.
 
-## Executor name
+- **Planner** — carries the weight: talks with the owner, writes specifications, ADRs and the scenario catalog, creates tasks, writes "Analysis" and "Plan" (with POCs in `poc/` when an unknown must be removed), records the owner's approvals, answers the executor's questions and amends plans, reviews finished tasks, archives, audits, keeps `docs/status.md`. The planner never writes product code in `ImageGen/`, never claims a task and never sets `in-progress` or `review`.
+- **Executor** — carries out one approved task exactly as planned. Its complete rules are in `docs/executor.md`; the rest of this file is for the planner. The executor never writes or changes "Description", "Acceptance criteria", "Analysis" or "Plan", never sets `planned`, `approved` or `done`, and never decides anything that the plan does not say: it stops, writes the finding with a proposed plan change and sets `blocked`.
+
+Plans are written for the executor: concrete steps, the exact files, the expected failing reason of each test, the verification commands. If an executor could ask "which way?", the plan is not finished.
+
+## Statuses and who sets them
+| Status | Meaning | Set by |
+|---|---|---|
+| `todo` | a task exists, no plan yet | planner, or executor for a finding (description + proposed plan in comments) |
+| `planned` | analysis and plan written, waiting for the owner | planner |
+| `approved` | the owner approved the plan (a "Plan approved" record in comments is required — `check-tasks.sh` checks it) | planner (recording the owner) or the owner |
+| `in-progress` | claimed and being executed | executor (`scripts/claim-task.sh`, only from `approved`) |
+| `blocked` | the executor stopped with a question and a proposed change; the claim is released | executor; the planner answers |
+| `review` | the executor finished, the "Report" is filled, the claim is released | executor (`scripts/submit-task.sh`) |
+| `done` | the planner checked the work against the plan and the criteria and filled "Review" | planner (`scripts/review-task.sh NNN done`) |
+| `cancelled` | not needed any more | planner with the owner |
+
+`scripts/check-tasks.sh` checks, against the base branch: the four planned sections stay unchanged while a task is executed (`approved`/`in-progress` → `in-progress`/`review`/`blocked`); `review` has a "Report" and no claim; a newly `done` task has a filled "Review"; a newly `approved` task has a new approval record.
+
+## Review (planner)
+1. Read the task's "Report" and the pull request diff. Check each acceptance criterion and each plan step against the diff; check that only the files of the "Files:" line changed and that the "Verification" commands were run (CI is green).
+2. Write the "Review" section: `### YYYY-MM-DD, <planner-name>`, what was checked, the verdict, the follow-up tasks.
+3. Accepted: `scripts/review-task.sh NNN done` (on the task branch before the merge, or in a follow-up change). Not accepted: write what to fix in "Comments" and `scripts/review-task.sh NNN approved`; the executor takes it again.
+4. Unchecked manual items go to the manual check tasks (016, 046, 140, 198); they do not keep a task open.
+
+## Answering a blocked task (planner)
+Read the executor's finding and proposed change, check it against the code, decide with the owner, then amend the "Plan" (or the criteria, with the owner), write a comment with the decision and a "Plan amendment approved" record, and set `approved`. If the work must be re-analysed, set `todo`.
+
+Section names. Task files are being translated to English (task 269). Until then the template `tasks/_template.md`, the scripts and the old task files keep the original section names; in the same order they mean: Description, Acceptance criteria, Analysis, Plan, Report, Comments (the "Review" section is English already); inside the Description the lines "Depends on" and "Environment", inside the Plan the lines "Files:" and "Verification". Use the names of the file you edit; task 269 switches the template, the scripts and all files at once.
+
+## Agent name
 Your name is the `AGENT_NAME` environment variable or the name the user gave. If there is none, invent a unique one, for example `claude-4f2a`. Names of different agents must not coincide.
 
-## Starting work
+## Starting work (executor; the short version is `docs/executor.md`)
 1. Read the whole task file, including "Comments".
 2. Check the "Depends on" line in the "Description": every task named there must be `done` in `main` (`TASKS_BRANCH=main scripts/list-tasks.sh --main done`) or recorded in `tasks/DONE.md` (the log of finished tasks, `scripts/archive-tasks.sh`). If at least one is not ready, do not claim the task: tell the user. The queue order is in `docs/status.md`, section "Order of work"; taking a task out of order is allowed only if its dependencies are ready and the user named it.
 3. Check the "Environment" line in the task's "Description" (`docs/knowledge/dev-environment.md`). If your environment does not fit (for example, the task is "Windows only" and you are on Linux or in a cloud session), do not claim the task: tell the user. If there is no such line, the task runs on Linux or Windows, except the "Windows only" cases from `docs/knowledge/dev-environment.md` (running MAUI on Windows, `Platforms/Windows`, DPAPI).
@@ -18,10 +49,12 @@ Your name is the `AGENT_NAME` environment variable or the name the user gave. If
 6. Claim the task from the task branch: `scripts/claim-task.sh <number> <your-name>`, then `git pull --ff-only` (the script pushes the claim commit to origin and does not touch the working copy). Exit code 2 means the task is already claimed: stop and tell the user. Do not take another task yourself.
 
 ## What to do depending on the status
-- `todo`: read the description and criteria, study the code and `docs/`. Fill in "Analysis" and "Plan" (with a `Files: ...` line in the plan), set `planned` and stop. Do not write code in `ImageGen/` (proof-of-concept code only in `poc/`, see below).
-- `planned`: waits for a human review. Do nothing. If the user asks to fix the plan according to comments, fix the "Plan" and answer with a comment.
-- `approved`: may be implemented. `claim-task.sh` sets `in-progress` itself.
-- `in-progress`: continue the implementation.
+- `todo` (planner): read the description and criteria, study the code and `docs/`. Fill in "Analysis" and "Plan" (with a `Files: ...` line in the plan), set `planned` and stop. Do not write code in `ImageGen/` (proof-of-concept code only in `poc/`, see below). A `todo` created by the executor has a proposed plan in "Comments": use it as input, not as the plan.
+- `planned` (planner): waits for the owner. If the owner asks to fix the plan according to comments, fix the "Plan" and answer with a comment.
+- `approved` (executor): may be implemented. `claim-task.sh` sets `in-progress` itself.
+- `in-progress` (executor): continue the implementation.
+- `blocked` (planner): see "Answering a blocked task".
+- `review` (planner): see "Review".
 
 ## What to write in the "Plan"
 - Only concepts, not finished code: which types and members appear and what they are responsible for, pseudocode of algorithms, state machines, data flows, edge cases, test cases in words (condition → expected result), verification commands, the `Files:` line.
@@ -34,14 +67,14 @@ Your name is the `AGENT_NAME` environment variable or the name the user gave. If
 - Write the plan in English (`docs/conventions.md`, "Language").
 
 ## Approval
-Approval of a plan is the `approved` status set by a human, or an explicit "plan approved" in the chat or in the comments (then set `approved` yourself). Do not write code without approval.
+Approval of a plan is the `approved` status set by the owner, or an explicit "plan approved" by the owner in the chat or in the comments; then the planner records it as a comment `### YYYY-MM-DD, owner (in the chat, recorded by <planner-name>)` with the words "Plan approved" and sets `approved`. Nobody writes code without approval.
 
-## Finishing
+## Finishing (executor)
 1. Run the tests and the linter.
 2. Fill in the "Report": what changed, which files, how it was verified, what differs from the plan.
 3. Update `docs/` if the behavior or structure diverged from the description: the specification, an ADR, `docs/architecture.md`. If it was done as described, do not touch `docs/`. Do not write progress into `docs/` ("task NNN added …", "not written yet"): it is visible from task statuses and "Reports".
-4. Set the status `done` and release the claim: `scripts/release-task.sh NNN`.
-   If everything that is checked by the build and tests in your environment passed, and only checks your environment lacks remain (building the MAUI Windows target — CI does it, running on Windows or macOS, a manual screen check, a live request with a key), do **not** leave the task `in-progress`: set `done`, list in the "Report" what was not checked and why, and add the manual items to the manual check task (016 — MAUI on Windows, 046 — Avalonia on the Linux desktop and Windows). A task stays `in-progress` only if the code is not ready or a check available in the environment fails.
+4. Submit for review: `scripts/submit-task.sh NNN` (sets `review` and releases the claim). The planner sets `done` after the review.
+   If everything that is checked by the build and tests in your environment passed, and only checks your environment lacks remain (building the MAUI Windows target — CI does it, running on Windows or macOS, a manual screen check, a live request with a key), do **not** leave the task `in-progress`: submit it, list in the "Report" what was not checked and why, and add the manual items to the manual check task (016 — MAUI on Windows, 046 — Avalonia on the Linux desktop and Windows). A task stays `in-progress` only if the code is not ready or a check available in the environment fails.
 5. Run `scripts/check.sh`.
 6. `git fetch && git rebase origin/main`, then a pull request. In commit messages name the task file, for example: `001-add-login: add the login form`.
 
@@ -50,10 +83,11 @@ Approval of a plan is the `approved` status set by a human, or an explicit "plan
 - Do not edit or delete other people's comments. An answer to a comment is a new comment.
 
 ## If something is unclear
-Do not rewrite the "Description" and the "Acceptance criteria". Write the questions in "Comments", set `blocked` and stop. Keep the claim: a human decides whether to release it. After the answer, the human returns the task to `approved` (or `todo` if a new analysis is needed).
+Executor: do not rewrite the planned sections. Write the finding and a proposed plan change in "Comments", set `blocked`, release the claim (`scripts/release-task.sh NNN`) and stop (`docs/executor.md`, section 3). The planner answers, amends the plan with the owner and returns the task to `approved` (or `todo` if a new analysis is needed).
+Planner: write the question in `docs/status.md` ("Open questions") or ask the owner; do not guess.
 
 ## New tasks
-If you notice a problem outside the task's scope, do not fix it; create a new task `scripts/new-task.sh --publish <release|backlog> <name>` and mention it in the "Report". With `--publish` the task is pushed to the current branch right away; its number is the next after the tasks of this branch. In parallel branches the numbers may coincide: after `git rebase origin/main`, `scripts/check.sh` reports a duplicate id; then renumber your not yet merged task (the `id` field and the file name) with the next free number.
+If you notice a problem outside the task's scope, do not fix it; create a new task `scripts/new-task.sh --publish <release|backlog> <name>` and mention it in the "Report". An executor fills only the "Description" (facts and evidence) and a "Proposed plan" comment and leaves `todo`; the planner writes the analysis and plan. With `--publish` the task is pushed to the current branch right away; its number is the next after the tasks of this branch. In parallel branches the numbers may coincide: after `git rebase origin/main`, `scripts/check.sh` reports a duplicate id; then renumber your not yet merged task (the `id` field and the file name) with the next free number.
 
 ## Shared files
 Make only the needed edits in shared `docs/` files, without reformatting. On a conflict during `rebase` keep both versions.

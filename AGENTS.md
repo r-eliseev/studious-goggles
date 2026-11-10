@@ -6,6 +6,12 @@ A multi-provider client for image generation: keys of the built-in providers fal
 ## Language
 Everything in the repository is written in English: documentation, tasks, code, comments, test names, Gherkin scenarios, commit messages. `scripts/check.sh` rejects non-Latin letters in the checked paths (`docs/conventions.md`, "Language"). Files that are not translated yet are listed in task 268; until then their Russian section names stay valid for the scripts.
 
+## Roles
+Every session works in one role, named by the user at the start (ADR 0032):
+- **Executor** — carries out one approved task exactly as planned. Read `docs/executor.md` (the complete rules), this file and the task; do nothing the plan does not say; on any mismatch stop, propose a plan change in the task's comments and set `blocked`; finish with `scripts/submit-task.sh` (status `review`).
+- **Planner** — everything else: specifications, ADRs, tasks, analysis and plans, approvals recorded from the owner, answers to blocked tasks, reviews (`scripts/review-task.sh`), archiving, audits. The planner does not write product code in `ImageGen/`.
+- If the user did not name a role, you are the planner: do not change `ImageGen/`; ask if code work is expected.
+
 ## Commands
 - Avalonia data folder: `ImageGen` in local app data by default; the `IMAGEGEN_DATA_DIR` variable sets another one (tests use a temporary one, see task 048).
 - App logs: `<data folder>/logs/imagegen-<date>.log` (14 days). Level: the `IMAGEGEN_LOG_LEVEL` variable or `logging.json` in the data folder. Where the folder is on each OS: `docs/knowledge/dev-environment.md`, section "Logs".
@@ -45,7 +51,7 @@ The root contains `ImageGen/` (source projects), `docs/` (specifications, decisi
 ## Tasks
 - Work only on the task the user named. Do not pick tasks yourself.
 - The rules for tasks are in `docs/tasks.md`. Read them before working on any task.
-- Do not write code without an approved plan.
+- Do not write code without an approved plan, and only as the executor.
 - The task's "Plan" contains only concepts: contracts, pseudocode, state machines, test cases in words. Do not paste finished code into tasks; proof-of-concept code goes to separate files in `poc/`, and only to remove a real unknown (`docs/tasks.md`, "What to write in the Plan").
 
 ## Audit and helper agents
