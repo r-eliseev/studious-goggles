@@ -1,5 +1,9 @@
 using ImageGen.Acceptance.Tests.Support;
-using ImageGen.Core.Domain.Keys;
+using ImageGen.Avalonia.Services.Navigation;
+using ImageGen.Avalonia.Views;
+using ImageGen.Core.Providers;
+using ImageGen.Presentation;
+using Microsoft.Extensions.DependencyInjection;
 using Reqnroll;
 using Xunit;
 
@@ -8,55 +12,19 @@ namespace ImageGen.Acceptance.Tests.Steps;
 [Binding]
 public sealed class FirstRunSteps
 {
-    private FirstRunHarness? _harness;
+    private readonly AppWorld _world;
 
-    [Given("the app has no saved OpenRouter key")]
-    public async Task GivenTheAppHasNoSavedOpenRouterKey()
-    {
-        await HeadlessApp.RunAsync(async cancellationToken =>
-        {
-            _harness = new FirstRunHarness();
-            var savedKey = await _harness.Secrets.GetAsync(SecretNames.OpenRouterApiKey, cancellationToken);
-            Assert.Null(savedKey);
-            return true;
-        }, TestContext.Current.CancellationToken).ConfigureAwait(false);
-    }
-
-    [When("the user starts the app")]
-    public async Task WhenTheUserStartsTheApp()
-    {
-        var harness = _harness ?? throw new InvalidOperationException("The first-run harness has not been created.");
-        await HeadlessApp.RunAsync(async cancellationToken =>
-        {
-            await harness.StartAsync(cancellationToken);
-            return true;
-        }, TestContext.Current.CancellationToken).ConfigureAwait(false);
-    }
+    public FirstRunSteps(ScenarioContext scenario) => _world = scenario.Get<AppWorld>();
 
     [Then("the API key screen is shown instead of the session list")]
     public async Task ThenTheApiKeyScreenIsShownInsteadOfTheSessionList()
     {
-        var harness = _harness ?? throw new InvalidOperationException("The first-run harness has not been created.");
-        var isShown = await HeadlessApp.RunAsync(
-            cancellationToken => harness.IsApiKeyScreenShownAsync(cancellationToken),
-            TestContext.Current.CancellationToken).ConfigureAwait(false);
-
-        Assert.True(isShown, "The first-run API key screen was not shown.");
-    }
-
-    [AfterScenario]
-    public async Task DisposeHarnessAsync()
-    {
-        var harness = Interlocked.Exchange(ref _harness, null);
-        if (harness is null)
+        var isShown = await HeadlessApp.RunAsync(_ =>
         {
-            return;
-        }
-
-        await HeadlessApp.RunAsync(_ =>
-        {
-            harness.Dispose();
-            return Task.FromResult(true);
+            return Task.FromResult(_world.Window.PageArea.Content is ApiKeyView
+                && _world.Provider.GetRequiredService<AvaloniaNavigationService>().CurrentRoute == Routes.ApiKeyFor(ProviderIds.OpenRouter, firstRun: true));
         }, CancellationToken.None).ConfigureAwait(false);
+
+        Assert.True(isShown, "The first-run API key screen was not shown instead of the session list.");
     }
 }
