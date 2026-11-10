@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Text.Json.Nodes;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Keys;
@@ -20,7 +21,7 @@ public sealed class OpenRouterClient(
     ISecretStore secretStore,
     TimeProvider timeProvider,
     ILogger<OpenRouterClient>? logger = null)
-    : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient, ISynchronousImageTransport, ITextEmbeddingClient, IVideoModelProvider, IQueuedVideoProvider
+    : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient, ISynchronousImageTransport, ITextEmbeddingClient, IVideoModelProvider, IQueuedVideoProvider, IAudioModelProvider, IAudioGenerationProvider
 {
     private const int PriceRequestParallelism = 4;
     private readonly ILogger<OpenRouterClient> _logger = logger ?? NullLogger<OpenRouterClient>.Instance;
@@ -115,6 +116,207 @@ public sealed class OpenRouterClient(
 
         return result;
     }
+
+    public async Task<IReadOnlyList<AudioModel>> ListAudioModelsAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var request = await CreateAuthorizedRequestAsync(HttpMethod.Get, "models?output_modalities=all", null, cancellationToken);
+        var root = await SendJsonAsync(request, cancellationToken);
+        var fetchedAt = TimeProvider.GetUtcNow();
+        var result = new List<AudioModel>();
+        if (root["data"] is not JsonArray data)
+        {
+            return result;
+        }
+
+        foreach (var item in data.OfType<JsonObject>())
+        {
+            var id = ReadString(item["id"]);
+            var modalities = item["architecture"]?["output_modalities"] as JsonArray;
+            if (string.IsNullOrWhiteSpace(id) || modalities is null)
+            {
+                continue;
+            }
+
+            var hasAudio = modalities.Any(value => ReadString(value) == "audio");
+            var hasSpeech = modalities.Any(value => ReadString(value) == "speech");
+            if (!hasAudio && !hasSpeech)
+            {
+                continue;
+            }
+
+            var output = hasAudio ? AudioOutput.ChatAudio : AudioOutput.Speech;
+            result.Add(new AudioModel
+            {
+                ProviderId = Config.Id,
+                Id = id,
+                Name = ReadString(item["name"]) ?? id,
+                Description = ReadString(item["description"]),
+                Output = output,
+                PricePerInputCharacterUsd = output == AudioOutput.Speech ? ReadPrice(item["pricing"]?["prompt"]) : null,
+                FetchedAt = fetchedAt,
+            });
+        }
+
+        return result;
+    }
+
+    public async Task<AudioGenerationResponse> GenerateAudioAsync(AudioGenerationRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Model);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.Prompt);
+
+        return request.Model.Output switch
+        {
+            AudioOutput.ChatAudio => await GenerateChatAudioAsync(request, cancellationToken),
+            AudioOutput.Speech => await GenerateSpeechAsync(request, cancellationToken),
+            _ => throw new ArgumentOutOfRangeException(nameof(request), "Unknown audio output type."),
+        };
+    }
+
+    private async Task<AudioGenerationResponse> GenerateChatAudioAsync(AudioGenerationRequest request, CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            var format = attempt == 0 ? "mp3" : "wav";
+            var audio = new JsonObject { ["format"] = format };
+            SetIfNotNull(audio, "voice", request.Voice);
+            using var message = await CreateAuthorizedRequestAsync(HttpMethod.Post, "chat/completions", new JsonObject
+            {
+                ["model"] = request.Model.Id,
+                ["messages"] = new JsonArray(new JsonObject
+                {
+                    ["role"] = "user",
+                    ["content"] = request.Prompt,
+                }),
+                ["modalities"] = new JsonArray("text", "audio"),
+                ["audio"] = audio,
+                ["stream"] = true,
+            }, cancellationToken);
+            message.Options.Set(ProviderResponseLimits.BodyKind, ProviderResponseBodyKind.Audio);
+            var result = await OpenAudioResponseAsync(message, cancellationToken, isSse: true);
+            if (result.Response is not null)
+            {
+                return result.Response;
+            }
+
+            if (attempt == 1 || result.ErrorStatus != HttpStatusCode.BadRequest || !IsAudioFormatOrVoiceError(result.ErrorMessage))
+            {
+                throw new ProviderException(
+                    MapErrorKind((int)result.ErrorStatus!.Value, hasModerationReasons: false),
+                    result.ErrorMessage,
+                    statusCode: (int)result.ErrorStatus.Value);
+            }
+        }
+
+        throw new InvalidOperationException("The OpenRouter audio retry did not complete.");
+    }
+
+    private async Task<AudioGenerationResponse> GenerateSpeechAsync(AudioGenerationRequest request, CancellationToken cancellationToken)
+    {
+        var body = new JsonObject
+        {
+            ["model"] = request.Model.Id,
+            ["input"] = request.Prompt,
+            ["response_format"] = "mp3",
+        };
+        SetIfNotNull(body, "voice", request.Voice);
+        using var message = await CreateAuthorizedRequestAsync(HttpMethod.Post, "audio/speech", body, cancellationToken);
+        message.Options.Set(ProviderResponseLimits.BodyKind, ProviderResponseBodyKind.Audio);
+        var result = await OpenAudioResponseAsync(message, cancellationToken, isSse: false);
+        if (result.Response is not null)
+        {
+            return result.Response;
+        }
+
+        throw new ProviderException(
+            MapErrorKind((int)result.ErrorStatus!.Value, hasModerationReasons: false),
+            result.ErrorMessage,
+            statusCode: (int)result.ErrorStatus.Value);
+    }
+
+    private async Task<AudioResponseOpenResult> OpenAudioResponseAsync(HttpRequestMessage request, CancellationToken cancellationToken, bool isSse)
+    {
+        var timeout = CreateTimeout(cancellationToken);
+        HttpResponseMessage? response = null;
+        var transferred = false;
+        try
+        {
+            response = await CreateHttpClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await BoundedHttpContentReader.ReadTextAsync(response.Content, ProviderResponseLimits.GetLimit(request), timeout.Token);
+                return new AudioResponseOpenResult(null, response.StatusCode, ExtractAudioErrorMessage(error, response.StatusCode));
+            }
+
+            var audioBodyLimit = isSse
+                ? ProviderResponseLimits.Audio + (ProviderResponseLimits.Audio / 3) + ProviderResponseLimits.Json
+                : ProviderResponseLimits.Audio;
+            if (response.Content.Headers.ContentLength is { } length && length > audioBodyLimit)
+            {
+                throw new ProviderException(
+                    ErrorKind.Unknown,
+                    "OpenRouter audio exceeded the configured size limit.",
+                    innerException: new ProviderResponseTooLargeException(audioBodyLimit, length));
+            }
+
+            var mediaType = response.Content.Headers.ContentType?.MediaType;
+            var source = await response.Content.ReadAsStreamAsync(timeout.Token);
+            Stream content = isSse ? new SseAudioStream(source, timeout.Token) : new AudioFormatDetectingStream(source, timeout.Token);
+            var owner = new AudioResponseOwner(response, timeout);
+            response = null;
+            transferred = true;
+            return new AudioResponseOpenResult(new AudioGenerationResponse(content, isSse ? null : mediaType, owner), null, string.Empty);
+        }
+        catch (HttpRequestException exception)
+        {
+            throw new ProviderException(ErrorKind.Network, "Could not reach OpenRouter.", innerException: exception);
+        }
+        catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new ProviderException(ErrorKind.Timeout, "OpenRouter did not respond in time.", innerException: exception);
+        }
+        finally
+        {
+            response?.Dispose();
+            if (!transferred)
+            {
+                timeout.Dispose();
+            }
+        }
+    }
+
+    private sealed record AudioResponseOpenResult(AudioGenerationResponse? Response, HttpStatusCode? ErrorStatus, string ErrorMessage);
+
+    private sealed class AudioResponseOwner(HttpResponseMessage response, CancellationTokenSource timeout) : IDisposable
+    {
+        public void Dispose()
+        {
+            response.Dispose();
+            timeout.Dispose();
+        }
+    }
+
+    private static string ExtractAudioErrorMessage(string body, HttpStatusCode statusCode)
+    {
+        try
+        {
+            var parsed = JsonNode.Parse(body);
+            return ReadString(parsed?["error"]?["message"]) ?? ReadString(parsed?["message"]) ?? body;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return string.IsNullOrWhiteSpace(body) ? $"OpenRouter returned HTTP {(int)statusCode}." : body;
+        }
+    }
+
+    private static bool IsAudioFormatOrVoiceError(string message) =>
+        message.Contains("format", StringComparison.OrdinalIgnoreCase)
+        || message.Contains("voice", StringComparison.OrdinalIgnoreCase);
+
+    private static decimal? ReadPrice(JsonNode? node) =>
+        decimal.TryParse(ReadString(node), NumberStyles.Float, CultureInfo.InvariantCulture, out var price) ? price : null;
 
     public async Task<ProviderJobHandle> SubmitAsync(VideoGenerationRequest request, CancellationToken cancellationToken)
     {

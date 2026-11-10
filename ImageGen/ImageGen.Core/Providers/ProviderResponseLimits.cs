@@ -5,6 +5,7 @@ public enum ProviderResponseBodyKind
     Json,
     GeneratedImageJson,
     Image,
+    Audio,
 }
 
 public static class ProviderResponseLimits
@@ -24,6 +25,7 @@ public static class ProviderResponseLimits
         {
             ProviderResponseBodyKind.GeneratedImageJson => GeneratedImageJson,
             ProviderResponseBodyKind.Image => Image,
+            ProviderResponseBodyKind.Audio => Audio,
             _ => Json,
         }
         : Json;

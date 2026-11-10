@@ -2,6 +2,8 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using ImageGen.Core.Diagnostics;
+using ImageGen.Core.Domain.Generations;
+using ImageGen.Core.Providers;
 using ImageGen.LiveCheck.Scenarios;
 
 namespace ImageGen.LiveCheck.Tests;
@@ -13,8 +15,8 @@ public sealed class MusicScenarioTests
     {
         var lines = new[]
         {
-            "data: {\"choices\":[{\"delta\":{\"audio\":{\"data\":\"AQID\"}}}]}",
-            "data: {\"choices\":[{\"delta\":{\"audio\":{\"data\":\"BAU=\",\"transcript\":\"piano\"}}}]}",
+            "data: {\"choices\":[{\"delta\":{\"audio\":{\"data\":\"SUQz\"}}}]}",
+            "data: {\"choices\":[{\"delta\":{\"audio\":{\"data\":\"AQIDBAU=\",\"transcript\":\"piano\"}}}]}",
             "data: {\"choices\":[],\"usage\":{\"cost\":0.04,\"output_tokens\":5}}",
         };
         using var output = new MemoryStream();
@@ -22,14 +24,14 @@ public sealed class MusicScenarioTests
 
         var result = MusicScenario.CollectSseLines(lines, output, trace.Add);
 
-        Assert.Equal(new byte[] { 1, 2, 3, 4, 5 }, output.ToArray());
-        Assert.Equal(5, result.AudioBytes);
+        Assert.Equal(new byte[] { 0x49, 0x44, 0x33, 1, 2, 3, 4, 5 }, output.ToArray());
+        Assert.Equal(8, result.AudioBytes);
         Assert.True(result.HasTranscript);
         Assert.Equal(3, result.EventCount);
         Assert.Contains("0.04", result.UsageJson, StringComparison.Ordinal);
         Assert.Equal(2, trace.Count);
-        Assert.DoesNotContain("AQID", string.Join(" ", trace.Select(record => string.Join(" ", record.Fields.Values))));
-        Assert.DoesNotContain("BAU=", string.Join(" ", trace.Select(record => string.Join(" ", record.Fields.Values))));
+        Assert.DoesNotContain("SUQz", string.Join(" ", trace.Select(record => string.Join(" ", record.Fields.Values))));
+        Assert.DoesNotContain("AQIDBAU=", string.Join(" ", trace.Select(record => string.Join(" ", record.Fields.Values))));
     }
 
     [Fact]
@@ -37,10 +39,10 @@ public sealed class MusicScenarioTests
     {
         using var output = new MemoryStream();
 
-        var error = Assert.Throws<InvalidDataException>(() =>
+        var error = Assert.Throws<ProviderException>(() =>
             MusicScenario.CollectSseLines(["data: {\"choices\":[{\"delta\":{\"content\":\"ready\"}}]}", "data: [DONE]"], output));
 
-        Assert.Contains("without audio", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no audio", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(output.ToArray());
     }
 
@@ -64,7 +66,7 @@ public sealed class MusicScenarioTests
                 ? new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = new StringContent("unsupported audio format") }
                 : new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new StringContent("data: {\"choices\":[{\"delta\":{\"audio\":{\"data\":\"AQID\"}}}]}\ndata: [DONE]\n", Encoding.UTF8, "text/event-stream")
+                    Content = new StringContent("data: {\"choices\":[{\"delta\":{\"audio\":{\"data\":\"SUQzAQID\"}}}]}\ndata: [DONE]\n", Encoding.UTF8, "text/event-stream")
                 };
         }));
         var outputDirectory = Path.Combine("tmp", "music-scenario-tests", Guid.NewGuid().ToString("N"));
@@ -84,7 +86,7 @@ public sealed class MusicScenarioTests
             Assert.True(requestShapeIsCorrect);
             Assert.Equal(["mp3", "wav"], formats);
             Assert.EndsWith("music.wav", result.FilePath, StringComparison.Ordinal);
-            Assert.Equal(new byte[] { 1, 2, 3 }, await File.ReadAllBytesAsync(result.FilePath!, TestContext.Current.CancellationToken));
+            Assert.Equal(new byte[] { 0x49, 0x44, 0x33, 1, 2, 3 }, await File.ReadAllBytesAsync(result.FilePath!, TestContext.Current.CancellationToken));
         }
         finally
         {

@@ -1,8 +1,8 @@
 ---
 id: 221
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-10T10:14:10Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -60,6 +60,19 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-10, codex-gpt6 (completed)
+
+Implemented the OpenRouter audio and speech model catalog, persistent cache (`audio_models`, migration `0017_audio_models.sql`), provider interfaces and router wiring. Chat audio is decoded from SSE in bounded base64 chunks, reports transcript, cost and detected media type, and retries once with WAV for format or voice errors. Speech requests use `audio/speech`, stream the response bytes, detect the media type when the response header is absent, and preserve provider error messages. `MusicScenario` now uses the shared Core SSE parser. Updated the media-generation specification and API knowledge.
+
+Verification:
+- `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --no-restore` — 824 passed.
+- `dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj --no-restore` — 147 passed.
+- `dotnet test --project ImageGen/ImageGen.LiveCheck.Tests/ImageGen.LiveCheck.Tests.csproj --no-restore` — 12 passed.
+- `dotnet format` with `--verify-no-changes --no-restore` passed for Core, Core.Tests, Data.Tests, LiveCheck and LiveCheck.Tests; Data was also verified after its implementation.
+- `bash scripts/check.sh` and `git diff --check` passed.
+
+No live paid OpenRouter request was made. Speech model availability, voice validation and real speech response formats remain unverified, as specified for the owner-run live check.
 
 ## Комментарии
 

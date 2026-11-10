@@ -25,6 +25,7 @@ Generate video through OpenRouter and save the result locally without loading la
 - OpenRouter provides no cancellation for video. The local watcher can be stopped, but this does not confirm that the paid operation stopped on the provider's side.
 - After sending, cancellation stops the local watcher, saves `Cancelled` and returns `StoppedWaiting`; the UI warns that the provider may still charge. Before sending, cancellation returns `Cancelled`. Repeat and Edit keep the model, seed, parameters and first frame of the source run; New seed keeps the other settings and gets a new seed. Run on model is not supported for video.
 - The supported streaming MIME types and file limits are set in ADR 0027 and `ProviderResponseLimits`; pictures keep their old execution path and the gallery keeps showing only pictures.
+- The OpenRouter audio catalog loads every model with an `audio` or `speech` output from `GET /models?output_modalities=all` and caches it locally. A model advertising both is treated as chat audio. Chat audio uses streaming `chat/completions` and decodes base64 audio chunks; speech uses streaming `audio/speech` response bytes. The shared response exposes the audio stream, detected media type, transcript and provider-reported cost. Chat audio retries once with WAV when a 400 response mentions an unsupported format or voice. Speech requests use MP3 and include `voice` only when supplied; their cost is estimated separately by the caller from the catalog's price per input character.
 
 ## Open checks
 
