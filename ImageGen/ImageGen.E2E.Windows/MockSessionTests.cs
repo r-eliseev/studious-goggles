@@ -26,6 +26,7 @@ public sealed class MockSessionTests : WindowsTestBase
         Find(TestIds.ChatModels).AsButton().Invoke();
         FindByName("e2e (1)").Click();
         FindByName("E2E Image", TimeSpan.FromSeconds(15)).Click();
+        FindByName("Save").AsButton().Invoke();
 
         Find(TestIds.ChatInput).AsTextBox().Enter("a red square");
         Find(TestIds.ChatSend).AsButton().Invoke();
