@@ -1,6 +1,6 @@
 ---
 id: 046
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-10-28
@@ -92,3 +92,6 @@ scripts/check.sh
 
 - [ ] Очистка истории: подтвердить удаление всех сессий и медиа; расходы и ключи сохраняются; создать и открыть новую сессию. (229)
 - [ ] Avalonia desktop player (207): open a video and an audio card, verify playback starts, seek and volume controls work, Space pauses/resumes, Escape and the window close button stop playback; on Linux without `libvlc5`/`vlc-plugin-base`, Play is hidden.
+
+### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan)
+Plan approved ("approve all tasks with plans").

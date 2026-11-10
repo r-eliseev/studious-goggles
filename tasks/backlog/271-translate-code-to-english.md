@@ -1,6 +1,6 @@
 ---
 id: 271
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-11-09
@@ -58,3 +58,6 @@ bash scripts/check.sh
 
 ### 2026-11-09, claude-bdd-plan
 Part of 268. The plan waits for approval.
+
+### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan)
+Plan approved ("approve all tasks with plans").

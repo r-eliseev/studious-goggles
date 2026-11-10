@@ -1,6 +1,6 @@
 ---
 id: 269
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-11-09
@@ -58,3 +58,6 @@ TASKS_BRANCH=main scripts/list-tasks.sh --main approved
 
 ### 2026-11-09, claude-bdd-plan
 Part of 268. Changing `scripts/` is allowed by the owner's request to translate everything (2026-11-09). The plan waits for approval.
+
+### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan)
+Plan approved ("approve all tasks with plans").
