@@ -18,6 +18,11 @@
     <PackageReference Include="Avalonia.Android" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
     <PackageReference Include="Xamarin.AndroidX.Core.SplashScreen" />
+    <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer" />
+    <PackageReference Include="Xamarin.AndroidX.Media3.Ui" />
+    <PackageReference Include="Xamarin.AndroidX.Lifecycle.Process" />
+    <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" />
+    <PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModelSavedState" />
   </ItemGroup>
   <ItemGroup>
     <AndroidResource Include="Resources\mipmap-*\appicon*.png" />

@@ -16,6 +16,10 @@ Data is stored in `<FilesDir>/ImageGen`. Secrets are encrypted with AES-256-GCM 
 
 The VPS check of 2026-11-06: the Debug build and the Release build passed without warnings and errors. A signed Release APK of 60,556,659 bytes (about 57.7 MiB) was built with a local Android debug certificate; it is not meant for updating or publishing over the official release. The build used API 36, min API 23. Launching on a device was not checked.
 
+Task 224 adds `Xamarin.AndroidX.Media3.ExoPlayer` and `Xamarin.AndroidX.Media3.Ui` 1.11.1. With Avalonia.Android 12.1.4, restore reports `NU1608` unless Lifecycle Process, LiveData.Core and ViewModelSavedState are aligned to 2.11.0.1; keep warnings-as-errors enabled. AndroidX Media3 uses the .NET binding type `ExoPlayerBuilder` and the player interface `IExoPlayer`.
+
+On 2026-11-10 the unsigned Release APK before the Media3 player was 61,266,192 bytes; after it was 66,086,281 bytes (+4,820,089 bytes). The signed build artifact was 66,186,909 bytes. This is a local debug-signed artifact, not an official release package. The Media3 player runs in a separate non-exported Android activity and handles orientation changes without recreation; physical-device playback has not been checked yet (task 198).
+
 ### Avalonia application icon
 
 The Avalonia Android and desktop icons are rasterized from the MAUI source files `ImageGen/ImageGen.Maui/Resources/AppIcon/appicon.svg` (background) and `appiconfg.svg` (foreground). On Debian or Ubuntu, install the environment tools with `sudo apt install librsvg2-bin icoutils`. Keep generated and intermediate files in the repository's ignored `tmp/` directory. Compose the foreground SVG children over the background with Python's `xml.etree.ElementTree`, then rasterize the composite with `rsvg-convert`; do not rasterize the two source files independently because the foreground is transparent. For example, write the combined SVG to `tmp/omnilite-icon/appicon.svg`, then run:
