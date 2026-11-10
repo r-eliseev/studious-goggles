@@ -222,14 +222,57 @@ jobs:
       - name: Run Windows interactive preflight
         shell: pwsh
         run: .\ImageGen\ImageGen.E2E.Common\ci\windows-preflight.ps1
+      - name: Create and trust one-off HTTPS certificate
+        shell: pwsh
+        run: |
+          $tlsDirectory = Join-Path $env:RUNNER_TEMP 'e2e-mock-tls'
+          New-Item -ItemType Directory -Force -Path $tlsDirectory, 'reports/windows/mock-provider' | Out-Null
+          $certificate = New-SelfSignedCertificate `
+            -DnsName 'localhost' `
+            -CertStoreLocation 'Cert:\LocalMachine\My' `
+            -FriendlyName 'Omnilite E2E Mock' `
+            -NotAfter (Get-Date).AddDays(2) `
+            -KeyExportPolicy Exportable `
+            -KeyUsage DigitalSignature, KeyEncipherment `
+            -Type SSLServerAuthentication
+          $certificatePath = Join-Path $tlsDirectory 'mock-server.cer'
+          $certificateFile = Export-Certificate -Cert $certificate -FilePath $certificatePath
+          Import-Certificate -FilePath $certificateFile.FullName -CertStoreLocation 'Cert:\LocalMachine\Root' | Out-Null
+          $password = [guid]::NewGuid().ToString('N')
+          $securePassword = ConvertTo-SecureString -String $password -Force -AsPlainText
+          $pfxPath = Join-Path $tlsDirectory 'mock-server.pfx'
+          Export-PfxCertificate -Cert $certificate -FilePath $pfxPath -Password $securePassword | Out-Null
+          "Kestrel__Certificates__Default__Path=$pfxPath" >> $env:GITHUB_ENV
+          "Kestrel__Certificates__Default__Password=$password" >> $env:GITHUB_ENV
       - name: Run Windows UI tests
         shell: pwsh
         env:
           APP_EXE: ${{ github.workspace }}\publish\win-x64\ImageGen.Maui.exe
           E2E_REPORTS_DIR: ${{ github.workspace }}\reports\windows
+          E2E_PROVIDER_CONFIG: ${{ github.workspace }}\ImageGen\ImageGen.E2E.Common\e2e-providers.json
         run: |
           New-Item -ItemType Directory -Force -Path reports/windows/allure-results | Out-Null
-          dotnet test --project ImageGen/ImageGen.E2E.Windows/ImageGen.E2E.Windows.csproj --report-trx --results-directory reports/windows
+          $mockLog = Join-Path $env:GITHUB_WORKSPACE 'reports/windows/mock-provider/mock-provider.log'
+          $mockError = Join-Path $env:GITHUB_WORKSPACE 'reports/windows/mock-provider/mock-provider-error.log'
+          $mock = Start-Process dotnet -ArgumentList @('run', '--project', 'ImageGen/ImageGen.E2E.MockProvider', '--', '--urls', 'https://0.0.0.0:5443') -PassThru -RedirectStandardOutput $mockLog -RedirectStandardError $mockError
+          try {
+            $ready = $false
+            for ($attempt = 0; $attempt -lt 120; $attempt++) {
+              try {
+                $response = Invoke-WebRequest -Uri 'https://localhost:5443/v1/models' -Headers @{ Authorization = 'Bearer e2e-mock-key' } -TimeoutSec 2
+                if ($response.StatusCode -eq 200) { $ready = $true; break }
+              }
+              catch { Start-Sleep -Seconds 1 }
+            }
+            if (-not $ready) {
+              Get-Content $mockLog, $mockError -ErrorAction SilentlyContinue
+              throw 'The HTTPS E2E mock provider did not become ready.'
+            }
+            dotnet test --project ImageGen/ImageGen.E2E.Windows/ImageGen.E2E.Windows.csproj --report-trx --results-directory reports/windows
+          }
+          finally {
+            if (-not $mock.HasExited) { Stop-Process -Id $mock.Id -Force }
+          }
       - uses: actions/upload-artifact@v4
         if: always()
         with:

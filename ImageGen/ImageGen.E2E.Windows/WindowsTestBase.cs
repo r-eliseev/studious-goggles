@@ -50,6 +50,18 @@ public abstract class WindowsTestBase
             Directory.Delete(_dataDirectory, recursive: true);
         }
 
+        var providerConfig = Environment.GetEnvironmentVariable("E2E_PROVIDER_CONFIG");
+        if (!string.IsNullOrWhiteSpace(providerConfig))
+        {
+            if (!File.Exists(providerConfig))
+            {
+                throw new FileNotFoundException("E2E_PROVIDER_CONFIG must point to an existing providers.json.", providerConfig);
+            }
+
+            Directory.CreateDirectory(_dataDirectory);
+            File.Copy(providerConfig, Path.Combine(_dataDirectory, "providers.json"));
+        }
+
         var executable = Environment.GetEnvironmentVariable("APP_EXE");
         if (string.IsNullOrWhiteSpace(executable) || !File.Exists(executable))
         {
