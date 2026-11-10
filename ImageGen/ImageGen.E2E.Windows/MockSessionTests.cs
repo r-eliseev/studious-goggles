@@ -22,7 +22,7 @@ public sealed class MockSessionTests : WindowsTestBase
         FindByName("E2E Assistant").Click();
         Find(TestIds.ApiKeyUseModel).AsButton().Invoke();
 
-        Find(TestIds.SessionsNew).AsButton().Invoke();
+        FindByName("New session").AsButton().Invoke();
         Find(TestIds.ChatModels).AsButton().Invoke();
         FindByName("All models").Click();
         var search = Window.FindFirstDescendant(condition => condition.ByControlType(FlaUI.Core.Definitions.ControlType.Edit));

@@ -50,7 +50,7 @@ public sealed class MockSessionTests : AndroidTestBase
     public void FirstRunWithMock_GeneratesImage()
     {
         Find(TestIds.ApiKeyProvider).Click();
-        Driver.FindElement(By.XPath("//*[@text='E2E Mock']")).Click();
+        Driver.FindElement(By.XPath("//*[contains(@text, 'E2E Mock')]")).Click();
         Find(TestIds.ApiKeyEntry).SendKeys("e2e-mock-key");
         Find(TestIds.ApiKeySave).Click();
 
