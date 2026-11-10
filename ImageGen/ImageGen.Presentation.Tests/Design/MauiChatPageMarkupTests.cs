@@ -4,6 +4,34 @@ namespace ImageGen.Presentation.Tests.Design;
 
 public class MauiChatPageMarkupTests
 {
+    [Fact]
+    public void RunCards_UseOneCenteredTemplateInWideAndNarrowLayouts()
+    {
+        XNamespace maui = "http://schemas.microsoft.com/dotnet/2021/maui";
+        XNamespace x = "http://schemas.microsoft.com/winfx/2009/xaml";
+        var document = XDocument.Load(Path.Combine(MauiRoot(), "Pages", "ChatPage.xaml"));
+        var root = Assert.IsType<XElement>(document.Root);
+        var template = Assert.Single(root.Descendants(maui + "DataTemplate"), element =>
+            (string?)element.Attribute(x + "Key") == "GenerationCardTemplate");
+        Assert.Equal("Center", (string?)Assert.Single(template.Descendants(maui + "Border"), element =>
+            (string?)element.Attribute(x + "Name") == "CardRoot").Attribute("HorizontalOptions"));
+
+        var containers = root.Descendants().Where(element =>
+            element.Attribute("BindableLayout.ItemsSource")?.Value == "{Binding Generations}").ToList();
+        Assert.Equal(2, containers.Count);
+        var wide = Assert.Single(containers, element => element.Name.LocalName == "FlexLayout");
+        Assert.Equal("{Binding Source={x:Reference Page}, Path=IsWide, x:DataType=pages:ChatPage}",
+            (string?)wide.Attribute("IsVisible"));
+        var narrow = Assert.Single(containers, element => element.Name.LocalName == "VerticalStackLayout");
+        Assert.Contains(narrow.Descendants(maui + "DataTrigger"), trigger =>
+            (string?)trigger.Attribute("Binding") == "{Binding Source={x:Reference Page}, Path=IsWide, x:DataType=pages:ChatPage}"
+            && (string?)trigger.Attribute("Value") == "True"
+            && (string?)trigger.Element(maui + "Setter")?.Attribute("Property") == "IsVisible"
+            && (string?)trigger.Element(maui + "Setter")?.Attribute("Value") == "False");
+        Assert.All(containers, element => Assert.Equal("{StaticResource GenerationCardTemplate}",
+            (string?)element.Attribute("BindableLayout.ItemTemplate")));
+    }
+
     private static readonly XNamespace Xaml = "http://schemas.microsoft.com/winfx/2009/xaml";
 
     [Fact]
@@ -96,13 +124,15 @@ public class MauiChatPageMarkupTests
         var audioPlayer = Assert.Single(players, element => (string?)element.Attribute("HeightRequest") == "64");
 
         Assert.Equal("{Binding AudioFilePath, Converter={StaticResource FilePathToMediaSource}}", (string?)audioPlayer.Attribute("Source"));
+        Assert.Equal("False", (string?)audioPlayer.Attribute("IsVisible"));
         Assert.Equal("False", (string?)audioPlayer.Attribute("ShouldAutoPlay"));
         Assert.Equal("True", (string?)audioPlayer.Attribute("ShouldShowPlaybackControls"));
         Assert.Equal("{Binding SummaryText}", (string?)audioPlayer.Attribute("SemanticProperties.Description"));
-        Assert.Contains(audioPlayer.Descendants(), element =>
-            element.Name.LocalName == "BindingCondition"
-            && (string?)element.Attribute("Binding") == "{Binding HasMedia}"
-            && (string?)element.Attribute("Value") == "True");
+        var conditions = audioPlayer.Descendants().Where(element => element.Name.LocalName == "BindingCondition").ToArray();
+        Assert.Contains(conditions, element =>
+            (string?)element.Attribute("Binding") == "{Binding IsAudio}" && (string?)element.Attribute("Value") == "True");
+        Assert.Contains(conditions, element =>
+            (string?)element.Attribute("Binding") == "{Binding HasMedia}" && (string?)element.Attribute("Value") == "True");
     }
 
     [Fact]

@@ -9,6 +9,19 @@ namespace ImageGen.E2E.Windows;
 public sealed class VideoRecorderTests
 {
     [Test]
+    public void CaptureFinalFrame_SavesThenWaitsThenStopsRecording()
+    {
+        var steps = new List<string>();
+
+        VideoRecorder.CaptureFinalFrame(
+            () => steps.Add("screenshot"),
+            () => steps.Add("hold"),
+            () => steps.Add("stop"));
+
+        Assert.That(steps, Is.EqualTo(new[] { "screenshot", "hold", "stop" }));
+    }
+
+    [Test]
     public void BuildArguments_UsesRequiredDesktopRecordingOptions()
     {
         var arguments = VideoRecorder.BuildArguments("tmp/capture.mp4");

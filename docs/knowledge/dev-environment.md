@@ -185,6 +185,7 @@ The machine: Ubuntu 24.04.5 LTS, x86_64, AMD EPYC 9355P, 4 vCPU, 15 GB RAM, abou
 - **Core and storage:** `dotnet build` and `dotnet test` pass. On `main` of 2026-10-29: Core.Tests 356 tests, Data.Tests 70 — all pass.
 - **Presentation:** `ImageGen.Presentation` and `ImageGen.Presentation.Tests` build and are tested on the VPS: 277/277 tests.
 - **Avalonia:** `ImageGen.Avalonia` builds, the headless tests pass — 118 of 120, two skipped (Secret Service: needs a session keyring; DPAPI — Windows only). **The app launches** under the virtual display `Xvfb` (see below).
+- **Avalonia desktop media playback:** Linux playback requires the system packages `libvlc5` and `vlc-plugin-base`; without them the player service reports unsupported and hides Play. Windows and macOS desktop publishes include their LibVLC runtime NuGet packages.
 - **`dotnet format --verify-no-changes`** passes for all projects: Core, Core.Tests, Data, Data.Tests, Presentation, Presentation.Tests, Avalonia, Avalonia.Tests, Maui.
 - **MAUI, the Android target:** `dotnet build -f net10.0-android` builds an APK (`com.companyname.imagegen.maui.apk` and `-Signed.apk`), 0 warnings. The `maui-android` workload is installed.
 - **Android SDK:** the command-line tools from `dl.google.com`, licenses accepted, `platforms;android-36`, `build-tools;36.0.0`, `platform-tools` 37.0.1, the `emulator` package.

@@ -1,6 +1,6 @@
 ---
 id: 251
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -41,7 +41,7 @@ created: 2026-11-07
 3. Windows: то же для скриншота и паузы; шаг с вставкой ключа и вывод.
 4. Документация.
 
-Файлы: `ImageGen/ImageGen.E2E.Android/AndroidTestBase.cs`, `ImageGen/ImageGen.E2E.Android/TestArtifacts.cs`, `ImageGen/ImageGen.E2E.Android/FirstRunTests.cs`, `ImageGen/ImageGen.E2E.Windows/WindowsTestBase.cs`, `ImageGen/ImageGen.E2E.Windows/FirstRunTests.cs` (временный тест), `docs/knowledge/ui-e2e.md`, `docs/knowledge/maui.md`.
+Файлы: `ImageGen/ImageGen.E2E.Android/AndroidTestBase.cs`, `ImageGen/ImageGen.E2E.Android/TestArtifacts.cs`, `ImageGen/ImageGen.E2E.Android/FirstRunTests.cs`, `ImageGen/ImageGen.E2E.Windows/WindowsTestBase.cs`, `ImageGen/ImageGen.E2E.Windows/VideoRecorder.cs`, `ImageGen/ImageGen.E2E.Windows/VideoRecorderTests.cs`, `ImageGen/ImageGen.E2E.Windows/FirstRunTests.cs` (временный тест), `docs/knowledge/ui-e2e.md`, `docs/knowledge/maui.md`.
 
 ### Проверка
 ```
@@ -62,6 +62,15 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-10, codex-gpt6 (completed)
+
+- Android now saves `screenshot.png` on every test, captures the UI tree only on failures, and holds the final screen for 1.5 seconds before stopping recording. `Rotate_KeepsKeyScreen` waits for the API key field, then verifies the field and reported orientation in landscape and portrait.
+- Windows now captures a screenshot on every test, keeps the UI tree failure-only, and orders screenshot → 1.5-second hold → recording stop. Added a test for this order in `VideoRecorderTests`.
+- Temporary Windows clipboard paste test passed in run 42806400823. Video frames showed the pasted key masked throughout; recorded in `docs/knowledge/maui.md`, then removed the temporary test.
+- Final UI E2E run 42808851378 passed. Verified Android artifacts contain screenshots; the Android invalid-key final frames and Windows invalid-key recording show the error message; the rotation video includes the key screen in landscape. Details are recorded in `docs/knowledge/ui-e2e.md`.
+- Local Android and Windows E2E project builds succeeded with 0 warnings/errors. Windows test execution is unavailable on Linux because `Microsoft.WindowsDesktop.App` is not installed; the Windows test suite passed in CI. Formatting for both E2E projects, `bash scripts/check.sh`, and `git diff --check` passed.
+- Plan difference: `VideoRecorder.cs` and its existing test file were included to make the final-frame sequence testable. No workflow changes were needed.
 
 ## Комментарии
 

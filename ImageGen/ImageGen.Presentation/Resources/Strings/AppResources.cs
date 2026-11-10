@@ -101,6 +101,16 @@ public static class AppResources
 
     public static string SemanticSearchMeaningUnavailable => Get(nameof(SemanticSearchMeaningUnavailable));
 
+    public static string SemanticSearchModelSearch => Get(nameof(SemanticSearchModelSearch));
+
+    public static string SemanticSearchChangeModel => Get(nameof(SemanticSearchChangeModel));
+
+    public static string SemanticSearchChangeModelPromptFormat => Get(nameof(SemanticSearchChangeModelPromptFormat));
+
+    public static string SemanticSearchModelUnavailableFormat => Get(nameof(SemanticSearchModelUnavailableFormat));
+
+    public static string SemanticSearchUnavailableOptionFormat => Get(nameof(SemanticSearchUnavailableOptionFormat));
+
     public static string Stop => Get(nameof(Stop));
 
     public static string Saved => Get(nameof(Saved));
@@ -190,6 +200,26 @@ public static class AppResources
 
     public static string VideoModelsSelectedFormat => Get(nameof(VideoModelsSelectedFormat));
 
+    public static string AudioModelsTitle => Get(nameof(AudioModelsTitle));
+
+    public static string AudioModelsSelectedFormat => Get(nameof(AudioModelsSelectedFormat));
+
+    public static string AudioMusicSoundGroup => Get(nameof(AudioMusicSoundGroup));
+
+    public static string AudioSpeechGroup => Get(nameof(AudioSpeechGroup));
+
+    public static string AudioPriceUnknown => Get(nameof(AudioPriceUnknown));
+
+    public static string AudioPricePerThousandFormat => Get(nameof(AudioPricePerThousandFormat));
+
+    public static string SessionAudioVoice => Get(nameof(SessionAudioVoice));
+
+    public static string SessionAudioVoiceHint => Get(nameof(SessionAudioVoiceHint));
+
+    public static string StoppedWaitingMedia => Get(nameof(StoppedWaitingMedia));
+
+    public static string PlayAudio => Get(nameof(PlayAudio));
+
     public static string VideoPriceUnknown => Get(nameof(VideoPriceUnknown));
 
     public static string VideoPriceForDurationFormat => Get(nameof(VideoPriceForDurationFormat));
@@ -267,6 +297,8 @@ public static class AppResources
     public static string SettingsHistoryDeletedFormat => Get(nameof(SettingsHistoryDeletedFormat));
 
     public static string SettingsLogsCleared => Get(nameof(SettingsLogsCleared));
+
+    public static string SettingsLogsClearedWithFailures => Get(nameof(SettingsLogsClearedWithFailures));
 
     public static string SettingsNoLogs => Get(nameof(SettingsNoLogs));
 

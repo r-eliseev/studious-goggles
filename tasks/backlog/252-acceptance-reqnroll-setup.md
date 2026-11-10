@@ -1,6 +1,6 @@
 ---
 id: 252
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-09
@@ -78,6 +78,16 @@ bash scripts/check.sh
 
 ## Report
 
+### 2026-11-10, codex-gpt6 (completed)
+- Added the proof of concept under `poc/backlog/252-acceptance-reqnroll-setup/`. `dotnet test` passed with `Reqnroll.xunit.v3` 3.3.4, `Avalonia.Headless` 12.1.4 and both `xunit.v3` 4.0.2 and 3.2.2. The project uses 4.0.2 without a version override.
+- Added `ImageGen.Acceptance.Tests`, its Reqnroll configuration, a serial headless session, timeout-bound UI-thread dispatch, temporary data paths, an in-memory key store, a stub HTTP handler, and substitute dialogs. KEY-01 passes against the real Avalonia composition.
+- Added an ordinary xUnit self-check for `missingOrPendingStepsOutcome = Error`. Before the step bindings were added, the KEY-01 scenario failed with `Reqnroll.MissingStepDefinitionException`, confirming that undefined steps fail the run rather than being skipped.
+- Configured Reqnroll to generate feature code-behind files under `obj/`, not beside tracked `.feature` files.
+- Added the project to `ImageGen.slnx` and to Linux `avalonia` and Windows `windows-tests` CI jobs. Updated the task command in `AGENTS.md`, the conventions, ADR 0031, the scenario catalog and the knowledge index.
+- `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` — passed. Debug and Release builds passed; Release acceptance tests — 2 passed. `dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj` — 180 passed, 2 skipped (D-Bus unavailable in this session; DPAPI is Windows-only). `bash scripts/check.sh` — passed.
+- The POC showed that `[AfterTestRun]` may run on the Avalonia dispatcher thread. Disposing the session synchronously there deadlocks, so the hook disposes it on a worker thread; this implementation detail is recorded in `docs/knowledge/acceptance-tests.md`.
+- PR [#92](https://github.com/r-eliseev/studious-goggles/pull/92), build run [42796068960](https://github.com/r-eliseev/studious-goggles/actions/runs/42796068960): Linux `avalonia` and Windows `windows-tests` passed, including Release build and both acceptance tests on Windows. Other independent build workflows were still running when this report was updated.
+
 ## Comments
 
 ### 2026-11-09, claude-bdd-plan
@@ -85,3 +95,6 @@ Created at the owner's request "let's adopt something like Cucumber" and "plan t
 
 ### 2026-11-09, owner (in the chat, recorded by claude-bdd-plan)
 Plan approved. The acceptance tests go to CI (the change of `.github/workflows/build.yml` is allowed). Everything in English, including the Gherkin. The task was rewritten in English accordingly: English Gherkin instead of `# language: ru`, the CI step is no longer conditional; status `approved`.
+
+### 2026-11-10, codex-gpt6
+The required POC passes with `Reqnroll.xunit.v3` 3.3.4, `Avalonia.Headless` 12.1.4 and both `xunit.v3` 4.0.2 and 3.2.2. In both cases a Reqnroll step dispatched through `HeadlessUnitTestSession` observes `Dispatcher.UIThread.CheckAccess() == true`. The run also exposed a lifecycle issue: the after-run hook can execute on the Avalonia dispatcher thread, where synchronous `Dispose()` deadlocks; dispose on a worker thread. Details and package sources are in `docs/knowledge/acceptance-tests.md`.

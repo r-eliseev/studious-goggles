@@ -18,24 +18,29 @@ public static class LogFiles
             .ToArray();
     }
 
-    public static int DeleteAllExceptNewest(string logDirectory)
+    public static LogCleanupResult DeleteAllExceptNewest(string logDirectory, Action<string>? deleteFile = null)
     {
         var files = List(logDirectory);
+        deleteFile ??= File.Delete;
         var deleted = 0;
+        var failed = 0;
+        string? lastExceptionType = null;
         foreach (var file in files.Take(Math.Max(0, files.Count - 1)))
         {
             try
             {
-                File.Delete(file);
+                deleteFile(file);
                 deleted++;
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
                 // Keep going so one locked file does not prevent clearing the others.
+                failed++;
+                lastExceptionType = exception.GetType().Name;
             }
         }
 
-        return deleted;
+        return new LogCleanupResult(deleted, failed, lastExceptionType);
     }
 
     public static async Task<IReadOnlyList<string>> CopyForSharingAsync(

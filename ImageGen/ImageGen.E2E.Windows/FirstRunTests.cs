@@ -36,4 +36,5 @@ public sealed class FirstRunTests : WindowsTestBase
                 || text.StartsWith(networkError, StringComparison.Ordinal)).Name;
         Assert.That(message, Does.Not.Contain(InvalidKey));
     }
+
 }

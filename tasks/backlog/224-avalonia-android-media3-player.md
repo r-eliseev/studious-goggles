@@ -1,6 +1,6 @@
 ---
 id: 224
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -53,6 +53,12 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+- Added Media3 1.11.1 and a fullscreen, non-exported `MediaPlayerActivity` with `PlayerView`, local-file playback, automatic play, pause on stop, release on destroy, and orientation handling without recreation. Added `AndroidMediaPlayerService`, awaited activity closure, cancellation-driven close, and Android DI registration.
+- Restore initially failed with `NU1608`: Avalonia.Android 12.1.4 selected Lifecycle 2.11.0.1 while older transitive bindings required `<2.10.1`. Aligned Lifecycle Process, LiveData.Core and ViewModelSavedState to 2.11.0.1; restore and build now complete without warnings. The Media3 .NET binding exposes `ExoPlayerBuilder` and `IExoPlayer`.
+- Unsigned Release APK changed from 61,266,192 to 66,086,281 bytes (+4,820,089); signed artifact is 66,186,909 bytes. Recorded in `docs/knowledge/avalonia-mobile.md`.
+- Verification passed: `dotnet restore ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj`, Release Android build (0 warnings/errors), Avalonia headless tests (182 passed, 2 platform skips), Android project formatting, and `bash scripts/check.sh`.
+- Physical-device playback, rotation, sound and Back behavior could not be checked in this Linux environment; added the scenario to task 198.
 
 ## Комментарии
 

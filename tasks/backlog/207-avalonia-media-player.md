@@ -1,6 +1,6 @@
 ---
 id: 207
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-06
@@ -58,6 +58,12 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+Implemented the Avalonia desktop media player in a separate window. The service initializes one LibVLC engine lazily, reports unsupported initialization once, replaces an open player before showing another, and releases the player and media on close. The window starts playback, shows video through `VideoView` or audio controls, supports seek, volume, Space, Escape, and the native close button. Desktop composition now registers the service; the Android head does not compile or publish the desktop LibVLC services.
+
+Added LibVLCSharp 3.10.2, Windows runtime 3.0.24, macOS runtime 3.1.3.2, the LGPL-2.1 license text, Linux runtime setup notes, README notes and the manual check in task 046. The Windows runtime package defaults to copying all three architectures; the Avalonia project now limits it to the selected Windows RID. Cross-publish verified `win-x64` (only `libvlc/win-x64`, 321 MiB before removing debug symbols), `win-arm64` (only `libvlc/win-arm64`, 314 MiB), and `osx-x64` (204 MiB). Linux `linux-x64` publish was 111 MiB and uses the system LibVLC packages. Physical playback on Linux, Windows and macOS remains for the human check in task 046.
+
+Verification: the new headless tests passed (2/2); Avalonia tests passed (184 passed, 2 environment skips); desktop Linux build and Linux self-contained publish passed; Windows x64 and ARM64 and macOS x64 cross-publishes passed; Avalonia Android Release build passed with 0 warnings/errors; both project formatting checks and `bash scripts/check.sh` passed. The Android head output contains no LibVLC files. No release workflow edit was needed.
 
 ## Комментарии
 

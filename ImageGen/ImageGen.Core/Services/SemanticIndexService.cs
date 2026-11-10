@@ -29,6 +29,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
     private readonly IProviderRouter _providers;
     private readonly ApiKeyService _apiKeys;
     private readonly ISemanticSearchSettingsStore _settings;
+    private readonly EmbeddingModelCatalogService? _modelCatalog;
     private readonly SessionChangeNotifier _changes;
     private readonly IAsyncDelay _delay;
     private readonly TimeProvider _timeProvider;
@@ -50,13 +51,15 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
         SessionChangeNotifier changes,
         IAsyncDelay delay,
         TimeProvider timeProvider,
-        ILogger<SemanticIndexService> logger)
+        ILogger<SemanticIndexService> logger,
+        EmbeddingModelCatalogService? modelCatalog = null)
     {
         _sources = sources;
         _embeddings = embeddings;
         _providers = providers;
         _apiKeys = apiKeys;
         _settings = settings;
+        _modelCatalog = modelCatalog;
         _changes = changes;
         _delay = delay;
         _timeProvider = timeProvider;
@@ -87,16 +90,21 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
             return off;
         }
 
-        var currentSources = await _sources.ListSourcesAsync(cancellationToken).ConfigureAwait(false);
-        var totalSourceCount = await _sources.CountSourcesAsync(cancellationToken).ConfigureAwait(false);
-        var stored = await _embeddings.ListAllAsync(cancellationToken).ConfigureAwait(false);
-        var indexed = CountCurrent(currentSources, stored);
-        var status = new SemanticIndexStatus(
-            true,
-            indexed,
-            Math.Max(0, Math.Min(currentSources.Count, MaximumIndexedSources) - indexed),
-            SemanticIndexState.Ready,
-                WarningCode: totalSourceCount > MaximumIndexedSources ? "limit_reached" : null);
+        bool completedReadyAtSnapshotStart;
+        lock (_gate)
+        {
+            completedReadyAtSnapshotStart = _indexTask is { IsCompleted: true } && _status.State == SemanticIndexState.Ready;
+        }
+
+        var status = await GetReadyStatusAsync(cancellationToken).ConfigureAwait(false);
+        var modelId = await _settings.GetModelAsync(cancellationToken).ConfigureAwait(false);
+
+        if (_modelCatalog is not null && await _modelCatalog.FindAsync(modelId, cancellationToken).ConfigureAwait(false) is null)
+        {
+            status = status with { State = SemanticIndexState.Unavailable, ErrorCode = "model_unavailable", ErrorDetail = modelId };
+            SetStatus(status);
+            return status;
+        }
 
         if (!await _apiKeys.HasKeyAsync(EmbeddingProviderId, cancellationToken).ConfigureAwait(false))
         {
@@ -105,17 +113,22 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
             return status;
         }
 
+        var refreshCompletedStatus = false;
         lock (_gate)
         {
             if (_indexTask is { IsCompleted: false })
             {
                 status = status with { State = SemanticIndexState.Indexing };
             }
-            else if (_indexTask is { IsCompleted: true } && _status.State == SemanticIndexState.Ready)
+            else if (_status.State == SemanticIndexState.Unavailable
+                && _status.ErrorCode == "missing_key"
+                && !_paused)
             {
-                // The repository snapshot above may have been captured before indexing finished.
-                // Keep the completion status published by the index task instead of replacing it.
-                status = _status;
+                _hasStarted = false;
+                StartIndexingLocked();
+                status = _indexTask?.IsCompleted == true
+                    ? _status
+                    : status with { State = SemanticIndexState.Indexing, ErrorCode = null, ErrorDetail = null };
             }
             else if (!_hasStarted && !_paused)
             {
@@ -128,10 +141,60 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
             {
                 status = status with { State = _status.State, ErrorCode = _status.ErrorCode, ErrorDetail = _status.ErrorDetail };
             }
+            else if (_indexTask is { IsCompleted: true } && _status.State == SemanticIndexState.Ready)
+            {
+                if (!completedReadyAtSnapshotStart)
+                {
+                    refreshCompletedStatus = true;
+                }
+                else if (status.Pending > 0 && !_paused)
+                {
+                    _hasStarted = false;
+                    StartIndexingLocked();
+                    status = _indexTask?.IsCompleted == true ? _status : status with { State = SemanticIndexState.Indexing };
+                }
+            }
+        }
+
+        if (refreshCompletedStatus)
+        {
+            status = await GetReadyStatusAsync(cancellationToken).ConfigureAwait(false);
+            lock (_gate)
+            {
+                if (_indexTask is { IsCompleted: false })
+                {
+                    status = status with { State = SemanticIndexState.Indexing };
+                }
+                else if (_status.State is SemanticIndexState.Failed or SemanticIndexState.Unavailable)
+                {
+                    status = status with { State = _status.State, ErrorCode = _status.ErrorCode, ErrorDetail = _status.ErrorDetail };
+                }
+                else if (status.Pending > 0 && !_paused)
+                {
+                    _hasStarted = false;
+                    StartIndexingLocked();
+                    status = _indexTask?.IsCompleted == true ? _status : status with { State = SemanticIndexState.Indexing };
+                }
+            }
         }
 
         SetStatus(status);
         return status;
+    }
+
+    private async Task<SemanticIndexStatus> GetReadyStatusAsync(CancellationToken cancellationToken)
+    {
+        var sources = await _sources.ListSourcesAsync(cancellationToken).ConfigureAwait(false);
+        var totalSourceCount = await _sources.CountSourcesAsync(cancellationToken).ConfigureAwait(false);
+        var embeddings = await _embeddings.ListAllAsync(cancellationToken).ConfigureAwait(false);
+        var modelId = await _settings.GetModelAsync(cancellationToken).ConfigureAwait(false);
+        var indexed = CountCurrent(sources, embeddings, modelId);
+        return new SemanticIndexStatus(
+            true,
+            indexed,
+            Math.Max(0, Math.Min(sources.Count, MaximumIndexedSources) - indexed),
+            SemanticIndexState.Ready,
+            WarningCode: totalSourceCount > MaximumIndexedSources ? "limit_reached" : null);
     }
 
     public async Task EnableAsync(CancellationToken cancellationToken)
@@ -189,6 +252,65 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
 
         var status = _status with { State = SemanticIndexState.Failed, ErrorCode = "stopped" };
         SetStatus(status);
+    }
+
+    public async Task ChangeModelAsync(string modelId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(modelId);
+        var catalog = _modelCatalog ?? throw new InvalidOperationException("The embedding model catalog is not registered.");
+        if (await catalog.FindAsync(modelId, cancellationToken).ConfigureAwait(false) is null)
+        {
+            throw new ArgumentException($"Embedding model '{modelId}' is not available.", nameof(modelId));
+        }
+
+        if (!await _settings.GetEnabledAsync(cancellationToken).ConfigureAwait(false))
+        {
+            await _settings.SetModelAsync(modelId, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        Task? active;
+        lock (_gate)
+        {
+            _paused = true;
+            _indexCancellation?.Cancel();
+            active = _indexTask;
+        }
+
+        if (active is not null)
+        {
+            await IgnoreCancellationAsync(active).ConfigureAwait(false);
+        }
+
+        await _embeddings.DeleteAllAsync(cancellationToken).ConfigureAwait(false);
+        await _settings.SetModelAsync(modelId, cancellationToken).ConfigureAwait(false);
+        lock (_gate)
+        {
+            _hasStarted = false;
+            _paused = false;
+        }
+
+        SetStatus(_status with { State = SemanticIndexState.Failed, ErrorCode = null, ErrorDetail = null });
+        await GetStatusAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<ReindexEstimate> EstimateReindexAsync(string modelId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(modelId);
+        var catalog = _modelCatalog ?? throw new InvalidOperationException("The embedding model catalog is not registered.");
+        var model = await catalog.FindAsync(modelId, cancellationToken).ConfigureAwait(false)
+            ?? throw new ArgumentException($"Embedding model '{modelId}' is not available.", nameof(modelId));
+        var sources = (await _sources.ListSourcesAsync(cancellationToken).ConfigureAwait(false))
+            .Take(MaximumIndexedSources).ToArray();
+        long characters = 0;
+        foreach (var source in sources)
+        {
+            characters = checked(characters + NormalizeText(source.Text).Length);
+        }
+
+        var tokens = characters / 4 + (characters % 4 == 0 ? 0 : 1);
+        return new ReindexEstimate(sources.Length, tokens,
+            model.PricePerTokenUsd is decimal price ? tokens * price : null);
     }
 
     public async ValueTask DisposeAsync()
@@ -259,8 +381,10 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
                 State = exception.Kind is ErrorKind.InvalidKey or ErrorKind.ModelUnavailable
                     ? SemanticIndexState.Unavailable
                     : SemanticIndexState.Failed,
-                ErrorCode = exception.Kind.ToString(),
-                ErrorDetail = exception.Message.Length <= 200 ? exception.Message : exception.Message[..200],
+                ErrorCode = exception.Kind == ErrorKind.ModelUnavailable ? "model_unavailable" : exception.Kind.ToString(),
+                ErrorDetail = exception.Kind == ErrorKind.ModelUnavailable
+                    ? await GetSelectedModelNameAsync(cancellationToken).ConfigureAwait(false)
+                    : exception.Message.Length <= 200 ? exception.Message : exception.Message[..200],
             });
         }
         catch (Exception exception)
@@ -302,6 +426,12 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
 
     private async Task IndexCurrentSourcesAsync(CancellationToken cancellationToken)
     {
+        var modelId = await _settings.GetModelAsync(cancellationToken).ConfigureAwait(false);
+        if (_modelCatalog is not null && await _modelCatalog.FindAsync(modelId, cancellationToken).ConfigureAwait(false) is null)
+        {
+            throw new ProviderException(ErrorKind.ModelUnavailable, modelId);
+        }
+
         var allSources = await _sources.ListSourcesAsync(cancellationToken).ConfigureAwait(false);
         var totalSourceCount = await _sources.CountSourcesAsync(cancellationToken).ConfigureAwait(false);
         if (totalSourceCount > MaximumIndexedSources)
@@ -313,7 +443,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
         var selectedByKey = selected.ToDictionary(source => source.SourceKey, StringComparer.Ordinal);
         var hashesByKey = selected.ToDictionary(source => source.SourceKey, source => HashText(source.Text), StringComparer.Ordinal);
         var stored = await _embeddings.ListAllAsync(cancellationToken).ConfigureAwait(false);
-        var dimensions = stored.Where(embedding => IsRequestedEmbeddingModel(embedding.Model))
+        var dimensions = stored.Where(embedding => IsRequestedEmbeddingModel(embedding.Model, modelId))
             .Select(embedding => embedding.Dimensions)
             .Distinct()
             .ToArray();
@@ -330,7 +460,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
         var remove = stored
             .Where(embedding => !selectedByKey.TryGetValue(embedding.SourceKey, out var source)
                 || !string.Equals(embedding.ContentHash, hashesByKey[source.SourceKey], StringComparison.Ordinal)
-                || !IsRequestedEmbeddingModel(embedding.Model))
+                || !IsRequestedEmbeddingModel(embedding.Model, modelId))
             .Select(embedding => embedding.SourceKey)
             .ToArray();
         await _embeddings.DeleteBySourceKeysAsync(remove, cancellationToken).ConfigureAwait(false);
@@ -351,10 +481,10 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
             cancellationToken.ThrowIfCancellationRequested();
             var batch = pending.Skip(offset).Take(BatchSize).ToArray();
             var texts = batch.Select(source => NormalizeText(source.Text)).ToArray();
-            var result = await EmbedWithRetryAsync(texts, cancellationToken).ConfigureAwait(false);
+            var result = await EmbedWithRetryAsync(modelId, texts, cancellationToken).ConfigureAwait(false);
             if (!responseModelLogged)
             {
-                _logger.LogDebug("Semantic embedding model {RequestedModel} was served as {ResponseModel}.", SemanticSearchModels.Default, result.Model);
+                _logger.LogDebug("Semantic embedding model {RequestedModel} was served as {ResponseModel}.", modelId, result.Model);
                 responseModelLogged = true;
             }
 
@@ -364,7 +494,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
                     OperationId = $"embed:{Guid.NewGuid():N}",
                     Kind = ExpenseKind.Embedding,
                     ProviderId = EmbeddingProviderId,
-                    ModelId = SemanticSearchModels.Default,
+                    ModelId = modelId,
                     CostUsd = cost,
                     OccurredAt = _timeProvider.GetUtcNow(),
                 }
@@ -410,7 +540,7 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
                     source.SessionId,
                     source.Kind,
                     hashesByKey[source.SourceKey],
-                    SemanticSearchModels.Default,
+                    modelId,
                     result.Dimensions,
                     result.Vectors[index],
                     _timeProvider.GetUtcNow()));
@@ -422,14 +552,14 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
         }
     }
 
-    private async Task<EmbeddingResult> EmbedWithRetryAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken)
+    private async Task<EmbeddingResult> EmbedWithRetryAsync(string modelId, IReadOnlyList<string> texts, CancellationToken cancellationToken)
     {
         var client = _providers.GetTextEmbeddingClient(EmbeddingProviderId);
         for (var retry = 0; ; retry++)
         {
             try
             {
-                return await client.EmbedAsync(texts, cancellationToken).ConfigureAwait(false);
+                return await client.EmbedAsync(modelId, texts, cancellationToken).ConfigureAwait(false);
             }
             catch (ProviderException exception) when (retry < RetryCount && IsTransient(exception))
             {
@@ -504,17 +634,18 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
         var sources = await _sources.ListSourcesAsync(cancellationToken).ConfigureAwait(false);
         var totalSourceCount = await _sources.CountSourcesAsync(cancellationToken).ConfigureAwait(false);
         var embeddings = await _embeddings.ListAllAsync(cancellationToken).ConfigureAwait(false);
-        var indexed = CountCurrent(sources, embeddings);
+        var modelId = await _settings.GetModelAsync(cancellationToken).ConfigureAwait(false);
+        var indexed = CountCurrent(sources, embeddings, modelId);
         return (indexed, Math.Max(0, Math.Min(totalSourceCount, MaximumIndexedSources) - indexed), totalSourceCount);
     }
 
-    private static int CountCurrent(IReadOnlyList<SearchSource> sources, IReadOnlyList<TextEmbedding> embeddings)
+    private static int CountCurrent(IReadOnlyList<SearchSource> sources, IReadOnlyList<TextEmbedding> embeddings, string modelId)
     {
         var stored = embeddings.ToDictionary(embedding => embedding.SourceKey, StringComparer.Ordinal);
         return sources.Take(MaximumIndexedSources).Count(source =>
             stored.TryGetValue(source.SourceKey, out var embedding)
             && string.Equals(embedding.ContentHash, HashText(source.Text), StringComparison.Ordinal)
-            && IsRequestedEmbeddingModel(embedding.Model));
+            && IsRequestedEmbeddingModel(embedding.Model, modelId));
     }
 
     private void SetStatus(SemanticIndexStatus status)
@@ -552,7 +683,16 @@ public sealed class SemanticIndexService : IAsyncDisposable, ISemanticIndexContr
     private static string NormalizeText(string text) =>
         string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
-    private static bool IsRequestedEmbeddingModel(string model) => SemanticSearchModels.IsDefault(model);
+    private static bool IsRequestedEmbeddingModel(string model, string requestedModel) =>
+        string.Equals(model, requestedModel, StringComparison.OrdinalIgnoreCase);
+
+    private async Task<string> GetSelectedModelNameAsync(CancellationToken cancellationToken)
+    {
+        var modelId = await _settings.GetModelAsync(cancellationToken).ConfigureAwait(false);
+        return _modelCatalog is null
+            ? modelId
+            : (await _modelCatalog.FindAsync(modelId, cancellationToken).ConfigureAwait(false))?.Name ?? modelId;
+    }
 
     private static string HashText(string text) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(NormalizeText(text))));
 

@@ -19,6 +19,10 @@ public sealed class SessionSettings
 
     public VideoParameters VideoParameters { get; set; } = VideoParameters.Default;
 
+    public List<ModelRef> AudioModels { get; set; } = [];
+
+    public AudioParameters AudioParameters { get; set; } = AudioParameters.Default;
+
     public int RunsPerModel { get; set; } = MinRunsPerModel;
 
     /// <summary>Parameters asked for every run of the session. Changing the models does not change them.</summary>

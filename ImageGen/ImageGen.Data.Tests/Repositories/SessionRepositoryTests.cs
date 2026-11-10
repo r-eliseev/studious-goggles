@@ -18,6 +18,8 @@ public class SessionRepositoryTests
         var session = TestData.Session();
         session.Settings.ImageModels = [new ModelRef("openrouter", "a/b"), new ModelRef("local", "c/d")];
         session.Settings.RunsPerModel = 3;
+        session.Settings.AudioModels = [new ModelRef("openrouter", "speech/model")];
+        session.Settings.AudioParameters = new AudioParameters { Voice = "alloy" };
 
         await repository.AddAsync(session, ct);
         var loaded = await repository.GetAsync(session.Id, ct);
@@ -28,6 +30,8 @@ public class SessionRepositoryTests
         Assert.Equal(session.UpdatedAt, loaded.UpdatedAt);
         Assert.Equal(session.Settings.ImageModels, loaded.Settings.ImageModels);
         Assert.Equal(3, loaded.Settings.RunsPerModel);
+        Assert.Equal(session.Settings.AudioModels, loaded.Settings.AudioModels);
+        Assert.Equal(session.Settings.AudioParameters, loaded.Settings.AudioParameters);
     }
 
     [Fact]
@@ -52,6 +56,8 @@ public class SessionRepositoryTests
         Assert.NotNull(loaded);
         Assert.Empty(loaded.Settings.VideoModels);
         Assert.Equal(VideoParameters.Default, loaded.Settings.VideoParameters);
+        Assert.Empty(loaded.Settings.AudioModels);
+        Assert.Equal(AudioParameters.Default, loaded.Settings.AudioParameters);
     }
 
     [Fact]

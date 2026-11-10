@@ -1,7 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="ImageGen.Avalonia.Views.MainWindow"
-        Width="960" Height="640">
+        Width="960" Height="640"
+        Icon="/Assets/appicon.png">
     <!-- Pages are shown in this host by the navigation service (task 041). -->
     <ContentControl Name="PageHost" />
 </Window>

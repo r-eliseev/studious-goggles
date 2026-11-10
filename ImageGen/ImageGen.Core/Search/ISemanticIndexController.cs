@@ -10,4 +10,8 @@ public interface ISemanticIndexController : ISemanticIndexStatusProvider
     Task DisableAsync(CancellationToken cancellationToken);
 
     Task StopAsync(CancellationToken cancellationToken);
+
+    Task ChangeModelAsync(string modelId, CancellationToken cancellationToken);
+
+    Task<ReindexEstimate> EstimateReindexAsync(string modelId, CancellationToken cancellationToken);
 }

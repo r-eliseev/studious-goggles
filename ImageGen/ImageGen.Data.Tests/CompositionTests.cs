@@ -26,9 +26,13 @@ public class CompositionTests
         Assert.Same(openRouter, router.GetImageProvider(ProviderIds.OpenRouter));
         Assert.Same(openRouter, router.GetChatClient(ProviderIds.OpenRouter));
         Assert.Same(openRouter, router.GetQueuedImageProvider(ProviderIds.OpenRouter));
+        Assert.Same(openRouter, router.GetAudioModelProvider(ProviderIds.OpenRouter));
+        Assert.Same(openRouter, router.GetAudioGenerationProvider(ProviderIds.OpenRouter));
         Assert.NotNull(provider.GetRequiredService<ISeedSource>());
         Assert.NotNull(provider.GetRequiredService<ApiKeyService>());
         Assert.NotNull(provider.GetRequiredService<ModelCatalogService>());
+        Assert.NotNull(provider.GetRequiredService<AudioModelCatalogService>());
+        Assert.NotNull(provider.GetRequiredService<IAudioModelRepository>());
         Assert.NotNull(provider.GetRequiredService<SessionService>());
         Assert.NotNull(provider.GetRequiredService<GenerationService>());
         Assert.NotNull(provider.GetRequiredService<AssistantService>());

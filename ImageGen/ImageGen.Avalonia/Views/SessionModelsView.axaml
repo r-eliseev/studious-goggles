@@ -140,6 +140,44 @@
                     </ScrollViewer>
                 </Grid>
             </TabItem>
+            <TabItem Header="{markup:Res AudioModelsTitle}"
+                     AutomationProperties.Name="{markup:Res AudioModelsTitle}">
+                <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                    <TextBlock Classes="section" Text="{Binding SelectedAudioCountText}" />
+                    <ScrollViewer Grid.Row="1">
+                        <StackPanel Spacing="8">
+                            <TextBlock Classes="section" Text="{markup:Res AudioMusicSoundGroup}" />
+                            <ItemsControl ItemsSource="{Binding MusicSoundModels}">
+                                <ItemsControl.DataTemplates>
+                                    <DataTemplate DataType="pm:AudioModelOptionViewModel" x:DataType="pm:AudioModelOptionViewModel">
+                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,2"
+                                                  AutomationProperties.Name="{Binding Name}">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" />
+                                                <TextBlock Classes="meta" Text="{Binding PriceText}" />
+                                            </StackPanel>
+                                        </CheckBox>
+                                    </DataTemplate>
+                                </ItemsControl.DataTemplates>
+                            </ItemsControl>
+                            <TextBlock Classes="section" Text="{markup:Res AudioSpeechGroup}" />
+                            <ItemsControl ItemsSource="{Binding SpeechModels}">
+                                <ItemsControl.DataTemplates>
+                                    <DataTemplate DataType="pm:AudioModelOptionViewModel" x:DataType="pm:AudioModelOptionViewModel">
+                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,2"
+                                                  AutomationProperties.Name="{Binding Name}">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" />
+                                                <TextBlock Classes="meta" Text="{Binding PriceText}" />
+                                            </StackPanel>
+                                        </CheckBox>
+                                    </DataTemplate>
+                                </ItemsControl.DataTemplates>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </TabItem>
         </TabControl>
 
         <UniformGrid x:Name="ButtonRow" Grid.Row="3" Columns="2">

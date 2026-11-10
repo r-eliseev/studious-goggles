@@ -17,6 +17,8 @@ public static class DataServiceCollectionExtensions
         services.AddSingleton<IRunRepository, RunRepository>();
         services.AddSingleton<IImageModelRepository, ImageModelRepository>();
         services.AddSingleton<IVideoModelRepository, VideoModelRepository>();
+        services.AddSingleton<IEmbeddingModelRepository, EmbeddingModelRepository>();
+        services.AddSingleton<IAudioModelRepository, AudioModelRepository>();
         services.AddSingleton<IImageFileStore, FileImageStore>();
         services.AddSingleton<IChatAttachmentRepository, ChatAttachmentRepository>();
         services.AddSingleton<IImageDescriptionRepository, ImageDescriptionRepository>();

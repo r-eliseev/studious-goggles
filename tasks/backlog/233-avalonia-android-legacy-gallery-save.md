@@ -1,6 +1,6 @@
 ---
 id: 233
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -46,6 +46,17 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-10, codex-gpt6 (completed)
+
+On Android API 23–28, `AndroidImageSaver` now delegates to the shared `AvaloniaImageSaver` and exposes its “Save image as…” action label. On API 29 and later, the existing MediaStore gallery save remains active with the “Save to gallery” label. Registered the shared file saver in the Android composition and added the API-specific save behavior to manual-check task 198.
+
+Verification:
+- `dotnet build ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj -c Release` — succeeded, 0 warnings and 0 errors.
+- `dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj --no-restore` — 180 passed, 2 platform-specific skips.
+- `dotnet format ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj --verify-no-changes --no-restore` and `bash scripts/check.sh` passed.
+
+No Android 9 device was available for the manual save-picker check; it is recorded in task 198.
 
 ## Комментарии
 

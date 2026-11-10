@@ -20,10 +20,12 @@ public sealed partial class SessionParametersPageModel(
     ModelCatalogService catalog,
     INavigationService navigation,
     ErrorAlert errorAlert,
-    VideoModelCatalogService? videoCatalog = null) : ObservableObject
+    VideoModelCatalogService? videoCatalog = null,
+    AudioModelCatalogService? audioCatalog = null) : ObservableObject
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
     private readonly VideoModelCatalogService? _videoCatalog = videoCatalog;
+    private readonly AudioModelCatalogService? _audioCatalog = audioCatalog;
     /// <summary>Output formats the service accepts (see <c>SessionService</c>).</summary>
     private static readonly string[] OutputFormats = ["png", "jpeg", "webp"];
 
@@ -48,6 +50,12 @@ public sealed partial class SessionParametersPageModel(
     public ObservableCollection<ParameterOption> VideoResolutionOptions { get; } = [];
 
     public ObservableCollection<ParameterOption> VideoAspectRatioOptions { get; } = [];
+
+    [ObservableProperty]
+    public partial string AudioVoice { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool IsAudioVoiceVisible { get; set; }
 
     [ObservableProperty]
     public partial ParameterOption? SelectedAspectRatio { get; set; }
@@ -143,6 +151,12 @@ public sealed partial class SessionParametersPageModel(
                 await sessionService.UpdateVideoSettingsAsync(
                     _sessionId, session.Settings.VideoModels, videoParameters, CancellationToken.None);
             }
+            if (_audioCatalog is not null)
+            {
+                var voice = string.IsNullOrWhiteSpace(AudioVoice) ? null : AudioVoice.Trim();
+                await sessionService.UpdateAudioSettingsAsync(
+                    _sessionId, session.Settings.AudioModels, new AudioParameters { Voice = voice }, CancellationToken.None);
+            }
 
             await CloseAsync();
         }
@@ -204,6 +218,23 @@ public sealed partial class SessionParametersPageModel(
                 savedVideo.AspectRatio);
             IsVideoAudioOptionVisible = selectedVideoModels.Any(model => model.GeneratesAudio == true);
             GenerateVideoAudio = savedVideo.GenerateAudio;
+
+            AudioVoice = session.Settings.AudioParameters.Voice ?? "";
+            IsAudioVoiceVisible = false;
+            if (_audioCatalog is not null && session.Settings.AudioModels.Count > 0)
+            {
+                try
+                {
+                    var audioRefs = session.Settings.AudioModels.ToHashSet();
+                    var audioModels = await _audioCatalog.GetAudioModelsAsync(forceRefresh: false, CancellationToken.None);
+                    IsAudioVoiceVisible = audioModels.Any(model =>
+                        model.Output == AudioOutput.Speech && audioRefs.Contains(new ModelRef(model.ProviderId, model.Id)));
+                }
+                catch (ProviderException)
+                {
+                    // Keep the image and video parameter controls available when the optional audio catalog is offline.
+                }
+            }
         }
         catch (Exception ex)
         {

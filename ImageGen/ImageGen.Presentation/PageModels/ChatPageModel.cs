@@ -227,7 +227,9 @@ public sealed partial class ChatPageModel(
                 CultureInfo.CurrentCulture,
                 AppResources.ModelsButtonFormat,
                 settings.ImageModels.Count,
-                settings.RunsPerModel);
+                settings.RunsPerModel,
+                settings.VideoModels.Count,
+                settings.AudioModels.Count);
             AssistantText = string.Format(CultureInfo.CurrentCulture, AppResources.AssistantLabelFormat, settings.AssistantModel.ModelId);
 
             Items.Clear();

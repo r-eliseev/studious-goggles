@@ -1,6 +1,6 @@
 ---
 id: 228
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -53,6 +53,12 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+Added embedding model discovery, price/context labels, name/id filtering, current and unavailable model selection, reindex cost confirmation, cancellation restore, and model-unavailable status text to Settings. Added selectors to MAUI and Avalonia, plus the Avalonia headless accessibility check. Added follow-up manual scenarios to tasks 140 and 046.
+
+Verification passed: Presentation tests (536); Avalonia headless tests (181 passed, 2 environment skips); MAUI Android build (0 warnings, 0 errors); `dotnet format` for Presentation, Presentation.Tests, Avalonia, Avalonia.Tests, and MAUI; `bash scripts/check.sh`.
+
+Owner-run Android and desktop model-switch scenarios are listed in tasks 140 and 046 and remain unverified until a person runs them on a device/desktop.
 
 ## Комментарии
 

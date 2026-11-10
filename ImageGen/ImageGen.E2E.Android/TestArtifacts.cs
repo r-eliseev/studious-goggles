@@ -7,6 +7,7 @@ namespace ImageGen.E2E.Android;
 internal sealed class TestArtifacts
 {
     private const string InvalidKey = "sk-or-e2e-invalid";
+    private const int FinalFrameHold = 1500;
     private readonly List<string> _errors = [];
 
     public TestArtifacts(string className, string testName)
@@ -33,12 +34,13 @@ internal sealed class TestArtifacts
 
     public void Capture(string className, string testName, string status, Action? screenshot, Func<string>? pageSource, Func<string?>? stopRecording)
     {
+        Try("screenshot", () => Save("screenshot.png", screenshot));
         if (status == "Failed")
         {
-            Try("screenshot", () => Save("screenshot.png", screenshot));
             Try("page source", () => SaveText("ui.xml", pageSource?.Invoke() ?? string.Empty, "application/xml"));
         }
 
+        Try("final frame hold", () => Thread.Sleep(FinalFrameHold));
         Try("screen recording", () =>
         {
             var encoded = stopRecording?.Invoke();

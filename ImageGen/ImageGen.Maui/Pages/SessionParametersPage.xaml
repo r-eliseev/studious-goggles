@@ -57,6 +57,14 @@
                         SemanticProperties.Description="{x:Static strings:AppResources.VideoGenerateAudio}" />
                 <Label StyleClass="meta" Text="{x:Static strings:AppResources.VideoGenerateAudio}"
                        IsVisible="{Binding IsVideoAudioOptionVisible}" />
+
+                <VerticalStackLayout Spacing="4" IsVisible="{Binding IsAudioVoiceVisible}">
+                    <Label StyleClass="section" Text="{x:Static strings:AppResources.SessionAudioVoice}" />
+                    <Entry Text="{Binding AudioVoice, Mode=TwoWay}"
+                           Placeholder="{x:Static strings:AppResources.SessionAudioVoice}"
+                           SemanticProperties.Description="{x:Static strings:AppResources.SessionAudioVoice}" />
+                    <Label StyleClass="meta" Text="{x:Static strings:AppResources.SessionAudioVoiceHint}" />
+                </VerticalStackLayout>
             </VerticalStackLayout>
         </ScrollView>
 

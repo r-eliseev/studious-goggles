@@ -21,5 +21,11 @@ public interface IProviderRouter
 
     IVideoModelProvider GetVideoModelProvider(string providerId);
 
+    IEmbeddingModelProvider GetEmbeddingModelProvider(string providerId);
+
     IQueuedVideoProvider GetQueuedVideoProvider(string providerId);
+
+    IAudioModelProvider GetAudioModelProvider(string providerId);
+
+    IAudioGenerationProvider GetAudioGenerationProvider(string providerId);
 }

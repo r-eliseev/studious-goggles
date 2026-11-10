@@ -1,6 +1,6 @@
 ---
 id: 226
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -50,6 +50,14 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-10, codex-gpt6 (completed)
+
+- Reordered status recovery so an enabled index retries after `missing_key`, while other provider failures remain failed until an explicit retry.
+- A completed ready index now reports fresh indexed/pending counts. If indexing completes while the status snapshot is being read, the service refreshes the snapshot; pending sources start a rescan even without a session-change event.
+- Added four regression tests for re-enabling after Ready, new sources without an event, key restoration after `missing_key`, and preserving unrelated `Failed` errors.
+- Verification: Core tests passed (815/815); formatting passed for Core and Core.Tests; `bash scripts/check.sh` and `git diff --check` passed.
+- No plan differences.
 
 ## Комментарии
 

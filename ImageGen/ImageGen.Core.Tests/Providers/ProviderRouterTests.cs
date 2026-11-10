@@ -47,6 +47,8 @@ public class ProviderRouterTests
         Assert.Same(connection, _router.GetChatClient("openrouter"));
         Assert.Same(connection, _router.GetQueuedImageProvider("openrouter"));
         Assert.Same(connection, _router.GetQueuedVideoProvider("openrouter"));
+        Assert.Same(connection, _router.GetAudioModelProvider("openrouter"));
+        Assert.Same(connection, _router.GetAudioGenerationProvider("openrouter"));
     }
 
     [Fact]
@@ -118,11 +120,19 @@ public class ProviderRouterTests
     }
 
     [Fact]
+    public void GetAudioModelProvider_OpenAiCompatible_ThrowsModelUnavailable()
+    {
+        var error = Assert.Throws<ProviderException>(() => _router.GetAudioModelProvider("local"));
+
+        Assert.Equal(ErrorKind.ModelUnavailable, error.Kind);
+    }
+
+    [Fact]
     public async Task GetTextEmbeddingClient_OpenAiCompatible_ThrowsModelUnavailable()
     {
         var client = _router.GetTextEmbeddingClient("local");
 
-        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync(["text"], TestContext.Current.CancellationToken));
+        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync("baai/bge-m3", ["text"], TestContext.Current.CancellationToken));
 
         Assert.Equal(ErrorKind.ModelUnavailable, error.Kind);
     }

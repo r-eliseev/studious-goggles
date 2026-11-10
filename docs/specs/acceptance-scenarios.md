@@ -36,16 +36,16 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 ### First launch and keys (`FirstRunAndKeys.feature`, task 254)
 | id | Scenario: condition → expectation | Requirements | Status |
 |---|---|---|---|
-| KEY-01 | First launch without a key → the key screen opens, not the session list (`@e2e`, replaces `FirstRunTests.Launch_ShowsFirstRunKeyScreen`) | S1, F1.1 | planned |
-| KEY-02 | A valid OpenRouter key → status "works", then the assistant model choice; after choosing — the session list | F1.2, S1.3 | planned |
-| KEY-03 | An invalid key (401) → an "invalid key" message with the provider's name, we stay on the key screen, the key is not saved (`@e2e`, replaces `FirstRunTests.InvalidKey_ShowsError`; on a device the message may also be "no connection") | F1.2 | planned |
-| KEY-04 | No connection → a "no connection" message, the key is not saved | F1.2 | planned |
-| KEY-05 | The error text and the app log do not contain the entered key | F1.3, F10.3 | planned |
-| KEY-06 | A saved key, restart → the key screen does not appear, the session list opens | F10.3 | planned |
-| KEY-07 | Settings: OpenRouter shows only the last four characters of the key; an unconfigured provider shows "Not connected" | F1.3, S6.4 | planned |
-| KEY-08 | Settings: replacing the key with an invalid one → an error, the old key keeps working | F1.3 | planned |
-| KEY-09 | Settings: deleting the OpenRouter key → the provider is "Not connected"; the next time the session list opens — the key screen | F1.3 | planned |
-| KEY-10 | Any scenario: no requests to addresses outside the fake (self-check of the world) | ADR 0031 | planned |
+| KEY-01 | First launch without a key → the key screen opens, not the session list (`@e2e`, replaces `FirstRunTests.Launch_ShowsFirstRunKeyScreen`) | S1, F1.1 | done |
+| KEY-02 | A valid OpenRouter key → status "works", then the assistant model choice; after choosing — the session list | F1.2, S1.3 | discrepancy (272) |
+| KEY-03 | An invalid key (401) → an "invalid key" message with the provider's name, we stay on the key screen, the key is not saved (`@e2e`, replaces `FirstRunTests.InvalidKey_ShowsError`; on a device the message may also be "no connection") | F1.2 | done |
+| KEY-04 | No connection → a "no connection" message, the key is not saved | F1.2 | done |
+| KEY-05 | The error text and the app log do not contain the entered key | F1.3, F10.3 | done |
+| KEY-06 | A saved key, restart → the key screen does not appear, the session list opens | F10.3 | done |
+| KEY-07 | Settings: OpenRouter shows only the last four characters of the key; an unconfigured provider shows "Not connected" | F1.3, S6.4 | done |
+| KEY-08 | Settings: replacing the key with an invalid one → an error, the old key keeps working | F1.3 | done |
+| KEY-09 | Settings: deleting the OpenRouter key → the provider is "Not connected"; the next time the session list opens — the key screen | F1.3 | done |
+| KEY-10 | Any scenario: no requests to addresses outside the fake (self-check of the world) | ADR 0031 | done |
 | KEY-11 | The key screen is rotated to landscape and back → the key field stays visible (`@e2e-only`, replaces `FirstRunTests.Rotate_KeepsKeyScreen`) | F10.1 | planned |
 
 ### Sessions (`Sessions.feature`, task 255)

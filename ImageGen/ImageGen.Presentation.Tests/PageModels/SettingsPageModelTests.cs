@@ -1,3 +1,4 @@
+using System.Globalization;
 using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Platform;
@@ -12,6 +13,7 @@ using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
 using ImageGen.Presentation.Tests.TestDoubles;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
@@ -28,10 +30,14 @@ public sealed class SettingsPageModelTests : IDisposable
     private readonly IProviderRouter _router = Substitute.For<IProviderRouter>();
     private readonly IDefaultAssistantModel _defaultAssistantModel = DefaultAssistantModels.Create();
     private readonly ISemanticIndexController _semanticIndex = Substitute.For<ISemanticIndexController>();
+    private readonly ISemanticSearchSettingsStore _semanticSettings = Substitute.For<ISemanticSearchSettingsStore>();
+    private readonly IEmbeddingModelRepository _embeddingModelRepository = Substitute.For<IEmbeddingModelRepository>();
+    private readonly IEmbeddingModelProvider _embeddingModelProvider = Substitute.For<IEmbeddingModelProvider>();
     private readonly IMainThread _mainThread = Substitute.For<IMainThread>();
     private readonly ISessionRepository _sessions = Substitute.For<ISessionRepository>();
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
     private readonly ISessionGenerationCoordinator _generationCoordinator = Substitute.For<ISessionGenerationCoordinator>();
+    private readonly CapturingLogger<SettingsPageModel> _settingsLogger = new();
     private readonly SessionChangeNotifier _changes = new(NullLogger<SessionChangeNotifier>.Instance);
     private readonly ISemanticIndexStatusProvider _indexStatus = Substitute.For<ISemanticIndexStatusProvider>();
     private HistoryService CreateHistory() => new(_sessions, _files, _generationCoordinator, _changes, NullLogger<HistoryService>.Instance, _indexStatus);
@@ -51,6 +57,10 @@ public sealed class SettingsPageModelTests : IDisposable
         _appearance = new AppearanceService(new TestPaths(_directory), NullLogger<AppearanceService>.Instance);
         _semanticIndex.GetStatusAsync(Arg.Any<CancellationToken>()).Returns(new SemanticIndexStatus(false, 0, 0, SemanticIndexState.Off));
         _semanticIndex.GetSourceCountAsync(Arg.Any<CancellationToken>()).Returns(0);
+        _semanticSettings.GetModelAsync(Arg.Any<CancellationToken>()).Returns(SemanticSearchModels.Default);
+        _embeddingModelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns([]);
+        _embeddingModelProvider.ListEmbeddingModelsAsync(Arg.Any<CancellationToken>()).Returns([]);
+        _router.GetEmbeddingModelProvider(ProviderIds.OpenRouter).Returns(_embeddingModelProvider);
         _indexStatus.GetStatusSnapshot().Returns(new SemanticIndexStatus(false, 0, 0, SemanticIndexState.Off));
         _mainThread.When(thread => thread.BeginInvokeOnMainThread(Arg.Any<Action>())).Do(call => call.Arg<Action>().Invoke());
     }
@@ -239,6 +249,103 @@ public sealed class SettingsPageModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Load_ListsEmbeddingModelsWithPriceAndContextAndSearchesNameAndId()
+    {
+        _semanticSettings.GetModelAsync(Arg.Any<CancellationToken>()).Returns("vendor/a-model");
+        _embeddingModelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns([
+            EmbeddingModel("vendor/z-model", "Zulu embedding", 4_096, 0.00000002m),
+            EmbeddingModel("vendor/a-model", "Alpha embedding", 8_192, 0.00000001m),
+        ]);
+        var model = CreateModel();
+
+        await model.LoadCommand.ExecuteAsync(null);
+
+        Assert.Equal(["vendor/a-model", "vendor/z-model"], model.EmbeddingModels.Select(item => item.Id));
+        Assert.Contains("$0.01 / 1M tokens", model.EmbeddingModels[0].DisplayName, StringComparison.Ordinal);
+        Assert.Contains("context 8192", model.EmbeddingModels[0].DisplayName, StringComparison.Ordinal);
+        model.EmbeddingModelSearchText = "z-model";
+        Assert.Equal("vendor/z-model", Assert.Single(model.FilteredEmbeddingModels).Id);
+    }
+
+    [Fact]
+    public async Task ChangeEmbeddingModel_ConfirmsEstimateAndChangesModel()
+    {
+        _semanticIndex.GetStatusAsync(Arg.Any<CancellationToken>()).Returns(new SemanticIndexStatus(true, 4, 6, SemanticIndexState.Ready));
+        _embeddingModelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns([
+            EmbeddingModel(SemanticSearchModels.Default, "BGE M3", 8_192, 0.00000001m),
+            EmbeddingModel("vendor/new-model", "New embedding", 16_384, 0.00000002m),
+        ]);
+        _semanticIndex.EstimateReindexAsync("vendor/new-model", Arg.Any<CancellationToken>()).Returns(new ReindexEstimate(10, 1_000, 0.00002m));
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+        var model = CreateModel();
+        await model.LoadCommand.ExecuteAsync(null);
+        model.SelectedEmbeddingModel = model.EmbeddingModels.Single(item => item.Id == "vendor/new-model");
+
+        await model.ChangeEmbeddingModelCommand.ExecuteAsync(null);
+
+        await _dialogs.Received(1).ConfirmAsync(AppResources.SemanticSearchTitle,
+            Arg.Is<string>(message => message.Contains("Re-index 10 texts with New embedding? About 1,000 tokens, ≈$0.00002", StringComparison.Ordinal)
+                && message.Contains("Semantic search works on the new model as indexing progresses.", StringComparison.Ordinal)),
+            AppResources.SemanticSearchChangeModel, AppResources.Cancel);
+        await _semanticIndex.Received(1).ChangeModelAsync("vendor/new-model", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ChangeEmbeddingModel_Declined_RestoresCurrentSelection()
+    {
+        _semanticIndex.GetStatusAsync(Arg.Any<CancellationToken>()).Returns(new SemanticIndexStatus(true, 1, 0, SemanticIndexState.Ready));
+        _embeddingModelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns([
+            EmbeddingModel(SemanticSearchModels.Default, "BGE M3", 8_192, 0.00000001m),
+            EmbeddingModel("vendor/new-model", "New embedding", 16_384, 0.00000002m),
+        ]);
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        var model = CreateModel();
+        await model.LoadCommand.ExecuteAsync(null);
+        model.SelectedEmbeddingModel = model.EmbeddingModels.Single(item => item.Id == "vendor/new-model");
+
+        await model.ChangeEmbeddingModelCommand.ExecuteAsync(null);
+
+        Assert.Equal(SemanticSearchModels.Default, model.SelectedEmbeddingModel!.Id);
+        await _semanticIndex.DidNotReceive().ChangeModelAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ChangeEmbeddingModel_SearchDisabled_SavesWithoutConfirmation()
+    {
+        _embeddingModelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns([
+            EmbeddingModel(SemanticSearchModels.Default, "BGE M3", 8_192, 0.00000001m),
+            EmbeddingModel("vendor/new-model", "New embedding", 16_384, 0.00000002m),
+        ]);
+        var model = CreateModel();
+        await model.LoadCommand.ExecuteAsync(null);
+        model.SelectedEmbeddingModel = model.EmbeddingModels.Single(item => item.Id == "vendor/new-model");
+
+        await model.ChangeEmbeddingModelCommand.ExecuteAsync(null);
+
+        await _dialogs.DidNotReceive().ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+        await _semanticIndex.Received(1).ChangeModelAsync("vendor/new-model", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Load_RetiredSelectedModel_ShowsUnavailableMessageAndOption()
+    {
+        _semanticSettings.GetModelAsync(Arg.Any<CancellationToken>()).Returns("vendor/retired-model");
+        _semanticIndex.GetStatusAsync(Arg.Any<CancellationToken>()).Returns(new SemanticIndexStatus(true, 0, 1,
+            SemanticIndexState.Unavailable, ErrorCode: "model_unavailable", ErrorDetail: "vendor/retired-model"));
+        _embeddingModelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns([
+            EmbeddingModel(SemanticSearchModels.Default, "BGE M3", 8_192, 0.00000001m),
+        ]);
+        var model = CreateModel();
+
+        await model.LoadCommand.ExecuteAsync(null);
+
+        Assert.Equal("vendor/retired-model", model.EmbeddingModels[0].Id);
+        Assert.True(model.EmbeddingModels[0].IsUnavailable);
+        Assert.Contains("vendor/retired-model", model.SemanticSearchStatusText, StringComparison.Ordinal);
+        Assert.Contains("Choose another model to re-index.", model.SemanticSearchStatusText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ProviderChangeCommand_NavigatesWithProviderId()
     {
         var model = CreateModel();
@@ -375,6 +482,34 @@ public sealed class SettingsPageModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ClearLogs_DeletionFails_ReportsFailuresAndLogsExceptionType()
+    {
+        var paths = CreateLogFiles("imagegen-20261101.log", "imagegen-20261102.log", "imagegen-20261103.log");
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+        var model = CreateModel(path =>
+        {
+            if (path == paths[0])
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            File.Delete(path);
+        });
+
+        await model.ClearLogsCommand.ExecuteAsync(null);
+
+        Assert.True(File.Exists(paths[0]));
+        Assert.False(File.Exists(paths[1]));
+        Assert.True(File.Exists(paths[2]));
+        await _dialogs.Received(1).AlertAsync(AppResources.SettingsLogs,
+            string.Format(CultureInfo.CurrentCulture, AppResources.SettingsLogsClearedWithFailures, 1, 1));
+        Assert.Contains(_settingsLogger.Entries, entry => entry.Level == LogLevel.Warning
+            && entry.Message.Contains(nameof(UnauthorizedAccessException), StringComparison.Ordinal)
+            && entry.Message.Contains("1", StringComparison.Ordinal)
+            && !entry.Message.Contains(_directory, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task ClearHistory_Cancel_KeepsHistory()
     {
         _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(false);
@@ -416,9 +551,22 @@ public sealed class SettingsPageModelTests : IDisposable
         Assert.True(CreateModel().CanOpenLogs);
     }
 
-    private SettingsPageModel CreateModel() => new(_appearance, _keyService, _registry, _navigation, _folders, _logSharer, new TestPaths(_directory), _dialogs,
+    private SettingsPageModel CreateModel(Action<string>? deleteLogFile = null) => new(_appearance, _keyService, _registry, _navigation, _folders, _logSharer, new TestPaths(_directory), _dialogs,
         ErrorAlerts.Create(_dialogs), new ChatModelCatalogService(_router, NullLogger<ChatModelCatalogService>.Instance), _defaultAssistantModel,
-        _semanticIndex, _mainThread, CreateHistory(), _currentSession);
+        _semanticIndex, _semanticSettings,
+        new EmbeddingModelCatalogService(_router, _embeddingModelRepository, NullLogger<EmbeddingModelCatalogService>.Instance),
+        _mainThread, CreateHistory(), _currentSession, _settingsLogger, deleteLogFile);
+
+    private static EmbeddingModel EmbeddingModel(string id, string name, int? contextLength, decimal? price) => new()
+    {
+        ProviderId = ProviderIds.OpenRouter,
+        Id = id,
+        Name = name,
+        Description = "test model",
+        ContextLength = contextLength,
+        PricePerTokenUsd = price,
+        FetchedAt = new DateTimeOffset(2026, 11, 10, 0, 0, 0, TimeSpan.Zero),
+    };
 
     private string[] CreateLogFiles(params string[] names)
     {

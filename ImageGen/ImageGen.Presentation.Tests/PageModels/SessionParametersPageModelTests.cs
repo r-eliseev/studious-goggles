@@ -21,7 +21,9 @@ public class SessionParametersPageModelTests
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
     private readonly IVideoModelRepository _videoModelRepository = Substitute.For<IVideoModelRepository>();
     private readonly IVideoModelProvider _videoProvider = Substitute.For<IVideoModelProvider>();
+    private readonly IAudioModelRepository _audioModelRepository = Substitute.For<IAudioModelRepository>();
     private readonly VideoModelCatalogService _videoCatalog;
+    private readonly AudioModelCatalogService _audioCatalog;
     private readonly INavigationService _navigation = Substitute.For<INavigationService>();
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly Session _session;
@@ -34,7 +36,10 @@ public class SessionParametersPageModelTests
         time.GetUtcNow().Returns(Now);
         var router = ProviderDoubles.Router();
         router.GetVideoModelProvider(ProviderIds.OpenRouter).Returns(_videoProvider);
+        var audioProvider = Substitute.For<IAudioModelProvider>();
+        router.GetAudioModelProvider(ProviderIds.OpenRouter).Returns(audioProvider);
         _videoCatalog = new VideoModelCatalogService(router, _videoModelRepository, NullLogger<VideoModelCatalogService>.Instance);
+        _audioCatalog = new AudioModelCatalogService(router, _audioModelRepository, NullLogger<AudioModelCatalogService>.Instance);
         var sessionService = new SessionService(
             _sessions,
             Substitute.For<IChatMessageRepository>(),
@@ -42,10 +47,10 @@ public class SessionParametersPageModelTests
             Substitute.For<IImageFileStore>(),
             new ChatModelCatalogService(router, NullLogger<ChatModelCatalogService>.Instance),
             time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance), Substitute.For<ISessionGenerationCoordinator>(), DefaultAssistantModels.Create(),
-            _videoCatalog);
+            _videoCatalog, _audioCatalog);
         var catalog = new ModelCatalogService(
             ProviderDoubles.Router(), _modelRepository, NullLogger<ModelCatalogService>.Instance);
-        _model = new SessionParametersPageModel(sessionService, catalog, _navigation, ErrorAlerts.Create(_dialogs), _videoCatalog);
+        _model = new SessionParametersPageModel(sessionService, catalog, _navigation, ErrorAlerts.Create(_dialogs), _videoCatalog, _audioCatalog);
         _model.ApplyQueryAttributes(new Dictionary<string, object> { [Routes.SessionIdParameter] = SessionId.ToString("D") });
 
         _session = new Session
@@ -71,6 +76,17 @@ public class SessionParametersPageModelTests
         [
             Video("vendor/alpha-video", [4, 6, 8], ["720p", "1080p"], ["16:9", "1:1"], generatesAudio: true),
             Video("vendor/beta-video", [5, 6, 8, 10], ["1080p", "4k"], ["16:9"], generatesAudio: false),
+        ]);
+        _audioModelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(
+        [
+            new AudioModel
+            {
+                ProviderId = ProviderIds.OpenRouter,
+                Id = "speech/model",
+                Name = "Speech",
+                Output = AudioOutput.Speech,
+                FetchedAt = Now,
+            },
         ]);
     }
 
@@ -166,6 +182,30 @@ public class SessionParametersPageModelTests
         await _model.OnAppearingAsync();
 
         Assert.False(_model.IsVideoAudioOptionVisible);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_SelectedSpeechModel_ShowsSavedVoice()
+    {
+        _session.Settings.AudioModels = [new ModelRef(ProviderIds.OpenRouter, "speech/model")];
+        _session.Settings.AudioParameters = new AudioParameters { Voice = "alloy" };
+
+        await _model.OnAppearingAsync();
+
+        Assert.True(_model.IsAudioVoiceVisible);
+        Assert.Equal("alloy", _model.AudioVoice);
+    }
+
+    [Fact]
+    public async Task SaveCommand_AudioVoice_SavesWithSelectedAudioModels()
+    {
+        _session.Settings.AudioModels = [new ModelRef(ProviderIds.OpenRouter, "speech/model")];
+        await _model.OnAppearingAsync();
+        _model.AudioVoice = "alloy";
+
+        await _model.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal("alloy", _saved!.Settings.AudioParameters.Voice);
     }
 
     private static ImageModel WithParameters(string id, string name, string parameterName, params string[] values)

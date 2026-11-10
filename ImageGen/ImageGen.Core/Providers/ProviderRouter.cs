@@ -58,6 +58,17 @@ public sealed class ProviderRouter(
             ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support video models.");
     }
 
+    public IEmbeddingModelProvider GetEmbeddingModelProvider(string providerId)
+    {
+        if (registry.Get(providerId).Kind != ProviderKind.OpenRouter)
+        {
+            throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support embedding models.");
+        }
+
+        return GetConnection(providerId) as IEmbeddingModelProvider
+            ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support embedding models.");
+    }
+
     public IQueuedVideoProvider GetQueuedVideoProvider(string providerId)
     {
         if (registry.Get(providerId).Kind != ProviderKind.OpenRouter)
@@ -67,6 +78,28 @@ public sealed class ProviderRouter(
 
         return GetConnection(providerId) as IQueuedVideoProvider
             ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support queued video generation.");
+    }
+
+    public IAudioModelProvider GetAudioModelProvider(string providerId)
+    {
+        if (registry.Get(providerId).Kind != ProviderKind.OpenRouter)
+        {
+            throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support audio models.");
+        }
+
+        return GetConnection(providerId) as IAudioModelProvider
+            ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support audio models.");
+    }
+
+    public IAudioGenerationProvider GetAudioGenerationProvider(string providerId)
+    {
+        if (registry.Get(providerId).Kind != ProviderKind.OpenRouter)
+        {
+            throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support audio generation.");
+        }
+
+        return GetConnection(providerId) as IAudioGenerationProvider
+            ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support audio generation.");
     }
 
     private IProviderConnection Create(ProviderConfig config) => config.Kind switch

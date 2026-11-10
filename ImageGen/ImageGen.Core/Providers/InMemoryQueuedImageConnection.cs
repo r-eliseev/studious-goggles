@@ -4,13 +4,16 @@ using ImageGen.Core.Domain.Models;
 namespace ImageGen.Core.Providers;
 
 /// <summary>Combines one synchronous image/chat client with a prepared in-memory queued adapter.</summary>
-public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelProvider, IAssistantChatClient, IQueuedImageProvider, ITextEmbeddingClient, IVideoModelProvider, IQueuedVideoProvider
+public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelProvider, IAssistantChatClient, IQueuedImageProvider, ITextEmbeddingClient, IVideoModelProvider, IEmbeddingModelProvider, IQueuedVideoProvider, IAudioModelProvider, IAudioGenerationProvider
 {
     private readonly IModelProvider _imageProvider;
     private readonly IAssistantChatClient _chatClient;
     private readonly ITextEmbeddingClient? _textEmbeddingClient;
     private readonly IVideoModelProvider? _videoModelProvider;
+    private readonly IEmbeddingModelProvider? _embeddingModelProvider;
     private readonly IQueuedVideoProvider? _queuedVideoProvider;
+    private readonly IAudioModelProvider? _audioModelProvider;
+    private readonly IAudioGenerationProvider? _audioGenerationProvider;
     private readonly InMemoryQueuedImageProvider _queuedImages;
 
     public InMemoryQueuedImageConnection(
@@ -30,7 +33,10 @@ public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelP
         _chatClient = chatClient;
         _textEmbeddingClient = imageProvider as ITextEmbeddingClient ?? chatClient as ITextEmbeddingClient;
         _videoModelProvider = imageProvider as IVideoModelProvider ?? chatClient as IVideoModelProvider;
+        _embeddingModelProvider = imageProvider as IEmbeddingModelProvider ?? chatClient as IEmbeddingModelProvider;
         _queuedVideoProvider = imageProvider as IQueuedVideoProvider ?? chatClient as IQueuedVideoProvider;
+        _audioModelProvider = imageProvider as IAudioModelProvider ?? chatClient as IAudioModelProvider;
+        _audioGenerationProvider = imageProvider as IAudioGenerationProvider ?? chatClient as IAudioGenerationProvider;
         _queuedImages = new InMemoryQueuedImageProvider(transport, providerId, timeProvider);
     }
 
@@ -55,17 +61,23 @@ public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelP
     public Task<IReadOnlyList<ChatModel>> ListChatModelsAsync(CancellationToken cancellationToken) =>
         _chatClient.ListChatModelsAsync(cancellationToken);
 
-    public Task<EmbeddingResult> EmbedAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken) =>
+    public Task<EmbeddingResult> EmbedAsync(string modelId, IReadOnlyList<string> texts, CancellationToken cancellationToken) =>
         (_textEmbeddingClient ?? throw new ProviderException(
             ImageGen.Core.Domain.Generations.ErrorKind.ModelUnavailable,
             "This provider does not support text embeddings."))
-        .EmbedAsync(texts, cancellationToken);
+        .EmbedAsync(modelId, texts, cancellationToken);
 
     public Task<IReadOnlyList<VideoModel>> ListVideoModelsAsync(CancellationToken cancellationToken) =>
         (_videoModelProvider ?? throw new ProviderException(
             ImageGen.Core.Domain.Generations.ErrorKind.ModelUnavailable,
             "This provider does not support video models."))
         .ListVideoModelsAsync(cancellationToken);
+
+    public Task<IReadOnlyList<EmbeddingModel>> ListEmbeddingModelsAsync(CancellationToken cancellationToken) =>
+        (_embeddingModelProvider ?? throw new ProviderException(
+            ImageGen.Core.Domain.Generations.ErrorKind.ModelUnavailable,
+            "This provider does not support embedding models."))
+        .ListEmbeddingModelsAsync(cancellationToken);
 
     public Task<ProviderJobHandle> SubmitAsync(VideoGenerationRequest request, CancellationToken cancellationToken) =>
         (_queuedVideoProvider ?? throw new ProviderException(
@@ -84,4 +96,16 @@ public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelP
             ImageGen.Core.Domain.Generations.ErrorKind.ModelUnavailable,
             "This provider does not support queued video generation."))
         .OpenContentAsync(handle, cancellationToken);
+
+    public Task<IReadOnlyList<AudioModel>> ListAudioModelsAsync(CancellationToken cancellationToken) =>
+        (_audioModelProvider ?? throw new ProviderException(
+            ImageGen.Core.Domain.Generations.ErrorKind.ModelUnavailable,
+            "This provider does not support audio models."))
+        .ListAudioModelsAsync(cancellationToken);
+
+    public Task<AudioGenerationResponse> GenerateAudioAsync(AudioGenerationRequest request, CancellationToken cancellationToken) =>
+        (_audioGenerationProvider ?? throw new ProviderException(
+            ImageGen.Core.Domain.Generations.ErrorKind.ModelUnavailable,
+            "This provider does not support audio generation."))
+        .GenerateAudioAsync(request, cancellationToken);
 }

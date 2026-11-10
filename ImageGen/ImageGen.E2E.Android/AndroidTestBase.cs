@@ -42,7 +42,7 @@ public abstract class AndroidTestBase
             context.Test.ClassName ?? "Unknown",
             context.Test.Name,
             status,
-            failed ? () => Driver.GetScreenshot().SaveAsFile(Path.Combine(_artifacts.DirectoryPath, "screenshot.png")) : null,
+            () => Driver.GetScreenshot().SaveAsFile(Path.Combine(_artifacts.DirectoryPath, "screenshot.png")),
             failed ? () => Driver.PageSource : null,
             DriverOrNull is { } driver ? driver.StopRecordingScreen : null);
     }

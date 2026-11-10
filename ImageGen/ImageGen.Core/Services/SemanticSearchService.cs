@@ -20,6 +20,7 @@ public sealed class SemanticSearchService : IDisposable
     private readonly ITextEmbeddingRepository _embeddings;
     private readonly IProviderRouter _providers;
     private readonly ISemanticIndexStatusProvider _index;
+    private readonly ISemanticSearchSettingsStore _settings;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<SemanticSearchService> _logger;
     private readonly SemaphoreSlim _searchGate = new(1, 1);
@@ -34,6 +35,7 @@ public sealed class SemanticSearchService : IDisposable
         ITextEmbeddingRepository embeddings,
         IProviderRouter providers,
         ISemanticIndexStatusProvider index,
+        ISemanticSearchSettingsStore settings,
         TimeProvider timeProvider,
         ILogger<SemanticSearchService> logger)
     {
@@ -41,6 +43,7 @@ public sealed class SemanticSearchService : IDisposable
         _embeddings = embeddings;
         _providers = providers;
         _index = index;
+        _settings = settings;
         _timeProvider = timeProvider;
         _logger = logger;
         _index.StatusChanged += OnIndexStatusChanged;
@@ -79,11 +82,13 @@ public sealed class SemanticSearchService : IDisposable
                 return [];
             }
 
-            var queryVector = GetCachedQuery(normalizedQuery);
+            var modelId = await _settings.GetModelAsync(cancellationToken).ConfigureAwait(false);
+
+            var queryVector = GetCachedQuery(modelId, normalizedQuery);
             if (queryVector is null)
             {
                 var response = await _providers.GetTextEmbeddingClient(EmbeddingProviderId)
-                    .EmbedAsync([normalizedQuery], cancellationToken).ConfigureAwait(false);
+                    .EmbedAsync(modelId, [normalizedQuery], cancellationToken).ConfigureAwait(false);
                 ValidateQueryVector(response);
                 queryVector = response.Vectors[0];
                 if (response.CostUsd is decimal cost)
@@ -93,18 +98,18 @@ public sealed class SemanticSearchService : IDisposable
                         OperationId = $"embed-query:{Guid.NewGuid():N}",
                         Kind = ExpenseKind.Embedding,
                         ProviderId = EmbeddingProviderId,
-                        ModelId = SemanticSearchModels.Default,
+                        ModelId = modelId,
                         CostUsd = cost,
                         OccurredAt = _timeProvider.GetUtcNow(),
                     }, cancellationToken).ConfigureAwait(false);
                 }
 
-                AddCachedQuery(normalizedQuery, queryVector);
+                AddCachedQuery(modelId, normalizedQuery, queryVector);
             }
 
             var texts = await _sources.ListSourcesAsync(cancellationToken).ConfigureAwait(false);
             var stored = await GetIndexAsync(cancellationToken).ConfigureAwait(false);
-            var indexedDimension = stored.FirstOrDefault(embedding => IsRequestedEmbeddingModel(embedding.Model))?.Dimensions;
+            var indexedDimension = stored.FirstOrDefault(embedding => IsRequestedEmbeddingModel(embedding.Model, modelId))?.Dimensions;
             if (indexedDimension is int dimensions && dimensions != queryVector.Length)
             {
                 LastErrorCode = "dimension_mismatch";
@@ -123,7 +128,7 @@ public sealed class SemanticSearchService : IDisposable
                 var source = texts[order];
                 if (!embeddingsByKey.TryGetValue(source.SourceKey, out var embedding)
                     || embedding.SessionId != source.SessionId
-                    || !IsRequestedEmbeddingModel(embedding.Model)
+                    || !IsRequestedEmbeddingModel(embedding.Model, modelId)
                     || embedding.ContentHash != HashText(source.Text)
                     || embedding.Dimensions != queryVector.Length
                     || embedding.Vector.Length != queryVector.Length)
@@ -153,7 +158,7 @@ public sealed class SemanticSearchService : IDisposable
         }
         catch (ProviderException exception)
         {
-            LastErrorCode = exception.Kind.ToString();
+            LastErrorCode = exception.Kind == ErrorKind.ModelUnavailable ? "model_unavailable" : exception.Kind.ToString();
             _logger.LogWarning("Semantic query failed with provider error {ErrorKind}.", exception.Kind);
             return [];
         }
@@ -195,9 +200,9 @@ public sealed class SemanticSearchService : IDisposable
         }
     }
 
-    private float[]? GetCachedQuery(string query)
+    private float[]? GetCachedQuery(string modelId, string query)
     {
-        var key = $"{SemanticSearchModels.Default}\n{query}";
+        var key = $"{modelId}\n{query}";
         lock (_cacheGate)
         {
             var node = _queryCache.First;
@@ -217,9 +222,9 @@ public sealed class SemanticSearchService : IDisposable
         return null;
     }
 
-    private void AddCachedQuery(string query, float[] vector)
+    private void AddCachedQuery(string modelId, string query, float[] vector)
     {
-        var key = $"{SemanticSearchModels.Default}\n{query}";
+        var key = $"{modelId}\n{query}";
         lock (_cacheGate)
         {
             _queryCache.AddFirst((key, vector));
@@ -262,7 +267,8 @@ public sealed class SemanticSearchService : IDisposable
     private static string NormalizeText(string text) =>
         string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
-    private static bool IsRequestedEmbeddingModel(string model) => SemanticSearchModels.IsDefault(model);
+    private static bool IsRequestedEmbeddingModel(string model, string requestedModel) =>
+        string.Equals(model, requestedModel, StringComparison.OrdinalIgnoreCase);
 
     private static string HashText(string text) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(NormalizeText(text))));
 

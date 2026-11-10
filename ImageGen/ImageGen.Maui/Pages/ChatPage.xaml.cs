@@ -18,6 +18,8 @@ public partial class ChatPage : ContentPage, IQueryAttributable
     private bool _programmaticScroll;
     private bool _active;
 
+    public bool IsWide { get; private set; }
+
     public ChatPage(ChatPageModel model, SessionsPageModel sessions)
     {
         InitializeComponent();
@@ -49,6 +51,8 @@ public partial class ChatPage : ContentPage, IQueryAttributable
         var wide = width >= WideWidth;
         ChatLayout.ColumnDefinitions[0].Width = wide ? new GridLength(272) : new GridLength(0);
         SessionList.IsVisible = wide;
+        IsWide = wide;
+        OnPropertyChanged(nameof(IsWide));
         // A narrow window opens the models and parameters as a screen; any open pane is closed.
         _model.IsWide = wide;
         if (!wide)

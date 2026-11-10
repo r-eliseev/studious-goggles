@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ImageGen.Core.Domain.Models;
@@ -10,6 +11,7 @@ using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.Logging;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using Microsoft.Extensions.Logging;
 
 namespace ImageGen.Presentation.PageModels;
 
@@ -30,12 +32,18 @@ public sealed partial class SettingsPageModel(
     ChatModelCatalogService chatModels,
     IDefaultAssistantModel defaultAssistantModel,
     ISemanticIndexController semanticIndex,
+    ISemanticSearchSettingsStore semanticSearchSettings,
+    EmbeddingModelCatalogService embeddingModelCatalog,
     IMainThread mainThread,
     HistoryService history,
-    ICurrentSessionTracker currentSessionTracker) : ObservableObject, IDisposable
+    ICurrentSessionTracker currentSessionTracker,
+    ILogger<SettingsPageModel> logger,
+    Action<string>? deleteLogFile = null) : ObservableObject, IDisposable
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
+    private readonly Action<string>? _deleteLogFile = deleteLogFile;
     private bool _listeningForSemanticStatus;
+    private string _currentEmbeddingModelId = SemanticSearchModels.Default;
     /// <summary>The style cards; built on the first <see cref="LoadCommand"/>, because they refer to this page model.</summary>
     public ObservableCollection<StyleOptionViewModel> Styles { get; } = [];
 
@@ -43,6 +51,22 @@ public sealed partial class SettingsPageModel(
     public ObservableCollection<ProviderKeyItemViewModel> ProviderKeys { get; } = [];
 
     public ObservableCollection<AssistantModelOption> AssistantModels { get; } = [];
+
+    public ObservableCollection<EmbeddingModelOption> EmbeddingModels { get; } = [];
+
+    public IReadOnlyList<EmbeddingModelOption> FilteredEmbeddingModels =>
+        string.IsNullOrWhiteSpace(EmbeddingModelSearchText)
+            ? EmbeddingModels.ToArray()
+            : EmbeddingModels.Where(option => option.Name.Contains(EmbeddingModelSearchText, StringComparison.OrdinalIgnoreCase)
+                || option.Id.Contains(EmbeddingModelSearchText, StringComparison.OrdinalIgnoreCase)).ToArray();
+
+    [ObservableProperty]
+    public partial string EmbeddingModelSearchText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial EmbeddingModelOption? SelectedEmbeddingModel { get; set; }
+
+    public bool IsEmbeddingModelUnavailable => SemanticIndexStatus.ErrorCode == "model_unavailable";
 
     [ObservableProperty]
     public partial AssistantModelOption? SelectedAssistantModel { get; set; }
@@ -64,6 +88,12 @@ public sealed partial class SettingsPageModel(
     {
         get
         {
+            if (IsEmbeddingModelUnavailable)
+            {
+                return string.Format(CultureInfo.CurrentCulture, AppResources.SemanticSearchModelUnavailableFormat,
+                    SemanticIndexStatus.ErrorDetail ?? SelectedEmbeddingModel?.Id ?? _currentEmbeddingModelId);
+            }
+
             var message = SemanticIndexStatus.State switch
             {
                 SemanticIndexState.Off => AppResources.SemanticSearchOff,
@@ -111,6 +141,30 @@ public sealed partial class SettingsPageModel(
         }
 
         UpdateSemanticStatus(await semanticIndex.GetStatusAsync(CancellationToken.None));
+        _currentEmbeddingModelId = await semanticSearchSettings.GetModelAsync(CancellationToken.None);
+        var loadedEmbeddingModels = await embeddingModelCatalog.GetModelsAsync(forceRefresh: false, CancellationToken.None);
+        EmbeddingModels.Clear();
+        if (!loadedEmbeddingModels.Any(model => model.Id == _currentEmbeddingModelId))
+        {
+            EmbeddingModels.Add(new EmbeddingModelOption(_currentEmbeddingModelId, _currentEmbeddingModelId,
+                string.Format(CultureInfo.CurrentCulture, AppResources.SemanticSearchUnavailableOptionFormat, _currentEmbeddingModelId), true));
+        }
+
+        foreach (var model in loadedEmbeddingModels.OrderBy(model => model.Name, StringComparer.OrdinalIgnoreCase).ThenBy(model => model.Id, StringComparer.Ordinal))
+        {
+            var price = model.PricePerTokenUsd is decimal pricePerToken
+                ? string.Format(CultureInfo.InvariantCulture, "${0:0.##} / 1M tokens", pricePerToken * 1_000_000m)
+                : AppResources.AssistantPriceUnknown;
+            var context = model.ContextLength is int contextLength
+                ? string.Format(CultureInfo.InvariantCulture, "context {0}", contextLength)
+                : string.Empty;
+            var details = string.Join(" · ", new[] { price, context }.Where(value => !string.IsNullOrWhiteSpace(value)));
+            EmbeddingModels.Add(new EmbeddingModelOption(model.Id, model.Name,
+                $"{model.Name} · {model.Id} · {details}"));
+        }
+
+        SelectedEmbeddingModel = EmbeddingModels.FirstOrDefault(option => option.Id == _currentEmbeddingModelId);
+        OnPropertyChanged(nameof(FilteredEmbeddingModels));
         if (Styles.Count == 0)
         {
             Styles.Add(new StyleOptionViewModel(AppearanceStyle.Quiet, AppResources.StyleQuiet, AppResources.StyleQuietHint, SelectStyleAsync));
@@ -194,8 +248,20 @@ public sealed partial class SettingsPageModel(
                 return;
             }
 
-            var deleted = LogFiles.DeleteAllExceptNewest(LogsFolder);
-            await dialogs.AlertAsync(AppResources.SettingsLogs, string.Format(AppResources.SettingsLogsCleared, deleted));
+            var result = LogFiles.DeleteAllExceptNewest(LogsFolder, _deleteLogFile);
+            if (result.Failed > 0)
+            {
+                logger.LogWarning(
+                    "Could not delete {FailedCount} log files. Last exception type: {ExceptionType}.",
+                    result.Failed,
+                    result.LastExceptionType);
+                await dialogs.AlertAsync(AppResources.SettingsLogs,
+                    string.Format(CultureInfo.CurrentCulture, AppResources.SettingsLogsClearedWithFailures, result.Deleted, result.Failed));
+                return;
+            }
+
+            await dialogs.AlertAsync(AppResources.SettingsLogs,
+                string.Format(CultureInfo.CurrentCulture, AppResources.SettingsLogsCleared, result.Deleted));
         }
         catch (Exception exception)
         {
@@ -289,6 +355,56 @@ public sealed partial class SettingsPageModel(
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanChangeEmbeddingModel))]
+    private async Task ChangeEmbeddingModelAsync()
+    {
+        var selected = SelectedEmbeddingModel;
+        if (selected is null || selected.Id == _currentEmbeddingModelId)
+        {
+            return;
+        }
+
+        try
+        {
+            if (SemanticIndexStatus.Enabled)
+            {
+                var estimate = await semanticIndex.EstimateReindexAsync(selected.Id, CancellationToken.None);
+                var cost = estimate.CostUsd is decimal amount
+                    ? string.Format(CultureInfo.InvariantCulture, "≈${0:0.########}", amount)
+                    : AppResources.AssistantPriceUnknown;
+                var message = string.Format(CultureInfo.InvariantCulture, AppResources.SemanticSearchChangeModelPromptFormat,
+                    estimate.Sources, selected.Name, estimate.ApproxTokens.ToString("N0", CultureInfo.InvariantCulture), cost);
+                var confirmed = await dialogs.ConfirmAsync(AppResources.SemanticSearchTitle, message,
+                    AppResources.SemanticSearchChangeModel, AppResources.Cancel);
+                if (!confirmed)
+                {
+                    RestoreEmbeddingModelSelection();
+                    return;
+                }
+            }
+
+            await semanticIndex.ChangeModelAsync(selected.Id, CancellationToken.None);
+            _currentEmbeddingModelId = selected.Id;
+            ChangeEmbeddingModelCommand.NotifyCanExecuteChanged();
+            UpdateSemanticStatus(await semanticIndex.GetStatusAsync(CancellationToken.None));
+        }
+        catch (Exception exception)
+        {
+            RestoreEmbeddingModelSelection();
+            await _errorAlert.ShowAsync(exception);
+        }
+    }
+
+    private bool CanChangeEmbeddingModel() =>
+        SelectedEmbeddingModel is not null && SelectedEmbeddingModel.Id != _currentEmbeddingModelId;
+
+    private void RestoreEmbeddingModelSelection() =>
+        SelectedEmbeddingModel = EmbeddingModels.FirstOrDefault(option => option.Id == _currentEmbeddingModelId);
+
+    partial void OnEmbeddingModelSearchTextChanged(string value) => OnPropertyChanged(nameof(FilteredEmbeddingModels));
+
+    partial void OnSelectedEmbeddingModelChanged(EmbeddingModelOption? value) => ChangeEmbeddingModelCommand.NotifyCanExecuteChanged();
+
     private void OnSemanticIndexStatusChanged(object? sender, SemanticIndexStatus status) =>
         mainThread.BeginInvokeOnMainThread(() => UpdateSemanticStatus(status));
 
@@ -359,4 +475,6 @@ public sealed partial class SettingsPageModel(
         OnPropertyChanged(nameof(IsLightTheme));
         OnPropertyChanged(nameof(IsDarkTheme));
     }
+
+    public sealed record EmbeddingModelOption(string Id, string Name, string DisplayName, bool IsUnavailable = false);
 }

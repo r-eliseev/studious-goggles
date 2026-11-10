@@ -16,7 +16,9 @@ public static partial class AppServices
     /// Builds the container of the desktop app: core, storage, the shared presentation layer, the Avalonia pages and the
     /// platform services. Validates the registrations at build time.
     /// <paramref name="openRouterHandler"/> and <paramref name="dialogs"/> replace the network and dialog windows
-    /// in tests; the app itself passes neither. <paramref name="configureLogging"/> adds log providers (the app adds the file log).
+    /// in tests; the app itself passes neither. <paramref name="configureTestServices"/> applies test-only registrations
+    /// after the desktop services, so tests can replace platform services and transports. <paramref name="configureLogging"/>
+    /// adds log providers (the app adds the file log).
     /// </summary>
     public static ServiceProvider Create(
         IAppPaths paths,
@@ -25,8 +27,20 @@ public static partial class AppServices
         HttpMessageHandler? openRouterHandler = null,
         IDialogService? dialogs = null,
         Action<ILoggingBuilder>? configureLogging = null,
-        IDebugTrace? debugTrace = null) =>
-        CreateShared(paths, secrets, persistence, services => RegisterDesktop(services, dialogs), openRouterHandler, configureLogging, debugTrace);
+        IDebugTrace? debugTrace = null,
+        Action<IServiceCollection>? configureTestServices = null) =>
+        CreateShared(
+            paths,
+            secrets,
+            persistence,
+            services =>
+            {
+                RegisterDesktop(services, dialogs);
+                configureTestServices?.Invoke(services);
+            },
+            openRouterHandler,
+            configureLogging,
+            debugTrace);
 
     private static void RegisterDesktop(IServiceCollection services, IDialogService? dialogs)
     {
@@ -34,7 +48,10 @@ public static partial class AppServices
         services.AddSingleton<IFilePickerService>(new AvaloniaFilePickerService(MainWindowOwner));
         services.AddSingleton<IClipboardService>(new AvaloniaClipboardService(MainWindowOwner));
         services.AddSingleton<IImageSaver>(new AvaloniaImageSaver(MainWindowOwner));
-        services.AddSingleton<IMediaPlayerService, UnsupportedMediaPlayerService>();
+        services.AddSingleton<IMediaPlayerService>(sp => new AvaloniaMediaPlayerService(
+            MainWindowOwner,
+            new LibVlcMediaEngine(),
+            sp.GetRequiredService<ILoggerFactory>().CreateLogger("ImageGen.Avalonia.MediaPlayer")));
         services.AddSingleton<IVideoPosterService, UnsupportedVideoPosterService>();
         services.AddSingleton<AvaloniaFullScreenController>();
         services.AddSingleton<IImageViewerService>(sp => new AvaloniaImageViewerService(

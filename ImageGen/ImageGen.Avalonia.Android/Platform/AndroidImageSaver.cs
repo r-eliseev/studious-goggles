@@ -1,5 +1,6 @@
 using Android.Content;
 using Android.Provider;
+using ImageGen.Avalonia.Services;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
 using Microsoft.Extensions.Logging;
@@ -12,10 +13,15 @@ public sealed class AndroidImageSaver : IImageSaver
     private const string GalleryFolder = "Pictures/Omnilite";
 
     private readonly ILogger<AndroidImageSaver> _logger;
+    private readonly AvaloniaImageSaver _fileSaver;
 
-    public AndroidImageSaver(ILogger<AndroidImageSaver> logger) => _logger = logger;
+    public AndroidImageSaver(ILogger<AndroidImageSaver> logger, AvaloniaImageSaver fileSaver)
+    {
+        _logger = logger;
+        _fileSaver = fileSaver;
+    }
 
-    public string ActionLabel => AppResources.SaveToGallery;
+    public string ActionLabel => OperatingSystem.IsAndroidVersionAtLeast(29) ? AppResources.SaveToGallery : _fileSaver.ActionLabel;
 
     public async Task<ImageSaveResult> SaveAsync(
         string sourcePath,
@@ -26,7 +32,7 @@ public sealed class AndroidImageSaver : IImageSaver
         cancellationToken.ThrowIfCancellationRequested();
         if (!OperatingSystem.IsAndroidVersionAtLeast(29))
         {
-            return ImageSaveResult.Failed;
+            return await _fileSaver.SaveAsync(sourcePath, suggestedFileName, mediaType, cancellationToken);
         }
 
         var resolver = global::Android.App.Application.Context.ContentResolver;

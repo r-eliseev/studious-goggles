@@ -814,6 +814,24 @@ public class AssistantServiceTests
     }
 
     [Fact]
+    public async Task SendUserMessageAsync_AudioModels_OffersAudioToolAndStartsAudioRun()
+    {
+        var model = new ModelRef(ProviderIds.OpenRouter, "vendor/audio");
+        _session.Settings.AudioModels = [model];
+        ReplyWith(new AssistantChatResult("Starting", [new AssistantToolCall(
+            AssistantPrompts.GenerateAudioToolName,
+            "{\"prompt\":\"description\",\"speech_text\":\"hello there\"}")], null));
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "make audio", TestContext.Current.CancellationToken);
+
+        Assert.Equal([GenerateImages, AssistantPrompts.GenerateAudioToolName], LastRequest.Tools.Select(tool => tool.Name));
+        Assert.Contains(LastRequest.Messages, message => message.Text == AssistantPrompts.AudioSystemInstruction);
+        Assert.Equal(MediaKind.Audio, Assert.Single(_storedGenerations).Kind);
+        Assert.Equal("hello there", result.Run!.Prompt);
+        Assert.Equal([model], _storedGenerations.Select(g => new ModelRef(g.ProviderId, g.ModelId)));
+    }
+
+    [Fact]
     public async Task SendUserMessageAsync_VideoToolCall_StartsVideoRunWithSessionSettings()
     {
         var parameters = new VideoParameters { DurationSeconds = 8, Resolution = "1080p", GenerateAudio = false };
@@ -890,7 +908,7 @@ public class AssistantServiceTests
 
         Assert.Equal(MediaKind.Video, Assert.Single(_storedGenerations).Kind);
         Assert.Equal("first", result.Run!.Prompt);
-        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Warning && entry.Message.Contains("both", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Warning && entry.Message.Contains("multiple generation tools", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

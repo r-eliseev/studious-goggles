@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
@@ -85,6 +86,58 @@ public sealed class GenerationCardMetadataTests
         Assert.Equal("8 s", card.DurationText);
         Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == card.DurationText && text.IsVisible);
         Assert.False(card.HasImage);
+    }
+
+    [AvaloniaFact]
+    public void AudioCard_ShowsAudioPlaceholderWithoutImageViewer()
+    {
+        var provider = ((ImageGen.Avalonia.App)Application.Current!).Services!;
+        var chat = provider.GetRequiredService<ChatPageModel>();
+        var generation = new Generation
+        {
+            Id = Guid.NewGuid(),
+            RunId = Guid.NewGuid(),
+            SessionId = Guid.NewGuid(),
+            ProviderId = "openrouter",
+            ModelId = "vendor/speech",
+            Prompt = "calm piano melody",
+            Seed = 1,
+            SeedApplied = false,
+            Status = GenerationStatus.Succeeded,
+            Kind = MediaKind.Audio,
+            ImagePath = "media/session/audio.mp3",
+            MediaType = "audio/mpeg",
+            CreatedAt = DateTimeOffset.Parse("2026-01-01T00:00:00Z"),
+            SortOrder = 0,
+        };
+        var card = new GenerationItemViewModel(
+            generation, Substitute.For<IImageFileStore>(), Substitute.For<IDialogService>(),
+            Substitute.For<IClipboardService>(), Substitute.For<IImageSaver>(), _ => Task.CompletedTask,
+            _ => Task.CompletedTask, _ => Task.CompletedTask, (_, _) => Task.CompletedTask, _ => Task.CompletedTask);
+        var run = new RunItemViewModel(
+            new Run
+            {
+                Id = generation.RunId,
+                SessionId = generation.SessionId,
+                Prompt = generation.Prompt,
+                Origin = RunOrigin.Assistant,
+                CreatedAt = generation.CreatedAt
+            }, [card],
+            new CopyTextAction(Substitute.For<IClipboardService>(), Substitute.For<IMainThread>(), generation.Prompt));
+        chat.Items.Clear();
+        chat.Items.Add(run);
+        var view = new ChatView { DataContext = chat };
+        var window = new MainWindow { Width = 1100, Height = 800 };
+        window.PageArea.Content = view;
+        window.Show();
+        window.UpdateLayout();
+
+        Assert.True(card.IsAudio);
+        Assert.True(card.HasMedia);
+        Assert.False(card.HasImage);
+        var imageViewer = Assert.Single(view.GetVisualDescendants().OfType<Button>(), button =>
+            AutomationProperties.GetName(button) == ImageGen.Presentation.Resources.Strings.AppResources.ImageViewerOpen);
+        Assert.False(imageViewer.IsVisible);
     }
 
     private static void AssertMetadataVisible(AppearanceStyle style)

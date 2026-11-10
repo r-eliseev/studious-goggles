@@ -7,7 +7,8 @@ namespace ImageGen.Avalonia;
 [Activity(
     Label = "Omnilite Avalonia",
     Theme = "@style/MyTheme.NoActionBar",
-    Icon = "@drawable/icon",
+    Icon = "@mipmap/appicon",
+    RoundIcon = "@mipmap/appicon_round",
     MainLauncher = true,
     Exported = true,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
