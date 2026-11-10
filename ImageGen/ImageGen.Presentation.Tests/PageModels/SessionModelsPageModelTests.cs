@@ -36,6 +36,8 @@ public class SessionModelsPageModelTests
     private readonly IImageModelRepository _modelRepository = Substitute.For<IImageModelRepository>();
     private readonly IVideoModelRepository _videoModelRepository = Substitute.For<IVideoModelRepository>();
     private readonly IVideoModelProvider _videoProvider = Substitute.For<IVideoModelProvider>();
+    private readonly IAudioModelRepository _audioModelRepository = Substitute.For<IAudioModelRepository>();
+    private readonly IAudioModelProvider _audioProvider = Substitute.For<IAudioModelProvider>();
     private readonly INavigationService _navigation = Substitute.For<INavigationService>();
     private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
     private readonly IAssistantChatClient _chat = Substitute.For<IAssistantChatClient>();
@@ -43,6 +45,7 @@ public class SessionModelsPageModelTests
     private SessionService _sessionService;
     private readonly ModelCatalogService _catalog;
     private readonly VideoModelCatalogService _videoCatalog;
+    private readonly AudioModelCatalogService _audioCatalog;
     private ChatModelCatalogService _chatModels;
     private Session? _saved;
 
@@ -52,10 +55,12 @@ public class SessionModelsPageModelTests
         time.GetUtcNow().Returns(Now);
         var router = ProviderDoubles.Router(_provider, _chat);
         router.GetVideoModelProvider(ProviderIds.OpenRouter).Returns(_videoProvider);
+        router.GetAudioModelProvider(ProviderIds.OpenRouter).Returns(_audioProvider);
         _chatModels = new ChatModelCatalogService(router, NullLogger<ChatModelCatalogService>.Instance);
         _catalog = new ModelCatalogService(router, _modelRepository, NullLogger<ModelCatalogService>.Instance);
         _videoCatalog = new VideoModelCatalogService(router, _videoModelRepository, NullLogger<VideoModelCatalogService>.Instance);
-        _sessionService = new SessionService(_sessions, _messages, _runs, _files, _chatModels, time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance), Substitute.For<ISessionGenerationCoordinator>(), DefaultAssistantModels.Create(), _videoCatalog);
+        _audioCatalog = new AudioModelCatalogService(router, _audioModelRepository, NullLogger<AudioModelCatalogService>.Instance);
+        _sessionService = new SessionService(_sessions, _messages, _runs, _files, _chatModels, time, Substitute.For<IConversationSummaryRepository>(), new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance), Substitute.For<ISessionGenerationCoordinator>(), DefaultAssistantModels.Create(), _videoCatalog, _audioCatalog);
         _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ChatModel>>(
         [
             new ChatModel("vendor/zed", "Zed", SupportsImageInput: false, ContextLength: 1000, SupportsTools: true),
@@ -85,6 +90,11 @@ public class SessionModelsPageModelTests
         [
             Video("google/veo", "Veo", [5, 8], new Dictionary<string, decimal> { ["duration_seconds_with_audio"] = 0.1m }, generatesAudio: true),
             Video("vendor/seedance", "Seedance", [5, 8], new Dictionary<string, decimal>(), generatesAudio: false),
+        ]);
+        _audioModelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(
+        [
+            Audio("music/lyria", "Lyria", AudioOutput.ChatAudio, null),
+            Audio("speech/tts", "Speech", AudioOutput.Speech, 0.00002m),
         ]);
     }
 
@@ -175,6 +185,35 @@ public class SessionModelsPageModelTests
         await model.SaveCommand.ExecuteAsync(null);
 
         Assert.Equal([Ref("google/veo"), Ref("vendor/seedance")], _saved!.Settings.VideoModels);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_AudioModels_GroupsPricesAndRestoresSelection()
+    {
+        _session.Settings.AudioModels = [Ref("speech/tts")];
+
+        var model = await OpenAsync();
+
+        var music = Assert.Single(model.MusicSoundModels);
+        var speech = Assert.Single(model.SpeechModels);
+        Assert.Equal("Lyria", music.Name);
+        Assert.Equal("Speech", speech.Name);
+        Assert.Equal("price unknown", music.PriceText);
+        Assert.Equal("$0.02 / 1K chars", speech.PriceText);
+        Assert.True(speech.IsSelected);
+        Assert.False(music.IsSelected);
+    }
+
+    [Fact]
+    public async Task SaveCommand_SelectedAudioModels_UpdatesAudioSettings()
+    {
+        var model = await OpenAsync();
+        model.MusicSoundModels.Single().IsSelected = true;
+        model.SpeechModels.Single().IsSelected = true;
+
+        await model.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal([Ref("music/lyria"), Ref("speech/tts")], _saved!.Settings.AudioModels);
     }
 
     [Fact]
@@ -324,7 +363,7 @@ public class SessionModelsPageModelTests
 
     private SessionModelsPageModel CreateModel(ProviderRegistry? registry = null)
     {
-        var model = new SessionModelsPageModel(_sessionService, _catalog, _chatModels, registry ?? ProviderDoubles.BuiltInRegistry(), _navigation, ErrorAlerts.Create(_dialogs), _videoCatalog);
+        var model = new SessionModelsPageModel(_sessionService, _catalog, _chatModels, registry ?? ProviderDoubles.BuiltInRegistry(), _navigation, ErrorAlerts.Create(_dialogs), _videoCatalog, _audioCatalog);
         model.ApplyQueryAttributes(new Dictionary<string, object> { [Routes.SessionIdParameter] = SessionId.ToString("D") });
         return model;
     }
@@ -347,6 +386,16 @@ public class SessionModelsPageModelTests
         FrameImages = [],
         GeneratesAudio = generatesAudio,
         PriceSkus = prices,
+        FetchedAt = Now,
+    };
+
+    private static AudioModel Audio(string id, string name, AudioOutput output, decimal? price) => new()
+    {
+        ProviderId = ProviderIds.OpenRouter,
+        Id = id,
+        Name = name,
+        Output = output,
+        PricePerInputCharacterUsd = price,
         FetchedAt = Now,
     };
 

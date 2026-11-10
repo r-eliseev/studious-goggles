@@ -80,6 +80,12 @@
                 <CheckBox Content="{markup:Res VideoGenerateAudio}" IsChecked="{Binding GenerateVideoAudio, Mode=TwoWay}"
                           IsVisible="{Binding IsVideoAudioOptionVisible}"
                           AutomationProperties.Name="{markup:Res VideoGenerateAudio}" />
+                <StackPanel Spacing="4" IsVisible="{Binding IsAudioVoiceVisible}">
+                    <TextBlock Classes="section" Text="{markup:Res SessionAudioVoice}" />
+                    <TextBox Text="{Binding AudioVoice, Mode=TwoWay}"
+                             AutomationProperties.Name="{markup:Res SessionAudioVoice}" />
+                    <TextBlock Classes="meta" Text="{markup:Res SessionAudioVoiceHint}" TextWrapping="Wrap" />
+                </StackPanel>
             </StackPanel>
         </ScrollViewer>
 

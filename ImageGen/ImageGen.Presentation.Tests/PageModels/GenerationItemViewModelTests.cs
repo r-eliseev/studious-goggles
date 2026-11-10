@@ -144,6 +144,27 @@ public class GenerationItemViewModelTests
     }
 
     [Fact]
+    public async Task ShowActions_AudioGeneration_OffersSaveAndHidesNewSeed()
+    {
+        var generation = BaseGeneration();
+        generation.Kind = MediaKind.Audio;
+        generation.Status = GenerationStatus.Succeeded;
+        generation.ImagePath = "audio/session/track.mp3";
+        var choices = Array.Empty<string>();
+        var dialogs = Substitute.For<IDialogService>();
+        dialogs.ChooseAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Do<IReadOnlyList<string>>(items => choices = items.ToArray()))
+            .Returns((string?)null);
+        var card = CardOf(generation, dialogs: dialogs);
+
+        await card.ShowActionsCommand.ExecuteAsync(null);
+
+        Assert.Contains(AppResources.SaveFile, choices);
+        Assert.DoesNotContain(AppResources.NewSeed, choices);
+        Assert.DoesNotContain(AppResources.Compare, choices);
+        Assert.DoesNotContain(AppResources.ActionDescribeImage, choices);
+    }
+
+    [Fact]
     public async Task ShowActions_Cancel_DoesNothing()
     {
         var repeated = false;
@@ -347,6 +368,13 @@ public class GenerationItemViewModelTests
 
         Assert.Equal("/data/audio/session/audio.mp3", card.AudioFilePath);
         Assert.Empty(card.VideoFilePath);
+        Assert.Equal(AppResources.AudioPriceUnknown, card.CostText);
+        Assert.False(card.NewSeedCommand.CanExecute(null));
+        Assert.True(card.RepeatCommand.CanExecute(null));
+        Assert.True(card.EditCommand.CanExecute(null));
+        Assert.False(card.DescribeCommand.CanExecute(null));
+        Assert.False(card.CompareCommand.CanExecute(null));
+        Assert.False(card.OtherModelCommand.CanExecute(null));
     }
 
     [Fact]
@@ -357,7 +385,7 @@ public class GenerationItemViewModelTests
         card.SetStoppedWaiting();
 
         Assert.True(card.HasCancellationStatus);
-        Assert.Equal(AppResources.StoppedWaitingVideo, card.CancellationStatusText);
+        Assert.Equal(AppResources.StoppedWaitingMedia, card.CancellationStatusText);
     }
 
     [Fact]

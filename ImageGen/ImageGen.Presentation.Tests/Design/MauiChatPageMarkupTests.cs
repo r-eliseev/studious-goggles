@@ -96,13 +96,15 @@ public class MauiChatPageMarkupTests
         var audioPlayer = Assert.Single(players, element => (string?)element.Attribute("HeightRequest") == "64");
 
         Assert.Equal("{Binding AudioFilePath, Converter={StaticResource FilePathToMediaSource}}", (string?)audioPlayer.Attribute("Source"));
+        Assert.Equal("False", (string?)audioPlayer.Attribute("IsVisible"));
         Assert.Equal("False", (string?)audioPlayer.Attribute("ShouldAutoPlay"));
         Assert.Equal("True", (string?)audioPlayer.Attribute("ShouldShowPlaybackControls"));
         Assert.Equal("{Binding SummaryText}", (string?)audioPlayer.Attribute("SemanticProperties.Description"));
-        Assert.Contains(audioPlayer.Descendants(), element =>
-            element.Name.LocalName == "BindingCondition"
-            && (string?)element.Attribute("Binding") == "{Binding HasMedia}"
-            && (string?)element.Attribute("Value") == "True");
+        var conditions = audioPlayer.Descendants().Where(element => element.Name.LocalName == "BindingCondition").ToArray();
+        Assert.Contains(conditions, element =>
+            (string?)element.Attribute("Binding") == "{Binding IsAudio}" && (string?)element.Attribute("Value") == "True");
+        Assert.Contains(conditions, element =>
+            (string?)element.Attribute("Binding") == "{Binding HasMedia}" && (string?)element.Attribute("Value") == "True");
     }
 
     [Fact]

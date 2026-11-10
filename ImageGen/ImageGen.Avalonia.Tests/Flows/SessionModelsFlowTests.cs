@@ -35,7 +35,8 @@ public class SessionModelsFlowTests
         models.RunsPerModel = 3;
         await models.SaveCommand.ExecuteAsync(null);
 
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView && chat.ModelsButtonText == string.Format(AppResources.ModelsButtonFormat, 1, 3), "подпись кнопки моделей");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView
+            && chat.ModelsButtonText == string.Format(AppResources.ModelsButtonFormat, 1, 3, 0, 0), "подпись кнопки моделей");
         var saved = await shell.Provider.GetRequiredService<SessionService>().ListAsync(TestContext.Current.CancellationToken);
         Assert.Equal([new ImageGen.Core.Domain.Models.ModelRef(ImageGen.Core.Providers.ProviderIds.OpenRouter, "vendor/beta")], saved.Single().Settings.ImageModels);
         Assert.Equal(3, saved.Single().Settings.RunsPerModel);
@@ -149,7 +150,7 @@ public class SessionModelsFlowTests
     }
 
     [AvaloniaFact]
-    public async Task Tabs_ThreeTabsWithImageModelsFirst()
+    public async Task Tabs_FourTabsWithImageModelsFirst()
     {
         using var shell = new ShellHarness(openRouter: OpenRouterFakes.Create());
         var chat = await shell.OpenNewChatAsync();
@@ -162,10 +163,11 @@ public class SessionModelsFlowTests
         var tabs = view.GetVisualDescendants().OfType<TabControl>().Single();
         var items = tabs.Items.Cast<TabItem>().ToArray();
 
-        Assert.Equal(3, items.Length);
+        Assert.Equal(4, items.Length);
         Assert.Equal(AppResources.ImageModelsTab, items[0].Header);
         Assert.Equal(AppResources.AssistantModelTitle, items[1].Header);
         Assert.Equal(AppResources.VideoModelsTitle, items[2].Header);
+        Assert.Equal(AppResources.AudioModelsTitle, items[3].Header);
         Assert.Equal(0, tabs.SelectedIndex);
     }
 

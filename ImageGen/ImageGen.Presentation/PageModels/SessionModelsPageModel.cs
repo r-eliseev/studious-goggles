@@ -24,12 +24,15 @@ public sealed partial class SessionModelsPageModel(
     ProviderRegistry providers,
     INavigationService navigation,
     ErrorAlert errorAlert,
-    VideoModelCatalogService? videoCatalog = null) : ObservableObject
+    VideoModelCatalogService? videoCatalog = null,
+    AudioModelCatalogService? audioCatalog = null) : ObservableObject
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
     private readonly VideoModelCatalogService? _videoCatalog = videoCatalog;
+    private readonly AudioModelCatalogService? _audioCatalog = audioCatalog;
     private readonly List<ModelOptionViewModel> _all = [];
     private readonly List<VideoModelOptionViewModel> _videoAll = [];
+    private readonly List<AudioModelOptionViewModel> _audioAll = [];
     private readonly List<AssistantModelOptionViewModel> _assistants = [];
     private readonly Dictionary<string, bool> _imageGroupExpanded = new(StringComparer.Ordinal);
     private readonly Dictionary<string, bool> _assistantGroupExpanded = new(StringComparer.Ordinal);
@@ -51,6 +54,10 @@ public sealed partial class SessionModelsPageModel(
 
     public ObservableCollection<VideoModelOptionViewModel> VideoModels { get; } = [];
 
+    public ObservableCollection<AudioModelOptionViewModel> MusicSoundModels { get; } = [];
+
+    public ObservableCollection<AudioModelOptionViewModel> SpeechModels { get; } = [];
+
     public ObservableCollection<ImageModelGroupViewModel> ImageModelGroups { get; } = [];
 
     public ObservableCollection<AssistantModelGroupViewModel> AssistantModelGroups { get; } = [];
@@ -59,10 +66,12 @@ public sealed partial class SessionModelsPageModel(
     [NotifyPropertyChangedFor(nameof(IsImageModelsTabSelected))]
     [NotifyPropertyChangedFor(nameof(IsAssistantTabSelected))]
     [NotifyPropertyChangedFor(nameof(IsVideoModelsTabSelected))]
+    [NotifyPropertyChangedFor(nameof(IsAudioModelsTabSelected))]
     [NotifyPropertyChangedFor(nameof(SelectedTabIndex))]
     [NotifyPropertyChangedFor(nameof(ImageModelsTabAutomationName))]
     [NotifyPropertyChangedFor(nameof(AssistantTabAutomationName))]
     [NotifyPropertyChangedFor(nameof(VideoModelsTabAutomationName))]
+    [NotifyPropertyChangedFor(nameof(AudioModelsTabAutomationName))]
     public partial SessionModelsTab SelectedTab { get; set; } = SessionModelsTab.ImageModels;
 
     public bool IsImageModelsTabSelected => SelectedTab == SessionModelsTab.ImageModels;
@@ -70,6 +79,8 @@ public sealed partial class SessionModelsPageModel(
     public bool IsAssistantTabSelected => SelectedTab == SessionModelsTab.AssistantModel;
 
     public bool IsVideoModelsTabSelected => SelectedTab == SessionModelsTab.VideoModels;
+
+    public bool IsAudioModelsTabSelected => SelectedTab == SessionModelsTab.AudioModels;
 
     public int SelectedTabIndex
     {
@@ -95,6 +106,10 @@ public sealed partial class SessionModelsPageModel(
         ? $"{AppResources.VideoModelsTitle}, {AppResources.AssistantSelected}"
         : AppResources.VideoModelsTitle;
 
+    public string AudioModelsTabAutomationName => IsAudioModelsTabSelected
+        ? $"{AppResources.AudioModelsTitle}, {AppResources.AssistantSelected}"
+        : AppResources.AudioModelsTitle;
+
     [RelayCommand]
     private void ShowImageModels() => SelectedTab = SessionModelsTab.ImageModels;
 
@@ -103,6 +118,9 @@ public sealed partial class SessionModelsPageModel(
 
     [RelayCommand]
     private void ShowVideoModels() => SelectedTab = SessionModelsTab.VideoModels;
+
+    [RelayCommand]
+    private void ShowAudioModels() => SelectedTab = SessionModelsTab.AudioModels;
 
     [ObservableProperty]
     public partial string SearchText { get; set; } = "";
@@ -126,6 +144,9 @@ public sealed partial class SessionModelsPageModel(
 
     public string SelectedVideoCountText =>
         string.Format(CultureInfo.CurrentCulture, AppResources.VideoModelsSelectedFormat, _videoAll.Count(model => model.IsSelected));
+
+    public string SelectedAudioCountText =>
+        string.Format(CultureInfo.CurrentCulture, AppResources.AudioModelsSelectedFormat, _audioAll.Count(model => model.IsSelected));
 
     public string RunsPerModelText =>
         string.Format(CultureInfo.CurrentCulture, AppResources.RunsPerModelFormat, (int)Math.Round(RunsPerModel));
@@ -178,6 +199,17 @@ public sealed partial class SessionModelsPageModel(
                 await sessionService.UpdateVideoSettingsAsync(
                     _sessionId, selectedVideos, session.Settings.VideoParameters, CancellationToken.None);
             }
+            if (_audioCatalog is not null)
+            {
+                var selectedAudio = _audioAll.Where(model => model.IsSelected).Select(model => model.Reference).ToHashSet();
+                var knownAudio = _audioAll.Select(model => model.Reference).ToHashSet();
+                var unknownSavedAudio = session.Settings.AudioModels.Where(reference => !knownAudio.Contains(reference));
+                await sessionService.UpdateAudioSettingsAsync(
+                    _sessionId,
+                    selectedAudio.Concat(unknownSavedAudio).Distinct().ToList(),
+                    session.Settings.AudioParameters,
+                    CancellationToken.None);
+            }
 
             await CloseAsync();
         }
@@ -226,6 +258,9 @@ public sealed partial class SessionModelsPageModel(
             var selectedVideos = _loaded
                 ? _videoAll.Where(model => model.IsSelected).Select(model => model.Reference).ToHashSet()
                 : session.Settings.VideoModels.ToHashSet();
+            var selectedAudio = _loaded
+                ? _audioAll.Where(model => model.IsSelected).Select(model => model.Reference).ToHashSet()
+                : session.Settings.AudioModels.ToHashSet();
             if (!_loaded)
             {
                 RunsPerModel = session.Settings.RunsPerModel;
@@ -293,6 +328,36 @@ public sealed partial class SessionModelsPageModel(
             }
             OnPropertyChanged(nameof(SelectedVideoCountText));
 
+            IReadOnlyList<AudioModel> audio = [];
+            if (_audioCatalog is not null)
+            {
+                try
+                {
+                    audio = await _audioCatalog.GetAudioModelsAsync(forceRefresh, CancellationToken.None);
+                }
+                catch (ProviderException)
+                {
+                    // The audio catalog must not prevent choosing image, assistant, or video models.
+                }
+            }
+
+            _audioAll.Clear();
+            _audioAll.AddRange(audio.Select(item => new AudioModelOptionViewModel(
+                item,
+                selectedAudio.Contains(new ModelRef(item.ProviderId, item.Id))))
+                .OrderBy(item => item.Name, StringComparer.Ordinal));
+            foreach (var row in _audioAll)
+            {
+                row.PropertyChanged += (_, e) =>
+                {
+                    if (e.PropertyName == nameof(AudioModelOptionViewModel.IsSelected))
+                    {
+                        OnPropertyChanged(nameof(SelectedAudioCountText));
+                    }
+                };
+            }
+            OnPropertyChanged(nameof(SelectedAudioCountText));
+
             _loaded = true;
             ApplyFilter();
         }
@@ -334,6 +399,18 @@ public sealed partial class SessionModelsPageModel(
         foreach (var model in _videoAll.Where(m => Matches(search, m.Name, m.Reference.ModelId)))
         {
             VideoModels.Add(model);
+        }
+
+        MusicSoundModels.Clear();
+        foreach (var model in _audioAll.Where(m => m.Output == AudioOutput.ChatAudio && Matches(search, m.Name, m.Reference.ModelId)))
+        {
+            MusicSoundModels.Add(model);
+        }
+
+        SpeechModels.Clear();
+        foreach (var model in _audioAll.Where(m => m.Output == AudioOutput.Speech && Matches(search, m.Name, m.Reference.ModelId)))
+        {
+            SpeechModels.Add(model);
         }
 
         RebuildImageModelGroups(search);
