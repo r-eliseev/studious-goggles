@@ -11,6 +11,7 @@ using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.Logging;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
+using Microsoft.Extensions.Logging;
 
 namespace ImageGen.Presentation.PageModels;
 
@@ -35,9 +36,12 @@ public sealed partial class SettingsPageModel(
     EmbeddingModelCatalogService embeddingModelCatalog,
     IMainThread mainThread,
     HistoryService history,
-    ICurrentSessionTracker currentSessionTracker) : ObservableObject, IDisposable
+    ICurrentSessionTracker currentSessionTracker,
+    ILogger<SettingsPageModel> logger,
+    Action<string>? deleteLogFile = null) : ObservableObject, IDisposable
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
+    private readonly Action<string>? _deleteLogFile = deleteLogFile;
     private bool _listeningForSemanticStatus;
     private string _currentEmbeddingModelId = SemanticSearchModels.Default;
     /// <summary>The style cards; built on the first <see cref="LoadCommand"/>, because they refer to this page model.</summary>
@@ -244,8 +248,20 @@ public sealed partial class SettingsPageModel(
                 return;
             }
 
-            var deleted = LogFiles.DeleteAllExceptNewest(LogsFolder);
-            await dialogs.AlertAsync(AppResources.SettingsLogs, string.Format(AppResources.SettingsLogsCleared, deleted));
+            var result = LogFiles.DeleteAllExceptNewest(LogsFolder, _deleteLogFile);
+            if (result.Failed > 0)
+            {
+                logger.LogWarning(
+                    "Could not delete {FailedCount} log files. Last exception type: {ExceptionType}.",
+                    result.Failed,
+                    result.LastExceptionType);
+                await dialogs.AlertAsync(AppResources.SettingsLogs,
+                    string.Format(CultureInfo.CurrentCulture, AppResources.SettingsLogsClearedWithFailures, result.Deleted, result.Failed));
+                return;
+            }
+
+            await dialogs.AlertAsync(AppResources.SettingsLogs,
+                string.Format(CultureInfo.CurrentCulture, AppResources.SettingsLogsCleared, result.Deleted));
         }
         catch (Exception exception)
         {

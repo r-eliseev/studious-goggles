@@ -34,9 +34,10 @@ public sealed class LogFilesTests : IDisposable
     {
         var paths = CreateLogs("imagegen-20261101.log", "imagegen-20261102.log", "imagegen-20261102_001.log", "notes.txt");
 
-        var deleted = LogFiles.DeleteAllExceptNewest(_directory);
+        var result = LogFiles.DeleteAllExceptNewest(_directory);
 
-        Assert.Equal(2, deleted);
+        Assert.Equal(2, result.Deleted);
+        Assert.Equal(0, result.Failed);
         Assert.False(File.Exists(paths[0]));
         Assert.False(File.Exists(paths[1]));
         Assert.True(File.Exists(paths[2]));
@@ -49,7 +50,30 @@ public sealed class LogFilesTests : IDisposable
         var missing = Path.Combine(_directory, "missing");
 
         Assert.Empty(LogFiles.List(missing));
-        Assert.Equal(0, LogFiles.DeleteAllExceptNewest(missing));
+        Assert.Equal(new LogCleanupResult(0, 0), LogFiles.DeleteAllExceptNewest(missing));
+    }
+
+    [Fact]
+    public void DeleteAllExceptNewest_WhenOneDeletionFails_ContinuesAndReturnsFailureCount()
+    {
+        var paths = CreateLogs("imagegen-20261101.log", "imagegen-20261102.log", "imagegen-20261103.log");
+
+        var result = LogFiles.DeleteAllExceptNewest(_directory, path =>
+        {
+            if (path == paths[0])
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            File.Delete(path);
+        });
+
+        Assert.Equal(1, result.Deleted);
+        Assert.Equal(1, result.Failed);
+        Assert.Equal(nameof(UnauthorizedAccessException), result.LastExceptionType);
+        Assert.True(File.Exists(paths[0]));
+        Assert.False(File.Exists(paths[1]));
+        Assert.True(File.Exists(paths[2]));
     }
 
     [Fact]

@@ -1,8 +1,8 @@
 ---
 id: 232
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-10T16:41:08Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -26,7 +26,7 @@ created: 2026-11-07
 1. Падающие тесты.
 2. Результат очистки, журнал, тексты.
 
-Файлы: `ImageGen/ImageGen.Presentation/Logging/LogFiles.cs`, `ImageGen/ImageGen.Presentation/PageModels/SettingsPageModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Presentation.Tests/Logging/LogFilesTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SettingsPageModelTests.cs`.
+Файлы: `ImageGen/ImageGen.Presentation/Logging/LogFiles.cs`, `ImageGen/ImageGen.Presentation/Logging/LogCleanupResult.cs` (новый), `ImageGen/ImageGen.Presentation/PageModels/SettingsPageModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Presentation.Tests/Logging/LogFilesTests.cs`, `ImageGen/ImageGen.Presentation.Tests/PageModels/SettingsPageModelTests.cs`.
 
 ### Проверка
 ```
@@ -45,6 +45,11 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+- `LogFiles.DeleteAllExceptNewest` now returns `LogCleanupResult` with deleted/failed counts and the last exception type; an injectable delete delegate makes failure handling portable to test.
+- `SettingsPageModel.ClearLogsAsync` formats both messages with `CurrentCulture`, reports failed removals to the user, and writes a warning with only the count and exception type (no file paths).
+- Added coverage for continued cleanup after an access-denied error and the failed-deletion alert/log message.
+- Verification passed: Presentation tests (545), formatting for Presentation and Presentation.Tests, and `bash scripts/check.sh`.
 
 ## Комментарии
 
