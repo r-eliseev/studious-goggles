@@ -1,33 +1,33 @@
-> Исходная спецификация владельца (2026-11-07), без правок, справочно для исполнителя задач 238–243. Действуют поправки из ADR 0029 и `docs/specs/ui-e2e.md`: Appium 3.9.0 + uiautomator2 8.7.3 вместо `appium@4`; на Android `MobileBy.Id`, а не `AccessibilityId`; проекты в `ImageGen/ImageGen.E2E.*`; мок по HTTPS; эмулятор API 33. Папку `docs/specs/ui-e2e-original/` удалить при архивировании задач 238–250.
+> The owner's original specification (2026-11-07), translated to English on 2026-11-09 without changes in meaning (the unedited original is the `.docx` next to it), for reference for the executor of tasks 238–243. The corrections from ADR 0029 and `docs/specs/ui-e2e.md` apply: Appium 3.9.0 + uiautomator2 8.7.3 instead of `appium@4`; on Android `MobileBy.Id`, not `AccessibilityId`; projects in `ImageGen/ImageGen.E2E.*`; a mock over HTTPS; emulator API 33. Delete the `docs/specs/ui-e2e-original/` folder when archiving tasks 238–250.
 
-Техническая спецификация • 7 ноября 2026
+Technical specification • November 7, 2026
 
-# 1. Цель и ограничения
+# 1. Goal and constraints
 
-Автоматически запускать UI smoke-тесты после сборки APK и
-Windows-приложения, сохранять MP4 каждого теста, скриншоты при ошибке,
-UI-дерево, логи, NUnit TRX и Allure HTML. Использовать ubuntu-latest для
-Android и windows-latest для Windows без self-hosted runner.
+Automatically run UI smoke tests after building the APK and the
+Windows app, save an MP4 of each test, screenshots on error,
+the UI tree, logs, NUnit TRX and Allure HTML. Use ubuntu-latest for
+Android and windows-latest for Windows without a self-hosted runner.
 
-Критичный риск: на windows-latest не гарантирована интерактивная
-пользовательская сессия. FlaUI и захват desktop должны пройти отдельный
-preflight. Если не проходят — Windows UI job помечается как
-инфраструктурно недоступный; нельзя выдавать это за успешные тесты.
+A critical risk: an interactive user session is not guaranteed on
+windows-latest. FlaUI and desktop capture must pass a separate
+preflight. If they do not, the Windows UI job is marked as
+unavailable for infrastructure reasons; this must not be passed off as successful tests.
 
-# 2. Архитектура
+# 2. Architecture
 
 Build Android → APK artifact → ubuntu-latest / Android Emulator / Appium
-UiAutomator2 → NUnit + видео → artifacts. Build Windows → unpackaged EXE
-или MSIX → windows-latest / FlaUI UIA3 / FFmpeg → NUnit + видео →
-artifacts. Report job объединяет Allure-results и создаёт HTML.
+UiAutomator2 → NUnit + video → artifacts. Build Windows → unpackaged EXE
+or MSIX → windows-latest / FlaUI UIA3 / FFmpeg → NUnit + video →
+artifacts. The report job merges the Allure results and creates HTML.
 
-# 3. Подготовка приложения
+# 3. Preparing the app
 
-Использовать стабильные AutomationId: login.email, login.password,
-login.submit, home.dashboard. Проверять Android accessibility tree в
-Appium Inspector: MAUI AutomationId не обязательно совпадает с
-AccessibilityId. Создать изолированные тестовые аккаунты и backend; не
-сохранять пароли в репозитории.
+Use stable AutomationIds: login.email, login.password,
+login.submit, home.dashboard. Check the Android accessibility tree in
+Appium Inspector: a MAUI AutomationId does not necessarily match the
+AccessibilityId. Create isolated test accounts and a backend; do not
+keep passwords in the repository.
 
 \<Entry AutomationId="login.email" Placeholder="Email" /\>
 
@@ -37,7 +37,7 @@ AccessibilityId. Создать изолированные тестовые ак
 
 \<Label AutomationId="home.dashboard" Text="Welcome" /\>
 
-# 4. Структура репозитория
+# 4. Repository structure
 
 src/MyApp/MyApp.csproj
 
@@ -51,11 +51,11 @@ tests/scripts/{windows-preflight.ps1,android-preflight.sh}
 
 .github/workflows/ui-e2e.yml
 
-# 5. Windows тесты: NUnit + FlaUI
+# 5. Windows tests: NUnit + FlaUI
 
-Пакеты: NUnit, NUnit3TestAdapter, Microsoft.NET.Test.Sdk, FlaUI.Core,
-FlaUI.UIA3, Allure.NUnit. Запуск приложения через Application.Launch;
-ожидания через Retry.WhileNull; локаторы по AutomationId; тесты
+Packages: NUnit, NUnit3TestAdapter, Microsoft.NET.Test.Sdk, FlaUI.Core,
+FlaUI.UIA3, Allure.NUnit. Launch the app through Application.Launch;
+waits through Retry.WhileNull; locators by AutomationId; tests are
 NonParallelizable.
 
 using var app = FlaUI.Core.Application.Launch(exe);
@@ -78,11 +78,11 @@ Assert.That(submit, Is.Not.Null);
 
 submit!.AsButton().Invoke();
 
-# 6. Android тесты: NUnit + Appium
+# 6. Android tests: NUnit + Appium
 
-Пакеты: NUnit, NUnit3TestAdapter, Microsoft.NET.Test.Sdk,
-Appium.WebDriver, Allure.NUnit. На Ubuntu установить Node, Appium 4 и
-совместимый UiAutomator2 driver; запускать Android Emulator Runner с
+Packages: NUnit, NUnit3TestAdapter, Microsoft.NET.Test.Sdk,
+Appium.WebDriver, Allure.NUnit. On Ubuntu install Node, Appium 4 and
+a compatible UiAutomator2 driver; run the Android Emulator Runner with
 KVM.
 
 var options = new OpenQA.Selenium.Appium.AppiumOptions {
@@ -101,21 +101,21 @@ driver.FindElement(OpenQA.Selenium.Appium.AppiumBy
 
 .AccessibilityId("login.submit")).Click();
 
-# 7. Per-test видео и диагностика
+# 7. Per-test video and diagnostics
 
 ## Android
 
-В NUnit SetUp создать папку по Test.ID, запустить
-Driver.StartRecordingScreen(); в TearDown при ошибке сохранить
-screenshot.png и Driver.PageSource в ui.xml, затем
-Driver.StopRecordingScreen() (base64 MP4), сохранить recording.mp4 и
-закрыть driver. Каждый шаг сохранения защищать отдельным try/catch.
-Учитывать ограничение длительности screenrecord, разбивать длинные
-тесты.
+In the NUnit SetUp create a folder by Test.ID, start
+Driver.StartRecordingScreen(); in TearDown on error save
+screenshot.png and Driver.PageSource to ui.xml, then
+Driver.StopRecordingScreen() (base64 MP4), save recording.mp4 and
+close the driver. Protect each saving step with a separate try/catch.
+Take into account the screenrecord duration limit, split long
+tests.
 
 Driver.StartRecordingScreen();
 
-// ... тест ...
+// ... test ...
 
 var video = Driver.StopRecordingScreen();
 
@@ -123,10 +123,10 @@ File.WriteAllBytes("recording.mp4", Convert.FromBase64String(video));
 
 ## Windows
 
-На каждый тест запускать FFmpeg gdigrab в SetUp и корректно завершать
-через stdin командой q в TearDown. После завершения проверять размер
-файла и ffprobe; при ошибке сохранять скриншот и дерево UIA. Не
-запускать тесты параллельно: desktop, мышь и клавиатура общие.
+For each test start FFmpeg gdigrab in SetUp and stop it properly
+through stdin with the q command in TearDown. After it finishes, check the file
+size and ffprobe; on error save a screenshot and the UIA tree. Do not
+run tests in parallel: the desktop, mouse and keyboard are shared.
 
 ffmpeg -y -f gdigrab -framerate 15 -i desktop \\
 
@@ -136,17 +136,17 @@ ffmpeg -y -f gdigrab -framerate 15 -i desktop \\
 
 ## Preflight Windows
 
-Проверить интерактивную сессию, доступность UIAutomationClient, запуск
-тестового окна, нахождение элемента и получение не-чёрного screenshot.
-Если любой шаг провален, останавливать Windows job с явной причиной.
+Check the interactive session, the availability of UIAutomationClient, launching
+a test window, finding an element and getting a non-black screenshot.
+If any step fails, stop the Windows job with an explicit reason.
 
-# 8. Allure и артефакты
+# 8. Allure and artifacts
 
-В каждом тестовом проекте Allure.NUnit. В TearDown после остановки видео
-прикрепить MP4, PNG, XML и текстовые логи через AllureApi.AddAttachment.
-В GitHub Actions сохранять reports/ через actions/upload-artifact с if:
-always() и retention-days: 14. Для HTML объединить allure-results двух
-платформ и выполнить allure generate --clean.
+Allure.NUnit in each test project. In TearDown after the video stops,
+attach the MP4, PNG, XML and text logs through AllureApi.AddAttachment.
+In GitHub Actions save reports/ through actions/upload-artifact with if:
+always() and retention-days: 14. For HTML merge the allure-results of the two
+platforms and run allure generate --clean.
 
 Allure.Net.Commons.AllureApi.AddAttachment(
 
@@ -154,12 +154,12 @@ Allure.Net.Commons.AllureApi.AddAttachment(
 
 allure generate reports/allure-results --clean -o reports/allure-html
 
-# 9. Пример GitHub Actions: тестовые jobs
+# 9. A GitHub Actions example: test jobs
 
-Ниже фрагмент для подключения к уже существующим
-build-android/build-windows jobs. Они должны публиковать android-apk и
-windows-app. Реальные команды publish зависят от csproj, подписи и
-упаковки.
+Below is a fragment to plug into already existing
+build-android/build-windows jobs. They must publish android-apk and
+windows-app. The real publish commands depend on the csproj, signing and
+packaging.
 
 name: MAUI UI E2E
 
@@ -269,43 +269,43 @@ uses: actions/upload-artifact@v4
 
 with: {name: windows-e2e, path: reports/windows/}
 
-Важно: фрагмент не является самостоятельным валидным workflow без build
-jobs. Добавить timeout на ожидание Appium, контроль наличия APK,
-настройку APP_EXE, совместимые версии пакетов и секреты. HTML-report job
-должен исполняться с if: always() и учитывать отсутствие одного из
-артефактов.
+Important: the fragment is not a standalone valid workflow without the build
+jobs. Add a timeout for waiting for Appium, a check that the APK exists,
+setting APP_EXE, compatible package versions and secrets. The HTML report job
+must run with if: always() and take into account that one of the
+artifacts may be missing.
 
 # 10. Acceptance criteria
 
-☐ Android APK запускается в эмуляторе и тест нажимает кнопку
+☐ The Android APK launches in the emulator and the test taps a button
 
-☐ Windows preflight доказывает UI Automation и реальный захват desktop
+☐ The Windows preflight proves UI Automation and a real desktop capture
 
-☐ Каждый тест сохраняет отдельный воспроизводимый MP4
+☐ Each test saves a separate playable MP4
 
-☐ При падении сохраняются screenshot и UI-дерево
+☐ On failure a screenshot and the UI tree are saved
 
-☐ Есть Appium/Logcat и Windows/FFmpeg логи
+☐ There are Appium/Logcat and Windows/FFmpeg logs
 
-☐ Allure HTML содержит результаты и вложения
+☐ The Allure HTML contains results and attachments
 
-☐ Артефакты сохраняются при failed test
+☐ Artifacts are saved on a failed test
 
-☐ PR показывает отдельный статус Android и Windows
+☐ A PR shows separate Android and Windows statuses
 
-# 11. Риски и план
+# 11. Risks and plan
 
-Риски: Windows desktop недоступен; MAUI Android locator не совпадает с
-AccessibilityId; screenrecord ограничен по длительности; видео может
-содержать секреты; flaky-тесты из-за анимаций и сетевых зависимостей.
-Меры: preflight, Appium Inspector, сегментация, тестовые данные, явные
-ожидания и timeout.
+Risks: the Windows desktop is unavailable; the MAUI Android locator does not match
+the AccessibilityId; screenrecord is limited in duration; a video may
+contain secrets; flaky tests because of animations and network dependencies.
+Measures: preflight, Appium Inspector, segmentation, test data, explicit
+waits and timeouts.
 
-Этапы: (1) preflight инфраструктуры, 0,5–1 день; (2) 3–5 smoke-тестов,
-1–2 дня; (3) видео/логи/Allure, 1–2 дня; (4) CI интеграция, 1 день. Срок
-ориентировочный.
+Stages: (1) the infrastructure preflight, 0.5–1 day; (2) 3–5 smoke tests,
+1–2 days; (3) video/logs/Allure, 1–2 days; (4) CI integration, 1 day. The timeline
+is approximate.
 
-# 12. Официальные ссылки
+# 12. Official links
 
 MAUI: https://learn.microsoft.com/en-us/dotnet/maui/
 

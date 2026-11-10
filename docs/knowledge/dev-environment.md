@@ -1,145 +1,145 @@
-# Среды разработки
+# Development environments
 
-Общий обзор: где какой проект собирается и что умеет каждая среда. Сведения ниже собраны из проверок 2026-10-27—2026-10-30; платформенные отметки сохраняют статус проверки на эти даты.
+A general overview: where each project builds and what each environment can do. The facts below were collected from checks of 2026-10-27 — 2026-10-30; the platform marks keep the check status as of those dates.
 
-- **Windows-машина** — полная среда, включая цель Windows у MAUI.
-- **Облачная сессия Claude Code** (Linux-контейнер) — без цели Windows у MAUI, с целью Android.
-- **Kiro Web** (браузерная сессия, Linux) — Android только собирается (эмулятора нет); корень read-only, инструменты были в `/projects/sandbox/.toolcache`. Kiro Web больше не используется.
-- **VPS** (постоянная Linux-машина) — без цели Windows у MAUI, с целью Android; среда переживает сессию. Собирает и тестирует Linux-проекты, включая Avalonia (headless-тесты и запуск окна под `Xvfb`).
+- **Windows machine** — the full environment, including the MAUI Windows target.
+- **Claude Code cloud session** (a Linux container) — without the MAUI Windows target, with the Android target.
+- **Kiro Web** (a browser session, Linux) — Android is only built (no emulator); the root is read-only, the tools were in `/projects/sandbox/.toolcache`. Kiro Web is no longer used.
+- **VPS** (a permanent Linux machine) — without the MAUI Windows target, with the Android target; the environment survives the session. Builds and tests the Linux projects, including Avalonia (headless tests and launching the window under `Xvfb`).
 
-Пункты с пометкой «не проверено» ещё не проверялись в реальной среде.
+Items marked "not checked" have not been checked in a real environment yet.
 
-## Что где собирается
-| Проект | Windows-машина | Облачная сессия (Linux) | Kiro Web (Linux) | VPS (Linux) |
+## What builds where
+| Project | Windows machine | Cloud session (Linux) | Kiro Web (Linux) | VPS (Linux) |
 |---|---|---|---|---|
-| `ImageGen.Core`, `ImageGen.Core.Tests` | да | да, проверено | да, проверено (59/59 тестов) | да, проверено (356/356 тестов) |
-| `ImageGen.Presentation`, `ImageGen.Presentation.Tests` | да | да, проверено (112/112 тестов) | не проверено | да, проверено (277/277 тестов) |
-| `ImageGen.Avalonia`, `ImageGen.Avalonia.Tests` (десктоп, headless) | да, проверено 2026-10-28 (45 тестов, 1 пропущен — Secret Service; приложение запускается) | да, проверено (4/4 тестов; запуск окна без дисплея не проверен) | не проверено | да, проверено (118/120 тестов, 2 пропущены — Secret Service и DPAPI); приложение запускается под `Xvfb` |
-| `ImageGen.Avalonia.Android` | не проверено | не проверено | не проверено | да, проверено 2026-11-06: Debug и Release APK; запуск на устройстве не проверен |
-| `ImageGen.Data`, `ImageGen.Data.Tests` | да | да, проверено | да, проверено (16/16 тестов) | да, проверено (70/70 тестов) |
-| `ImageGen.Maui`, цель Android (`net10.0-android`) | да | да, проверено (APK собран на шаблоне) | сборка да (не проверено на проекте); запуск/отладка нет — нет эмулятора, `adb`, `/dev/kvm` | сборка да, проверено (APK собран на проекте); запуск/отладка — только на реальном устройстве по сети через `adb connect`, эмулятор не работает (нет KVM) |
-| `ImageGen.Maui`, цель Windows (`net10.0-windows…`) | да | нет, проверено (XAML-компилятор только под Windows) | нет, проверено (как в облачной сессии) | сборка да, проверено, но через Wine и неофициально (1 ч 45 мин); запуск и отладка нет — WinUI 3 под Wine не работает |
+| `ImageGen.Core`, `ImageGen.Core.Tests` | yes | yes, checked | yes, checked (59/59 tests) | yes, checked (356/356 tests) |
+| `ImageGen.Presentation`, `ImageGen.Presentation.Tests` | yes | yes, checked (112/112 tests) | not checked | yes, checked (277/277 tests) |
+| `ImageGen.Avalonia`, `ImageGen.Avalonia.Tests` (desktop, headless) | yes, checked 2026-10-28 (45 tests, 1 skipped — Secret Service; the app launches) | yes, checked (4/4 tests; launching the window without a display not checked) | not checked | yes, checked (118/120 tests, 2 skipped — Secret Service and DPAPI); the app launches under `Xvfb` |
+| `ImageGen.Avalonia.Android` | not checked | not checked | not checked | yes, checked 2026-11-06: Debug and Release APK; launch on a device not checked |
+| `ImageGen.Data`, `ImageGen.Data.Tests` | yes | yes, checked | yes, checked (16/16 tests) | yes, checked (70/70 tests) |
+| `ImageGen.Maui`, the Android target (`net10.0-android`) | yes | yes, checked (APK built from the template) | build yes (not checked on the project); launch/debugging no — no emulator, `adb`, `/dev/kvm` | build yes, checked (APK built from the project); launch/debugging — only on a real device over the network through `adb connect`, the emulator does not work (no KVM) |
+| `ImageGen.Maui`, the Windows target (`net10.0-windows…`) | yes | no, checked (the XAML compiler is Windows-only) | no, checked (as in the cloud session) | build yes, checked, but through Wine and unofficially (1 h 45 min); launch and debugging no — WinUI 3 does not work under Wine |
 
-## Live API check (задача 170)
+## Live API check (task 170)
 
-Инструмент использует реальные клиенты `ImageGen.Core` и пишет безопасный HTTP-трейс через `LoggingHttpHandler`/`FileDebugTrace`. Никогда не передавайте ключи третьим лицам. Параметры командной строки могут сохраняться в истории оболочки и быть видны локальным процессам; используйте переменные окружения `IMAGEGEN_LIVE_OPENROUTER_KEY`, `IMAGEGEN_LIVE_FAL_KEY`, `IMAGEGEN_LIVE_TOGETHER_KEY` или `--provider-key-<id>` для дополнительных провайдеров.
+The tool uses the real `ImageGen.Core` clients and writes a safe HTTP trace through `LoggingHttpHandler`/`FileDebugTrace`. Never give keys to third parties. Command-line parameters may be kept in the shell history and be visible to local processes; use the environment variables `IMAGEGEN_LIVE_OPENROUTER_KEY`, `IMAGEGEN_LIVE_FAL_KEY`, `IMAGEGEN_LIVE_TOGETHER_KEY` or `--provider-key-<id>` for additional providers.
 
-Перед платными запросами ограничьте бюджет и число вызовов для каждого провайдера. Значения по умолчанию: `$1` и 40 запросов. Для OpenAI-compatible/Anthropic из собственного `providers.json` задайте `--openai-compatible <путь>` и `--provider-key-<id> <ключ>`. Модели можно закрепить параметрами `--openrouter-image-model`, `--openrouter-chat-model`, `--fal-image-model`, `--together-image-model`; без них выбирается первая из каталога/конфига.
+Before paid requests, limit the budget and the number of calls per provider. The defaults: `$1` and 40 requests. For OpenAI-compatible/Anthropic providers from your own `providers.json` set `--openai-compatible <path>` and `--provider-key-<id> <key>`. Models can be pinned with `--openrouter-image-model`, `--openrouter-chat-model`, `--fal-image-model`, `--together-image-model`; without them the first one from the catalog/config is chosen.
 
 ```bash
 dotnet run --project ImageGen/ImageGen.LiveCheck -- --budget-usd 1 --max-requests 40 --only openrouter,fal --out tmp/live-check
 ```
 
-Отдельный музыкальный сценарий Lyria запускайте с `--only music`, бюджетом не менее `$0.10` и `IMAGEGEN_LIVE_OPENROUTER_KEY`; без ключа или бюджета он пропускается без запроса. Он сохраняет клип в `tmp/live-check/<UTC-дата>/music.mp3` или `music.wav` при повторе после ошибки формата/голоса. Живой запрос тарифицируется провайдером.
+Run the separate Lyria music scenario with `--only music`, a budget of at least `$0.10` and `IMAGEGEN_LIVE_OPENROUTER_KEY`; without a key or budget it is skipped without a request. It saves the clip to `tmp/live-check/<UTC date>/music.mp3` or `music.wav` when retrying after a format/voice error. A live request is billed by the provider.
 
-Отчёт и отладочный трейс появляются под `tmp/live-check/<UTC-дата>/report.md` и `tmp/live-check/debug/<UTC-дата>/trace.jsonl`. Проверьте каждый сценарий вручную по колонке статуса, модели и ссылке на trace. Сценарии генерации резервируют оценочную цену до запроса и останавливаются, если не помещаются в бюджет. Цены из каталога могут быть устаревшими или переменными; отчёт помечает их как оценочные. Тесты инструмента работают без сети и ключей.
+The report and the debug trace appear under `tmp/live-check/<UTC date>/report.md` and `tmp/live-check/debug/<UTC date>/trace.jsonl`. Check each scenario by hand by the status column, the model and the trace link. Generation scenarios reserve the estimated price before the request and stop if it does not fit into the budget. Catalog prices may be outdated or variable; the report marks them as estimates. The tool's tests work without a network and keys.
 
 ### OpenRouter embeddings
 
-Проверка с двумя короткими текстами: `dotnet run --project ImageGen/ImageGen.LiveCheck -- --only embeddings --budget-usd 0.01 --max-requests 1 --out tmp/live-check`. При отсутствии `IMAGEGEN_LIVE_OPENROUTER_KEY` LiveCheck отмечает сценарий как `unverified` и не отправляет запрос. При ключе запрос выполняется через `ITextEmbeddingClient` и `OpenRouterClient.EmbedAsync`, то есть тем же разбором ответа, что использует индекс приложения; отчёт содержит HTTP-статус, запрошенную и ответную модели, upstream-провайдера, число и размер векторов, наличие `index`, usage и результат парсинга.
+A check with two short texts: `dotnet run --project ImageGen/ImageGen.LiveCheck -- --only embeddings --budget-usd 0.01 --max-requests 1 --out tmp/live-check`. Without `IMAGEGEN_LIVE_OPENROUTER_KEY`, LiveCheck marks the scenario as `unverified` and sends no request. With a key, the request goes through `ITextEmbeddingClient` and `OpenRouterClient.EmbedAsync`, that is, the same response parsing the app's index uses; the report contains the HTTP status, the requested and the answered models, the upstream provider, the number and size of the vectors, the presence of `index`, the usage and the parsing result.
 
-Живой ответ владельца от 2026-11-07: `POST /api/v1/embeddings`, два текста, HTTP 200; ответ содержал `model: "BAAI/bge-m3"`, `provider: "DeepInfra"`, два вектора по 1024 числа, поля `index` и `usage.cost: 1.6e-07 USD` (такое же значение `cost_details.upstream_inference_cost`). В другом логе владельца OpenRouter вернул `model: "parasail-bge-m3"`: имя в ответе может обозначать upstream-модель и отличаться от запроса `baai/bge-m3`; приложение проверяет форму и размерность векторов, но хранит запрошенный идентификатор. Запуск обновлённого LiveCheck с ключом в этой рабочей сессии не повторялся, ключ отсутствует. Единица `usage.cost` подтверждена живым ответом как USD.
+The owner's live answer of 2026-11-07: `POST /api/v1/embeddings`, two texts, HTTP 200; the answer contained `model: "BAAI/bge-m3"`, `provider: "DeepInfra"`, two vectors of 1024 numbers, the `index` fields and `usage.cost: 1.6e-07 USD` (the same value as `cost_details.upstream_inference_cost`). In another log of the owner OpenRouter returned `model: "parasail-bge-m3"`: the name in the answer may denote the upstream model and differ from the requested `baai/bge-m3`; the app checks the shape and dimension of the vectors, but stores the requested identifier. Running the updated LiveCheck with a key was not repeated in this working session, there is no key. The `usage.cost` unit is confirmed as USD by a live answer.
 
-Отладка GUI: Windows-приложение — только на Windows-машине; Android вживую (эмулятор/устройство, точки останова, Hot Reload) недоступен в облачной сессии и Kiro Web; на VPS эмулятор не запускается, но возможна отладка на реальном устройстве по сети.
-- Сборка всего решения (`dotnet build ImageGen/ImageGen.slnx`) и `dotnet format ImageGen/ImageGen.slnx` на Linux не запускаются, потому что решение включает MAUI-проект, а без нагрузки MAUI он не загружается. Форматирование и сборка по отдельным проектам: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`.
-- В CI на ubuntu-latest установка нагрузки `maui-android` падала с «Disk quota exceeded», поэтому Android в CI собирается на Windows (`.github/workflows/build.yml`, задача `maui`). В облачной сессии Android-сборка проверена, но CI на ней не настроен.
+GUI debugging: the Windows app — only on the Windows machine; live Android (emulator/device, breakpoints, Hot Reload) is unavailable in the cloud session and Kiro Web; on the VPS the emulator does not start, but debugging on a real device over the network is possible.
+- Building the whole solution (`dotnet build ImageGen/ImageGen.slnx`) and `dotnet format ImageGen/ImageGen.slnx` do not run on Linux, because the solution includes the MAUI project, and without the MAUI workload it does not load. Formatting and building per project: `dotnet format ImageGen/<Project>/<Project>.csproj --verify-no-changes`.
+- In CI on ubuntu-latest installing the `maui-android` workload failed with "Disk quota exceeded", so Android in CI is built on Windows (`.github/workflows/build.yml`, the `maui` job). In the cloud session the Android build is checked, but CI is not set up there.
 
-## Web-хост
+## Web host
 
-`ImageGen.Web` запускается на .NET 10. Для старта требуется непустой `IMAGEGEN_WEB_PASSWORD`; папка данных задаётся `IMAGEGEN_DATA_DIR` (по умолчанию `/data`) и содержит базу SQLite, зашифрованные секреты и ключи ASP.NET Core Data Protection.
+`ImageGen.Web` runs on .NET 10. Startup requires a non-empty `IMAGEGEN_WEB_PASSWORD`; the data folder is set by `IMAGEGEN_DATA_DIR` (`/data` by default) and contains the SQLite database, the encrypted secrets and the ASP.NET Core Data Protection keys.
 
-Локальный запуск: `IMAGEGEN_WEB_PASSWORD=test dotnet run --project ImageGen/ImageGen.Web/ImageGen.Web.csproj`. Health endpoint: `GET /api/health`. Интеграционные тесты: `dotnet test ImageGen/ImageGen.Web.Tests/ImageGen.Web.Tests.csproj`.
+A local run: `IMAGEGEN_WEB_PASSWORD=test dotnet run --project ImageGen/ImageGen.Web/ImageGen.Web.csproj`. Health endpoint: `GET /api/health`. Integration tests: `dotnet test ImageGen/ImageGen.Web.Tests/ImageGen.Web.Tests.csproj`.
 
-## Строка «Среда» в задаче
-У каждой задачи в «Описании» есть строка «Среда». Правило в `docs/tasks.md`: агент, у которого нет нужной среды, задачу не занимает.
+## The "Environment" line in a task
+Every task has an "Environment" line in its "Description". The rule in `docs/tasks.md`: an agent without the needed environment does not claim the task.
 
-С 2026-10-28 (решение владельца: как можно больше разработки на Linux) действует такое деление:
-- **Linux или Windows** — всё, что проверяется сборкой и тестами: ядро, хранилище, `Presentation`, Avalonia (сборка, headless-тесты, запуск окна на Linux-рабочем столе), MAUI через цель Android (сборка и `dotnet format` с Android SDK). Windows-цель MAUI для таких задач проверяет CI (задача `maui` на `windows-latest`).
-- `ImageGen.Avalonia.Android` собирается на Linux с Android SDK и workload `android`: `dotnet workload install android`, затем `dotnet build ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj -c Release`. Debug и Release проверены на VPS 2026-11-06; запуск на устройстве пока не проверен (задача 198).
-- **только Windows** — то, что нельзя проверить иначе: запуск и ручная проверка MAUI-приложения под Windows, поведение, которого нет на Linux (DPAPI, WinUI-специфика), правки `Platforms/Windows`.
-- **человек у экрана** — ручные сценарии (задачи 016, 046).
+Since 2026-10-28 (the owner's decision: as much development on Linux as possible) this split applies:
+- **Linux or Windows** — everything checked by builds and tests: the core, storage, `Presentation`, Avalonia (build, headless tests, launching the window on a Linux desktop), MAUI through the Android target (build and `dotnet format` with the Android SDK). For such tasks the MAUI Windows target is checked by CI (the `maui` job on `windows-latest`).
+- `ImageGen.Avalonia.Android` builds on Linux with the Android SDK and the `android` workload: `dotnet workload install android`, then `dotnet build ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj -c Release`. Debug and Release were checked on the VPS on 2026-11-06; launching on a device is not checked yet (task 198).
+- **Windows only** — what cannot be checked otherwise: launching and manually checking the MAUI app on Windows, behavior that does not exist on Linux (DPAPI, WinUI specifics), edits of `Platforms/Windows`.
+- **A human at the screen** — manual scenarios (tasks 016, 046).
 
-Задача с MAUI-разметкой по умолчанию идёт на Linux: логика экранов в `Presentation`, их интерфейс можно увидеть и потыкать в Avalonia на Linux (тот же сценарий), а MAUI-разметка проверяется сборкой Android и CI. Если в такой задаче осталась только проверка, недоступная в среде (Windows-запуск, macOS, ручной экран), её не держат в `in-progress`: см. `docs/tasks.md`, «Завершение».
+A task with MAUI markup goes to Linux by default: the screen logic is in `Presentation`, its UI can be seen and clicked in Avalonia on Linux (the same scenario), and the MAUI markup is checked by the Android build and CI. If such a task has only a check left that the environment cannot do (a Windows launch, macOS, a manual screen), it is not kept `in-progress`: see `docs/tasks.md`, "Finishing".
 
-## Логи
-Журнал приложения пишется в файлы `imagegen-yyyyMMdd.log` в папке `logs` внутри папки данных (ADR 0010). Первая строка каждого запуска называет версию, оболочку, ОС и путь к папке.
-- **Avalonia, Linux:** `~/.local/share/ImageGen/logs` (проверено, `Environment.SpecialFolder.LocalApplicationData`, headless-тесты).
-- **Avalonia, Windows:** `%LOCALAPPDATA%\ImageGen\logs` (проверено 2026-10-28: первая строка запуска — версия, оболочка, ОС, папки данных и логов).
-- **Avalonia, macOS:** неизвестно, путь не проверен (нет macOS-машины).
-- **Avalonia Android:** `<FilesDir>/ImageGen/logs` (внутри закрытой папки данных приложения Android).
-- **MAUI:** папка `AppDataDirectory` приложения (`FileSystem.Current.AppDataDirectory`), подпапка `logs`. На Android передать файлы можно через Settings → Share logs: откроется системное меню «Поделиться» с копиями файлов, включая текущий открытый журнал. Папка данных APK закрыта для других приложений; `run-as` недоступен у release APK, `allowBackup=false`. Сообщения также пишутся в `Debug`-вывод (logcat). Передача и очистка ожидают ручной проверки на устройстве в задаче 140.
-- Уровень: `IMAGEGEN_LOG_LEVEL=Trace|Debug|Information|Warning|Error` или `logging.json` `{"level": "Debug"}` в папке данных; по умолчанию Debug в Debug-сборке, Information в Release.
-- Отладочный трейс (задача 085) включается отдельно от уровня: `IMAGEGEN_DEBUG_TRACE=1` или `{"debugTrace": true}` в `logging.json`. Пишет в `{папка данных}/debug/<дата>/trace.jsonl` и картинки рядом; очистки нет (неизвестно, нужна ли). Спецификация: `docs/specs/debug-trace.md`.
-- Папка данных Avalonia задаётся переменной `IMAGEGEN_DATA_DIR` (второй профиль для ручной проверки). Тесты `ImageGen.Avalonia.Tests` её не используют: они работают во временной папке и с хранилищем ключей в памяти (`App.HostOverrides`, задача 048).
+## Logs
+The app log is written to `imagegen-yyyyMMdd.log` files in the `logs` folder inside the data folder (ADR 0010). The first line of every start names the version, the head, the OS and the folder path.
+- **Avalonia, Linux:** `~/.local/share/ImageGen/logs` (checked, `Environment.SpecialFolder.LocalApplicationData`, headless tests).
+- **Avalonia, Windows:** `%LOCALAPPDATA%\ImageGen\logs` (checked 2026-10-28: the first line of a start — version, head, OS, data and log folders).
+- **Avalonia, macOS:** unknown, the path is not checked (no macOS machine).
+- **Avalonia Android:** `<FilesDir>/ImageGen/logs` (inside the app's private Android data folder).
+- **MAUI:** the app's `AppDataDirectory` folder (`FileSystem.Current.AppDataDirectory`), the `logs` subfolder. On Android the files can be handed over through Settings → Share logs: the system "Share" menu opens with copies of the files, including the current open log. The APK's data folder is closed to other apps; `run-as` is unavailable for a release APK, `allowBackup=false`. Messages are also written to the `Debug` output (logcat). Handing over and clearing wait for a manual check on a device in task 140.
+- Level: `IMAGEGEN_LOG_LEVEL=Trace|Debug|Information|Warning|Error` or `logging.json` `{"level": "Debug"}` in the data folder; by default Debug in a Debug build, Information in Release.
+- The debug trace (task 085) is enabled separately from the level: `IMAGEGEN_DEBUG_TRACE=1` or `{"debugTrace": true}` in `logging.json`. It writes to `{data folder}/debug/<date>/trace.jsonl` with pictures next to it; there is no cleanup (unknown whether it is needed). Specification: `docs/specs/debug-trace.md`.
+- The Avalonia data folder is set by the `IMAGEGEN_DATA_DIR` variable (a second profile for manual checks). The `ImageGen.Avalonia.Tests` tests do not use it: they work in a temporary folder and with an in-memory key store (`App.HostOverrides`, task 048).
 
-## Релиз
-- Workflow `.github/workflows/release.yml` запускается на каждый push (и merge PR) в `main` и на тег `vMAJOR.MINOR.PATCH` (например, `v0.1.0`) и создаёт GitHub Release. Push в `main` выпускает следующий patch после последнего стабильного тега (`v0.1.7` → `v0.1.8`): тег создаётся на этом коммите самим `gh release create` (решение владельца 2026-11-06). Если на коммите уже есть стабильный тег, push-запуск ничего не публикует — релиз делает запуск тега. Запуски по `main` идут по очереди (`concurrency`), поэтому номера не повторяются; minor/major меняют, поставив тег вручную. Релиз создаётся с заметками из `scripts/release-notes.sh`. Заметки перечисляют задачи, ставшие `done` после предыдущего по версии тега `vX.Y.Z` (по файлам задач и `tasks/DONE.md` в версии тега; папка задачи не важна), и заканчиваются ссылкой на сравнение коммитов; у первого тега — все завершённые задачи. Тот же текст локально: `git fetch --tags && scripts/release-notes.sh <тег> [<предыдущий тег>]`. Ручной запуск (`workflow_dispatch`, «Run workflow» в Actions) собирает те же пакеты как артефакты запуска, без релиза, с версией `0.0.<номер запуска>`: так проверяют workflow, не выпуская релиз.
-- Shell-регрессия release notes (в том числе пустой предыдущий набор done-задач): `bash scripts/tests/release-notes-empty-previous.sh`.
-- Пакеты (решение владельца 2026-10-29: обе оболочки под все платформы):
-  - Avalonia, self-contained: `linux-x64`, `linux-arm64` (`.tar.gz`), `win-x64`, `win-arm64` (`.zip`), `osx-x64`, `osx-arm64` (`.tar.gz`, собираются на macOS-раннере: `osx-arm64` без подписи ad-hoc не запускается, а SDK подписывает apphost только на Mac).
-  - MAUI Windows: `win-x64`, `win-arm64`, без MSIX (`WindowsPackageType=None`), с Windows App SDK внутри, `.zip`.
-  - MAUI Android: `.apk`, ставится вручную. Подпись — постоянный ключ из секретов репозитория `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` (задача 163; сертификат `CN=ImageGen, O=eliseev`, SHA-256 `6711f8badc39c087512e78a04ab4d7a8313d9d00b33081bf139867fc55b10277`). Без секретов сборка использует отладочный ключ с предупреждением; такой APK не ставится поверх предыдущего релиза. До v0.1.5 включительно использовались разные отладочные ключи, поэтому требуется удалить приложение вместе с данными. Все MAUI targets используют `com.eliseev.imagegen` и отображают имя Omnilite.
-  - Avalonia Android: `ImageGen-Avalonia-<версия>-android.apk`, собирается и включается в каждый релиз отдельно от MAUI; устанавливается рядом с MAUI и имеет собственный application ID, каталог данных и ключи провайдеров. Workflow использует те же секреты подписи; сертификат релизного APK требуется подтвердить при ручном запуске workflow.
-  - MAUI Mac Catalyst и iOS не публикуются (решение владельца 2026-10-29). Текущий workload `maui` (Mac Catalyst SDK 27.0) требует Xcode 27.1, а на раннерах GitHub `macos-latest` и `macos-26` на 2026-10-29 только Xcode 26.x (до 26.6). На Mac есть пакеты Avalonia `osx-x64` и `osx-arm64`. iOS к тому же без сертификата и профиля Apple на устройство не ставится.
-  - Если вернуть Mac Catalyst: на macOS ставить workload `maui` целиком, а не `maui-maccatalyst` (restore проверяет все целевые платформы проекта, иначе `NETSDK1147`), и раннер с нужным Xcode.
-- Версия MAUI: `ApplicationDisplayVersion` из тега (или вычисленного для push в `main`), `ApplicationVersion` — номер запуска workflow (Android требует целое, растущее от релиза к релизу).
-- MAUI Windows публикуется с `-p:ImageGenWindowsRid=<rid>`; проект передаёт его в `RuntimeIdentifier` только для Windows TFM, не затрагивая project references и остальные платформы. Архив `win-arm64` релиза `v0.1.4` фактически содержал x64 PE-файлы. Workflow проверяет поле Machine PE-заголовков перед упаковкой; подробности и номер проверки — в [справочнике MAUI](maui.md#публикация-maui-под-windows-с-rid).
-- Проверено запуском по тегу `v0.1.3` (2026-10-29): все пакеты Avalonia, MAUI Windows `win-x64`/`win-arm64` и Android собираются. Локально на Windows опубликованный MAUI `win-x64` запускается. Пакеты под arm64 и macOS на устройствах не запускались.
-- Первый удачный релиз — `v0.1.2` (2026-10-29, только Avalonia `linux-x64` и `win-x64`); `v0.1.0` и `v0.1.1` упали на шаге публикации `win-x64`, `v0.1.3` — на сборке Mac Catalyst (релиза нет).
-
-
-## Windows-машина разработки
-
-Описание среды, на которой собирается цель Windows у MAUI и проверяется интерфейс. Общий обзор сред: `docs/knowledge/dev-environment.md`. Записано 2026-10-27 по прежнему описанию среды. В ревизии облачной сессии эта машина не проверялась: всё ниже «не проверено» на самой машине.
-
-## Что нужно
-- Windows с установленными нагрузками MAUI (`maui-windows`, `maui-android`), .NET 10 SDK.
-- Для Android-цели: Android SDK и JDK (не проверено на этой машине).
-- Для проверки скелета (задача 016) нужен человек у экрана: интерфейс проверяется вручную.
-
-## Что собирается только здесь
-- Цель `net10.0-windows10.0.19041.0` у `ImageGen.Maui`. На Linux она не собирается: XAML-компилятор WinUI работает только под Windows (проверено в облачной сессии, см. `этот раздел «Облачная сессия Claude Code»`).
-- Ручная проверка интерфейса скелета (задача 016) — только на Windows.
-
-## Команды
-- Сборка Windows: `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0`
-- Сборка Android: `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android`
-- Запуск: `ImageGen/ImageGen.Maui/bin/Debug/net10.0-windows10.0.19041.0/win-x64/ImageGen.Maui.exe`
-- Форматирование по проекту: `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes`
+## Release
+- The `.github/workflows/release.yml` workflow runs on a push (and PR merge) to `main` that changes the shipped code — `ImageGen/**` except the `*.Tests` and `ImageGen.E2E.*` projects, or `global.json` (a `paths` filter, the owner's decision of 2026-11-09; documentation, tasks, scripts and workflows alone do not release) — and on a `vMAJOR.MINOR.PATCH` tag (GitHub does not apply path filters to tags) (for example, `v0.1.0`) and creates a GitHub Release. A push to `main` releases the next patch after the latest stable tag (`v0.1.7` → `v0.1.8`): the tag is created on this commit by `gh release create` itself (the owner's decision of 2026-11-06). If the commit already has a stable tag, the push run publishes nothing — the tag run makes the release. Runs on `main` go one after another (`concurrency`), so numbers do not repeat; minor/major are changed by setting a tag by hand. The release is created with notes from `scripts/release-notes.sh`. The notes list the tasks that became `done` after the previous `vX.Y.Z` tag by version (by the task files and `tasks/DONE.md` in the tag's version; the task folder does not matter), and end with a link to the commit comparison; the first tag lists all finished tasks. The same text locally: `git fetch --tags && scripts/release-notes.sh <tag> [<previous tag>]`. A manual run (`workflow_dispatch`, "Run workflow" in Actions) builds the same packages as run artifacts, without a release, with the version `0.0.<run number>`: this is how the workflow is checked without releasing.
+- The shell regression of the release notes (including an empty previous set of done tasks): `bash scripts/tests/release-notes-empty-previous.sh`.
+- Packages (the owner's decision of 2026-10-29: both heads for all platforms):
+  - Avalonia, self-contained: `linux-x64`, `linux-arm64` (`.tar.gz`), `win-x64`, `win-arm64` (`.zip`), `osx-x64`, `osx-arm64` (`.tar.gz`, built on a macOS runner: `osx-arm64` does not start without an ad-hoc signature, and the SDK signs the apphost only on a Mac).
+  - MAUI Windows: `win-x64`, `win-arm64`, without MSIX (`WindowsPackageType=None`), with the Windows App SDK inside, `.zip`.
+  - MAUI Android: `.apk`, installed by hand. Signing: the permanent key from the repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` (task 163; certificate `CN=ImageGen, O=eliseev`, SHA-256 `6711f8badc39c087512e78a04ab4d7a8313d9d00b33081bf139867fc55b10277`). Without the secrets the build uses a debug key with a warning; such an APK does not install over the previous release. Up to and including v0.1.5 different debug keys were used, so the app has to be uninstalled together with its data. All MAUI targets use `com.eliseev.imagegen` and show the name Omnilite.
+  - Avalonia Android: `ImageGen-Avalonia-<version>-android.apk`, built and included in every release separately from MAUI; installs next to MAUI and has its own application ID, data folder and provider keys. The workflow uses the same signing secrets; the certificate of the release APK must be confirmed on a manual workflow run.
+  - MAUI Mac Catalyst and iOS are not published (the owner's decision of 2026-10-29). The current `maui` workload (Mac Catalyst SDK 27.0) requires Xcode 27.1, while the GitHub `macos-latest` and `macos-26` runners had only Xcode 26.x (up to 26.6) on 2026-10-29. On a Mac there are the Avalonia `osx-x64` and `osx-arm64` packages. iOS, moreover, does not install on a device without an Apple certificate and profile.
+  - If Mac Catalyst is brought back: on macOS install the whole `maui` workload, not `maui-maccatalyst` (restore checks all target platforms of the project, otherwise `NETSDK1147`), and a runner with the needed Xcode.
+- MAUI version: `ApplicationDisplayVersion` from the tag (or the one computed for a push to `main`), `ApplicationVersion` — the workflow run number (Android requires an integer that grows from release to release).
+- MAUI Windows is published with `-p:ImageGenWindowsRid=<rid>`; the project passes it into `RuntimeIdentifier` only for the Windows TFM, without affecting project references and the other platforms. The `win-arm64` archive of release `v0.1.4` actually contained x64 PE files. The workflow checks the Machine field of the PE headers before packaging; details and the check number are in the [MAUI reference](maui.md#publishing-maui-for-windows-with-a-rid).
+- Checked by the `v0.1.3` tag run (2026-10-29): all Avalonia packages, MAUI Windows `win-x64`/`win-arm64` and Android build. Locally on Windows the published MAUI `win-x64` launches. The arm64 and macOS packages were not launched on devices.
+- The first successful release is `v0.1.2` (2026-10-29, only Avalonia `linux-x64` and `win-x64`); `v0.1.0` and `v0.1.1` failed at the `win-x64` publish step, `v0.1.3` at the Mac Catalyst build (no release).
 
 
-## Облачная сессия Claude Code (проверка 2026-10-27)
+## The Windows development machine
 
-Что реально работает в облачной сессии (Linux-контейнер Claude Code) и как поставить недостающее. Ревизия проведена 2026-10-27 на этой машине (Ubuntu 24.04, x86_64, 4 CPU, 15 ГБ RAM, около 23 ГБ свободно на диске). Пункты помечены: «проверено», «не работает», «не проверено». Общий обзор сред: `docs/knowledge/dev-environment.md`. Windows-машина описана в `этот раздел «Windows-машина разработки»`.
+A description of the environment where the MAUI Windows target is built and the UI is checked. A general overview of environments: `docs/knowledge/dev-environment.md`. Recorded 2026-10-27 from the earlier description of the environment. This machine was not checked in the cloud session revision: everything below is "not checked" on the machine itself.
 
-## Работает (проверено)
-- **.NET SDK 10.0.403:** `dotnet build`, `dotnet test`, `dotnet format` проходят для ядра и хранилища.
-- **NuGet:** `api.nuget.org` доступен.
-- **MAUI, цель Android:** `dotnet build -f net10.0-android` собирает APK на свежем шаблоне `dotnet new maui`. Нужна платформа Android API 36.
-- **Android SDK:** command-line tools ставятся с `dl.google.com`, лицензии принимаются через `yes | sdkmanager --licenses`.
-- **JDK 21:** установлен, подходит для MAUI Android.
-- **Chromium через Playwright:** установленная браузерная версия зависит от образа сессии. Не запускать `playwright install`.
-- **Node/npm:** Node.js 22.12+ требуется для Vite 8 и Vitest 5; `registry.npmjs.org` доступен. В этой рабочей сессии (2026-11-02) `/usr/bin/node` был v18.19.0, поэтому Node 22.23.4 временно установлен в `tmp/node22` внутри репозитория для проверок. Бинарник браузера Playwright в `/root/.cache/ms-playwright` и `/opt` не найден, поэтому E2E нельзя запустить в этой сессии без установки браузера; проектная инструкция запрещает `playwright install`.
-- **Python 3.13, git 2.43, curl:** установлены; `pypi.org` доступен.
-- **GitHub через MCP** (`mcp__github__*`): чтение PR, check runs, комментарии, создание PR и ответы в тредах.
-- **Харнес:** `scripts/check.sh` проходит.
+## What is needed
+- Windows with the MAUI workloads installed (`maui-windows`, `maui-android`), the .NET 10 SDK.
+- For the Android target: the Android SDK and a JDK (not checked on this machine).
+- Checking the skeleton (task 016) needs a human at the screen: the UI is checked by hand.
 
-## Работает с оговорками
-- **Docker:** CLI установлен (29.9.2), демон не запущен автоматически. Запуск: `dockerd > ~/dockerd.log 2>&1 &`. Docker Hub отвечает `429 Too Many Requests` на анонимные запросы, образы для сборки не тянутся.
-- **`gh`:** установлен, не аутентифицирован (`GH_TOKEN` отвергается). Для GitHub использовать MCP.
-- **Фоновые процессы:** `sleep` в переднем плане блокируется. Ждать через `run_in_background` или `until <условие>; do sleep 3; done` в фоне.
+## What builds only here
+- The `net10.0-windows10.0.19041.0` target of `ImageGen.Maui`. It does not build on Linux: the WinUI XAML compiler works only on Windows (checked in the cloud session, see the "Claude Code cloud session" section of this file).
+- The manual check of the skeleton UI (task 016) — only on Windows.
 
-## Не работает (проверено)
-- **MAUI, цель Windows:** `dotnet build -f net10.0-windows10.0.19041.0` на Linux не проходит. Без обхода — `NETSDK1100`. С `-p:EnableWindowsTargeting=true` и явным TFM — падает на XAML-компиляции (`XamlCompiler output file … was not created`). Компилятор WinUI XAML — Windows-инструмент. Значит, задачи 012–016 и Windows-часть 034 здесь не выполняются.
-- **sqlite3 CLI:** не установлен. Не нужен: БД через `Microsoft.Data.Sqlite`. Установка `apt-get install sqlite3` не проверялась.
-- **`chromium` в PATH:** нет. Использовать Playwright-версию из `/opt/pw-browsers`.
-- **Эмулятор Android (запуск приложения):** `/dev/kvm` отсутствует, у процессора нет флагов `vmx`/`svm`. Замер 2026-10-27 (эмулятор 37.2.12, Android 36 Google APIs, 4 vCPU, 3 ГБ RAM, `-no-accel -gpu swiftshader_indirect`):
-  - образ `arm64-v8a` не запускается: `System image must match the host architecture`;
-  - образ `x86_64` стартует, но загрузка не завершилась за 31 минуту: `sys.boot_completed` не выставлен, `bootanim` в состоянии `running`. Эмулятор остановлен.
-  - Вывод: отладка запуска и UI MAUI-приложения в облачной сессии не выполняется. Сборка, анализ APK и тесты логики — выполняются.
+## Commands
+- Windows build: `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0`
+- Android build: `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android`
+- Launch: `ImageGen/ImageGen.Maui/bin/Debug/net10.0-windows10.0.19041.0/win-x64/ImageGen.Maui.exe`
+- Formatting per project: `dotnet format ImageGen/<Project>/<Project>.csproj --verify-no-changes`
 
-## Как поставить (нужно в каждой новой сессии: окружение не сохраняется)
-Состояние не переживает сессию: SDK, Android SDK и запущенный `dockerd` ставятся заново.
+
+## Claude Code cloud session (check of 2026-10-27)
+
+What really works in the cloud session (the Claude Code Linux container) and how to install what is missing. The revision was done on 2026-10-27 on this machine (Ubuntu 24.04, x86_64, 4 CPU, 15 GB RAM, about 23 GB free on the disk). Items are marked "checked", "does not work", "not checked". A general overview of environments: `docs/knowledge/dev-environment.md`. The Windows machine is described in the "Windows development machine" section of this file.
+
+## Works (checked)
+- **.NET SDK 10.0.403:** `dotnet build`, `dotnet test`, `dotnet format` pass for the core and storage.
+- **NuGet:** `api.nuget.org` is reachable.
+- **MAUI, the Android target:** `dotnet build -f net10.0-android` builds an APK from a fresh `dotnet new maui` template. The Android API 36 platform is needed.
+- **Android SDK:** the command-line tools install from `dl.google.com`, licenses are accepted through `yes | sdkmanager --licenses`.
+- **JDK 21:** installed, suitable for MAUI Android.
+- **Chromium through Playwright:** the installed browser version depends on the session image. Do not run `playwright install`.
+- **Node/npm:** Node.js 22.12+ is required for Vite 8 and Vitest 5; `registry.npmjs.org` is reachable. In this working session (2026-11-02) `/usr/bin/node` was v18.19.0, so Node 22.23.4 was temporarily installed into `tmp/node22` inside the repository for the checks. The Playwright browser binary was not found in `/root/.cache/ms-playwright` and `/opt`, so E2E cannot be run in this session without installing a browser; the project instruction forbids `playwright install`.
+- **Python 3.13, git 2.43, curl:** installed; `pypi.org` is reachable.
+- **GitHub through MCP** (`mcp__github__*`): reading PRs, check runs, comments, creating PRs and replying in threads.
+- **Harness:** `scripts/check.sh` passes.
+
+## Works with caveats
+- **Docker:** the CLI is installed (29.9.2), the daemon does not start automatically. Start: `dockerd > ~/dockerd.log 2>&1 &`. Docker Hub answers `429 Too Many Requests` to anonymous requests, images for the build are not pulled.
+- **`gh`:** installed, not authenticated (`GH_TOKEN` is rejected). Use MCP for GitHub.
+- **Background processes:** a foreground `sleep` is blocked. Wait through `run_in_background` or `until <condition>; do sleep 3; done` in the background.
+
+## Does not work (checked)
+- **MAUI, the Windows target:** `dotnet build -f net10.0-windows10.0.19041.0` does not pass on Linux. Without a workaround — `NETSDK1100`. With `-p:EnableWindowsTargeting=true` and an explicit TFM it fails at XAML compilation (`XamlCompiler output file … was not created`). The WinUI XAML compiler is a Windows tool. So tasks 012–016 and the Windows part of 034 are not done here.
+- **The sqlite3 CLI:** not installed. Not needed: the DB goes through `Microsoft.Data.Sqlite`. Installing `apt-get install sqlite3` was not checked.
+- **`chromium` in PATH:** no. Use the Playwright version from `/opt/pw-browsers`.
+- **The Android emulator (launching the app):** `/dev/kvm` is missing, the CPU has no `vmx`/`svm` flags. Measured 2026-10-27 (emulator 37.2.12, Android 36 Google APIs, 4 vCPU, 3 GB RAM, `-no-accel -gpu swiftshader_indirect`):
+  - the `arm64-v8a` image does not start: `System image must match the host architecture`;
+  - the `x86_64` image starts, but booting did not finish in 31 minutes: `sys.boot_completed` is not set, `bootanim` is `running`. The emulator was stopped.
+  - Conclusion: debugging the launch and the UI of the MAUI app is not done in the cloud session. The build, APK analysis and logic tests are done.
+
+## How to install (needed in every new session: the environment is not kept)
+The state does not survive the session: the SDK, the Android SDK and a running `dockerd` are installed again.
 
 ```bash
 # .NET 10 SDK
@@ -147,10 +147,10 @@ curl -sSL https://dot.net/v1/dotnet-install.sh -o ~/dotnet-install.sh
 bash ~/dotnet-install.sh --channel 10.0 --install-dir "$HOME/.dotnet"
 export DOTNET_ROOT="$HOME/.dotnet" PATH="$HOME/.dotnet:$PATH" DOTNET_CLI_TELEMETRY_OPTOUT=1
 
-# MAUI-нагрузка для Android
+# The MAUI workload for Android
 dotnet workload install maui-android --skip-manifest-update
 
-# Android SDK (шаблон MAUI требует API 36)
+# Android SDK (the MAUI template requires API 36)
 mkdir -p ~/android-sdk/cmdline-tools && cd ~/android-sdk
 curl -sSL -o clt.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
 python3 -c "import zipfile;zipfile.ZipFile('clt.zip').extractall('cmdline-tools-tmp')"
@@ -158,126 +158,126 @@ mv cmdline-tools-tmp/cmdline-tools cmdline-tools/latest && chmod +x cmdline-tool
 export ANDROID_HOME="$HOME/android-sdk"
 yes | cmdline-tools/latest/bin/sdkmanager --licenses
 cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
-# сборка Android: dotnet build -f net10.0-android -p:AndroidSdkDirectory=$ANDROID_HOME
+# Android build: dotnet build -f net10.0-android -p:AndroidSdkDirectory=$ANDROID_HOME
 
-# Docker (по желанию)
+# Docker (optional)
 dockerd > ~/dockerd.log 2>&1 &
 ```
 
-Воспроизвести проверку Android: `dotnet new maui -n Probe`, затем `dotnet build -f net10.0-android` в каталоге проекта.
+To reproduce the Android check: `dotnet new maui -n Probe`, then `dotnet build -f net10.0-android` in the project folder.
 
-## Особенности облачной сессии
-- **`dotnet format` для MAUI-проекта:** без Android SDK проект не загружается (`The Android SDK directory could not be found`), и `dotnet format` выводит «Required references did not load». С SDK из раздела «Как поставить» `dotnet format ImageGen/ImageGen.Maui/ImageGen.Maui.csproj --verify-no-changes` проходит (проверено 2026-10-27). Сначала `dotnet restore` на том же проекте.
-- Тесты не ходят в сеть: OpenRouter подменяется `StubHttpMessageHandler`, ключ не нужен.
-- Скрипты задач (`scripts/claim-task.sh`, `scripts/release-task.sh --publish`, `scripts/new-task.sh --publish`) пишут в ветку на origin, одноимённую текущей, поэтому пуш в `main` облачной сессии не нужен. Ветку задачи нужно опубликовать до `claim-task.sh` (`git push -u origin task/NNN-имя`), а после него сделать `git pull --ff-only`. Порядок и ограничения: `docs/tasks.md`, «Начало работы», и `AGENTS.md и docs/tasks.md`, «Параллельная работа».
+## Cloud session quirks
+- **`dotnet format` for the MAUI project:** without the Android SDK the project does not load (`The Android SDK directory could not be found`), and `dotnet format` prints "Required references did not load". With the SDK from the "How to install" section `dotnet format ImageGen/ImageGen.Maui/ImageGen.Maui.csproj --verify-no-changes` passes (checked 2026-10-27). Run `dotnet restore` on the same project first.
+- Tests do not go to the network: OpenRouter is substituted by `StubHttpMessageHandler`, no key is needed.
+- The task scripts (`scripts/claim-task.sh`, `scripts/release-task.sh --publish`, `scripts/new-task.sh --publish`) write to the origin branch with the same name as the current one, so the cloud session does not need to push to `main`. The task branch must be published before `claim-task.sh` (`git push -u origin task/NNN-name`), and `git pull --ff-only` done after it. The order and limits: `docs/tasks.md`, "Starting work", and `AGENTS.md`.
 
 
-## VPS (проверки 2026-10-27—2026-10-29)
+## VPS (checks of 2026-10-27 — 2026-10-29)
 
-Постоянная Linux-машина (VPS), четвёртая среда в репозитории. Общий обзор сред: `docs/knowledge/dev-environment.md`. Записано 2026-10-27, все пункты проверены на машине в этот день.
+A permanent Linux machine (VPS), the fourth environment of the repository. A general overview of environments: `docs/knowledge/dev-environment.md`. Recorded 2026-10-27, all items checked on the machine that day.
 
-Отличие от остальных Linux-сред: окружение **переживает сессию** — установленные SDK и Android SDK остаются на месте, заново ставить не нужно. Рецепт ниже нужен только при пересоздании машины.
+The difference from the other Linux environments: the environment **survives the session** — the installed SDK and Android SDK stay in place, there is no need to install them again. The recipe below is needed only when the machine is recreated.
 
-Машина: Ubuntu 24.04.5 LTS, x86_64, AMD EPYC 9355P, 4 vCPU, 15 ГБ RAM, около 185 ГБ свободно на диске. Сама работает под гипервизором KVM.
+The machine: Ubuntu 24.04.5 LTS, x86_64, AMD EPYC 9355P, 4 vCPU, 15 GB RAM, about 185 GB free on the disk. It runs under a KVM hypervisor itself.
 
-## Что работает (проверено)
-- **.NET SDK 10.0.403** — та же версия, что в `этот раздел «Облачная сессия Claude Code»`. Ставится в `/usr/share/dotnet` (в облачной сессии был `~/.dotnet`).
-- **Ядро и хранилище:** `dotnet build` и `dotnet test` проходят. На `main` от 2026-10-29: Core.Tests 356 тестов, Data.Tests 70 — все проходят.
-- **Presentation:** `ImageGen.Presentation` и `ImageGen.Presentation.Tests` собираются и тестируются на VPS: 277/277 тестов.
-- **Avalonia:** `ImageGen.Avalonia` собирается, headless-тесты проходят — 118 из 120, два пропущены (Secret Service: нужен сессионный keyring; DPAPI — только Windows). **Приложение запускается** под виртуальным дисплеем `Xvfb` (см. ниже).
-- **`dotnet format --verify-no-changes`** проходит по всем проектам: Core, Core.Tests, Data, Data.Tests, Presentation, Presentation.Tests, Avalonia, Avalonia.Tests, Maui.
-- **MAUI, цель Android:** `dotnet build -f net10.0-android` собирает APK (`com.companyname.imagegen.maui.apk` и `-Signed.apk`), 0 предупреждений. Нагрузка `maui-android` установлена.
-- **Android SDK:** command-line tools с `dl.google.com`, лицензии приняты, `platforms;android-36`, `build-tools;36.0.0`, `platform-tools` 37.0.1, пакет `emulator`.
-- **JDK 21** (openjdk-21-jdk-headless, `/usr/lib/jvm/java-21-openjdk-amd64`) — подходит для MAUI Android.
-- **Xvfb** — виртуальный дисплей для запуска окна Avalonia на машине без экрана.
-- **Docker:** 29.9.2, демон запущен, overlayfs, cgroup v2. В отличие от облачной сессии, **Docker Hub отвечает**: анонимный `docker pull` проходит (проверено на `hello-world`).
-- **GitHub:** `gh` 2.103.3 аутентифицирован через OAuth (device flow), токен со скоупами `repo`, `read:org`, `gist`; `gh auth setup-git` настроен, HTTPS-remote работает по токену. Git 2.43.0, личность `r-eliseev <47721526+r-eliseev@users.noreply.github.com>`.
-- **Харнес:** `scripts/check.sh` проходит.
+## What works (checked)
+- **.NET SDK 10.0.403** — the same version as in the "Claude Code cloud session" section of this file. Installed in `/usr/share/dotnet` (in the cloud session it was `~/.dotnet`).
+- **Core and storage:** `dotnet build` and `dotnet test` pass. On `main` of 2026-10-29: Core.Tests 356 tests, Data.Tests 70 — all pass.
+- **Presentation:** `ImageGen.Presentation` and `ImageGen.Presentation.Tests` build and are tested on the VPS: 277/277 tests.
+- **Avalonia:** `ImageGen.Avalonia` builds, the headless tests pass — 118 of 120, two skipped (Secret Service: needs a session keyring; DPAPI — Windows only). **The app launches** under the virtual display `Xvfb` (see below).
+- **`dotnet format --verify-no-changes`** passes for all projects: Core, Core.Tests, Data, Data.Tests, Presentation, Presentation.Tests, Avalonia, Avalonia.Tests, Maui.
+- **MAUI, the Android target:** `dotnet build -f net10.0-android` builds an APK (`com.companyname.imagegen.maui.apk` and `-Signed.apk`), 0 warnings. The `maui-android` workload is installed.
+- **Android SDK:** the command-line tools from `dl.google.com`, licenses accepted, `platforms;android-36`, `build-tools;36.0.0`, `platform-tools` 37.0.1, the `emulator` package.
+- **JDK 21** (openjdk-21-jdk-headless, `/usr/lib/jvm/java-21-openjdk-amd64`) — suitable for MAUI Android.
+- **Xvfb** — a virtual display for launching the Avalonia window on a machine without a screen.
+- **Docker:** 29.9.2, the daemon is running, overlayfs, cgroup v2. Unlike the cloud session, **Docker Hub answers**: an anonymous `docker pull` passes (checked on `hello-world`).
+- **GitHub:** `gh` 2.103.3 is authenticated through OAuth (device flow), a token with the scopes `repo`, `read:org`, `gist`; `gh auth setup-git` is configured, the HTTPS remote works with the token. Git 2.43.0, identity `r-eliseev <47721526+r-eliseev@users.noreply.github.com>`.
+- **Harness:** `scripts/check.sh` passes.
 
-## Что работает с оговорками
-- **Локаль `C.UTF-8` и кириллические диапазоны в `grep -E`.** Под `C.UTF-8` выражение вида `[а-я]` даёт «Invalid collation character». Так раньше молча пропускалась проверка 5 в `scripts/check-docs.sh`; 2026-10-28 диапазон из скрипта убран, и проверка работает при любой локали. В новых скриптах кириллические диапазоны не использовать. `export LC_ALL=en_US.UTF-8` в `~/.bashrc` машины можно оставить.
-- **Токен `gh` хранится открытым текстом** в `/root/.config/gh/hosts.yml` (режим 600): keyring-демона в контейнере нет. Это заметно для машины, которую сохраняют в образ или снимок.
-- **Эмулятор Android установлен, но не запускается** — см. ниже.
+## What works with caveats
+- **The `C.UTF-8` locale and Cyrillic ranges in `grep -E`.** Under `C.UTF-8` an expression like a Cyrillic letter range gives "Invalid collation character". This used to silently skip check 5 in `scripts/check-docs.sh`; on 2026-10-28 the range was removed from the script, and the check works under any locale. Do not use Cyrillic ranges in new scripts (the "Latin only" check uses `grep -P` with Unicode properties under an explicit `C.UTF-8`). `export LC_ALL=en_US.UTF-8` in the machine's `~/.bashrc` may stay.
+- **The `gh` token is stored in plain text** in `/root/.config/gh/hosts.yml` (mode 600): there is no keyring daemon in the container. This matters for a machine that is saved into an image or a snapshot.
+- **The Android emulator is installed but does not start** — see below.
 
-## Не работает (проверено)
-- **Эмулятор Android — нет.** `emulator -accel-check` отвечает `accel: 3`, «KVM requires a CPU that supports vmx or svm». Причина: VPS сам работает под KVM, но **nested virtualization не проброшен** — в `/proc/cpuinfo` нет ни `vmx`, ни `svm`, `/dev/kvm` отсутствует, `modprobe kvm_intel` даёт «Operation not supported». Эмулятор возможен только на полной программной эмуляции (TCG). Это тот же класс среды, что и облачная сессия, где замер дал «не загрузился за 31 минуту» (см. `этот раздел «Облачная сессия Claude Code»`).
-- **Цель Windows у MAUI — нет.** Проверено на этой машине: без флагов — `NETSDK1100`; с `-p:EnableWindowsTargeting=true` — `NETSDK1005` (TFM не входит в `TargetFrameworks` проекта на Linux); при жёстком `-p:TargetFrameworks=net10.0-windows10.0.19041.0` флаг протекает в `ImageGen.Core` и ломает его restore. Итог совпадает с записью в `этот раздел «Облачная сессия Claude Code»`.
-- **Отладка UI в эмуляторе** — по причине отсутствия KVM. Сборка, разбор APK и тесты логики — выполняются.
+## Does not work (checked)
+- **The Android emulator — no.** `emulator -accel-check` answers `accel: 3`, "KVM requires a CPU that supports vmx or svm". The cause: the VPS itself runs under KVM, but **nested virtualization is not passed through** — `/proc/cpuinfo` has neither `vmx` nor `svm`, `/dev/kvm` is missing, `modprobe kvm_intel` gives "Operation not supported". The emulator is possible only with full software emulation (TCG). This is the same class of environment as the cloud session, where the measurement gave "did not boot in 31 minutes" (see the "Claude Code cloud session" section of this file).
+- **The MAUI Windows target — no.** Checked on this machine: without flags — `NETSDK1100`; with `-p:EnableWindowsTargeting=true` — `NETSDK1005` (the TFM is not in the project's `TargetFrameworks` on Linux); with a hard `-p:TargetFrameworks=net10.0-windows10.0.19041.0` the flag leaks into `ImageGen.Core` and breaks its restore. The result matches the entry in the "Claude Code cloud session" section of this file.
+- **Debugging the UI in the emulator** — because there is no KVM. The build, APK analysis and logic tests are done.
 
-## Почему цель Windows не собирается на Linux (точная причина)
+## Why the Windows target does not build on Linux (the exact cause)
 
-Проверено на VPS, 2026-10-27. Полезно, потому что старая формулировка «XAML-компилятор — инструмент под Windows» не указывает, что именно ломается.
+Checked on the VPS, 2026-10-27. Useful because the old wording "the XAML compiler is a Windows tool" does not say what exactly breaks.
 
-1. `NETSDK1100` — цели Windows нельзя собирать без `-p:EnableWindowsTargeting=true`.
-2. `NETSDK1005` — даже с этим флагом TFM не входит в `TargetFrameworks` проекта на Linux: в `ImageGen.Maui.csproj` он добавляется под условием `$([MSBuild]::IsOSPlatform('windows'))`. Чтобы дойти дальше, TFM надо добавить в `TargetFrameworks` вручную (тогда флаг протекает в `ImageGen.Core` и ломает его restore).
-3. Дальше — собственно точка отказа:
+1. `NETSDK1100` — Windows targets cannot be built without `-p:EnableWindowsTargeting=true`.
+2. `NETSDK1005` — even with this flag the TFM is not in the project's `TargetFrameworks` on Linux: in `ImageGen.Maui.csproj` it is added under the condition `$([MSBuild]::IsOSPlatform('windows'))`. To get further, the TFM must be added to `TargetFrameworks` by hand (then the flag leaks into `ImageGen.Core` and breaks its restore).
+3. Then the actual point of failure:
    ```
    .../microsoft.windowsappsdk.winui/1.8.260528001/tools/net472/XamlCompiler.exe: Exec format error
    error : XamlCompiler output file "obj/Debug/net10.0-windows10.0.19041.0/win-x64/output.json" was not created.
    ```
-   `XamlCompiler.exe` — это .NET Framework 4.7.2, Windows PE. Linux не может выполнить PE, отсюда «Exec format error».
-4. Пакет содержит и кроссплатформенную реализацию того же компилятора: `tools/net6.0/` — только управляемые сборки (`Microsoft.UI.Xaml.Markup.Compiler.dll` и др.), без `.exe`. Но `Microsoft.UI.Xaml.Markup.Compiler.interop.targets` (строка 27) при `MSbuildRuntimeType == 'Core'` выставляет `UseXamlCompilerExecutable=true`, то есть при `dotnet build` всегда выбирается ветка с Windows `.exe`.
-5. С `-p:UseXamlCompilerExecutable=false` MSBuild идёт по in-process ветке, но задача уходит out-of-process (механизм на AppDomain — только для .NET Framework), и сборка падает с `MSB4061: ... "Type must be a type provided by the runtime"`. Дополнительно нужен `Microsoft.Windows.SDK.BuildTools` — там Windows PE (`signtool.exe`, `mt.exe`, `mdmerge.exe`, `winmdidl.exe`).
+   `XamlCompiler.exe` is .NET Framework 4.7.2, a Windows PE. Linux cannot execute a PE, hence "Exec format error".
+4. The package also contains a cross-platform implementation of the same compiler: `tools/net6.0/` — only managed assemblies (`Microsoft.UI.Xaml.Markup.Compiler.dll` and others), without an `.exe`. But `Microsoft.UI.Xaml.Markup.Compiler.interop.targets` (line 27) with `MSbuildRuntimeType == 'Core'` sets `UseXamlCompilerExecutable=true`, that is, `dotnet build` always chooses the branch with the Windows `.exe`.
+5. With `-p:UseXamlCompilerExecutable=false` MSBuild takes the in-process branch, but the task goes out of process (the AppDomain mechanism is only for .NET Framework), and the build fails with `MSB4061: ... "Type must be a type provided by the runtime"`. Additionally `Microsoft.Windows.SDK.BuildTools` is needed — it has Windows PEs (`signtool.exe`, `mt.exe`, `mdmerge.exe`, `winmdidl.exe`).
 
-Итог: цель Windows на Linux не собирается, и обойти это одним флагом нельзя.
+Result: the Windows target does not build on Linux, and this cannot be bypassed with one flag.
 
-## Wine на VPS: что он даёт и чего не даёт
+## Wine on the VPS: what it gives and what it does not
 
-Wine 9.0 установлен, префикс `/root/.wine-igp` создан. Разобрано подробно, 2026-10-27.
+Wine 9.0 is installed, the prefix `/root/.wine-igp` is created. Analyzed in detail, 2026-10-27.
 
-**Отладку Wine не даёт.** WinUI 3 требует DirectWrite, DXGI, DirectComposition и runtime Windows App SDK — Wine этого не даёт. Приложение под Wine не запустится: ни точек останова, ни Hot Reload, ни проверки интерфейса. Это ограничение не обойти.
+**Wine does not give debugging.** WinUI 3 requires DirectWrite, DXGI, DirectComposition and the Windows App SDK runtime — Wine does not provide them. The app will not start under Wine: no breakpoints, no Hot Reload, no UI check. This limit cannot be bypassed.
 
-**Сборку — да, проверено полностью.** Wine снимает первый барьер (Windows PE запускается, «Exec format error» исчезает) и позволяет дойти до конца Windows-цели: `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0` на VPS даёт **Build succeeded, 0 warnings, 0 errors** и на выходе `ImageGen.Maui.exe` (PE32+ GUI x86-64). Разобранные барьеры и обходы (проверено 2026-10-27…28):
+**The build — yes, checked fully.** Wine removes the first barrier (a Windows PE runs, "Exec format error" disappears) and allows going through the whole Windows target: `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0` on the VPS gives **Build succeeded, 0 warnings, 0 errors** and the output `ImageGen.Maui.exe` (PE32+ GUI x86-64). The barriers and workarounds worked through (checked 2026-10-27…28):
 
-1. **Нужен .NET Framework в префиксе.** `XamlCompiler.exe` — приложение .NET Framework 4.7.2: `err:mscoree:CLRRuntimeInfo_GetRuntimeHost: Wine Mono is not installed`. Лечится `winetricks dotnet48`, но для его установки нужен `wine32:i386` (`dpkg --add-architecture i386` + `apt-get install wine32:i386`).
-2. **Нужно наполнить префикс 32-битными DLL.** `wineboot` отработал до установки `wine32`, поэтому в `syswow64` не оказалось встроенных 32-битных DLL, и 32-битные приложения падали с «Library shlwapi.dll not found». Лечится копированием недостающих builtins: `cp -n /usr/lib/i386-linux-gnu/wine/i386-windows/*.dll $WINEPREFIX/drive_c/windows/syswow64/`.
-3. **Нужен MSXML6.** `makepri.exe` парсит PRI через MSXML: `fixme:msxml:SAXErrorHandler_fatalError ... "Not implemented."` → `PRI175: 0x80004001`. Встроенного в Wine msxml6 мало; помогает нативный `winetricks msxml6`.
-4. **Нужен shcore!PathIsNetworkPathW.** `makepri.exe` импортирует `SHCORE.dll` по ординалу 170 (это `PathIsNetworkPathW`), а Wine реализует её как заглушку, которая завершает процесс: `wine: Call from ... to unimplemented function shcore.dll.PathIsNetworkPathW, aborting`. Обход: скопировать встроенный `shcore.dll` в префикс и **пропатчить копию** — заменить начало функции на `xor eax,eax; ret` (возвращает FALSE). Важно: патчить сам `/usr/lib/.../wine/*-windows/shcore.dll` нельзя — Wine перестаёт его грузить («Library SHCORE.dll not found»). Обход работает с `WINEDLLOVERRIDES=shcore=n` (именно `n`: с `n,b` Wine берёт из встроенной DLL заглушку `SHCreateStreamOnFileW` и makepri падает на ней).
-5. **Регистр и пути.** Инструменты SDK (59 файлов `.exe` в `microsoft.windows.sdk.buildtools`) запускаются через обёртки `wine`; в аргументах абсолютные POSIX-пути переводятся в `Z:\...` (Wine отображает `Z:` на `/`), иначе Windows-инструменты считают `/foo` ключом и ругаются «Unexpected/Unknown option».
-6. **Регистр MSBuild генерирует POSIX-пути**, а компилятор XAML и `makepri` ждут Windows-пути: `ItemSpec` вида `Platforms/Windows/App.xaml` схлопывается в `App.xbf` (нужны обратные слэши), а абсолютные пути в `input.json`, `output.json` и `*.resfiles` приводят к удвоению пути (`Z:\root\proj\root\proj\obj\...`). Лечится правкой этих JSON/списков перед запуском инструментов.
+1. **.NET Framework is needed in the prefix.** `XamlCompiler.exe` is a .NET Framework 4.7.2 app: `err:mscoree:CLRRuntimeInfo_GetRuntimeHost: Wine Mono is not installed`. Fixed by `winetricks dotnet48`, but installing it needs `wine32:i386` (`dpkg --add-architecture i386` + `apt-get install wine32:i386`).
+2. **The prefix must be filled with 32-bit DLLs.** `wineboot` ran before `wine32` was installed, so `syswow64` had no built-in 32-bit DLLs, and 32-bit apps crashed with "Library shlwapi.dll not found". Fixed by copying the missing builtins: `cp -n /usr/lib/i386-linux-gnu/wine/i386-windows/*.dll $WINEPREFIX/drive_c/windows/syswow64/`.
+3. **MSXML6 is needed.** `makepri.exe` parses PRI through MSXML: `fixme:msxml:SAXErrorHandler_fatalError ... "Not implemented."` → `PRI175: 0x80004001`. The msxml6 built into Wine is not enough; the native `winetricks msxml6` helps.
+4. **shcore!PathIsNetworkPathW is needed.** `makepri.exe` imports `SHCORE.dll` by ordinal 170 (this is `PathIsNetworkPathW`), and Wine implements it as a stub that ends the process: `wine: Call from ... to unimplemented function shcore.dll.PathIsNetworkPathW, aborting`. Workaround: copy the built-in `shcore.dll` into the prefix and **patch the copy** — replace the beginning of the function with `xor eax,eax; ret` (returns FALSE). Important: the `/usr/lib/.../wine/*-windows/shcore.dll` itself must not be patched — Wine stops loading it ("Library SHCORE.dll not found"). The workaround works with `WINEDLLOVERRIDES=shcore=n` (exactly `n`: with `n,b` Wine takes the `SHCreateStreamOnFileW` stub from the built-in DLL and makepri crashes on it).
+5. **Case and paths.** The SDK tools (59 `.exe` files in `microsoft.windows.sdk.buildtools`) are run through `wine` wrappers; in the arguments absolute POSIX paths are converted to `Z:\...` (Wine maps `Z:` to `/`), otherwise Windows tools treat `/foo` as a switch and complain "Unexpected/Unknown option".
+6. **MSBuild generates POSIX paths**, while the XAML compiler and `makepri` expect Windows paths: an `ItemSpec` like `Platforms/Windows/App.xaml` collapses into `App.xbf` (backslashes are needed), and absolute paths in `input.json`, `output.json` and `*.resfiles` lead to a doubled path (`Z:\root\proj\root\proj\obj\...`). Fixed by editing these JSON files/lists before running the tools.
 
-**Отдельно — регистр в пакетах Microsoft (обход симлинками в кэше NuGet):**
-- `microsoft.windowsappsdk.winui`: targets-файл ищет `tools\Msix\...`, а пакет кладёт `tools/MSIX/` → на Linux glob не сходится, элементов 0. Нужен симлинк `tools/Msix -> tools/MSIX`.
-- Там же glob `*.Msix`, а файлы называются `*.msix` → нужен симлинк на каждый файл.
-- `microsoft.windowsappsdk.runtime`: PRI-карты ссылаются на `NoiseAsset_256X256_PNG.png`, а в MSIX файл называется `NoiseAsset_256x256_PNG.png` → нужен симлинк с другим регистром.
+**Separately — case in the Microsoft packages (a workaround with symlinks in the NuGet cache):**
+- `microsoft.windowsappsdk.winui`: the targets file looks for `tools\Msix\...`, and the package puts `tools/MSIX/` → on Linux the glob does not match, 0 items. A symlink `tools/Msix -> tools/MSIX` is needed.
+- There too the glob is `*.Msix`, and the files are named `*.msix` → a symlink is needed for each file.
+- `microsoft.windowsappsdk.runtime`: the PRI maps reference `NoiseAsset_256X256_PNG.png`, and in the MSIX the file is named `NoiseAsset_256x256_PNG.png` → a symlink with another case is needed.
 
-**Итог:** Windows-цель на Linux-VPS собирается, но цена — Wine с .NET Framework, MSXML6, пропатченной копией shcore, обёртками 59 SDK-инструментов и тремя симлинками в кэше NuGet. Путь рабочий, но хрупкий и неофициальный: ломается при обновлении пакетов WinAppSDK и **медленный** — каждый `makepri` под Wine работает минуты, весь шаг разворачивания PRI занимает десятки минут. Рабочий скрипт: `setup-win-target-wine.sh` на машине.
+**Result:** the Windows target builds on the Linux VPS, but the price is Wine with .NET Framework, MSXML6, a patched copy of shcore, wrappers for 59 SDK tools and three symlinks in the NuGet cache. The path works but is fragile and unofficial: it breaks when the WinAppSDK packages are updated and is **slow** — every `makepri` under Wine runs for minutes, the whole PRI deployment step takes tens of minutes. The working script: `setup-win-target-wine.sh` on the machine.
 
-**Практический вывод.** Сборку Windows-цели уже делает CI (`.github/workflows/build.yml`, задача `maui` на `windows-latest`) — бесплатно, правильно и без хрупкости. Отладка в любом случае требует настоящей Windows-машины (`этот раздел «Windows-машина разработки»`), которой с VPS можно рулить дистанционно (SSH/WinRM/PowerShell remoting). Поэтому Wine на VPS — это способ ловить ошибки компиляции Windows-цели локально, но не способ отлаживать, и CI для компиляции лучше.
+**Practical conclusion.** CI already builds the Windows target (`.github/workflows/build.yml`, the `maui` job on `windows-latest`) — for free, correctly and without fragility. Debugging in any case needs a real Windows machine (the "Windows development machine" section of this file), which can be driven remotely from the VPS (SSH/WinRM/PowerShell remoting). So Wine on the VPS is a way to catch compilation errors of the Windows target locally, but not a way to debug, and CI is better for compilation.
 
-## Отладка Android: реальное устройство по сети
+## Debugging Android: a real device over the network
 
-Рабочий путь, не требующий KVM: настоящий телефон, доступный VPS по сети.
+A working path that does not need KVM: a real phone reachable from the VPS over the network.
 
 ```bash
 export ANDROID_HOME=$HOME/android-sdk
 export PATH=$ANDROID_HOME/platform-tools:$PATH
-adb connect <ip-телефона>:5555     # на Android 11+ — «Отладка по Wi-Fi», иначе adb tcpip 5555
+adb connect <phone ip>:5555     # on Android 11+ — "Wireless debugging", otherwise adb tcpip 5555
 adb devices
 dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android -t:Run
 ```
 
-Отладчик и Hot Reload работают по этому каналу. UI можно смотреть через `scrcpy` (по `adb`).
+The debugger and Hot Reload work over this channel. The UI can be watched through `scrcpy` (over `adb`).
 
-Проверено на этой машине: `adb` 1.0.41 / 37.0.1 установлен, сервер поднимается на `127.0.0.1:5037`. **Сам деплой на реальное устройство не проверялся** — устройства под рукой не было.
+Checked on this machine: `adb` 1.0.41 / 37.0.1 is installed, the server starts on `127.0.0.1:5037`. **Deploying to a real device itself was not checked** — there was no device at hand.
 
-## Запуск окна Avalonia на VPS (виртуальный дисплей)
+## Launching the Avalonia window on the VPS (a virtual display)
 
-Машина без экрана, но окно оболочки запускается: нужен `Xvfb` и переменная `DISPLAY`.
+The machine has no screen, but the head's window launches: `Xvfb` and the `DISPLAY` variable are needed.
 
 ```bash
 apt-get install -y xvfb
 Xvfb :99 -screen 0 1280x900x24 &
 export DISPLAY=:99
-export IMAGEGEN_DATA_DIR=~/igp-avalonia-data     # второй профиль, папка данных
+export IMAGEGEN_DATA_DIR=~/igp-avalonia-data     # a second profile, the data folder
 dotnet run --project ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj -c Release
 ```
 
-Проверено 2026-10-29: приложение стартует, создаёт БД (`imagegen.db`, схема версии 8 — миграции применяются), пишет журнал в `$IMAGEGEN_DATA_DIR/logs/imagegen-yyyyMMdd.log` первой строкой с версией, оболочкой, ОС, папками данных и логов, переходит на экран сессий и экран ключа. Без `IMAGEGEN_DATA_DIR` используется папка данных по умолчанию (`~/.local/share/ImageGen`, см. `docs/knowledge/dev-environment.md`, раздел «Логи»).
+Checked 2026-10-29: the app starts, creates the DB (`imagegen.db`, schema version 8 — the migrations are applied), writes the log to `$IMAGEGEN_DATA_DIR/logs/imagegen-yyyyMMdd.log` with a first line with the version, head, OS, data and log folders, goes to the sessions screen and the key screen. Without `IMAGEGEN_DATA_DIR` the default data folder is used (`~/.local/share/ImageGen`, see `docs/knowledge/dev-environment.md`, section "Logs").
 
-Оговорка: это запуск, а не ручная проверка интерфейса — экран не перед глазами. Глянуть на UI можно снимком (например, `import`/`xwd` из `x11-apps`), но кликать по окну по-прежнему нельзя. Задача 046 (ручная проверка Avalonia на Linux-рабочем столе) на VPS по-прежнему за человеком.
+A caveat: this is a launch, not a manual UI check — the screen is not in front of your eyes. You can look at the UI with a snapshot (for example, `import`/`xwd` from `x11-apps`), but you still cannot click the window. Task 046 (the manual check of Avalonia on a Linux desktop) stays with a human on the VPS.
 
-## Как поставить (при пересоздании машины)
+## How to install (when the machine is recreated)
 
 ```bash
 # .NET 10 SDK
@@ -290,7 +290,7 @@ export DOTNET_ROOT=/usr/share/dotnet PATH=$DOTNET_ROOT:$DOTNET_ROOT/tools:$PATH
 apt-get install -y openjdk-21-jdk-headless
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 
-# Виртуальный дисплей для запуска окна Avalonia (машина без экрана)
+# A virtual display for launching the Avalonia window (a machine without a screen)
 apt-get install -y xvfb
 
 # Android SDK
@@ -302,20 +302,20 @@ export ANDROID_HOME="$HOME/android-sdk"
 yes | cmdline-tools/latest/bin/sdkmanager --licenses
 cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" "emulator"
 
-# MAUI-нагрузка для Android
+# The MAUI workload for Android
 dotnet workload install maui-android --skip-manifest-update
 
-# GitHub CLI и вход
-apt-get install -y gh          # или официальный репозиторий cli.github.com
-gh auth login --web            # device flow: код на экране, ввод на https://github.com/login/device
+# GitHub CLI and login
+apt-get install -y gh          # or the official repository cli.github.com
+gh auth login --web            # device flow: a code on the screen, entered at https://github.com/login/device
 gh auth setup-git
 
-# Локаль: без неё молча отключается проверка 5 в scripts/check-docs.sh
+# Locale: a UTF-8 locale for the harness checks
 export LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
 ```
 
-## Особенности среды
-- **Правило «Среда» в задачах.** VPS — среда Linux, поэтому здесь выполняются задачи 001–011 (`tasks/v0.1/`). Задачи 012–016 и Windows-часть 034 — только на Windows-машине (`этот раздел «Windows-машина разработки»`). Android-часть 034 собирается, но не отлаживается (нет эмулятора).
-- **Токен `gh` и SSH-ключ.** SSH-ключ сгенерирован (`~/.ssh/id_ed25519_github`, отпечаток `SHA256:7ESBH3Cxonxswz7PDptNqSS8A2rPyeSgqeVU7u+W4hw`), но не загружен в GitHub: токену не хватает скоупа `admin:public_key`. Загрузка ключа требует `gh auth refresh -h github.com -s admin:public_key`. Git при этом работает по HTTPS с токеном.
-- **Docker Hub отвечает** (в отличие от облачной сессии, где были 429). Значит, образы для задачи 033 тянуть можно.
-- **Окружение постоянное.** В отличие от облачной сессии, состояние переживает перезапуск агента: заново ставить SDK не нужно. В `~/.bashrc` прописаны `DOTNET_ROOT`, `ANDROID_HOME`, `JAVA_HOME` и локаль.
+## Environment quirks
+- **The "Environment" rule in tasks.** The VPS is a Linux environment, so tasks 001–011 (`tasks/v0.1/`) are done here. Tasks 012–016 and the Windows part of 034 — only on the Windows machine (the "Windows development machine" section of this file). The Android part of 034 builds but is not debugged (no emulator).
+- **The `gh` token and the SSH key.** An SSH key is generated (`~/.ssh/id_ed25519_github`, fingerprint `SHA256:7ESBH3Cxonxswz7PDptNqSS8A2rPyeSgqeVU7u+W4hw`), but not uploaded to GitHub: the token lacks the `admin:public_key` scope. Uploading the key requires `gh auth refresh -h github.com -s admin:public_key`. Git meanwhile works over HTTPS with the token.
+- **Docker Hub answers** (unlike the cloud session, where there were 429s). So images for task 033 can be pulled.
+- **The environment is permanent.** Unlike the cloud session, the state survives an agent restart: there is no need to install the SDK again. `~/.bashrc` sets `DOTNET_ROOT`, `ANDROID_HOME`, `JAVA_HOME` and the locale.

@@ -1,65 +1,67 @@
-# 0029. UI-тесты собранного MAUI-приложения в GitHub Actions
+# 0029. UI tests of the built MAUI app in GitHub Actions
 
-Статус: принято
-Дата: 2026-11-07
+Status: accepted
+Date: 2026-11-07
 
-## Контекст
-Владелец прислал спецификацию «Автоматизация UI-тестов .NET MAUI в GitHub Actions» (NUnit, FlaUI, Appium, Allure, видео каждого теста) и попросил её перепроверить и распланировать. Сейчас интерфейс проверяется так:
-- модели страниц — в `ImageGen.Presentation.Tests`;
-- Avalonia — без экрана, в `ImageGen.Avalonia.Tests`;
-- MAUI — только вручную (задачи 140 и 046).
+Refined by ADR [0031](0031-bdd-acceptance-reqnroll.md) (2026-11-09): the E2E tests are rewritten as Gherkin scenarios on Reqnroll over the same drivers (task 266).
 
-Ограничения:
-- Только раннеры GitHub (`windows-latest` = Windows Server 2025, `ubuntu-latest`).
-- Нагрузка `maui-android` на `ubuntu-latest` не ставится: «Disk quota exceeded» (комментарий в `.github/workflows/build.yml`). Поэтому APK собирается на Windows.
-- Ключей провайдеров в CI нет (`docs/conventions.md`). Без ключа приложение показывает только экран первого запуска, потому что `SessionsPageModel.OnAppearingAsync` переходит на `ApiKeyPage`, а ключ проверяется по сети.
+## Context
+The owner sent the specification "Automating UI tests of .NET MAUI in GitHub Actions" (NUnit, FlaUI, Appium, Allure, a video of every test) and asked to re-check and plan it. Now the UI is checked like this:
+- page models — in `ImageGen.Presentation.Tests`;
+- Avalonia — without a screen, in `ImageGen.Avalonia.Tests`;
+- MAUI — only by hand (tasks 140 and 046).
 
-Факты, проверенные 2026-11-07:
-- npm: `appium` latest — 3.9.0. Версия 4 есть только как `4.0.0-beta.7`.
-- `appium-uiautomator2-driver` 9.x требует `appium ^4.0.0-beta.6`. Для Appium 3 последний — 8.7.3. Команда `npm install -g appium@4` из спецификации не сработает.
-- Документация MAUI «UI testing with Appium» (net-maui-10.0): `AutomationId` на Android ищется через `MobileBy.Id` (resource-id), на Windows — через `AccessibilityId`. `content-desc` на Android берётся из `SemanticProperties.Description`, а оно в проекте стоит на всех элементах. Поэтому `AppiumBy.AccessibilityId("…")` из спецификации на Android найдёт не то.
-- В MAUI-разметке проекта `AutomationId` нет нигде (0 вхождений). `SemanticProperties.Description` встречается 103 раза.
-- Allure: `Allure.NUnit` 2.15.0 стабилен. Для xUnit v3 есть только `Allure.Xunit.v3` 3.0.0-preview.1, и ему нужен `xunit.v3.mtp-v2`.
-- В образе Windows 2025 есть WinAppDriver 1.2.2009.02003 и Android SDK. FFmpeg в списке ПО образа нет. Разрешение экрана и наличие интерактивной сессии в описании образа не указаны — неизвестно.
-- FlaUI.UIA3 5.0.0 (2025-02-25) собран под `net8.0-windows`, `net6.0-windows` и `net48`.
+Constraints:
+- Only GitHub runners (`windows-latest` = Windows Server 2025, `ubuntu-latest`).
+- The `maui-android` workload does not install on `ubuntu-latest`: "Disk quota exceeded" (a comment in `.github/workflows/build.yml`). So the APK is built on Windows.
+- There are no provider keys in CI (`docs/conventions.md`). Without a key the app shows only the first-launch screen, because `SessionsPageModel.OnAppearingAsync` goes to `ApiKeyPage`, and the key is checked over the network.
 
-## Решение
-1. **Тесты собранных приложений** — отдельные проекты `ImageGen/ImageGen.E2E.Android` и `ImageGen/ImageGen.E2E.Windows` и общий код в `ImageGen/ImageGen.E2E.Common`. Так проекты лежат рядом с остальными в `ImageGen/`, а не в `tests/`, как в спецификации.
-2. **Фреймворк E2E — NUnit с `Allure.NUnit`** (решение владельца 2026-11-07). Это исключение из ADR 0004 только для E2E-проектов. Остальные тесты остаются на xUnit v3.
-3. **Android — основной путь.**
-   - Сборка: Release APK на `windows-latest`, как в `release.yml`.
-   - Тесты: на `ubuntu-latest` с эмулятором `reactivecircus/android-emulator-runner@v2` (API 33, `google_apis`, `-writable-system`: на API 34+ системные сертификаты лежат в APEX, а моку по HTTPS нужен свой корневой сертификат — задача 243), KVM, Appium 3.9.0 и `uiautomator2@8.7.3`. Версии закреплены.
-   - Поиск элементов — по `AutomationId` через `MobileBy.Id`. Какой атрибут дерева UI его несёт, проверяется в задаче 238.
-4. **Windows — экспериментальный путь.**
-   - Драйвер: FlaUI UIA3, без Appium и WinAppDriver.
-   - Видео: FFmpeg `gdigrab`, установка шагом workflow.
-   - Задача job — сделать предварительную проверку (preflight): есть ли сессия, отвечает ли UI Automation и не чёрный ли кадр.
-   - Пока стабильность не доказана, job помечен `continue-on-error: true`.
-5. **Сценарии.**
-   - Сначала smoke без ключей: экран первого запуска, неверный ключ и ошибка, доступность элементов.
-   - Затем локальный мок OpenAI-совместимого провайдера по HTTPS с одноразовым тестовым корневым сертификатом, подключённый через `providers.json` (задача 243; HTTPS — решение владельца 2026-11-07). Это настоящий путь кода без ключей и без денег.
-   - Живой OpenRouter в CI не используется.
-6. **Доказательства по каждому тесту** — в папке `reports/<платформа>/<тест>/`:
-   - всегда: видео;
-   - при падении: скриншот и дерево UI;
-   - логи: logcat по PID приложения, лог Appium, лог FFmpeg и лог приложения.
-   Всё это прикладывается к Allure. Артефакты загружаются при любом исходе (`if: always()`).
-7. **Workflow** — новый `.github/workflows/ui-e2e.yml`, отдельный от `build.yml`.
-   - Запуск: `workflow_dispatch`, `pull_request`, `push` в `main`.
-   - Jobs: `build-android`, `build-windows`, `test-android`, `test-windows`, `report`. Jobs тестов — отдельные проверки в PR.
-   - Владелец явно попросил этот workflow (запрет менять `.github/workflows/` без просьбы снят для него).
-- Проверено задачей 238: Windows runner имеет активную console-сессию и UI Automation видит окно/`apikey.entry`; см. `docs/knowledge/ui-e2e.md`. Проверено задачей 238: Android AutomationId найден как `resource-id="com.eliseev.imagegen:id/apikey.entry"`; `adb root`/`remount`, screenshot и screenrecord успешны. Детали — `docs/knowledge/ui-e2e.md`.
+Facts checked on 2026-11-07:
+- npm: the latest `appium` is 3.9.0. Version 4 exists only as `4.0.0-beta.7`.
+- `appium-uiautomator2-driver` 9.x requires `appium ^4.0.0-beta.6`. For Appium 3 the latest is 8.7.3. The `npm install -g appium@4` command from the specification will not work.
+- The MAUI documentation "UI testing with Appium" (net-maui-10.0): on Android `AutomationId` is found through `MobileBy.Id` (resource-id), on Windows through `AccessibilityId`. On Android `content-desc` comes from `SemanticProperties.Description`, which the project sets on all elements. So `AppiumBy.AccessibilityId("…")` from the specification finds the wrong thing on Android.
+- The project's MAUI markup has no `AutomationId` anywhere (0 occurrences). `SemanticProperties.Description` occurs 103 times.
+- Allure: `Allure.NUnit` 2.15.0 is stable. For xUnit v3 there is only `Allure.Xunit.v3` 3.0.0-preview.1, and it needs `xunit.v3.mtp-v2`.
+- The Windows 2025 image has WinAppDriver 1.2.2009.02003 and the Android SDK. FFmpeg is not in the image's software list. The screen resolution and whether there is an interactive session are not stated in the image description — unknown.
+- FlaUI.UIA3 5.0.0 (2025-02-25) is built for `net8.0-windows`, `net6.0-windows` and `net48`.
 
-## Альтернативы
-- **Appium Windows driver вместо FlaUI.** Нужен WinAppDriver (на образе он есть, но документация MAUI требует именно 1.2.1) и ещё один процесс. FlaUI проще и работает напрямую через UIA3.
-- **xUnit v3 и Allure-превью.** Один фреймворк на весь проект, но адаптер в превью. Владелец выбрал NUnit.
-- **xUnit v3 без Allure** (TRX и сводка). Тогда не будет HTML-отчёта с видео, а спецификация его требует.
-- **Сборка APK на Ubuntu.** Падает по квоте диска.
-- **Живой OpenRouter.** Это деньги на каждый прогон и зависимость от сети и провайдера.
-- **Avalonia Android теми же тестами.** Отложено. Проект Android-тестов не завязан на MAUI, его можно направить на второй APK отдельной задачей после 240.
+## Decision
+1. **Tests of the built apps** are separate projects `ImageGen/ImageGen.E2E.Android` and `ImageGen/ImageGen.E2E.Windows` and shared code in `ImageGen/ImageGen.E2E.Common`. So the projects live next to the others in `ImageGen/`, not in `tests/` as in the specification.
+2. **The E2E framework is NUnit with `Allure.NUnit`** (the owner's decision of 2026-11-07). This is an exception from ADR 0004 only for the E2E projects. The other tests stay on xUnit v3.
+3. **Android is the main path.**
+   - Build: a Release APK on `windows-latest`, as in `release.yml`.
+   - Tests: on `ubuntu-latest` with the `reactivecircus/android-emulator-runner@v2` emulator (API 33, `google_apis`, `-writable-system`: on API 34+ system certificates live in APEX, and the HTTPS mock needs its own root certificate — task 243), KVM, Appium 3.9.0 and `uiautomator2@8.7.3`. Versions are pinned.
+   - Elements are found by `AutomationId` through `MobileBy.Id`. Which attribute of the UI tree carries it is checked in task 238.
+4. **Windows is the experimental path.**
+   - Driver: FlaUI UIA3, without Appium and WinAppDriver.
+   - Video: FFmpeg `gdigrab`, installed by a workflow step.
+   - The job's task is a preflight check: is there a session, does UI Automation answer, is the frame not black.
+   - Until stability is proven, the job is marked `continue-on-error: true`.
+5. **Scenarios.**
+   - First smoke without keys: the first-launch screen, an invalid key and the error, element accessibility.
+   - Then a local mock of an OpenAI-compatible provider over HTTPS with a one-off test root certificate, connected through `providers.json` (task 243; HTTPS is the owner's decision of 2026-11-07). This is the real code path without keys and without money.
+   - Live OpenRouter is not used in CI.
+6. **Evidence for every test** in the `reports/<platform>/<test>/` folder:
+   - always: a video;
+   - on failure: a screenshot and the UI tree;
+   - logs: logcat by the app's PID, the Appium log, the FFmpeg log and the app's log.
+   All of this is attached to Allure. Artifacts are uploaded on any outcome (`if: always()`).
+7. **Workflow** — a new `.github/workflows/ui-e2e.yml`, separate from `build.yml`.
+   - Triggers: `workflow_dispatch`, `pull_request`, `push` to `main`.
+   - Jobs: `build-android`, `build-windows`, `test-android`, `test-windows`, `report`. The test jobs are separate checks in a PR.
+   - The owner explicitly asked for this workflow (the prohibition on changing `.github/workflows/` without a request is lifted for it).
+- Checked by task 238: the Windows runner has an active console session and UI Automation sees the window/`apikey.entry`; see `docs/knowledge/ui-e2e.md`. Checked by task 238: the Android AutomationId is found as `resource-id="com.eliseev.imagegen:id/apikey.entry"`; `adb root`/`remount`, screenshot and screenrecord succeed. Details are in `docs/knowledge/ui-e2e.md`.
 
-## Последствия
-- В репозитории появляется второй тестовый фреймворк. В `docs/conventions.md` нужно указать, что NUnit — только для E2E.
-- В MAUI-разметке появляются `AutomationId` с постоянными смысловыми именами (задача 239). Они не локализуются.
-- CI становится дольше: насколько — неизвестно, измерит задача 238.
-- Видео может показать ввод ключа. В тестах — только фиктивные ключи (`sk-or-e2e-invalid`, ключ мока). Настоящие ключи E2E не получают.
+## Alternatives
+- **The Appium Windows driver instead of FlaUI.** Needs WinAppDriver (the image has it, but the MAUI documentation requires exactly 1.2.1) and one more process. FlaUI is simpler and works directly through UIA3.
+- **xUnit v3 and the Allure preview.** One framework for the whole project, but the adapter is a preview. The owner chose NUnit.
+- **xUnit v3 without Allure** (TRX and a summary). Then there is no HTML report with videos, and the specification requires it.
+- **Building the APK on Ubuntu.** Fails on the disk quota.
+- **Live OpenRouter.** Money on every run and a dependency on the network and the provider.
+- **Avalonia Android with the same tests.** Postponed. The Android test project is not tied to MAUI and can be pointed at the second APK by a separate task after 240.
+
+## Consequences
+- The repository gets a second test framework. `docs/conventions.md` must say that NUnit is only for E2E.
+- The MAUI markup gets `AutomationId`s with permanent meaningful names (task 239). They are not localized.
+- CI gets longer: by how much is unknown, task 238 measures it.
+- A video may show the key being typed. Tests use only fake keys (`sk-or-e2e-invalid`, the mock's key). Real keys never reach E2E.

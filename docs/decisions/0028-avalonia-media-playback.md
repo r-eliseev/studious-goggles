@@ -1,26 +1,26 @@
-# 0028. Воспроизведение видео и аудио в Avalonia
+# 0028. Video and audio playback in Avalonia
 
-Статус: принято
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: 2026-11-07
+Status: accepted
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: 2026-11-07
 
-Уточняет п. 7 ADR 0027 для Avalonia.
+Refines item 7 of ADR 0027 for Avalonia.
 
-## Контекст
-ADR 0027 выбрал LibVLC для Avalonia. Пробник 206: `LibVLCSharp.Avalonia` 3.10.2 с `VideoView` собирается на Avalonia 12.1.4 и проигрывает файл на desktop; на Android `VideoLAN.LibVLC.Android` 3.6.5 добавляет ~19 МБ к APK и даёт XA0141 (нативные библиотеки без выравнивания 16 КБ — на устройствах с 16-КБ страницами не загрузятся). README `LibVLCSharp.Avalonia` перечисляет только Windows, macOS, Linux (задача 207 заблокирована). На телефоне владельца MAUI `MediaElement` (ExoPlayer) в полноэкранном окне работает, а внутри прокручиваемой ленты — чёрное видео и мигание (задача 219). Решение владельца 2026-11-07: на Android — встроенный плеер Android.
+## Context
+ADR 0027 chose LibVLC for Avalonia. Probe 206: `LibVLCSharp.Avalonia` 3.10.2 with `VideoView` builds on Avalonia 12.1.4 and plays a file on the desktop; on Android `VideoLAN.LibVLC.Android` 3.6.5 adds ~19 MB to the APK and gives XA0141 (native libraries without 16 KB alignment — they will not load on devices with 16 KB pages). The `LibVLCSharp.Avalonia` README lists only Windows, macOS, Linux (task 207 is blocked). On the owner's phone, MAUI `MediaElement` (ExoPlayer) works in a fullscreen window, but inside a scrolling feed the video is black and blinks (task 219). The owner's decision of 2026-11-07: on Android — the built-in Android player.
 
-## Решение
-1. Общий контракт `IMediaPlayerService.ShowAsync(filePath, accessibleLabel, ct)` (Presentation, задача 219): карточка видео и аудио показывает Play, воспроизведение идёт в отдельном полноэкранном окне/экране, не в ленте — во всех оболочках.
-2. **Avalonia desktop** (Linux, Windows, macOS): LibVLC (`LibVLCSharp` + `LibVLCSharp.Avalonia` `VideoView`) в отдельном окне плеера (по образцу окна просмотра картинки), не внутри ленты: `VideoView` — нативное окно поверх содержимого и в прокручиваемом списке может обрезаться и мигать. Нативная libvlc — `VideoLAN.LibVLC.Windows`/`.Mac`; на Linux — системная (`libvlc5`, `vlc-plugin-base`).
-3. **Avalonia Android**: отдельная Android-активность с `androidx.media3` (`Xamarin.AndroidX.Media3.ExoPlayer` и `.Ui` 1.11.1, MIT AND Apache-2.0; `PlayerView` с управлением) для видео и аудио. LibVLC в Android-голову не подключается.
+## Decision
+1. A shared contract `IMediaPlayerService.ShowAsync(filePath, accessibleLabel, ct)` (Presentation, task 219): a video or audio card shows Play, playback goes in a separate fullscreen window/screen, not in the feed — in all heads.
+2. **Avalonia desktop** (Linux, Windows, macOS): LibVLC (`LibVLCSharp` + `LibVLCSharp.Avalonia` `VideoView`) in a separate player window (modeled on the picture viewer window), not inside the feed: `VideoView` is a native window over the content and in a scrolling list it may be clipped and blink. The native libvlc is `VideoLAN.LibVLC.Windows`/`.Mac`; on Linux the system one (`libvlc5`, `vlc-plugin-base`).
+3. **Avalonia Android**: a separate Android activity with `androidx.media3` (`Xamarin.AndroidX.Media3.ExoPlayer` and `.Ui` 1.11.1, MIT AND Apache-2.0; `PlayerView` with controls) for video and audio. LibVLC is not included in the Android head.
 
-## Альтернативы
-- Только desktop, на Android — «Open with» во внешнем приложении: без новых пакетов, но смотреть приходится вне приложения.
-- LibVLC на Android с выводом кадров колбэками в `WriteableBitmap`: +19 МБ, проблема 16 КБ, стоимость копирования кадров неизвестна.
-- Нативный `VideoView` LibVLC на Android через `NativeControlHost`: +19 МБ, 16 КБ, проблемы наложения поверх Avalonia.
-- Встроенный `VideoView` в карточке desktop: возможны обрезка и мигание в прокрутке; отказ в пользу окна.
+## Alternatives
+- Desktop only, on Android "Open with" in an external app: no new packages, but watching happens outside the app.
+- LibVLC on Android with frame output through callbacks into a `WriteableBitmap`: +19 MB, the 16 KB problem, the cost of copying frames is unknown.
+- The native LibVLC `VideoView` on Android through `NativeControlHost`: +19 MB, 16 KB, problems overlaying Avalonia.
+- A built-in `VideoView` in the desktop card: clipping and blinking in scrolling are possible; rejected in favor of a window.
 
-## Последствия
-- Поведение одинаковое во всех оболочках: в ленте обложка/значок и Play, просмотр — отдельно.
-- Android-голова растёт на Media3 (порядка нескольких МБ; точный размер — в отчёте 224), без LibVLC.
-- Desktop-пакеты растут на libvlc (Windows: ~112 МБ для win-x64 по отчёту 206).
+## Consequences
+- The behavior is the same in all heads: in the feed a poster/icon and Play, viewing is separate.
+- The Android head grows by Media3 (on the order of a few MB; the exact size is in the 224 report), without LibVLC.
+- Desktop packages grow by libvlc (Windows: ~112 MB for win-x64 per the 206 report).

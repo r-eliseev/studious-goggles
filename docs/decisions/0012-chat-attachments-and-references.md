@@ -1,32 +1,32 @@
-# 0012. Вложения сообщений и референсы генерации
+# 0012. Message attachments and generation references
 
-Статус: принято
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: 2026-10-28
+Status: accepted
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: 2026-10-28
 
-Задача: `tasks/backlog/018-user-image-in-chat.md`. Решения владельца в её «Комментариях» (2026-10-28).
+Task: `tasks/backlog/018-user-image-in-chat.md`. The owner's decisions are in its "Comments" (2026-10-28).
 
-## Контекст
-Пользователь прикрепляет до 4 картинок к сообщению. Они уходят ассистенту (если модель принимает картинки) и становятся референсами прогона, который запустил ассистент. Модели картинок принимают референсы по-разному: у одних нет `input_references`, у других лимит (0–4 в каталоге OpenRouter). Вложения должны переживать перезапуск и повторные действия (Repeat, New seed, Edit).
+## Context
+The user attaches up to 4 pictures to a message. They go to the assistant (if the model accepts pictures) and become references of the run the assistant starts. Image models accept references differently: some have no `input_references`, others have a limit (0–4 in the OpenRouter catalog). Attachments must survive a restart and repeated actions (Repeat, New seed, Edit).
 
-## Решение
-- Вложение — строка `chat_attachments` (id, сессия, сообщение, относительный путь, тип, время). Файл лежит в `images/<sessionId>/attachments/<id>.<ext>`, а не в папке генерации. Удаление сессии удаляет и вложения (каскад и общая папка сессии).
-- Вложение создаётся до отправки сообщения (`message_id` пустой), при отправке привязывается к сообщению. Порядок записи: сначала файл, потом строка; если строку записать не удалось, файл удаляется.
-- Лимиты: до 4 вложений на сообщение, до 10 МБ каждое, PNG, JPEG, WebP. Сообщение может состоять только из картинок.
-- Лимит референсов модели берётся из её каталога: `supported_parameters.input_references.max` (хранится в `ImageModel.Parameters`, см. ADR 0011). Модель с лимитом 0 пропускается, если пользователь прикрепил картинки, и в сообщении о прогоне указана причина. Если пропущены все модели, прогон не создаётся, ответ ассистента помечен как ошибка.
-- Модели с лимитом получают первые вложения до своего лимита; лишние не отправляются и называются в сообщении.
-- Генерация хранит `reference_attachment_ids_json`. Repeat, New seed и Edit повторяют те же вложения. Если файл пропал, генерация получает `Failed` с текстом, остальные генерации прогона выполняются.
-- Картинки сообщения вместе с картинками последнего прогона (сценарий S2.4 в `docs/specs/chat-sessions.md`) уходят ассистенту только если его модель принимает картинки; всего не больше 4 на сообщение.
-- Формат тела `POST /api/v1/images` для референсов — массив data URL под именем `input_references`. Форма не проверена на живом API (допущение владельца).
-- Перед первой отправкой картинки пользователь подтверждает, что они уйдут провайдеру (F10.6). Согласие действует на время экрана чата.
+## Decision
+- An attachment is a `chat_attachments` row (id, session, message, relative path, type, time). The file is in `images/<sessionId>/attachments/<id>.<ext>`, not in the generation folder. Deleting a session deletes the attachments too (cascade and the shared session folder).
+- An attachment is created before the message is sent (empty `message_id`) and is bound to the message on sending. Write order: the file first, then the row; if the row cannot be written, the file is deleted.
+- Limits: up to 4 attachments per message, up to 10 MB each, PNG, JPEG, WebP. A message may consist of pictures only.
+- A model's reference limit comes from its catalog: `supported_parameters.input_references.max` (stored in `ImageModel.Parameters`, see ADR 0011). A model with a limit of 0 is skipped if the user attached pictures, and the run message gives the reason. If all models are skipped, no run is created and the assistant's answer is marked as an error.
+- Models with a limit get the first attachments up to their limit; the extra ones are not sent and are named in the message.
+- A generation stores `reference_attachment_ids_json`. Repeat, New seed and Edit repeat the same attachments. If a file is gone, the generation gets `Failed` with a text, and the run's other generations are executed.
+- The message's pictures together with the pictures of the last run (scenario S2.4 in `docs/specs/chat-sessions.md`) go to the assistant only if its model accepts pictures; no more than 4 per message in total.
+- The body format of `POST /api/v1/images` for references is an array of data URLs named `input_references`. The shape is not verified against the live API (the owner's assumption).
+- Before the first picture is sent, the user confirms that it goes to the provider (F10.6). The consent lasts while the chat screen is open.
 
-## Альтернативы
-- **Одна картинка на сообщение.** Проще, но не покрывает сценарий «сравни с этими двумя». Отклонено владельцем: до 4.
-- **Новый статус «пропущено» у генерации.** Нужен бы ADR на статусы и отдельная карточка. Отклонено владельцем: причина в сообщении о прогоне.
-- **Вложение как отдельный ответ ассистента или отдельная кнопка «сделать референсом».** Отклонено владельцем: картинка сообщения автоматически становится референсом прогона.
+## Alternatives
+- **One picture per message.** Simpler, but does not cover the "compare with these two" scenario. Rejected by the owner: up to 4.
+- **A new "skipped" generation status.** Would need an ADR on statuses and a separate card. Rejected by the owner: the reason goes into the run message.
+- **An attachment as a separate assistant answer or a separate "make it a reference" button.** Rejected by the owner: a message picture automatically becomes a reference of the run.
 
-## Последствия
-- Миграция `0004_chat_attachments.sql`: таблица и колонка у генераций. Старые генерации читаются без референсов.
-- Лимит референсов получает данные только из каталога, загруженного после миграции `0003` (ADR 0011). Для старого кеша лимит 0 и модель пропускается; кеш перезагружается при первом обращении.
-- Согласие F10.6 хранится в памяти экрана чата: после перезапуска приложения спрашивается снова. Сохранять между запусками — отдельное решение.
-- Миниатюры вложений в ленте сообщений не показываются (вложение видно как имя файла в поле ввода до отправки). Это сокращение плана, отмечено в отчёте задачи.
+## Consequences
+- Migration `0004_chat_attachments.sql`: a table and a column on generations. Old generations are read without references.
+- The reference limit gets data only from a catalog loaded after migration `0003` (ADR 0011). For an old cache the limit is 0 and the model is skipped; the cache is reloaded on the first access.
+- The F10.6 consent is kept in the chat screen's memory: after an app restart it is asked again. Keeping it between starts is a separate decision.
+- Attachment thumbnails are not shown in the message feed (an attachment is visible as a file name in the input field before sending). This is a cut from the plan, noted in the task's report.

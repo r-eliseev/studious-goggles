@@ -1,70 +1,73 @@
 # AGENTS.md
 
-## О проекте
-Мульти-провайдерный клиент для генерации изображений: ключи встроенных провайдеров fal.ai, OpenRouter и Together AI (BYOK) подключаются один раз; Together встроен только как image provider, а живой ответ ещё не проверен. Другие OpenAI-совместимые провайдеры добавляются через конфиг. Один промпт параллельно уходит в несколько моделей, результаты показываются рядом с ценой и временем и сохраняются локально. Стек: C# / .NET 10; целевая раскладка: общее ядро и оболочки (MAUI для мобильных и десктопа, Web API + Vue для браузера и Docker). Цели и решения владельца: `docs/product.md`. Полная спецификация: `docs/specs/image-client.md`. Основной сценарий (сессии с ассистентом): `docs/specs/chat-sessions.md`.
+## About the project
+A multi-provider client for image generation: keys of the built-in providers fal.ai, OpenRouter and Together AI (BYOK) are connected once; Together is built in only as an image provider, and a live response has not been verified yet. Other OpenAI-compatible providers are added through the config. One prompt goes to several models in parallel, the results are shown side by side with price and time and are saved locally. Stack: C# / .NET 10; target layout: a shared core and heads (MAUI for mobile and desktop, Web API + Vue for the browser and Docker). The owner's goals and decisions: `docs/product.md`. Full specification: `docs/specs/image-client.md`. Main scenario (sessions with an assistant): `docs/specs/chat-sessions.md`.
 
-## Команды
-- Папка данных Avalonia: по умолчанию `ImageGen` в локальных данных; переменная `IMAGEGEN_DATA_DIR` задаёт другую (тесты используют временную, см. задачу 048).
-- Логи приложения: `<папка данных>/logs/imagegen-<дата>.log` (14 дней). Уровень: переменная `IMAGEGEN_LOG_LEVEL` или `logging.json` в папке данных. Где папка на каждой ОС: `docs/knowledge/dev-environment.md`, раздел «Логи».
-- Среда: почти всё идёт на Linux — ядро, хранилище, `Presentation`, Avalonia (включая Android при установленных Android SDK и workload `android`) и MAUI через цель Android; Windows-цель MAUI проверяет CI. Только Windows — запуск и ручная проверка MAUI под Windows (строка «Среда» в задаче, `docs/knowledge/dev-environment.md`)
-- Сборка ядра: `dotnet build ImageGen/ImageGen.Core/ImageGen.Core.csproj`; всё решение только на Windows с MAUI-нагрузками (долго): `dotnet build ImageGen/ImageGen.slnx`
-- Тесты: `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`, `dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj`, `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj`, `dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj` (headless, на Linux)
-- Сборка Avalonia (десктоп Linux, Windows, macOS, после задачи 039): `dotnet build ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj`; запуск: `dotnet run --project ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj` (нужен дисплей)
-- Сборка Avalonia Android (Linux с Android SDK): `dotnet workload install android`, `dotnet build ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj -c Debug` или `-c Release`
-- Сборка MAUI (Android — на Linux с Android SDK и на Windows; Windows-цель — только Windows или CI): `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0` (и `-f net10.0-android`)
-- Запуск под Windows: после сборки `ImageGen/ImageGen.Maui/bin/Debug/net10.0-windows10.0.19041.0/win-x64/ImageGen.Maui.exe`
-- Линтер/форматирование: по каждому изменённому проекту `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes` (решение целиком не форматировать: на Linux MAUI-проект не загружается)
-- Проверка харнеса (документация и задачи): `scripts/check.sh`
-- Сигналы устаревания (аудит): `scripts/audit.sh`
+## Language
+Everything in the repository is written in English: documentation, tasks, code, comments, test names, Gherkin scenarios, commit messages. `scripts/check.sh` rejects non-Latin letters in the checked paths (`docs/conventions.md`, "Language"). Files that are not translated yet are listed in task 268; until then their Russian section names stay valid for the scripts.
 
-## Как устроен харнес
+## Commands
+- Avalonia data folder: `ImageGen` in local app data by default; the `IMAGEGEN_DATA_DIR` variable sets another one (tests use a temporary one, see task 048).
+- App logs: `<data folder>/logs/imagegen-<date>.log` (14 days). Level: the `IMAGEGEN_LOG_LEVEL` variable or `logging.json` in the data folder. Where the folder is on each OS: `docs/knowledge/dev-environment.md`, section "Logs".
+- Environment: almost everything runs on Linux — the core, storage, `Presentation`, Avalonia (including Android with the Android SDK and the `android` workload installed) and MAUI through the Android target; the MAUI Windows target is checked by CI. Windows only: launching and manually checking MAUI on Windows (the "Environment" line in the task, `docs/knowledge/dev-environment.md`).
+- Core build: `dotnet build ImageGen/ImageGen.Core/ImageGen.Core.csproj`; the whole solution only on Windows with the MAUI workloads (slow): `dotnet build ImageGen/ImageGen.slnx`
+- Tests: `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`, `dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj`, `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj`, `dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj` (headless, on Linux); acceptance scenarios (Gherkin, after task 252): `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` (headless, on Linux)
+- Avalonia build (Linux, Windows, macOS desktop, after task 039): `dotnet build ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj`; run: `dotnet run --project ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj` (needs a display)
+- Avalonia Android build (Linux with the Android SDK): `dotnet workload install android`, `dotnet build ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj -c Debug` or `-c Release`
+- MAUI build (Android — on Linux with the Android SDK and on Windows; the Windows target — only Windows or CI): `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0` (and `-f net10.0-android`)
+- Running on Windows: after the build, `ImageGen/ImageGen.Maui/bin/Debug/net10.0-windows10.0.19041.0/win-x64/ImageGen.Maui.exe`
+- Linter/formatting: for each changed project `dotnet format ImageGen/<Project>/<Project>.csproj --verify-no-changes` (do not format the whole solution: on Linux the MAUI project does not load)
+- Harness check (documentation, tasks, language): `scripts/check.sh`
+- Staleness signals (audit): `scripts/audit.sh`
 
-В корне расположены `ImageGen/` (исходные проекты), `docs/` (спецификации, решения, знания), `tasks/` (задачи), `poc/` (изолированные proof of concept) и `scripts/` (проверки и работа с задачами). Задачи выполняются в ветках `task/NNN-*` от свежего `origin/main`; одна задача — одна ветка, после завершения её PR можно объединить с другими изменениями в PR. Перед claim проверь чужие ветки `origin/task/*` и занятые файлы. Скрипты claim/release/new-task фиксируют изменения в ветке задачи на origin; после claim подтяни коммит через `git pull --ff-only`. Подробный порядок работы — в `docs/tasks.md`.
+## How the harness works
 
-## Порядок работы (обязательно)
-1. Перед началом прочитай `docs/index.md` и `docs/status.md`. Остальное из `docs/` читай по необходимости. Перед написанием C#/MAUI-кода прочитай `docs/conventions.md` и нужное из `docs/knowledge/`.
-2. Если пользователь назвал задачу (номер или файл в `tasks/`), работай по правилам из `docs/tasks.md`.
-3. Для крупной работы без спецификации сначала предложи короткую спецификацию в `docs/specs/` и дождись подтверждения.
-4. Реализуй, запусти тесты и линтер.
-5. Обнови документацию (см. ниже).
-6. Запусти `scripts/check.sh`.
-7. Работа не завершена, пока шаги 4–6 не выполнены.
-8. Любое изменение кода выполняй по режиму ub-mode: https://github.com/unclebob/ub-mode/blob/master/SKILL.md (TDD: сначала падающий тест, затем минимальный код; маленькие проверяемые шаги; коммиты с причиной и способом проверки). Правила этого харнесса перекрывают режим там, где расходятся: ветка и PR вместо `push` в `main` (`docs/tasks.md`); журнал действий — в «Отчёте» задачи, а не в отдельном файле; пункт про `push` в основную ветку в конце работы не применяется.
+The root contains `ImageGen/` (source projects), `docs/` (specifications, decisions, knowledge), `tasks/` (tasks), `poc/` (isolated proofs of concept) and `scripts/` (checks and task tooling). Tasks are done in `task/NNN-*` branches from a fresh `origin/main`; one task — one branch; after it is finished its PR may be combined with other changes. Before claiming, check other agents' `origin/task/*` branches and the files they hold. The claim/release/new-task scripts commit to the task branch on origin; after a claim, pull that commit with `git pull --ff-only`. The detailed procedure is in `docs/tasks.md`.
 
-## Когда что обновлять
-- `docs/architecture.md` описывает задуманное устройство, а не ход работ. Правь её, только если реализуешь не так, как там написано (другие модули, зависимости, потоки), или меняешь само устройство: тогда документ должен снова совпадать с кодом. Что сделано и какой задачей, туда не пиши: это «Отчёт» задачи и её статус.
-- Принял значимое решение (выбор библиотеки, схема данных, компромисс) → новый ADR в `docs/decisions/` по шаблону `_template.md`.
-- Изменил поведение фичи → соответствующий файл в `docs/specs/`.
-- Нашёл новый неочевидный факт о C#/MAUI или о проекте → `docs/knowledge/`.
-- Закончил аудит по просьбе пользователя → файл `docs/log/YYYY-MM-DD-audit.md` по шаблону. Прочая работа вне задач записывается одной строкой в `docs/history.md`. Работа по задаче записывается в «Отчёт» самой задачи.
-- Добавил или переименовал файл верхнего уровня в `docs/` → обнови `docs/index.md`.
+## Working procedure (mandatory)
+1. Before starting, read `docs/index.md` and `docs/status.md`. Read the rest of `docs/` as needed. Before writing C#/MAUI code, read `docs/conventions.md` and what you need from `docs/knowledge/`.
+2. If the user named a task (a number or a file in `tasks/`), work by the rules of `docs/tasks.md`.
+3. For large work without a specification, first propose a short specification in `docs/specs/` and wait for confirmation.
+4. Implement, run the tests and the linter.
+5. Update the documentation (see below).
+6. Run `scripts/check.sh`.
+7. The work is not finished until steps 4–6 are done.
+8. Do every code change in ub-mode: https://github.com/unclebob/ub-mode/blob/master/SKILL.md (TDD: a failing test first, then minimal code; small verifiable steps; commits with the reason and how it was verified). The rules of this harness override the mode where they differ: a branch and a PR instead of `push` to `main` (`docs/tasks.md`); the action log goes to the task's "Report", not to a separate file; the item about pushing to the main branch at the end of the work does not apply.
 
-## Задачи
-- Работай только над задачей, которую назвал пользователь. Сам задачи не выбирай.
-- Правила работы с задачами лежат в `docs/tasks.md`. Прочитай их перед началом работы над любой задачей.
-- Без одобренного плана код не пиши.
-- В «Плане» задачи только концепции: контракты, псевдокод, машины состояний, тест-кейсы словами. Готовый код в задачи не вставляй; пробный код (proof of concept) — отдельными файлами в `poc/`, и только чтобы снять настоящую неизвестность (`docs/tasks.md`, «Что писать в „Плане“»).
+## What to update when
+- `docs/architecture.md` describes the intended structure, not the progress. Edit it only if you implement something differently from what it says (other modules, dependencies, flows) or change the structure itself: then the document must match the code again. Do not write there what was done and by which task: that is the task's "Report" and its status.
+- Made a significant decision (choice of a library, data schema, a trade-off) → a new ADR in `docs/decisions/` from the `_template.md` template.
+- Changed the behavior of a feature → the corresponding file in `docs/specs/`.
+- Found a new non-obvious fact about C#/MAUI or the project → `docs/knowledge/`.
+- Finished an audit at the user's request → a `docs/log/YYYY-MM-DD-audit.md` file from the template. Other work outside tasks is recorded as one line in `docs/history.md`. Work on a task is recorded in the task's own "Report".
+- Added or renamed a top-level file in `docs/` → update `docs/index.md`.
 
-## Аудит и вспомогательные агенты
+## Tasks
+- Work only on the task the user named. Do not pick tasks yourself.
+- The rules for tasks are in `docs/tasks.md`. Read them before working on any task.
+- Do not write code without an approved plan.
+- The task's "Plan" contains only concepts: contracts, pseudocode, state machines, test cases in words. Do not paste finished code into tasks; proof-of-concept code goes to separate files in `poc/`, and only to remove a real unknown (`docs/tasks.md`, "What to write in the Plan").
 
-Правила аудита документации и кода, а также делегирования вспомогательным агентам находятся в разделах «Аудит» и «Вспомогательные агенты» файла `docs/tasks.md`.
+## Audit and helper agents
 
-## Главные правила кода
-- Ядро (`Core`) не ссылается на MAUI, ASP.NET Core и UI-типы (`Brush`, `Color`, `Shell`); платформенное приходит через интерфейсы ядра.
-- Ключи провайдеров и пароли только в шифрованном хранилище; не в `Preferences`, конфигах, логах, экспорте и git.
-- Различия провайдеров скрыты за одним интерфейсом; статусы заданий приводятся к единой модели (в очереди, идёт, готово, ошибка, отменено, отфильтровано).
-- Результат генерации сохраняется сразу при получении; фильтрация провайдером — отдельное состояние, не ошибка.
-- MVVM на `CommunityToolkit.Mvvm`, компилируемые привязки (`x:DataType`), доступность (`SemanticProperties`) обязательна.
-- SQL только с параметрами; `async void` только через `FireAndForgetSafeAsync`; UI-поток не блокировать.
-- Подробности: `docs/conventions.md`
+The rules for auditing documentation and code and for delegating to helper agents are in the "Audit" and "Helper agents" sections of `docs/tasks.md`.
 
-## Запреты
-- Временные файлы, пробные сборки и черновики — только в `tmp/` в корне репозитория (в `.gitignore`). Вне репозитория файлы не создавай. Исключение — установка инструментов среды (SDK, Android SDK, кэши NuGet) по описанию среды в `docs/knowledge/`.
-- Не меняй `scripts/` и `.github/workflows/` без явной просьбы.
-- Не обходи модерацию провайдеров, не переписывай промпт и не подменяй модель скрытно.
-- Не коммитить ключи, файлы секретов, `bin/`, `obj/`, `.vs/`.
-- Не удаляй и не переписывай существующие ADR. Устаревшее помечай статусом «заменено на NNNN» и ссылкой на новое решение.
-- Не выдумывай факты в документации. Если не знаешь, пиши «неизвестно» и добавляй вопрос в `docs/status.md`.
+## Main code rules
+- The core (`Core`) does not reference MAUI, ASP.NET Core or UI types (`Brush`, `Color`, `Shell`); platform specifics come through core interfaces.
+- Provider keys and passwords only in encrypted storage; not in `Preferences`, configs, logs, exports or git.
+- Provider differences are hidden behind one interface; job statuses are mapped to one model (queued, running, done, failed, cancelled, filtered).
+- A generation result is saved immediately when it is received; filtering by the provider is a separate state, not an error.
+- MVVM on `CommunityToolkit.Mvvm`, compiled bindings (`x:DataType`), accessibility (`SemanticProperties`) is mandatory.
+- SQL only with parameters; `async void` only through `FireAndForgetSafeAsync`; do not block the UI thread.
+- Details: `docs/conventions.md`
 
-## Если что-то неясно
-Запиши вопрос в `docs/status.md` в раздел «Открытые вопросы» и продолжай с наиболее безопасным допущением, явно его указав. Если вопрос по задаче, пиши его в «Комментарии» задачи (см. `docs/tasks.md`).
+## Prohibitions
+- Temporary files, trial builds and drafts only in `tmp/` at the repository root (it is in `.gitignore`). Do not create files outside the repository. Exception: installing environment tools (SDK, Android SDK, NuGet caches) as described in `docs/knowledge/`.
+- Do not change `scripts/` or `.github/workflows/` without an explicit request.
+- Do not bypass provider moderation, do not rewrite the prompt and do not substitute the model in secret.
+- Do not commit keys, secret files, `bin/`, `obj/`, `.vs/`.
+- Do not delete or rewrite existing ADRs (translating them to English without changing the meaning is allowed, owner's decision of 2026-11-09). Mark outdated ones with the status "superseded by NNNN" and a link to the new decision.
+- Do not invent facts in the documentation. If you do not know, write "unknown" and add a question to `docs/status.md`.
+
+## If something is unclear
+Write the question in `docs/status.md`, section "Open questions", and continue with the safest assumption, stating it explicitly. If the question is about a task, write it in the task's "Comments" (see `docs/tasks.md`).

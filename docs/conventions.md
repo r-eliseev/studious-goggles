@@ -1,63 +1,70 @@
-# Соглашения
+# Conventions
 
-Справочники: `docs/knowledge/csharp.md`, `docs/knowledge/maui.md`. Здесь только правила, которые агенты чаще всего нарушают.
+References: `docs/knowledge/csharp.md`, `docs/knowledge/maui.md`. This file holds only the rules agents break most often.
 
-## Стиль и нейминг
-- .NET 10, C# с `Nullable` и `ImplicitUsings` включёнными (как в примере). Предупреждения о nullable не подавлять, а исправлять.
-- Один тип на файл, имя файла равно имени типа (в примере нарушено: `TaskRespository.cs`, не повторять).
-- Пространства имён по каталогам. `GlobalUsings.cs` допустим для своих пространств, как в примере.
-- Асинхронные методы заканчиваются на `Async`, принимают `CancellationToken` (в ядре обязательно, в PageModel где есть отмена).
-- Форматирование проверяет `dotnet format ImageGen/<Проект>/<Проект>.csproj --verify-no-changes` по каждому изменённому проекту (решение целиком не форматировать: на Linux MAUI-проект не загружается; `AGENTS.md`, «Команды»). `.editorconfig` в корне — главный источник правил форматирования.
+## Language
+- Everything in the repository is in English: documentation, tasks, code, identifiers, comments, test names and wait descriptions, log messages, Gherkin scenarios, script messages, commit messages (owner's decision of 2026-11-09).
+- `scripts/check-docs.sh` (check "Latin only") fails when a checked path contains letters of a non-Latin script (Cyrillic and others). Symbols such as `×`, `→`, `—`, `≈` are allowed. The checked paths are listed in the script; task 268 extends them until the whole repository is covered.
+- Exceptions are only test data that verify non-English input (for example, Russian text for search tests or localized resources). Such files are listed explicitly in the script's exception list with a reason; do not add Cyrillic anywhere else.
+- Quoted UI texts are the English texts from `AppResources`.
 
-## Слои (подробно в `docs/architecture.md`)
-- Ядро не ссылается на MAUI, ASP.NET Core и UI-типы. Платформенное через интерфейсы ядра.
-- Модели и DTO не содержат `Brush`, `Color`, `ImageSource` и других UI-типов: преобразование в PageModel или конвертере.
-- Провайдеры скрыты за одним интерфейсом; код вне `Providers/` не знает, какой провайдер за ним.
+## Style and naming
+- .NET 10, C# with `Nullable` and `ImplicitUsings` enabled (as in the sample). Do not suppress nullable warnings; fix them.
+- One type per file, the file name equals the type name (the sample breaks this: `TaskRespository.cs`; do not repeat it).
+- Namespaces follow folders. `GlobalUsings.cs` is allowed for our own namespaces, as in the sample.
+- Asynchronous methods end with `Async` and take a `CancellationToken` (mandatory in the core; in a PageModel where cancellation exists).
+- Formatting is checked by `dotnet format ImageGen/<Project>/<Project>.csproj --verify-no-changes` for each changed project (do not format the whole solution: on Linux the MAUI project does not load; `AGENTS.md`, "Commands"). `.editorconfig` at the root is the main source of formatting rules.
 
-## MAUI и MVVM
-- MVVM на `CommunityToolkit.Mvvm`: `[ObservableProperty]` на partial-свойствах, `[RelayCommand]` на методах (стиль примера, C# 14).
-- Страница получает PageModel через конструктор и присваивает `BindingContext`. Регистрация в `MauiProgram`: основные страницы `AddSingleton`, детальные `AddTransientWithShellRoute<Page, PageModel>("route")`.
-- Привязки только компилируемые: у каждой страницы и шаблона `x:DataType`. Включён `MauiXamlInflator=SourceGen`.
-- Навигация: Shell с маршрутами; параметры через `IQueryAttributable` и `ShellNavigationQueryParameters`, возврат `..` или `..?refresh=true`.
-- Доступность обязательна: `SemanticProperties.Description` у интерактивных элементов, `SemanticScreenReader.Announce` для важных изменений, цель касания не меньше 44 (как в стилях примера). Статус не передаётся одним цветом (требование спецификации).
-- Адаптивность: `OnIdiom` и `OnPlatform` в XAML, а не ветки в коде. Один код для телефона и десктопа.
-- Фоновые async-вызовы из синхронных мест: `FireAndForgetSafeAsync()`; ошибка записывается через `TaskExtensions.Logger`, а не голый `async void`.
-- Ошибки в диалогах показываются только через `ErrorAlert`: коды ошибок локализуются в Presentation, `Exception.Message` пользователю не показывать.
-- Нельзя блокировать UI-поток: никаких `.Result`, `.Wait()`.
+## Layers (details in `docs/architecture.md`)
+- The core does not reference MAUI, ASP.NET Core or UI types. Platform specifics come through core interfaces.
+- Models and DTOs do not contain `Brush`, `Color`, `ImageSource` or other UI types: conversion happens in a PageModel or a converter.
+- Providers are hidden behind one interface; code outside `Providers/` does not know which provider is behind it.
 
-## Секреты и данные
-- Ключи провайдеров и пароль Web хранятся только в шифрованном хранилище; никогда в `Preferences`, JSON-конфиге, репозитории, журналах, экспорте. Не печатать ключи в логи и сообщения об ошибках (показывать последние 4 символа).
-- Журнал: `ILogger<T>` с шаблонами сообщений (не интерполяция), идентификаторы в аргументах. Операционные записи Information/Warning/Error содержат только безопасные структурированные метаданные, без содержимого запросов/ответов, текста провайдера и деталей исключения; детали ошибок и отредактированные тела доступны отдельно на Debug. На Information тела HTTP не читаются: размер берётся из `Content-Length` или указывается как неизвестный. Debug/trace читают тела ограниченным reader и не записывают частично превышающие лимит. Заголовки HTTP не логировать (там ключ). Тело ответа проверки ключа (`GET .../key`) и запросы с `SkipResponseBody` не читаются ради логов ни на каком уровне. `BodyRedactor` заменяет на `<redacted>` значения полей `label`, `key`, `api_key`, `*_user_id`. Файл и уровни: ADR 0010 и 0022.
-- SQL только с параметрами (`@name`), как в примере. Значения (ввод пользователя, данные из БД и от провайдеров) в текст SQL не подставлять ни конкатенацией, ни интерполяцией. Подставлять можно только константы кода: имена столбцов и таблиц из `const`, номер версии схемы (`PRAGMA user_version = {int}`) (решение владельца 2026-10-29).
-- Схема БД: изменения уже выпущенной схемы только миграцией; `DROP TABLE` как в `SeedDataService` в продукте запрещён.
-- Результат генерации сохраняется сразу при получении, до показа пользователю.
+## MAUI and MVVM
+- MVVM on `CommunityToolkit.Mvvm`: `[ObservableProperty]` on partial properties, `[RelayCommand]` on methods (the sample's style, C# 14).
+- A page gets its PageModel through the constructor and assigns `BindingContext`. Registration in `MauiProgram`: main pages `AddSingleton`, detail pages `AddTransientWithShellRoute<Page, PageModel>("route")`.
+- Only compiled bindings: every page and template has `x:DataType`. `MauiXamlInflator=SourceGen` is enabled.
+- Navigation: Shell with routes; parameters through `IQueryAttributable` and `ShellNavigationQueryParameters`, return with `..` or `..?refresh=true`.
+- Accessibility is mandatory: `SemanticProperties.Description` on interactive elements, `SemanticScreenReader.Announce` for important changes, a touch target of at least 44 (as in the sample's styles). Status is never conveyed by color alone (a specification requirement).
+- Adaptivity: `OnIdiom` and `OnPlatform` in XAML, not branches in code. One code base for phone and desktop.
+- Background async calls from synchronous places: `FireAndForgetSafeAsync()`; the error is logged through `TaskExtensions.Logger`, not a bare `async void`.
+- Errors in dialogs are shown only through `ErrorAlert`: error codes are localized in Presentation; never show `Exception.Message` to the user.
+- Never block the UI thread: no `.Result`, no `.Wait()`.
 
-## Зависимости
-- Версии пакетов фиксируются явно; единый список в `Directory.Packages.props`.
-- Новый пакет только после проверки лицензии и решения в `docs/decisions/`. `Syncfusion.Maui.Toolkit` (MIT) пока не используем; когда понадобятся графики, shimmer, pull-to-refresh, это первый выбор, если нет лучшего (`docs/status.md`); подключение оформить ADR.
+## Secrets and data
+- Provider keys and the Web password are stored only in encrypted storage; never in `Preferences`, a JSON config, the repository, logs or exports. Do not print keys in logs or error messages (show the last 4 characters).
+- Logging: `ILogger<T>` with message templates (not interpolation), identifiers as arguments. Operational Information/Warning/Error entries contain only safe structured metadata, without request/response content, provider text or exception details; error details and redacted bodies are available separately at Debug. At Information HTTP bodies are not read: the size comes from `Content-Length` or is reported as unknown. Debug/trace read bodies with a bounded reader and do not write bodies that partly exceed the limit. Do not log HTTP headers (the key is there). The body of the key check response (`GET .../key`) and requests with `SkipResponseBody` are never read for logging at any level. `BodyRedactor` replaces the values of the fields `label`, `key`, `api_key`, `*_user_id` with `<redacted>`. File and levels: ADR 0010 and 0022.
+- SQL only with parameters (`@name`), as in the sample. Values (user input, data from the DB and from providers) are never put into SQL text, neither by concatenation nor by interpolation. Only code constants may be inserted: column and table names from `const`, the schema version number (`PRAGMA user_version = {int}`) (owner's decision of 2026-10-29).
+- DB schema: changes to an already released schema only through a migration; `DROP TABLE` as in the sample's `SeedDataService` is forbidden in the product.
+- A generation result is saved immediately when it is received, before it is shown to the user.
 
-## Тесты
-- Ядро покрывается тестами обязательно: перевод параметров в запросы провайдеров, приведение статусов к единой модели, расчёт цены, повторы и отмена. Вызовы провайдеров в тестах только через подменённый `HttpMessageHandler`, реальные ключи в тестах запрещены.
-- Имена тестов: `Метод_Условие_Результат`. Запуск: `dotnet test --project <путь к тестовому csproj>` (см. `docs/knowledge/csharp.md`, раздел «Тесты»).
-- Библиотеки: xUnit v3 и NSubstitute (ADR 0004). Исключение — UI-тесты собранного приложения `ImageGen.E2E.*` на NUnit с Allure (ADR 0029, `docs/specs/ui-e2e.md`). Тестовые проекты: `ImageGen.Core.Tests`, `ImageGen.Data.Tests`, `ImageGen.Presentation.Tests`, `ImageGen.Avalonia.Tests`.
-- Модели страниц пишутся в `ImageGen.Presentation` без типов UI-фреймворков (`IQueryAttributable`, `MainThread`, `ImageSource`, `Shell`, Avalonia): такие типы остаются в странице или в реализации интерфейса (`IMainThread`, `INavigationService`, `IDialogService`) в оболочке. Тесты — в `ImageGen.Presentation.Tests` (`docs/architecture.md`).
-- Тесты не зависят от культуры и ОС машины: числа и цены в интерфейсе до локализации (задача 028) форматируются `CultureInfo.InvariantCulture`; где культура важна, тест задаёт её сам (`CultureInfo.CurrentCulture = new CultureInfo("pl-PL")` в `try`/`finally`). Тесты, которые удаляют временную папку с базой, сначала дожидаются фоновой работы (`GenerationService.WhenIdleAsync`): на Windows открытый файл не удалить. Тестовые оболочки также прокачивают UI callbacks после генераций и ждут `IImageFileStore.WhenIdleAsync`: `ChatPageModel` начинает чтение размеров после сохранения результата, а Windows не позволяет удалить каталог, пока PNG открыт. CI гоняет тесты и на `windows-latest` (задача `windows-tests`).
+## Dependencies
+- Package versions are pinned explicitly; the single list is `Directory.Packages.props`.
+- A new package only after checking its license and a decision in `docs/decisions/`. `Syncfusion.Maui.Toolkit` (MIT) is not used yet; when charts, shimmer or pull-to-refresh are needed, it is the first choice unless there is a better one (`docs/status.md`); adopting it requires an ADR.
 
-## Правила для задач скелета v0.1
-Обязательны для каждой задачи в `tasks/v0.1/`. Если текст задачи расходится с этим разделом, побеждает задача; если задача молчит, действует этот раздел. Если не подходит ни то ни другое, не придумывай: напиши комментарий в задачу и поставь `blocked`.
-- Пространство имён = `ImageGen.<Проект>.<Каталог>` (например `ImageGen.Core.Domain`), объявление файловое: `namespace X;`.
-- Один публичный тип на файл, имя файла = имя типа. Классы `sealed`, если наследование не нужно.
-- Доменные классы — `sealed class` со свойствами `{ get; set; }`; обязательные свойства с модификатором `required`.
-- Асинхронные методы: суффикс `Async`, последний параметр `CancellationToken cancellationToken`. В интерфейсах ядра у него нет значения по умолчанию.
-- Время только через `TimeProvider` (`timeProvider.GetUtcNow()`), не `DateTime.Now` и не `DateTimeOffset.UtcNow`.
-- Проверка аргументов: `ArgumentNullException.ThrowIfNull`, `ArgumentException.ThrowIfNullOrWhiteSpace`, `ArgumentOutOfRangeException.ThrowIfLessThan` и т. п.
-- Журнал: `ILogger<T>`, структурные сообщения. Ключи и текст промптов в журнал не писать.
-- Пакеты только из `ImageGen/Directory.Packages.props`; версии не менять, новые не добавлять.
-- Сигнатуры, имена файлов и тексты, приведённые в задаче, переносить дословно.
-- В тестах во все методы с `CancellationToken` передавать `TestContext.Current.CancellationToken` (иначе анализатор xUnit v3 выдаёт предупреждение, а предупреждения — ошибки сборки).
-- Тесты: класс `<Тип>Tests` в тестовом проекте, путь каталогов как у типа (`ImageGen.Core.Tests/Services/ApiKeyServiceTests.cs`); подмены через NSubstitute; HTTP через `StubHttpMessageHandler` из задачи 006.
-- Перед завершением: команды из раздела «Проверка» задачи, затем `scripts/check.sh`.
+## Tests
+- The core must be covered by tests: translating parameters into provider requests, mapping statuses to the common model, price calculation, retries and cancellation. Provider calls in tests go only through a substituted `HttpMessageHandler`; real keys in tests are forbidden.
+- Test names: `Method_Condition_Result`. Run: `dotnet test --project <path to the test csproj>` (see `docs/knowledge/csharp.md`, section "Tests").
+- Libraries: xUnit v3 and NSubstitute (ADR 0004). Exception: UI tests of the built app `ImageGen.E2E.*` use NUnit with Allure (ADR 0029, `docs/specs/ui-e2e.md`). Test projects: `ImageGen.Core.Tests`, `ImageGen.Data.Tests`, `ImageGen.Presentation.Tests`, `ImageGen.Avalonia.Tests`, `ImageGen.Acceptance.Tests` (after task 252).
+- Acceptance scenarios (ADR 0031): Gherkin on Reqnroll, only in `ImageGen.Acceptance.Tests` and, after task 266, in `ImageGen.E2E.*`. Scenarios are in English, have a permanent id and requirement tags from `docs/specs/acceptance-scenarios.md`; the catalog is the source of truth for what is covered. User flows are tested as scenarios; new flow tests in `ImageGen.Avalonia.Tests/Flows` are not added (they are being migrated, task 267).
+- Page models are written in `ImageGen.Presentation` without UI framework types (`IQueryAttributable`, `MainThread`, `ImageSource`, `Shell`, Avalonia): such types stay in the page or in the head's implementation of an interface (`IMainThread`, `INavigationService`, `IDialogService`). Tests are in `ImageGen.Presentation.Tests` (`docs/architecture.md`).
+- Tests do not depend on the machine's culture and OS: numbers and prices in the UI are formatted with `CultureInfo.InvariantCulture` until localization (task 028); where culture matters, the test sets it itself (`CultureInfo.CurrentCulture = new CultureInfo("pl-PL")` in `try`/`finally`). Tests that delete a temporary folder with a database first wait for background work (`GenerationService.WhenIdleAsync`): on Windows an open file cannot be deleted. Test shells also pump UI callbacks after generations and wait for `IImageFileStore.WhenIdleAsync`: `ChatPageModel` starts reading dimensions after the result is saved, and Windows does not allow deleting the folder while the PNG is open. CI runs the tests on `windows-latest` too (job `windows-tests`).
 
-## Запреты
-- Не обходить модерацию провайдеров и не менять промпт или модель скрытно (F9.4).
-- Не коммитить `bin/`, `obj/`, `.vs/`, ключи и файлы секретов.
+## Rules for the v0.1 skeleton tasks
+Mandatory for every task in `tasks/v0.1/`. If the task text differs from this section, the task wins; if the task is silent, this section applies. If neither fits, do not invent: write a comment in the task and set `blocked`.
+- Namespace = `ImageGen.<Project>.<Folder>` (for example `ImageGen.Core.Domain`), file-scoped declaration: `namespace X;`.
+- One public type per file, file name = type name. Classes are `sealed` unless inheritance is needed.
+- Domain classes are `sealed class` with `{ get; set; }` properties; mandatory properties have the `required` modifier.
+- Asynchronous methods: the `Async` suffix, the last parameter is `CancellationToken cancellationToken`. In core interfaces it has no default value.
+- Time only through `TimeProvider` (`timeProvider.GetUtcNow()`), not `DateTime.Now` and not `DateTimeOffset.UtcNow`.
+- Argument checks: `ArgumentNullException.ThrowIfNull`, `ArgumentException.ThrowIfNullOrWhiteSpace`, `ArgumentOutOfRangeException.ThrowIfLessThan` and the like.
+- Logging: `ILogger<T>`, structured messages. Do not write keys or prompt text to the log.
+- Packages only from `ImageGen/Directory.Packages.props`; do not change versions or add new ones.
+- Signatures, file names and texts given in the task are copied verbatim.
+- In tests pass `TestContext.Current.CancellationToken` to every method with a `CancellationToken` (otherwise the xUnit v3 analyzer warns, and warnings are build errors).
+- Tests: a `<Type>Tests` class in the test project, folder path as for the type (`ImageGen.Core.Tests/Services/ApiKeyServiceTests.cs`); substitutes through NSubstitute; HTTP through `StubHttpMessageHandler` from task 006.
+- Before finishing: the commands from the task's "Verification" section, then `scripts/check.sh`.
+
+## Prohibitions
+- Do not bypass provider moderation and do not change the prompt or model in secret (F9.4).
+- Do not commit `bin/`, `obj/`, `.vs/`, keys or secret files.

@@ -24,8 +24,8 @@ fi
 for f in docs/decisions/*.md; do
   [ -e "$f" ] || continue
   case "$(basename "$f")" in _*) continue ;; esac
-  grep -qE '^Статус: (предложено|принято|заменено|отклонено)' "$f" \
-    || { echo "ОШИБКА: у $f нет строки 'Статус:' с допустимым значением"; fail=1; }
+  grep -qE '^Status: (proposed|accepted|superseded|rejected)' "$f" \
+    || { echo "ОШИБКА: у $f нет строки 'Status:' с допустимым значением"; fail=1; }
 done
 
 # 4. Битые относительные ссылки на .md-файлы
@@ -40,10 +40,14 @@ done < <(find . -name '*.md' -not -path './.git/*' -not -path './node_modules/*'
 
 # 5. architecture.md описывает устройство, а не ход работ: без номеров задач, путей tasks/ и раздела о состоянии
 if [ -f docs/architecture.md ]; then
-  grep -nE '[Зз]адач[^ ]* +[0-9]{3}|tasks/|^#+ +Состояние' docs/architecture.md | while IFS= read -r line; do
+  grep -nE '[Зз]адач[^ ]* +[0-9]{3}|[Tt]asks? +[0-9]{3}|tasks/|^#+ +(Состояние|Status|State)' docs/architecture.md | while IFS= read -r line; do
     echo "ОШИБКА: docs/architecture.md:${line%%:*}: ход работ (номер задачи, tasks/ или раздел «Состояние») — ему место в «Отчёте» задачи"
   done | grep . && fail=1
 fi
+
+# 7. Latin only: everything in the repository is in English (docs/conventions.md, "Language").
+#    The checked paths and the exceptions are in scripts/check-latin.sh.
+bash scripts/check-latin.sh || fail=1
 
 # 6. Предупреждение: изменён код, а docs/ и tasks/ нет (для CI на pull request)
 base="${BASE_REF:-origin/main}"

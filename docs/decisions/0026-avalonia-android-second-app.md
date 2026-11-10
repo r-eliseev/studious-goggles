@@ -1,30 +1,30 @@
-# 0026. Avalonia на Android — второе приложение рядом с MAUI
+# 0026. Avalonia on Android — a second app next to MAUI
 
-Статус: принято
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: 2026-11-06
+Status: accepted
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: 2026-11-06
 
-Заменяет ADR 0019 (вариант A «две оболочки» остаётся, к нему добавляется Android-голова Avalonia).
+Supersedes ADR 0019 (option A "two heads" stays, the Avalonia Android head is added to it).
 
-## Контекст
-ADR 0019 рекомендовал оставить MAUI на телефонах до проверки Avalonia на реальном Android. Пробник задачи 094 (`poc/backlog/094-avalonia-mobile-research/`) собрал Android-голову Avalonia 12.1.4 с реальными экранами; APK на 6,65 МиБ больше MAUI, на устройстве не запускался. На v0.1.7 у владельца на Android не работают нажатие на картинку и «…» в MAUI-карточке, причина не найдена. Владелец 2026-11-06: «распланируй андроид на авалонии, с билдами»; выбраны второе приложение рядом с MAUI и публикация в каждом релизе.
+## Context
+ADR 0019 recommended keeping MAUI on phones until Avalonia is checked on a real Android device. The probe of task 094 (`poc/backlog/094-avalonia-mobile-research/`) built an Avalonia 12.1.4 Android head with the real screens; the APK is 6.65 MiB larger than MAUI and was not launched on a device. On v0.1.7 the owner's Android device does not react to tapping the picture and "…" in the MAUI card, the cause was not found. The owner on 2026-11-06: "plan Android on Avalonia, with builds"; chosen: a second app next to MAUI and publishing in every release.
 
-## Решение
-1. Новый проект `ImageGen/ImageGen.Avalonia.Android` (`net10.0-android`, пакеты `Avalonia.Android` 12.1.4, `Xamarin.AndroidX.Core.SplashScreen`). `ApplicationId` — `com.eliseev.imagegen.avalonia`, название «Omnilite Avalonia». Ставится рядом с MAUI-приложением (`com.eliseev.imagegen`), у каждого свои данные и ключи; переноса между ними нет.
-2. Общий код Avalonia остаётся в `ImageGen.Avalonia` и подключается в Android-проект ссылками на файлы (`Compile`/`AvaloniaXaml` с `Link`, как в пробнике 094). `AssemblyName` Android-проекта — `ImageGen.Avalonia`, чтобы адреса `avares://ImageGen.Avalonia/...` совпадали. Десктопные файлы (окно, Program, DBus/DPAPI/Keychain, оконные диалоги) не подключаются.
-3. Сборка контейнера делится: общая часть (ядро, хранилище, Presentation, маршруты, модели страниц) и регистрация платформенных служб оболочкой. Службы, которым нужен только `TopLevel` (буфер обмена, выбор файла, сохранение картинки, запуск папки), принимают `Func<TopLevel?>` и используются обеими головами.
-4. Диалоги, просмотр картинки и сравнение на Android показываются поверх страницы (overlay) внутри единственного `TopLevel`. Эти реализации — общий Avalonia-код без Android API в `ImageGen.Avalonia`, проверяются headless-тестами на Linux.
-5. Только Android-код: `MainApplication`, `MainActivity`, `MobileApp`, `MainView` (страница, overlay, системный Back, клавиатура), папка данных (`Context.FilesDir`), хранилище ключей Android KeyStore (AES-256-GCM, файлы по `SecretFileNames`), отправка логов через `Intent` и `FileProvider`.
-6. CI собирает Android-голову в `build.yml`; `release.yml` подписывает APK тем же постоянным ключом, что MAUI (секреты `ANDROID_*`), и прикладывает `ImageGen-Avalonia-<версия>-android.apk` к релизу.
-7. Решение о замене MAUI на Android (вариант C ADR 0019) — отдельный ADR после ручной проверки обеих сборок на устройстве.
+## Decision
+1. A new project `ImageGen/ImageGen.Avalonia.Android` (`net10.0-android`, packages `Avalonia.Android` 12.1.4, `Xamarin.AndroidX.Core.SplashScreen`). `ApplicationId` is `com.eliseev.imagegen.avalonia`, the name "Omnilite Avalonia". It installs next to the MAUI app (`com.eliseev.imagegen`), each has its own data and keys; there is no transfer between them.
+2. Shared Avalonia code stays in `ImageGen.Avalonia` and is included in the Android project by file links (`Compile`/`AvaloniaXaml` with `Link`, as in probe 094). The `AssemblyName` of the Android project is `ImageGen.Avalonia`, so that the `avares://ImageGen.Avalonia/...` addresses match. Desktop files (the window, Program, DBus/DPAPI/Keychain, window dialogs) are not included.
+3. The container build is split: a shared part (core, storage, Presentation, routes, page models) and registration of platform services by the head. Services that need only a `TopLevel` (clipboard, file picker, saving a picture, opening a folder) take a `Func<TopLevel?>` and are used by both heads.
+4. Dialogs, the picture viewer and the comparison on Android are shown over the page (an overlay) inside the single `TopLevel`. These implementations are shared Avalonia code without Android APIs in `ImageGen.Avalonia`, checked by headless tests on Linux.
+5. Android-only code: `MainApplication`, `MainActivity`, `MobileApp`, `MainView` (page, overlay, system Back, keyboard), the data folder (`Context.FilesDir`), the key store on Android KeyStore (AES-256-GCM, files per `SecretFileNames`), sending logs through an `Intent` and a `FileProvider`.
+6. CI builds the Android head in `build.yml`; `release.yml` signs the APK with the same permanent key as MAUI (the `ANDROID_*` secrets) and attaches `ImageGen-Avalonia-<version>-android.apk` to the release.
+7. The decision on replacing MAUI on Android (option C of ADR 0019) is a separate ADR after a manual check of both builds on a device.
 
-## Альтернативы
-- **Заменить MAUI на Android сразу (вариант C ADR 0019).** Отклонено владельцем: сначала сравнить на устройстве; нужен перенос данных и ключей между разными хранилищами секретов.
-- **Отдельная библиотека `ImageGen.Avalonia.Shared` вместо ссылок на файлы.** Чище, но перенос файлов меняет адреса ресурсов, тесты и десктопный проект; для второй головы на этапе сравнения не оправдан. Пересмотреть, если Android-голова останется.
-- **Только сборка в CI, без релиза.** Отклонено владельцем: APK нужен для проверки на телефоне.
+## Alternatives
+- **Replace MAUI on Android right away (option C of ADR 0019).** Rejected by the owner: compare on a device first; data and keys would have to be moved between different secret stores.
+- **A separate `ImageGen.Avalonia.Shared` library instead of file links.** Cleaner, but moving the files changes resource addresses, tests and the desktop project; not justified for a second head at the comparison stage. Revisit if the Android head stays.
+- **Only a CI build, no release.** Rejected by the owner: the APK is needed for checking on a phone.
 
-## Последствия
-- Новый файл в `Views/` или общих службах автоматически попадает в Android-сборку; если он использует десктопный API, CI Android-сборки упадёт — это сигнал вынести зависимость за интерфейс.
-- Разметка экранов общая для Linux/Windows/macOS и Android; MAUI-разметка по-прежнему поддерживается отдельно.
-- Релиз содержит два APK. Оба подписаны одним ключом, но это разные приложения: обновление каждого ставится поверх только его же.
-- Неизвестно до проверки на устройстве: запуск, KeyStore после перезапуска, клавиатура и Send, системный Back, TalkBack, память и холодный старт (ручная задача).
+## Consequences
+- A new file in `Views/` or the shared services automatically gets into the Android build; if it uses a desktop API, the Android CI build fails — a signal to move the dependency behind an interface.
+- Screen markup is shared for Linux/Windows/macOS and Android; the MAUI markup is still maintained separately.
+- The release contains two APKs. Both are signed with one key, but they are different apps: an update of each installs only over itself.
+- Unknown until a device check: launch, KeyStore after a restart, the keyboard and Send, system Back, TalkBack, memory and cold start (a manual task).

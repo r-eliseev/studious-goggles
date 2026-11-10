@@ -1,31 +1,31 @@
-# Спецификация: видео и аудио генерация
+# Specification: video and audio generation
 
-Статус: в работе
-Код: `ImageGen/ImageGen.Core/` и `ImageGen/ImageGen.Data/`
-Решения: ADR 0027; исследование API — `docs/knowledge/media-generation.md`.
+Status: in progress
+Code: `ImageGen/ImageGen.Core/` and `ImageGen/ImageGen.Data/`
+Decisions: ADR 0027; API research — `docs/knowledge/media-generation.md`.
 
-## Цель
+## Goal
 
-Генерировать видео через OpenRouter и сохранять результат локально, не загружая большие файлы целиком в память. Модель, параметры, статус, фактическая цена и результат относятся к обычным запускам и генерациям приложения.
+Generate video through OpenRouter and save the result locally without loading large files into memory whole. Model, parameters, status, actual price and result belong to the app's ordinary runs and generations.
 
-## Требования
+## Requirements
 
-- `Generation.Kind` задаёт Image, Video или Audio. Для существующих строк и запусков по умолчанию сохраняется Image.
-- Каталог OpenRouter содержит только модели с поддерживаемой длительностью. Параметры и `pricing_skus` кэшируются локально. Цена оценивается только для известных единиц; для video-token SKU результат неизвестен.
-- Запуск видео создаёт одну генерацию на выбранную модель. В `Run` сохраняются общие настройки видео и идентификатор необязательного первого кадра.
-- Сессия хранит список видео-моделей и параметры; старый `settings_json` без этих полей читается с пустым списком и параметрами по умолчанию. При сохранении проверяется наличие модели в каталоге и допустимость выбранной длительности у каждой модели.
-- Ассистенту доступен `generate_video` только при выбранных видео-моделях. Явные запросы видео, ролика или анимации направляются в этот инструмент; изображения продолжают использовать `generate_images`. Оценка стоимости суммирует известные цены выбранных видео-моделей, неизвестные цены перечисляет отдельно и не помечает оценку как приблизительную.
-- Экран моделей сессии позволяет выбрать несколько видео-моделей; цена показывает оценку за 5 секунд или «price unknown», а модели со звуковой дорожкой помечаются. Параметры видео ограничиваются пересечением длительностей, разрешений и соотношений сторон выбранных моделей; отсутствие значения означает auto. Переключатель генерации звука доступен, если его поддерживает хотя бы одна выбранная модель.
-- Оценка следующего запуска в чате суммирует известные цены картинок и видео и отдельно показывает количество неизвестных. Карточка видео показывает тип медиа, статус, модель, длительность, цену и действия; MAUI воспроизводит готовый файл через MediaElement с системными controls, Avalonia — через плеер задачи 207. Для видео и аудио не показываются просмотр картинки, Describe, Compare и Run on model.
-- Первый кадр можно взять только из успешной картинки той же сессии. Seed отправляется только если каталог сообщает поддержку.
-- Видео отправляется как асинхронное задание OpenRouter. Идентификатор и адрес опроса сохраняются до ожидания результата, чтобы продолжить опрос после перезапуска без повторной генерации.
-- Статусы провайдера приводятся к общей модели. Опрос начинается сразу после отправки, затем использует нарастающий интервал от 5 до 30 секунд. Ошибка задания сохраняет код и текст провайдера.
-- После успеха видео открывается как поток и сохраняется через `IImageFileStore.SaveMediaStreamAsync` с лимитом `ProviderResponseLimits.Video`. В БД фиксируются путь, MIME-тип, цена и время завершения до публикации события обновления.
-- Ошибка скачивания или сохранения переводит генерацию в Failed; путь к частично записанному файлу не сохраняется. Ошибка финальной записи в БД удаляет только что созданный файл.
-- Для видео OpenRouter не предоставляет отмену. Локальный watcher можно прекратить, но это не подтверждает остановку платной операции на стороне провайдера.
-- После отправки отмена прекращает локальный watcher, сохраняет `Cancelled` и возвращает `StoppedWaiting`; интерфейс предупреждает, что провайдер всё ещё может списать плату. До отправки отмена возвращает `Cancelled`. Repeat и Edit сохраняют модель, seed, параметры и первый кадр исходного прогона; New seed сохраняет остальные настройки и получает новый seed. Run on model для видео не поддерживается.
-- Поддерживаемые потоковые MIME-типы и пределы файлов заданы в ADR 0027 и `ProviderResponseLimits`; картинки сохраняют прежний путь исполнения и галерея продолжает показывать только картинки.
+- `Generation.Kind` sets Image, Video or Audio. Existing rows and runs keep Image by default.
+- The OpenRouter catalog contains only models with a supported duration. Parameters and `pricing_skus` are cached locally. The price is estimated only for known units; for video-token SKUs the result is unknown.
+- A video run creates one generation per selected model. `Run` stores the shared video settings and the id of the optional first frame.
+- A session stores the list of video models and parameters; an old `settings_json` without these fields is read with an empty list and default parameters. On save, the model's presence in the catalog and whether the chosen duration is allowed for each model are checked.
+- `generate_video` is available to the assistant only when video models are selected. Explicit requests for a video, a clip or an animation go to this tool; pictures keep using `generate_images`. The cost estimate sums the known prices of the selected video models, lists unknown prices separately and does not mark the estimate as approximate.
+- The session models screen allows choosing several video models; the price shows an estimate for 5 seconds or "price unknown", and models with a sound track are marked. Video parameters are limited to the intersection of the durations, resolutions and aspect ratios of the selected models; a missing value means auto. The sound generation switch is available if at least one selected model supports it.
+- The next run estimate in the chat sums the known prices of pictures and videos and separately shows the number of unknown ones. A video card shows the media type, status, model, duration, price and actions; MAUI plays the finished file through MediaElement with system controls, Avalonia through the player of task 207. For video and audio the picture viewer, Describe, Compare and Run on model are not shown.
+- The first frame can be taken only from a successful picture of the same session. The seed is sent only if the catalog reports support.
+- A video is sent as an asynchronous OpenRouter job. The id and the polling address are saved before waiting for the result, so that polling continues after a restart without a repeated generation.
+- Provider statuses are mapped to the common model. Polling starts right after sending, then uses an increasing interval from 5 to 30 seconds. A job error keeps the provider's code and text.
+- After success the video is opened as a stream and saved through `IImageFileStore.SaveMediaStreamAsync` with the `ProviderResponseLimits.Video` limit. The DB records the path, MIME type, price and finish time before the update event is published.
+- A download or save error moves the generation to Failed; the path of a partially written file is not saved. An error in the final DB write deletes the file just created.
+- OpenRouter provides no cancellation for video. The local watcher can be stopped, but this does not confirm that the paid operation stopped on the provider's side.
+- After sending, cancellation stops the local watcher, saves `Cancelled` and returns `StoppedWaiting`; the UI warns that the provider may still charge. Before sending, cancellation returns `Cancelled`. Repeat and Edit keep the model, seed, parameters and first frame of the source run; New seed keeps the other settings and gets a new seed. Run on model is not supported for video.
+- The supported streaming MIME types and file limits are set in ADR 0027 and `ProviderResponseLimits`; pictures keep their old execution path and the gallery keeps showing only pictures.
 
-## Открытые проверки
+## Open checks
 
-Форма реального ответа и живой платный video job не проверялись с ключом. Ручная live-проверка проводится отдельно от автоматических тестов.
+The shape of the real response and a live paid video job were not checked with a key. A manual live check is done separately from the automated tests.

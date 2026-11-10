@@ -1,16 +1,16 @@
-# Название фичи
+# Feature name
 
-Статус: черновик
-Допустимые статусы: черновик, в работе, реализовано
-Код: пути к модулям, где реализовано
+Status: draft
+Allowed statuses: draft, in progress, implemented
+Code: paths to the modules that implement it
 
-## Цель
+## Goal
 
-## Требования
+## Requirements
 
-## Критерии готовности
+## Acceptance criteria
 
-## Ограничения и вне рамок
+## Constraints and out of scope
 
-## Тесты
-Какие тесты подтверждают критерии.
+## Tests
+Which tests confirm the criteria.

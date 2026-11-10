@@ -1,27 +1,27 @@
-# 0013. Описание картинки: модель ассистента, таблица описаний
+# 0013. Image description: the assistant model, a table of descriptions
 
-Статус: принято
-Дата: 2026-10-28
+Status: accepted
+Date: 2026-10-28
 
-Задача: `tasks/backlog/019-img2text.md`. Решения владельца в её «Комментариях» (2026-10-28).
+Task: `tasks/backlog/019-img2text.md`. The owner's decisions are in its "Comments" (2026-10-28).
 
-## Контекст
-Пользователь хочет получить описание картинки или промпт, которым её можно воспроизвести (F4.9). Текст должен попасть в поле ввода только по действию пользователя, а провайдер, модель и цена должны быть видны.
+## Context
+The user wants a description of a picture or a prompt that reproduces it (F4.9). The text must get into the input field only by the user's action, and the provider, model and price must be visible.
 
-## Решение
-- Описание пишет модель ассистента текущей сессии. Отдельной настройки в скелете нет. Если модель ассистента не принимает картинки, запрос не отправляется, пользователь видит причину.
-- Два режима: `Description` (описание на языке интерфейса) и `Prompt` (английский промпт). Системный текст режима в `DescriptionPrompts`.
-- Описание и цена сохраняются в таблице `image_descriptions` (миграция `0005`, по сессии, каскадно с сессией). Цена `NULL`, когда провайдер её не сообщил; `NULL` не показывается как ноль.
-- Пустой ответ и ошибка провайдера не сохраняются. Повтор на той же картинке — новый запрос, кеша нет.
-- Текст не подставляется автоматически: диалог показывает описание, модель, провайдера и цену, а подстановка — по кнопке. Если поле ввода уже заполнено, пользователь выбирает «заменить» или «дописать».
-- Источник — картинка результата (генерации). Картинки вложений (018) не описываются в этой задаче.
+## Decision
+- The description is written by the assistant model of the current session. There is no separate setting in the skeleton. If the assistant model does not accept pictures, the request is not sent and the user sees the reason.
+- Two modes: `Description` (a description in the UI language) and `Prompt` (an English prompt). The system text of each mode is in `DescriptionPrompts`.
+- The description and its price are saved in the `image_descriptions` table (migration `0005`, per session, cascading with the session). The price is `NULL` when the provider did not report it; `NULL` is not shown as zero.
+- An empty answer and a provider error are not saved. A repeat on the same picture is a new request, there is no cache.
+- The text is not inserted automatically: the dialog shows the description, the model, the provider and the price, and insertion happens on a button. If the input field is already filled, the user chooses "replace" or "append".
+- The source is a result picture (a generation). Attachment pictures (018) are not described in this task.
 
-## Альтернативы
-- **Отдельная модель описаний в настройках сессии.** Нужен экран и поле настроек. Отклонено владельцем: модель ассистента, отдельная настройка — в 027.
-- **Не хранить описания.** Цена не переживёт перезапуск, а её нужно учитывать (задача 021). Отклонено владельцем.
-- **Кеш описаний по картинке.** Усложняет без запроса со стороны пользователя. Отклонено владельцем.
+## Alternatives
+- **A separate description model in the session settings.** Needs a screen and a settings field. Rejected by the owner: the assistant model; a separate setting is in 027.
+- **Not storing descriptions.** The price would not survive a restart, and it must be accounted for (task 021). Rejected by the owner.
+- **A description cache per picture.** Adds complexity without a request from the user. Rejected by the owner.
 
-## Последствия
-- Язык описания — язык интерфейса (сейчас только английский); промпт всегда на английском.
-- Неудачные запросы chat completions: тарифицируются ли, неизвестно. Цена неудачного запроса не записывается.
-- Текст описания — пользовательские данные; в журнал пишется только на Debug (как сообщения ассистента, ADR 0010).
+## Consequences
+- The description language is the UI language (currently only English); the prompt is always in English.
+- Failed chat completions requests: whether they are billed is unknown. The price of a failed request is not recorded.
+- The description text is user data; it is written to the log only at Debug (like assistant messages, ADR 0010).

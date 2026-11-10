@@ -1,26 +1,26 @@
-# 0023. Настраиваемые форматы ответа image generation
+# 0023. Configurable image generation response formats
 
-Статус: принято (2026-10-31)
-Дата: 2026-10-30
+Status: accepted (2026-10-31)
+Date: 2026-10-30
 
-## Контекст
+## Context
 
-`OpenAiCompatibleClient` поддерживал только JSON с `data[0].b64_json` и всегда сообщал media type `image/png`. Together AI использует тот же endpoint `/images/generations`, но по умолчанию отдаёт URL; при `response_format=base64` возвращает `b64_json`. Формат файла можно запросить отдельно через `output_format` (`png` или `jpeg`). Разные OpenAI-compatible реализации требуют общей конфигурации, а не отдельной ветки для Together.
+`OpenAiCompatibleClient` supported only JSON with `data[0].b64_json` and always reported the media type `image/png`. Together AI uses the same `/images/generations` endpoint, but returns a URL by default; with `response_format=base64` it returns `b64_json`. The file format can be requested separately through `output_format` (`png` or `jpeg`). Different OpenAI-compatible implementations need a shared configuration rather than a separate branch for Together.
 
-## Решение
+## Decision
 
-Добавить к `ProviderConfig` необязательные `ImageResponseFormat` и `ImageOutputFormat`. JSON-поля `imageResponseFormat` (`base64`, `b64_json`) и `imageOutputFormat` (`png`, `jpeg`) разрешены только для `openAiCompatible`; отсутствующее или `null` поле сохраняет текущее поведение. Значения проверяются как загрузчиком JSON, так и `ProviderRegistry`, чтобы прямое создание конфигурации не обходило whitelist.
+Add optional `ImageResponseFormat` and `ImageOutputFormat` to `ProviderConfig`. The JSON fields `imageResponseFormat` (`base64`, `b64_json`) and `imageOutputFormat` (`png`, `jpeg`) are allowed only for `openAiCompatible`; a missing or `null` field keeps the current behavior. The values are checked both by the JSON loader and by `ProviderRegistry`, so that creating a configuration directly does not bypass the whitelist.
 
-Клиент отправляет заданные значения в `response_format` и `output_format`. Успешный результат по-прежнему берётся из `data[0].b64_json`; ожидаемый media type определяется `imageOutputFormat`. При отсутствии поля сохраняются прежние запрос и `image/png`.
+The client sends the configured values in `response_format` and `output_format`. A successful result is still taken from `data[0].b64_json`; the expected media type is determined by `imageOutputFormat`. Without the field the old request and `image/png` stay.
 
-Ответы URL не скачиваются. Together 422 без проверенного moderation marker остаётся `Unknown`. HTTP status mapping расширяется общими правилами клиента: 413 → `BadRequest`; 404 → `ModelUnavailable`; 504/524 → `Timeout`; существующие mappings 408, 502 и moderation 403 сохраняются.
+URL answers are not downloaded. A Together 422 without a verified moderation marker stays `Unknown`. The HTTP status mapping is extended with shared client rules: 413 → `BadRequest`; 404 → `ModelUnavailable`; 504/524 → `Timeout`; the existing mappings of 408, 502 and moderation 403 stay.
 
-## Альтернативы
+## Alternatives
 
-- Отдельный Together provider kind или специальная ветка в клиенте: отклонено, потому что формат запроса — конфигурационная возможность общего OpenAI-compatible API.
-- Автоматически загружать URL-ответ: отложено; это второй HTTP-запрос с отдельными лимитами, проверками и политикой хоста.
-- Считать HTTP 422 фильтрацией: отклонено до появления однозначного безопасного маркера в официальном контракте или проверенного живого fixture.
+- A separate Together provider kind or a special branch in the client: rejected, because the request format is a configuration capability of the shared OpenAI-compatible API.
+- Download a URL answer automatically: postponed; it is a second HTTP request with separate limits, checks and a host policy.
+- Treat HTTP 422 as filtering: rejected until an unambiguous safe marker appears in the official contract or a verified live fixture.
 
-## Последствия
+## Consequences
 
-Together можно подключить как обычный `openAiCompatible` provider с фиксированным JSON примером и без ключа в конфиге. Параметры whitelist ограничивают пространство возможных значений. Конфигурация не задаёт размеры, дополнительные параметры модели или достоверную цену результата; эти возможности остаются отдельной работой.
+Together can be connected as an ordinary `openAiCompatible` provider with a fixed JSON example and no key in the config. The whitelisted parameters limit the space of possible values. The configuration does not define sizes, additional model parameters or a reliable result price; these capabilities remain separate work.

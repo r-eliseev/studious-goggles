@@ -1,34 +1,34 @@
-# 0010. Журнал: ILogger везде, файл через Serilog в Presentation
+# 0010. Logging: ILogger everywhere, a file through Serilog in Presentation
 
-Статус: принято
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: 2026-10-28
+Status: accepted
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: 2026-10-28
 
-Задача: `tasks/backlog/045-detailed-logging.md`. План одобрен владельцем в чате 2026-10-28 (Serilog).
+Task: `tasks/backlog/045-detailed-logging.md`. The plan was approved by the owner in the chat on 2026-10-28 (Serilog).
 
-## Контекст
-Приложение отлаживается в первую очередь по логам (приоритет владельца). Было так: `ILogger` только в двух сервисах ядра, MAUI писал в `Debug`, Avalonia — только собственный `LogToTrace`, `FireAndForgetSafeAsync` терял ошибки в Release, файла журнала не было, необработанные исключения не перехватывались. Нужен один файл в папке данных на день, хранение 14 дней, уровень без пересборки, и гарантия, что ключи и base64 картинок в журнал не попадают.
+## Context
+The app is debugged first of all through logs (the owner's priority). Before: `ILogger` only in two core services, MAUI wrote to `Debug`, Avalonia only its own `LogToTrace`, `FireAndForgetSafeAsync` lost errors in Release, there was no log file, unhandled exceptions were not caught. Needed: one file per day in the data folder, 14 days of retention, a level without rebuilding, and a guarantee that keys and base64 pictures do not get into the log.
 
-Ядро (`Core`) уже ссылается на `Microsoft.Extensions.Logging.Abstractions`. `Microsoft.Extensions.Logging` не умеет писать в файл с ротацией и хранением, поэтому нужна библиотека записи.
+The core (`Core`) already references `Microsoft.Extensions.Logging.Abstractions`. `Microsoft.Extensions.Logging` cannot write to a file with rotation and retention, so a writing library is needed.
 
-## Решение
-- Везде, где есть журнал, пишем через `ILogger<T>` с шаблонами сообщений. Ядро и `Presentation` не знают о библиотеке записи, кроме одного места.
-- Библиотека записи — Serilog (`Serilog.Extensions.Logging` 10.0.0, `Serilog.Sinks.File` 7.0.0). Подключается только в `ImageGen/ImageGen.Presentation/Logging/` (`ImageGenLogging.AddImageGenFileLogging`). Оболочки вызывают этот метод; `Core` и `Data` Serilog не ссылаются.
-- Файл: `{DataDirectory}/logs/imagegen-yyyyMMdd.log`, новый день — новый файл, файлы старше 14 дней удаляются (`retainedFileTimeLimit`), при 10 МБ — следующий файл того же дня.
-- Уровень: переменная `IMAGEGEN_LOG_LEVEL`, затем `logging.json` (`{"level": "..."}`) в папке данных, затем значение по сборке (Debug в Debug-сборке, Information в Release). Неизвестное значение игнорируется и пишется предупреждением.
-- Первая строка каждого запуска: версия, оболочка, ОС, архитектура, среда выполнения, папка данных, папка журнала, уровень.
-- Журнал не содержит ключей и текста промптов на уровне Information. Тела HTTP-запросов и ответов, текст сообщений пользователя и ассистента пишутся только на уровне Debug. Картинки в телах заменяются размером (`<base64, N bytes>`), тело обрезается до 4 КБ. Заголовки HTTP (там ключ) не пишутся никогда.
-- HTTP-клиенты провайдеров получают `LoggingHttpHandler` через `ConfigureHttpClientDefaults` в `AddImageGenCore`.
-- Необработанные исключения: `AppDomain.UnhandledException`, `TaskScheduler.UnobservedTaskException` (через `CrashLog.Attach`), исключения UI-потока Avalonia (`Dispatcher.UIThread.UnhandledException`). `FireAndForgetSafeAsync` пишет ошибку через `TaskExtensions.Logger`, который оболочка задаёт при старте.
+## Decision
+- Wherever there is logging, we write through `ILogger<T>` with message templates. The core and `Presentation` do not know about the writing library, except in one place.
+- The writing library is Serilog (`Serilog.Extensions.Logging` 10.0.0, `Serilog.Sinks.File` 7.0.0). It is plugged in only in `ImageGen/ImageGen.Presentation/Logging/` (`ImageGenLogging.AddImageGenFileLogging`). The heads call this method; `Core` and `Data` do not reference Serilog.
+- File: `{DataDirectory}/logs/imagegen-yyyyMMdd.log`, a new day — a new file, files older than 14 days are deleted (`retainedFileTimeLimit`), at 10 MB — the next file of the same day.
+- Level: the `IMAGEGEN_LOG_LEVEL` variable, then `logging.json` (`{"level": "..."}`) in the data folder, then the build's value (Debug in a Debug build, Information in Release). An unknown value is ignored and logged as a warning.
+- The first line of every start: version, head, OS, architecture, runtime, data folder, log folder, level.
+- The log contains no keys and no prompt text at the Information level. HTTP request and response bodies and the text of user and assistant messages are written only at Debug. Pictures in bodies are replaced by their size (`<base64, N bytes>`), the body is cut to 4 KB. HTTP headers (the key is there) are never written.
+- Provider HTTP clients get `LoggingHttpHandler` through `ConfigureHttpClientDefaults` in `AddImageGenCore`.
+- Unhandled exceptions: `AppDomain.UnhandledException`, `TaskScheduler.UnobservedTaskException` (through `CrashLog.Attach`), exceptions of the Avalonia UI thread (`Dispatcher.UIThread.UnhandledException`). `FireAndForgetSafeAsync` writes the error through `TaskExtensions.Logger`, which the head sets at startup.
 
-## Альтернативы
-- **Свой `ILoggerProvider` без библиотеки.** Не нужны зависимости, но ротацию по размеру, хранение по возрасту и потокобезопасную запись пришлось бы писать и проверять самим. Отклонено: риск ошибок в том, что нужно для отладки.
-- **Serilog в `Core`.** Ядро стало бы зависеть от конкретной библиотеки записи, а `ImageGen.Core.Tests` не проверял бы это. Отклонено: ядро знает только `ILogger`.
-- **Serilog в оболочках (каждая настраивает сама).** Дублирование и расхождение форматов. Отклонено: один метод в `Presentation`.
-- **`Microsoft.Extensions.Logging.Debug` и файл через ОС-журнал.** Не покрывает требование «один файл в папке данных». Отклонено.
+## Alternatives
+- **Our own `ILoggerProvider` without a library.** No dependencies, but size rotation, age retention and thread-safe writing would have to be written and tested by us. Rejected: the risk of errors in exactly what is needed for debugging.
+- **Serilog in `Core`.** The core would depend on a specific writing library, and `ImageGen.Core.Tests` would not check that. Rejected: the core knows only `ILogger`.
+- **Serilog in the heads (each configures it itself).** Duplication and diverging formats. Rejected: one method in `Presentation`.
+- **`Microsoft.Extensions.Logging.Debug` and a file through the OS log.** Does not cover the "one file in the data folder" requirement. Rejected.
 
-## Последствия
-- `Presentation` теперь ссылается на Serilog. Архитектурный тест `Presentation` запрещает только UI-фреймворки, поэтому проходит. Замена библиотеки затронет один каталог (`Presentation/Logging`) и два вызова в оболочках.
-- Тесты, которые создают `ApiKeyService`, `ModelCatalogService`, `FileImageStore`, `SqliteDatabase` и `AvaloniaNavigationService` напрямую, получили параметр логгера (в тестах — `NullLogger` или `CapturingLogger`). Хосты обязаны вызвать `AddLogging()`, если не используют `AddImageGenCore`/`AddImageGenData` без логирования.
-- Внутренние предупреждения и ошибки Avalonia (`ILogSink`, `Logger.Sink`) пишутся в тот же файл через `AvaloniaLogSink`; сообщения уровня Information и ниже Avalonia отбрасывает, чтобы не засорять журнал. Сообщения, возникшие до старта `App`, идут только в трассировку.
-- Журнал пишется синхронно из потоков приложения; при очень больших объёмах Debug-логирования может стать узким местом. Пока не измерено.
+## Consequences
+- `Presentation` now references Serilog. The `Presentation` architecture test forbids only UI frameworks, so it passes. Replacing the library affects one folder (`Presentation/Logging`) and two calls in the heads.
+- Tests that create `ApiKeyService`, `ModelCatalogService`, `FileImageStore`, `SqliteDatabase` and `AvaloniaNavigationService` directly got a logger parameter (`NullLogger` or `CapturingLogger` in tests). Hosts must call `AddLogging()` if they use `AddImageGenCore`/`AddImageGenData` without logging.
+- Internal Avalonia warnings and errors (`ILogSink`, `Logger.Sink`) go to the same file through `AvaloniaLogSink`; Avalonia messages at Information and below are dropped so as not to clutter the log. Messages raised before `App` starts go only to the trace.
+- The log is written synchronously from the app's threads; with very large volumes of Debug logging it may become a bottleneck. Not measured yet.

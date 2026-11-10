@@ -20,10 +20,10 @@ while IFS= read -r f; do
   if [ -n "$st" ]; then
     case "$allowed" in *" $st "*) ;; *) echo "ОШИБКА: $f: неизвестный статус '$st'"; fail=1 ;; esac
     case "$st" in planned|approved|in-progress|done)
-      filled "$f" "План" || { echo "ОШИБКА: $f: статус '$st', но раздел 'План' пуст"; fail=1; } ;;
+      { filled "$f" "План" || filled "$f" "Plan"; } || { echo "ОШИБКА: $f: статус '$st', но раздел 'План' пуст"; fail=1; } ;;
     esac
     if [ "$st" = "done" ]; then
-      filled "$f" "Отчёт" || { echo "ОШИБКА: $f: статус 'done', но раздел 'Отчёт' пуст"; fail=1; }
+      { filled "$f" "Отчёт" || filled "$f" "Report"; } || { echo "ОШИБКА: $f: статус 'done', но раздел 'Отчёт' пуст"; fail=1; }
     fi
     if [ "$st" = "in-progress" ] && [ -z "$as" ]; then
       echo "ОШИБКА: $f: статус 'in-progress', но не указан assignee"; fail=1

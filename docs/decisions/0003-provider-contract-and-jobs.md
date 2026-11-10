@@ -1,31 +1,31 @@
-# 0003. Контракт провайдера и жизненный цикл задания
+# 0003. The provider contract and the job lifecycle
 
-Статус: принято (2026-10-28)
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: 2026-10-27
-Уточнено: `0005-openrouter-background-job.md` (OpenRouter как задание в фоне с опросом). Устарело в тексте: «все три провайдера сразу» отменено ADR 0004; контракт подтверждается задачами `tasks/backlog/025` и `026`, а не `tasks/v0.1/`.
+Status: accepted (2026-10-28)
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: 2026-10-27
+Refined by: `0005-openrouter-background-job.md` (OpenRouter as a background job with polling). Outdated in the text: "all three providers at once" was cancelled by ADR 0004; the contract is confirmed by tasks `tasks/backlog/025` and `026`, not `tasks/v0.1/`.
 
-## Контекст
-fal работает через очередь, Replicate через асинхронные предсказания, OpenRouter отвечает синхронно картинкой в base64 (таблица в `docs/specs/image-client.md`). Статусы, отмена, цена и фильтрация у всех разные. Приложение на телефоне может быть выгружено ОС посреди генерации, а публичного адреса для webhook у клиента нет. Владелец решил делать все три провайдера сразу, чтобы контракт проверялся на всех трёх моделях вызова.
+## Context
+fal works through a queue, Replicate through asynchronous predictions, OpenRouter answers synchronously with a base64 picture (table in `docs/specs/image-client.md`). Statuses, cancellation, price and filtering differ for each. The phone app can be unloaded by the OS in the middle of a generation, and the client has no public address for a webhook. The owner decided to do all three providers at once, so that the contract is checked against all three calling models.
 
-## Решение
-Один интерфейс `IImageProvider` в `Core/Providers`:
-- `CheckKeyAsync` → работает, неверный ключ, нет связи (F1.2).
-- `ListModelsAsync`, `DescribeModelAsync(modelId)` → `ModelDescriptor` с возможностями, лимитом референсов, ценой и единицей. Источник возможностей: у OpenRouter `GET /api/v1/images/models`, у fal и Replicate схема входа модели.
-- `SubmitAsync(ProviderJobRequest)` → `ProviderJobHandle` (сериализуемый: id запроса fal, id предсказания Replicate; у OpenRouter handle содержит уже готовый ответ).
-- `WatchAsync(handle)` → `IAsyncEnumerable<JobUpdate>`: в очереди (с позицией, если есть), идёт (с логами), готово (ссылки или байты, seed, фактическая цена, если есть), ошибка (`ProviderErrorKind` и исходный текст), отфильтровано.
-- `CancelAsync(handle)` → `CancelOutcome`: отменено, запрос отправлен (fal в работе), не поддерживается (OpenRouter).
+## Decision
+One `IImageProvider` interface in `Core/Providers`:
+- `CheckKeyAsync` → works, invalid key, no connection (F1.2).
+- `ListModelsAsync`, `DescribeModelAsync(modelId)` → `ModelDescriptor` with capabilities, the reference limit, the price and its unit. Source of capabilities: at OpenRouter `GET /api/v1/images/models`, at fal and Replicate the model's input schema.
+- `SubmitAsync(ProviderJobRequest)` → `ProviderJobHandle` (serializable: the fal request id, the Replicate prediction id; at OpenRouter the handle contains the ready answer).
+- `WatchAsync(handle)` → `IAsyncEnumerable<JobUpdate>`: queued (with the position, if any), running (with logs), done (links or bytes, seed, actual price if any), failed (`ProviderErrorKind` and the original text), filtered.
+- `CancelAsync(handle)` → `CancelOutcome`: cancelled, request sent (fal in progress), not supported (OpenRouter).
 
-Единая модель состояний задания: в очереди, идёт, готово, ошибка, отменено, запрос на отмену отправлен, отфильтровано. «Отфильтровано» — отдельное состояние (чёрный кадр с `has_nsfw_concepts` у fal, отказ модерации у других), не ошибка.
+One job state model: queued, running, done, failed, cancelled, cancellation request sent, filtered. "Filtered" is a separate state (a black frame with `has_nsfw_concepts` at fal, a moderation refusal at others), not an error.
 
-Оркестратор (`GenerationService`) сохраняет handle в БД сразу после `SubmitAsync`, поэтому после перезапуска опрос продолжается. Опрос с увеличивающимся интервалом; webhook не используется. Лимит одновременных заданий на провайдера — семафор. Результат сохраняется до того, как событие уходит в оболочку.
+The orchestrator (`GenerationService`) saves the handle to the DB right after `SubmitAsync`, so polling continues after a restart. Polling with an increasing interval; no webhook. The limit of concurrent jobs per provider is a semaphore. The result is saved before the event goes to the head.
 
-Ошибки провайдера приводятся к `ProviderErrorKind`: неверный ключ, нет средств, превышен лимит, модель недоступна, отклонено модерацией, таймаут, сбой сети, прочее (F9.1). Текст провайдера сохраняется, ключи из него вырезаются.
+Provider errors are mapped to `ProviderErrorKind`: invalid key, no funds, rate limit, model unavailable, rejected by moderation, timeout, network failure, other (F9.1). The provider's text is kept, keys are cut out of it.
 
-## Альтернативы
-- Отдельные интерфейсы на каждый вид генерации (`ITextToImage`, `IImageToImage`, `IImageToText`, как в заготовках): вид генерации — свойство запроса и возможность модели, а модель вызова у провайдера одна, поэтому интерфейсы дублировали бы друг друга.
-- Webhook: нужен публичный адрес, на телефоне его нет.
-- Блокирующий вызов на задание (subscribe у fal, `Prefer: wait` у Replicate): проще, но теряет позицию в очереди, отмену и восстановление после перезапуска.
+## Alternatives
+- Separate interfaces per kind of generation (`ITextToImage`, `IImageToImage`, `IImageToText`, as in the drafts): the kind of generation is a property of the request and a capability of the model, while the provider's calling model is the same, so the interfaces would duplicate each other.
+- Webhook: needs a public address, a phone does not have one.
+- A blocking call per job (subscribe at fal, `Prefer: wait` at Replicate): simpler, but loses the queue position, cancellation and recovery after a restart.
 
-## Последствия
-Проще: оркестратор, UI и тесты работают с одной моделью; новый провайдер добавляется одной реализацией. Сложнее: OpenRouter приходится подгонять под submit/watch (handle с готовым ответом), а его задание нельзя восстановить после перезапуска (помечается «прервано»). Контракт подтверждается задачами провайдеров в `tasks/v0.1/`; если реализация покажет расхождение, решение правится новым ADR.
+## Consequences
+Easier: the orchestrator, the UI and the tests work with one model; a new provider is added with one implementation. Harder: OpenRouter has to be fitted into submit/watch (a handle with a ready answer), and its job cannot be recovered after a restart (it is marked "interrupted"). The contract is confirmed by the provider tasks in `tasks/v0.1/`; if the implementation shows a discrepancy, the decision is changed by a new ADR.

@@ -1,69 +1,69 @@
-# Apple CI и UI-тесты: MAUI и Avalonia на iOS и macOS
+# Apple CI and UI tests: MAUI and Avalonia on iOS and macOS
 
-Статус: черновик
-Код: `.github/workflows/apple-ci.yml`, `ImageGen/ImageGen.Avalonia.iOS`, `ImageGen/ImageGen.E2E.iOS`, `ImageGen/ImageGen.E2E.Common/ci/apple-*` — появятся в задачах 244–250.
+Status: draft
+Code: `.github/workflows/apple-ci.yml`, `ImageGen/ImageGen.Avalonia.iOS`, `ImageGen/ImageGen.E2E.iOS`, `ImageGen/ImageGen.E2E.Common/ci/apple-*` — appear in tasks 244–250.
 
-Основа — дополнение владельца «MAUI + Avalonia — Apple CI/E2E» от 2026-11-07. Оригинал лежит в `docs/specs/ui-e2e-original/`. Это дополнение к `docs/specs/ui-e2e.md`, а не его замена. Решения и проверенные факты — в ADR 0030.
+The basis is the owner's addendum "MAUI + Avalonia — Apple CI/E2E" of 2026-11-07. The original is in `docs/specs/ui-e2e-original/`. It is an addendum to `docs/specs/ui-e2e.md`, not its replacement. Decisions and verified facts are in ADR 0030. iOS UI tests are written as Gherkin scenarios (tag `@e2e`) like the other E2E tests (ADR 0031, task 266).
 
-## Цель
-Получить на раннерах GitHub без Apple ID, сертификатов и секретов:
-- раздельные статусы четырёх сборок — MAUI iOS, MAUI Mac Catalyst, Avalonia iOS, Avalonia macOS;
-- запуск обоих iOS-приложений в Simulator с доказательствами;
-- UI-тесты iOS;
-- проверку GUI на macOS.
+## Goal
+On GitHub runners, without an Apple ID, certificates and secrets, get:
+- separate statuses of four builds — MAUI iOS, MAUI Mac Catalyst, Avalonia iOS, Avalonia macOS;
+- a launch of both iOS apps in the Simulator with evidence;
+- iOS UI tests;
+- a GUI check on macOS.
 
-Ничего из этого не публикуется как релиз.
+None of this is published as a release.
 
-## Требования
-1. **Несовместимость инструментов видна явно.**
-   - Workflow `apple-ci.yml` не требует секретов и не публикует релизы. `release.yml` не меняется.
-   - Несовместимость Xcode и workload выводится явно: `blocked: toolchain mismatch` с версиями.
-   - Job с такой несовместимостью падает, но не блокирует PR. Зелёным он не бывает.
-2. **Матрица сборок.**
+## Requirements
+1. **Tool incompatibility is shown explicitly.**
+   - The `apple-ci.yml` workflow needs no secrets and does not publish releases. `release.yml` does not change.
+   - An Xcode/workload incompatibility is printed explicitly: `blocked: toolchain mismatch` with the versions.
+   - A job with such an incompatibility fails but does not block the PR. It is never green.
+2. **The build matrix.**
 
-   | Приложение | Цель | Команда (уточняет 244/245) | Bundle id |
+   | App | Target | Command (refined by 244/245) | Bundle id |
    |---|---|---|---|
    | MAUI | iOS Simulator | `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-ios -c Debug -r iossimulator-arm64 -p:EnableCodeSigning=false` | `com.eliseev.imagegen` |
    | MAUI | Mac Catalyst | `… -f net10.0-maccatalyst -c Debug -r maccatalyst-arm64 -p:EnableCodeSigning=false` | `com.eliseev.imagegen` |
    | Avalonia | iOS Simulator | `dotnet build ImageGen/ImageGen.Avalonia.iOS/ImageGen.Avalonia.iOS.csproj -c Debug -r iossimulator-arm64` | `com.eliseev.imagegen.avalonia` |
-   | Avalonia | macOS | `dotnet publish ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj -c Release -r osx-arm64 --self-contained`, затем упаковка в `.app` | `com.eliseev.imagegen.avalonia` |
+   | Avalonia | macOS | `dotnet publish ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj -c Release -r osx-arm64 --self-contained`, then packaging into a `.app` | `com.eliseev.imagegen.avalonia` |
 
-   Отдельные jobs под x64 не нужны. Если понадобятся, их добавят не смешивая с arm64.
-3. **Артефакты.**
-   - `.app` упаковываются в `tar.gz`, чтобы сохранились права.
-   - Артефакты подписаны пометкой «только CI», загружаются при любом исходе и хранятся 14 дней.
-   - Неподписанные `.app` не годятся для устройств и для распространения.
-4. **Запуск в iOS Simulator.**
-   - Новый iPhone создаётся из доступных устройств и среды выполнения iOS. UDID ищется динамически.
-   - Шаги: `boot`, ожидание `bootstatus` (с тайм-аутом), установка, запуск. Затем проверяется, что процесс жив через 10 с и что нет отчёта о падении.
-   - Сохраняются скриншот, лог запуска, лог системы симулятора и отчёты о падениях.
-   - Симулятор удаляется в `always()`.
-5. **UI-тесты iOS.**
-   - Стек: NUnit + Allure + Appium 3.9.0 + `xcuitest@12.22.8`.
-   - Тесты идут последовательно, на один симулятор; данные изолируются переустановкой.
-   - Повторы не скрывают нестабильность: повторных запусков нет.
-   - Папка теста: `reports/ios/<maui|avalonia>/<Класс>.<Тест>/`. В ней `recording.mp4`, при падении — `screenshot.png` и `ui.xml`, а также `appium.log`, `simulator.log` и `metadata.json`.
-6. **Сценарии.**
-   - Smoke на каждое iOS-приложение: запуск и экран первого запуска; ввод и навигация; возврат или отмена; перезапуск без потери состояния.
-   - Генерация — только через мок по HTTPS из задачи 243. Настоящие платные API запрещены.
-7. **macOS.** Сначала проверка GUI: сессия, содержательный скриншот, права Accessibility. Если проверка не прошла — ошибка инфраструктуры с доказательствами, а не зелёный тест.
-8. **Секреты.** В скриншотах, видео и логах нет настоящих ключей. Используются только фиктивные ключи из ADR 0029.
+   Separate x64 jobs are not needed. If they are needed, they are added without mixing with arm64.
+3. **Artifacts.**
+   - `.app` bundles are packed into `tar.gz` so that permissions are kept.
+   - Artifacts are labeled "CI only", uploaded on any outcome and kept for 14 days.
+   - Unsigned `.app` bundles are not suitable for devices or distribution.
+4. **Launch in the iOS Simulator.**
+   - A new iPhone is created from the available devices and the iOS runtime. The UDID is found dynamically.
+   - Steps: `boot`, waiting for `bootstatus` (with a timeout), install, launch. Then it is checked that the process is alive after 10 s and that there is no crash report.
+   - A screenshot, the launch log, the simulator system log and crash reports are saved.
+   - The simulator is deleted in `always()`.
+5. **iOS UI tests.**
+   - Stack: NUnit + Allure + Appium 3.9.0 + `xcuitest@12.22.8` (after 266: Reqnroll on NUnit with `Allure.Reqnroll`).
+   - Tests run sequentially on one simulator; data is isolated by reinstalling.
+   - Retries do not hide instability: there are no repeated runs.
+   - The test folder: `reports/ios/<maui|avalonia>/<Class>.<Test>/`. It contains `recording.mp4`, on failure `screenshot.png` and `ui.xml`, and also `appium.log`, `simulator.log` and `metadata.json`.
+6. **Scenarios.**
+   - A smoke for each iOS app: launch and the first-launch screen; input and navigation; going back or cancelling; a restart without losing state.
+   - Generation — only through the HTTPS mock of task 243. Real paid APIs are forbidden.
+7. **macOS.** First a GUI check: a session, a meaningful screenshot, Accessibility permissions. If the check fails, it is an infrastructure error with evidence, not a green test.
+8. **Secrets.** Screenshots, videos and logs contain no real keys. Only the fake keys from ADR 0029 are used.
 
-## Критерии готовности
-- Windows и Android из ADR 0029 работают без регрессии.
-- В Actions нет сертификатов, профилей и новых обязательных секретов Apple.
-- У каждой из четырёх сборок свой статус. Неготовая голова Avalonia iOS не выдаётся за успех.
-- Несовместимость Xcode и .NET даёт явное `blocked` с версиями.
-- Оба iOS-приложения ставятся и открываются в Simulator. Доказательства сохраняются и при упавшем job.
-- UI-тесты iOS дают NUnit, TRX, Allure, видео, дерево UI и скриншоты.
-- UI-тесты macOS не считаются успешными, пока не прошла проверка GUI.
-- Нет публикации IPA или DMG.
+## Acceptance criteria
+- Windows and Android from ADR 0029 work without regression.
+- Actions has no certificates, profiles or new mandatory Apple secrets.
+- Each of the four builds has its own status. An unfinished Avalonia iOS head is not passed off as a success.
+- An Xcode/.NET incompatibility gives an explicit `blocked` with the versions.
+- Both iOS apps install and open in the Simulator. Evidence is kept also when the job fails.
+- iOS UI tests give NUnit, TRX, Allure, video, the UI tree and screenshots.
+- macOS UI tests do not count as successful until the GUI check passes.
+- No IPA or DMG is published.
 
-## Ограничения и вне рамок
-- Подпись, нотаризация и установка на iPhone — вне рамок.
-- Avalonia Android E2E — не здесь, см. ADR 0029.
-- Требование дополнения «unit-tests и Avalonia Headless на PR» уже выполнено: jobs `core` и `avalonia` в `build.yml`.
+## Constraints and out of scope
+- Signing, notarization and installing on an iPhone are out of scope.
+- Avalonia Android E2E is not here, see ADR 0029.
+- The addendum's requirement "unit-tests and Avalonia Headless on PR" is already met: the `core` and `avalonia` jobs in `build.yml`.
 
-## Тесты
-- Сами E2E-проекты запускает CI.
-- Скрипты упаковки `.app` и разбора `simctl list -j` получают проверки в shell, на файлах-образцах в `tmp/` (задачи 244, 245).
+## Tests
+- The E2E projects themselves are run by CI.
+- The `.app` packaging scripts and the `simctl list -j` parser get shell checks on sample files in `tmp/` (tasks 244, 245).

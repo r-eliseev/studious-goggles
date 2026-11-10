@@ -1,65 +1,65 @@
-# UI-тесты собранного приложения (E2E) в GitHub Actions
+# UI tests of the built app (E2E) in GitHub Actions
 
-Статус: черновик (базовые сценарии 238–242 реализованы; мок-сценарий 243 заблокирован)
-Код: `ImageGen/ImageGen.E2E.Common`, `ImageGen/ImageGen.E2E.Android`, `ImageGen/ImageGen.E2E.Windows`, `.github/workflows/ui-e2e.yml` (задачи 238–242)
+Status: draft (base scenarios 238–242 implemented; mock scenario 243 in progress; migration to Gherkin — task 266)
+Code: `ImageGen/ImageGen.E2E.Common`, `ImageGen/ImageGen.E2E.Android`, `ImageGen/ImageGen.E2E.Windows`, `.github/workflows/ui-e2e.yml` (tasks 238–242)
 
-Основа — спецификация владельца «Автоматизация UI-тестов .NET MAUI в GitHub Actions», версия 1.0, присланная 2026-11-07 (оригинал — `docs/specs/ui-e2e-original/`, удалить при архивировании 238–250; Apple-платформы — дополнение `docs/specs/apple-ci-e2e.md`, ADR 0030). Ниже записаны её требования, приведённые к проекту, с поправками после проверки. Решения и проверенные факты — в ADR 0029.
+The basis is the owner's specification "Automating UI tests of .NET MAUI in GitHub Actions", version 1.0, sent on 2026-11-07 (the original is in `docs/specs/ui-e2e-original/`, delete it when archiving 238–250; Apple platforms are the addendum `docs/specs/apple-ci-e2e.md`, ADR 0030). Below are its requirements adapted to the project, with corrections after checking. Decisions and verified facts are in ADR 0029. Since 2026-11-09 the E2E tests are written as Gherkin scenarios of the catalog `docs/specs/acceptance-scenarios.md` (tag `@e2e`) on Reqnroll (ADR 0031, task 266); the requirements below about drivers, videos and evidence do not change.
 
-## Цель
-После сборки MAUI-приложения CI сам проверяет интерфейс на Android и Windows и сохраняет доказательства по каждому тесту. Разработчик открывает последний прогон в GitHub Actions, видит прошедшие и упавшие сценарии и открывает видео нужного теста.
+## Goal
+After the MAUI app is built, CI itself checks the UI on Android and Windows and keeps evidence for every test. A developer opens the latest run in GitHub Actions, sees the passed and failed scenarios and opens the video of the needed test.
 
-## Требования
-1. Только раннеры GitHub: `ubuntu-latest` и `windows-latest`. Своего runner нет.
-2. Тестируются собранные приложения:
-   - Android: Release APK `com.eliseev.imagegen`, собранный на `windows-latest`. На Ubuntu нагрузка `maui-android` не помещается по диску.
-   - Windows: распакованная сборка `-p:WindowsPackageType=None` и запуск `ImageGen.Maui.exe`. MSIX не используется, потому что проект собирается unpackaged.
-3. Поиск элементов только по `AutomationId` с постоянными смысловыми именами `<экран>.<элемент>`, например `apikey.entry`, `apikey.save`, `sessions.new`. Имена не локализуются и не генерируются. Константы лежат в `ImageGen.E2E.Common/TestIds.cs`.
-   - Android: `MobileBy.Id(id)`. `AccessibilityId` занят `SemanticProperties.Description`.
+## Requirements
+1. Only GitHub runners: `ubuntu-latest` and `windows-latest`. No runner of our own.
+2. The built apps are tested:
+   - Android: the Release APK `com.eliseev.imagegen` built on `windows-latest`. On Ubuntu the `maui-android` workload does not fit on the disk.
+   - Windows: an unpacked build `-p:WindowsPackageType=None` and launching `ImageGen.Maui.exe`. MSIX is not used, because the project builds unpackaged.
+3. Elements are found only by `AutomationId` with permanent meaningful names `<screen>.<element>`, for example `apikey.entry`, `apikey.save`, `sessions.new`. The names are not localized or generated. The constants are in `ImageGen.E2E.Common/TestIds.cs`.
+   - Android: `MobileBy.Id(id)`. `AccessibilityId` is taken by `SemanticProperties.Description`.
    - Windows: UIA `AutomationId` (FlaUI `ByAutomationId`).
-   - Для строк списков id строится как `<экран>.item.<стабильный ключ>`, если ключ есть. Если ключа нет — поиск по порядку внутри контейнера со своим id.
-4. На каждый тест — отдельное видео MP4.
-   - Android: Appium `StartRecordingScreen` / `StopRecordingScreen`, `timeLimit` 1800 с.
-   - Windows: FFmpeg `gdigrab`, 15 кадров/с, H.264, `-movflags +frag_keyframe+empty_moov`. Остановка — `q` в stdin, на завершение 10 с, затем принудительное.
-5. При падении сохраняются скриншот и дерево UI (Android — `PageSource`, Windows — дамп дерева UIA). Всегда сохраняются логи:
-   - Android: logcat по PID приложения и `appium.log`;
-   - Windows: лог FFmpeg и лог приложения из `<папка данных>/logs`.
-   Сбой сохранения одного файла не мешает сохранить остальные: каждая операция в своём `try`.
-6. Папка теста: `reports/<android|windows>/<Класс>.<Тест>/` с файлами `recording.mp4`, `screenshot.png`, `ui.xml`, `logcat.txt` или `app.log`, `metadata.json` (имя, статус, длительность, версия приложения, коммит).
-7. Отчёт — Allure HTML: результаты и вложения обеих платформ в одной папке `allure-results`. Отсутствие одной платформы не валит сборку отчёта.
-8. В PR — отдельные проверки `test-android` и `test-windows`. Пока Windows-путь экспериментальный, его job не блокирует (`continue-on-error: true`).
-9. Артефакты загружаются при любом исходе и хранятся 14 дней.
-10. Секретов в коде и workflow нет. Ключи в тестах только фиктивные (`sk-or-e2e-invalid`, ключ мока `e2e-mock-key`). Настоящие ключи провайдеров в E2E не передаются.
-11. Изоляция состояния. Перед каждым тестом данные приложения чистые:
-    - Android: Appium `fullReset=false`, `noReset=false` — переустановка не нужна, данные чистятся `pm clear` через `mobile: clearApp`;
-    - Windows: удаление папки данных MAUI до запуска. Путь записывает задача 238.
+   - For list rows the id is `<screen>.item.<stable key>` if there is a key. If there is no key, search by order inside a container with its own id.
+4. A separate MP4 video for each test.
+   - Android: Appium `StartRecordingScreen` / `StopRecordingScreen`, `timeLimit` 1800 s.
+   - Windows: FFmpeg `gdigrab`, 15 fps, H.264, `-movflags +frag_keyframe+empty_moov`. Stopping is `q` on stdin, 10 s to finish, then forced.
+5. On failure a screenshot and the UI tree are saved (Android — `PageSource`, Windows — a dump of the UIA tree). Logs are always saved:
+   - Android: logcat by the app's PID and `appium.log`;
+   - Windows: the FFmpeg log and the app log from `<data folder>/logs`.
+   A failure to save one file does not prevent saving the others: each operation is in its own `try`.
+6. The test folder: `reports/<android|windows>/<Class>.<Test>/` with the files `recording.mp4`, `screenshot.png`, `ui.xml`, `logcat.txt` or `app.log`, `metadata.json` (name, status, duration, app version, commit).
+7. The report is Allure HTML: the results and attachments of both platforms in one `allure-results` folder. A missing platform does not fail the report build.
+8. Separate `test-android` and `test-windows` checks in a PR. While the Windows path is experimental, its job does not block (`continue-on-error: true`).
+9. Artifacts are uploaded on any outcome and kept for 14 days.
+10. No secrets in code and workflows. Only fake keys in tests (`sk-or-e2e-invalid`, the mock's key `e2e-mock-key`). Real provider keys are never passed to E2E.
+11. State isolation. Before each test the app's data is clean:
+    - Android: Appium `fullReset=false`, `noReset=false` — no reinstall needed, the data is cleared by `pm clear` through `mobile: clearApp`;
+    - Windows: the MAUI data folder is deleted before launch. Task 238 records the path.
 
-## Сценарии
-- **Smoke без сети к провайдерам (240, 241):**
-  1. Запуск → виден экран первого запуска (`apikey.entry`, `apikey.save`).
-  2. Пустой ключ → «Save» недоступна или показывает ошибку — по текущему поведению, которое фиксирует задача 239.
-  3. Неверный ключ `sk-or-e2e-invalid` → текст ошибки «ключ неверный» или «нет сети». Сюда идёт запрос в OpenRouter без ключа: он бесплатный. Если сеть недоступна, тест принимает оба текста.
-  4. Поворот экрана (Android) не роняет приложение.
-- **С моком провайдера (243):** первый запуск с провайдером мока → список сессий → новая сессия → сообщение → ответ ассистента и карточка картинки → полноэкранный просмотр → удаление сессии.
+## Scenarios
+- **Smoke without network access to providers (240, 241; Gherkin: KEY-01, KEY-03, KEY-11):**
+  1. Launch → the first-launch screen is visible (`apikey.entry`, `apikey.save`).
+  2. An empty key → "Save" is unavailable or shows an error — per the current behavior recorded by task 239.
+  3. The invalid key `sk-or-e2e-invalid` → the "invalid key" or "no network" error text. This sends a request to OpenRouter without a key: it is free. If the network is unavailable, the test accepts both texts.
+  4. Rotating the screen (Android) does not crash the app.
+- **With the provider mock (243; Gherkin: CHAT-02, GEN-05):** first launch with the mock provider → the session list → a new session → a message → the assistant's answer and a picture card → fullscreen viewing → deleting the session.
 
-## Критерии готовности
-- APK запускается в эмуляторе, тест нажимает кнопку и проверяет результат.
-- Предварительная проверка Windows (preflight) доказывает:
-  - UI Automation видит окно приложения;
-  - захваченный кадр не однотонный: доля пикселей, отличных от среднего, больше 1 %.
-  Если не доказывает — записан факт, и job остаётся экспериментальным.
-- У каждого теста своё MP4, которое открывается.
-- При падении есть скриншот и дерево UI.
-- Есть логи Appium и logcat, а также FFmpeg и приложения.
-- Allure HTML содержит результаты и вложения обеих платформ.
-- Артефакты загружаются и при упавших тестах.
-- В PR видны отдельные статусы Android и Windows.
+## Acceptance criteria
+- The APK launches in the emulator, the test taps a button and checks the result.
+- The Windows preflight proves:
+  - UI Automation sees the app window;
+  - the captured frame is not uniform: the share of pixels different from the mean is more than 1 %.
+  If it does not prove it, the fact is recorded and the job stays experimental.
+- Every test has its own MP4 that opens.
+- On failure there is a screenshot and the UI tree.
+- There are Appium and logcat logs, as well as FFmpeg and app logs.
+- The Allure HTML contains the results and attachments of both platforms.
+- Artifacts are uploaded also when tests fail.
+- A PR shows separate Android and Windows statuses.
 
-## Ограничения и вне рамок
-- iOS и Mac Catalyst — вне рамок, нет macOS-раннера в плане.
-- Avalonia Android тем же проектом — позже, отдельной задачей.
-- Живые провайдеры в E2E не используются.
-- Отдельная конфигурация сборки `E2E` из исходной спецификации не вводится. Тестируется обычный Release, а мок подключается через `providers.json`, который поддерживается и так. Мок работает по HTTPS с одноразовым корневым сертификатом, который ставится в системное хранилище эмулятора (API 33, `-writable-system`, `adb root`). Конфиг мока кладётся в папку данных через `adb root`. Сборка не меняется. Ключ вводится через экран первого запуска, потому что `SecureStorage` не подложить. Подробности — задача 243.
+## Constraints and out of scope
+- iOS and Mac Catalyst are out of scope here (ADR 0030 covers them).
+- Avalonia Android with the same project — later, as a separate task.
+- Live providers are not used in E2E.
+- The separate `E2E` build configuration from the original specification is not introduced. The ordinary Release is tested, and the mock is connected through `providers.json`, which is supported anyway. The mock works over HTTPS with a one-off root certificate installed in the emulator's system store (API 33, `-writable-system`, `adb root`). The mock config is put into the data folder through `adb root`. The build does not change. The key is entered through the first-launch screen, because `SecureStorage` cannot be pre-filled. Details: task 243.
 
-## Тесты
-- Сами E2E-проекты на NUnit — их запускает CI.
-- `ImageGen.Presentation.Tests/E2E/AutomationIdsTests.cs` проверяет, что все id из `TestIds` есть в разметке MAUI (задача 239). Этот тест идёт на Linux без эмулятора.
+## Tests
+- The E2E projects themselves (NUnit, after 266 Reqnroll on NUnit) — run by CI.
+- `ImageGen.Presentation.Tests/E2E/AutomationIdsTests.cs` checks that all ids from `TestIds` exist in the MAUI markup (task 239). This test runs on Linux without an emulator.

@@ -1,31 +1,31 @@
-# 0009. Конфиг провайдеров файлом и ссылка на модель «провайдер:модель»
+# 0009. Provider config in a file and the "provider:model" model reference
 
-Статус: принято
-Допустимые статусы: предложено, принято, заменено на NNNN, отклонено
-Дата: 2026-10-28
+Status: accepted
+Allowed statuses: proposed, accepted, superseded by NNNN, rejected
+Date: 2026-10-28
 
-Задача: `tasks/backlog/036-provider-config-compatible-api.md`. Ответы владельца в её «Комментариях» (2026-10-28).
+Task: `tasks/backlog/036-provider-config-compatible-api.md`. The owner's answers are in its "Comments" (2026-10-28).
 
-## Контекст
-Адрес OpenRouter был константой в `OpenRouterClient`, один провайдер на весь контейнер, `ImageModel` и `Generation` без провайдера, а `SessionSettings` хранил модели строками без провайдера. Подключить OpenAI- или Anthropic-совместимый API без правки кода было нельзя. Владелец: конфиг провайдеров файлом (JSON без ключей), OpenAI-совместимый тип для картинок и чата, Anthropic-совместимый только для чата, адреса только https (кроме localhost), ссылка на модель `provider:model`.
+## Context
+The OpenRouter address was a constant in `OpenRouterClient`, one provider for the whole container, `ImageModel` and `Generation` had no provider, and `SessionSettings` stored models as strings without a provider. Connecting an OpenAI- or Anthropic-compatible API without changing code was impossible. The owner: provider config in a file (JSON without keys), an OpenAI-compatible kind for images and chat, Anthropic-compatible only for chat, https addresses only (except localhost), the model reference `provider:model`.
 
-## Решение
-1. **Конфиг.** `providers.json` без ключей. Встроенный файл (`Providers/builtin-providers.json`, ресурс сборки) и необязательный пользовательский файл в `IAppPaths.DataDirectory`. Запись пользовательского файла с тем же `id` заменяет встроенную, новые добавляются. Неизвестные поля отвергаются по имени; поля, похожие на ключ или пароль, — с подсказкой не хранить их в конфиге.
-2. **Проверка при старте.** `ProviderRegistry` проверяет id (строчные буквы, цифры, `-`, уникальность), адрес (абсолютный https, http только для localhost), таймаут больше нуля, `imageModels` только у `openAiCompatible`. Ошибка — `ProviderConfigException` с названием провайдера и поля. `AppInitializer` берёт реестр в конструктор, поэтому неверный конфиг останавливает запуск.
-3. **Виды провайдера.** `ProviderKind`: `openRouter`, `openAiCompatible` (картинки и чат), `anthropicCompatible` (только чат). Fal и Replicate добавятся своими видами в задачах 025 и 026.
-4. **Ссылка на модель.** `ModelRef(ProviderId, ModelId)`, текст `provider:model`. Текст без префикса — модель OpenRouter (старые сессии). Префикс — только если до первого двоеточия стоит id провайдера (`[a-z0-9][a-z0-9-]*`): у бесплатных моделей OpenRouter `…:free` двоеточие стоит после слеша, поэтому префиксом не считается. JSON-конвертер `ModelRefJsonConverter`; в `settings_json` сохраняются старые имена свойств (`imageModelIds`, `assistantModelId`).
-5. **Клиенты.** Singleton-сервисы не держат `HttpClient`: каждый запрос берёт клиент из `IHttpClientFactory`. Таймаут задаётся на запрос из конфига (`CancellationTokenSource`), у именованных клиентов таймаут `HttpClient` отключён. Это закрывает задачу 037.
-6. **Чат ассистента.** `IAssistantChatClient` и нейтральные типы `AssistantChat*` вместо `IOpenRouterChatClient`. Формат `chat/completions` общий для OpenRouter и OpenAI-совместимых (`OpenAiChatWire`). Anthropic: Messages API, системные сообщения в поле `system`, картинки как base64-блоки. Версия API в заголовке `anthropic-version` — `2023-06-01` (не проверена на реальном API).
-7. **Ключи.** Ключ провайдера лежит в `ISecretStore` под именем `SecretNames.ForProvider(id)`. Для `openrouter` имя прежнее (`openrouter_api_key`), сохранённые ключи работают без миграции.
-8. **Каталог и хранение.** `image_models` получает ключ `(provider_id, id)`, миграция `0002_providers.sql` копирует старые строки как `openrouter`. `generations.provider_id` — колонка с `openrouter` по умолчанию. Каталог одного провайдера не трогает остальные.
-9. **Список моделей OpenAI-совместимого провайдера** берётся из `imageModels` в конфиге: API `/models` не описывает возможности картинок (seed, число картинок).
+## Decision
+1. **Config.** `providers.json` without keys. A built-in file (`Providers/builtin-providers.json`, an assembly resource) and an optional user file in `IAppPaths.DataDirectory`. A user entry with the same `id` replaces the built-in one, new ones are added. Unknown fields are rejected by name; fields that look like a key or password are rejected with a hint not to keep them in the config.
+2. **Check at startup.** `ProviderRegistry` checks the id (lowercase letters, digits, `-`, uniqueness), the address (absolute https, http only for localhost), a timeout greater than zero, `imageModels` only for `openAiCompatible`. An error is a `ProviderConfigException` with the name of the provider and the field. `AppInitializer` takes the registry in its constructor, so an invalid config stops the startup.
+3. **Provider kinds.** `ProviderKind`: `openRouter`, `openAiCompatible` (images and chat), `anthropicCompatible` (chat only). Fal and Replicate are added as their own kinds in tasks 025 and 026.
+4. **Model reference.** `ModelRef(ProviderId, ModelId)`, text `provider:model`. Text without a prefix is an OpenRouter model (old sessions). It is a prefix only if a provider id (`[a-z0-9][a-z0-9-]*`) stands before the first colon: in free OpenRouter models `…:free` the colon comes after a slash, so it is not a prefix. JSON converter `ModelRefJsonConverter`; `settings_json` keeps the old property names (`imageModelIds`, `assistantModelId`).
+5. **Clients.** Singleton services do not hold an `HttpClient`: each request takes a client from `IHttpClientFactory`. The timeout is set per request from the config (`CancellationTokenSource`); named clients have the `HttpClient` timeout disabled. This closes task 037.
+6. **Assistant chat.** `IAssistantChatClient` and neutral `AssistantChat*` types instead of `IOpenRouterChatClient`. The `chat/completions` format is shared by OpenRouter and OpenAI-compatible providers (`OpenAiChatWire`). Anthropic: the Messages API, system messages in the `system` field, pictures as base64 blocks. The API version in the `anthropic-version` header is `2023-06-01` (not verified against the real API).
+7. **Keys.** A provider key lives in `ISecretStore` under the name `SecretNames.ForProvider(id)`. For `openrouter` the name is the old one (`openrouter_api_key`), saved keys work without a migration.
+8. **Catalog and storage.** `image_models` gets the key `(provider_id, id)`, the migration `0002_providers.sql` copies old rows as `openrouter`. `generations.provider_id` is a column with `openrouter` by default. The catalog of one provider does not touch the others.
+9. **The model list of an OpenAI-compatible provider** comes from `imageModels` in the config: the `/models` API does not describe image capabilities (seed, number of pictures).
 
-## Альтернативы
-- **Конфиг в коде** (список `ProviderConfig` в `CoreServiceCollectionExtensions`). Проще, но новый API требует сборки. Отклонено владельцем.
-- **Ссылка объектом** `{"provider":…,"model":…}` в JSON. Надёжнее разбирается, но ломает совместимость с уже сохранёнными строками и занимает больше места. Отклонено.
-- **Разделитель `/` или `|`.** Конфликтует с идентификаторами моделей со слешем. Отклонено.
-- **Список моделей из `/models` у OpenAI-совместимого API.** Не даёт возможностей картинок. Отклонено.
-- **Anthropic-совместимый тип для картинок.** Messages API не отдаёт картинки (проверено по документации, 2026-10-28). Отклонено владельцем.
+## Alternatives
+- **Config in code** (a `ProviderConfig` list in `CoreServiceCollectionExtensions`). Simpler, but a new API needs a build. Rejected by the owner.
+- **The reference as an object** `{"provider":…,"model":…}` in JSON. Parses more reliably, but breaks compatibility with already saved strings and takes more space. Rejected.
+- **A `/` or `|` separator.** Conflicts with model ids that contain a slash. Rejected.
+- **A model list from `/models` of an OpenAI-compatible API.** Gives no image capabilities. Rejected.
+- **An Anthropic-compatible kind for images.** The Messages API does not return pictures (checked against the documentation, 2026-10-28). Rejected by the owner.
 
-## Последствия
-Проще: новый OpenAI- или Anthropic-совместимый API добавляется записью в файл; старые сессии, каталог и ключ OpenRouter работают без изменений; 037 закрыта. Сложнее: два места задания провайдеров (встроенный и пользовательский файл, правила слияния); ссылка на модель с префиксом — правило разбора, которое надо помнить (`ModelRef.Parse`); формат OpenAI-картинок (`images/generations`, только base64) и заголовки Anthropic проверяются только на заглушках — реальные ответы — вручную владельцем (`docs/status.md`).
+## Consequences
+Easier: a new OpenAI- or Anthropic-compatible API is added by an entry in a file; old sessions, the catalog and the OpenRouter key work unchanged; 037 is closed. Harder: two places define providers (the built-in and the user file, merge rules); a prefixed model reference is a parsing rule to remember (`ModelRef.Parse`); the OpenAI image format (`images/generations`, base64 only) and the Anthropic headers are checked only against stubs — real answers are checked by hand by the owner (`docs/status.md`).

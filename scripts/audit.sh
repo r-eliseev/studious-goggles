@@ -58,7 +58,7 @@ found=0
 for f in docs/decisions/*.md; do
   [ -e "$f" ] || continue
   case "$(basename "$f")" in _*) continue ;; esac
-  if grep -q '^Статус: предложено' "$f"; then echo "  $f"; found=1; fi
+  if grep -q '^Status: proposed' "$f"; then echo "  $f"; found=1; fi
 done
 [ $found -eq 1 ] || echo "  нет"
 

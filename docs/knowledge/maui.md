@@ -1,148 +1,147 @@
-# Справочник: .NET MAUI для этого проекта
+# Reference: .NET MAUI for this project
 
-Написан по знаниям модели, не по сверке с живой документацией в этой сессии. Пункты, помеченные «проверить», перед использованием сверьте с документацией. Версия в примере: .NET 10, `$(MauiVersion)` из SDK, `CommunityToolkit.Maui 12.3.0`, `CommunityToolkit.Mvvm 8.4.2`.
+Written from the model's knowledge, not by reconciling with live documentation in this session. Items marked "check" must be checked against the documentation before use. Versions in the sample: .NET 10, `$(MauiVersion)` from the SDK, `CommunityToolkit.Maui 12.3.0`, `CommunityToolkit.Mvvm 8.4.2`.
 
-Источники для сверки: https://learn.microsoft.com/dotnet/maui/ , https://learn.microsoft.com/dotnet/communitytoolkit/maui/ , https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/
+Sources to check against: https://learn.microsoft.com/dotnet/maui/ , https://learn.microsoft.com/dotnet/communitytoolkit/maui/ , https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/
 
-## Платформы
-- Поддерживаются: Android, iOS, Mac Catalyst (macOS), Windows (WinUI 3). Linux в MAUI официально нет; в `ImageGen.csproj` примера такой цели тоже нет. Linux закрывается другим способом (см. `docs/status.md`).
-- Сборка iOS и Mac Catalyst требует macOS с Xcode; на Windows они в `TargetFrameworks` примера пропускаются только на Linux, поэтому на Windows без Mac-хоста их сборка может не пройти (проверить; для работы на Windows собирайте `-f net10.0-windows10.0.19041.0` или `-f net10.0-android`).
-- Нагрузки: `dotnet workload install maui` (проверить актуальность команды для .NET 10); `dotnet workload list`.
+## Platforms
+- Supported: Android, iOS, Mac Catalyst (macOS), Windows (WinUI 3). MAUI has no official Linux; the sample's `ImageGen.csproj` has no such target either. Linux is covered another way (see `docs/status.md`).
+- Building iOS and Mac Catalyst needs macOS with Xcode; in the sample's `TargetFrameworks` they are skipped only on Linux, so on Windows without a Mac host their build may fail (check; to work on Windows, build `-f net10.0-windows10.0.19041.0` or `-f net10.0-android`).
+- Workloads: `dotnet workload install maui` (check that the command is current for .NET 10); `dotnet workload list`.
 
-### CommunityToolkit MediaElement 10.0.0 (задача 205)
-- `CommunityToolkit.Maui.MediaElement` — отдельный пакет. В `MauiProgram` достаточно `using CommunityToolkit.Maui;` и `.UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false)`; параметр соответствует README пакета 10.0.0 из NuGet. Для приложения без фонового воспроизведения оставлять `false`.
-- Для отдельной страницы плеера (219) закрытие вызывает `MediaElement.Stop()` и `Handler?.DisconnectHandler()` перед удалением модальной страницы. `Stop()` сбрасывает позицию и останавливает звук. Локальный `ReadMe.txt` пакета 10.0.0 описывает инициализацию, но не освобождение; семантика `Stop()` сверена с [официальной документацией MediaElement](https://learn.microsoft.com/dotnet/communitytoolkit/maui/views/mediaelement) и реализация `DisconnectHandler()` добавлена согласно плану задачи. Ручной Back/закрытие остаётся пунктом 140.
-- Элемент — `CommunityToolkit.Maui.Views.MediaElement`; локальный файл задаётся `MediaSource.FromFile(path)`. По умолчанию источник сам не начинает воспроизводиться; приложение явно задаёт `ShouldAutoPlay="False"` и `ShouldShowPlaybackControls="True"`. `Stop()` останавливает воспроизведение при уходе со страницы.
-- Пакет 10.0.0 совместим с .NET 10, но Android API 26+; `SupportedOSPlatformVersion` Android-проекта должен быть не ниже 26. На Android для Activity требуются `ResizeableActivity=true` и `LaunchMode=SingleTask` (см. [MediaElement platform setup](https://learn.microsoft.com/dotnet/communitytoolkit/maui/views/mediaelement#android)). Форматы зависят от нативных декодеров платформы.
-- Сверено 2026-11-06 по README NuGet 10.0.0 и [документации MediaElement](https://learn.microsoft.com/dotnet/communitytoolkit/maui/views/mediaelement); воспроизведение вручную проверяется задачами 016/140.
+### CommunityToolkit MediaElement 10.0.0 (task 205)
+- `CommunityToolkit.Maui.MediaElement` is a separate package. In `MauiProgram`, `using CommunityToolkit.Maui;` and `.UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false)` are enough; the parameter matches the README of package 10.0.0 from NuGet. For an app without background playback keep `false`.
+- For the separate player page (219), closing calls `MediaElement.Stop()` and `Handler?.DisconnectHandler()` before removing the modal page. `Stop()` resets the position and stops the sound. The local `ReadMe.txt` of package 10.0.0 describes initialization but not release; the semantics of `Stop()` were reconciled with the [official MediaElement documentation](https://learn.microsoft.com/dotnet/communitytoolkit/maui/views/mediaelement), and the `DisconnectHandler()` call was added per the task's plan. A manual Back/close check stays an item of 140.
+- The element is `CommunityToolkit.Maui.Views.MediaElement`; a local file is set with `MediaSource.FromFile(path)`. By default the source does not start playing by itself; the app explicitly sets `ShouldAutoPlay="False"` and `ShouldShowPlaybackControls="True"`. `Stop()` stops playback when leaving the page.
+- Package 10.0.0 is compatible with .NET 10, but Android API 26+; the Android project's `SupportedOSPlatformVersion` must be at least 26. On Android the Activity requires `ResizeableActivity=true` and `LaunchMode=SingleTask` (see [MediaElement platform setup](https://learn.microsoft.com/dotnet/communitytoolkit/maui/views/mediaelement#android)). Formats depend on the platform's native decoders.
+- Reconciled 2026-11-06 with the NuGet 10.0.0 README and the [MediaElement documentation](https://learn.microsoft.com/dotnet/communitytoolkit/maui/views/mediaelement); playback is checked by hand in tasks 016/140.
 
-## Структура single-project
-- Один `.csproj` на все платформы, `SingleProject=true`. Платформенный код в `Platforms/<Android|iOS|MacCatalyst|Windows>/` собирается только для своей платформы автоматически.
-- Условная компиляция: `#if ANDROID`, `#if IOS`, `#if MACCATALYST`, `#if WINDOWS`; для проверки на лету — `OperatingSystem.IsAndroid()`, `DeviceInfo.Platform`.
-- Ресурсы: `Resources/AppIcon`, `Splash`, `Images`, `Fonts`, `Raw`, `Styles`; `MauiImage` масштабируется Resizetizer (SVG и PNG), имена только в нижнем регистре, цифры и подчёркивание.
-- Все платформенные точки входа вызывают `MauiProgram.CreateMauiApp()`.
+## Single-project structure
+- One `.csproj` for all platforms, `SingleProject=true`. Platform code in `Platforms/<Android|iOS|MacCatalyst|Windows>/` is automatically built only for its platform.
+- Conditional compilation: `#if ANDROID`, `#if IOS`, `#if MACCATALYST`, `#if WINDOWS`; for a check at run time — `OperatingSystem.IsAndroid()`, `DeviceInfo.Platform`.
+- Resources: `Resources/AppIcon`, `Splash`, `Images`, `Fonts`, `Raw`, `Styles`; `MauiImage` is scaled by Resizetizer (SVG and PNG), names only in lowercase, digits and underscores.
+- All platform entry points call `MauiProgram.CreateMauiApp()`.
 
-### Android window и системные панели (задача 137)
-- В .NET MAUI 10 `IWindowHandler.PlatformView` для Android — `Android.App.Activity`; `Window.Handler` можно проверить как `IWindowHandler`, затем брать `Activity.Window` именно у окна viewer. Не искать произвольный `Application.Current.Windows` и не полагаться на статический `Platform.CurrentActivity`. Источник: [IWindowHandler.cs](https://github.com/dotnet/maui/blob/43db9d77f2ff59999dea36ab8befb8541e919013/src/Core/src/Handlers/Window/IWindowHandler.cs); локальная Android-сборка также проверяет тип.
-- `WindowInsetsControllerCompat` из имеющегося `Xamarin.AndroidX.Core` работает с status/navigation bars; видимость и `SystemBarsBehavior` нужно сохранить отдельно для каждого типа, затем восстановить. До первых `RootWindowInsets` нельзя выдумывать исходную видимость: fullscreen lease остаётся ожидающим и отменяемым.
+### Android window and system bars (task 137)
+- In .NET MAUI 10 `IWindowHandler.PlatformView` on Android is an `Android.App.Activity`; `Window.Handler` can be checked as `IWindowHandler`, then take `Activity.Window` of exactly the viewer's window. Do not search an arbitrary `Application.Current.Windows` and do not rely on the static `Platform.CurrentActivity`. Source: [IWindowHandler.cs](https://github.com/dotnet/maui/blob/43db9d77f2ff59999dea36ab8befb8541e919013/src/Core/src/Handlers/Window/IWindowHandler.cs); the local Android build also checks the type.
+- `WindowInsetsControllerCompat` from the existing `Xamarin.AndroidX.Core` works with the status/navigation bars; the visibility and `SystemBarsBehavior` must be saved separately for each type, then restored. Before the first `RootWindowInsets` the original visibility must not be invented: the fullscreen lease stays pending and cancellable.
 
-## Приложение и жизненный цикл
-- `App.CreateWindow(IActivationState?)` возвращает `Window` со стартовой страницей или `Shell` (`MainPage` у `Application` в новых проектах не используется).
-- События страницы: `Appearing`, `Disappearing`, `NavigatedTo`, `NavigatedFrom`; события окна: `Created`, `Activated`, `Deactivated`, `Stopped`, `Resumed`, `Destroying` (для сохранения состояния и остановки подписок).
-- Под Android и iOS приложение может быть остановлено системой в фоне: долгие генерации нельзя держать только в памяти UI; результат писать сразу на диск, статус задания хранить в БД (требование F7.2). Фоновые сервисы платформ (Android foreground service, iOS background tasks) — отдельная работа, не входит в MAUI из коробки (проверить).
+## App and lifecycle
+- `App.CreateWindow(IActivationState?)` returns a `Window` with the start page or a `Shell` (`MainPage` of `Application` is not used in new projects).
+- Page events: `Appearing`, `Disappearing`, `NavigatedTo`, `NavigatedFrom`; window events: `Created`, `Activated`, `Deactivated`, `Stopped`, `Resumed`, `Destroying` (to save state and stop subscriptions).
+- On Android and iOS the app may be stopped by the system in the background: long generations cannot be kept only in UI memory; write the result to disk right away, keep the job status in the DB (requirement F7.2). Platform background services (Android foreground service, iOS background tasks) are separate work, not part of MAUI out of the box (check).
 
-## XAML и привязки
-- `x:DataType` обязателен для компилируемых привязок; в `DataTemplate` и при `Source={RelativeSource AncestorType=...}` тип указывать явно (см. примеры в `Pages/`).
-- Ресурсы: `ResourceDictionary`, `StaticResource` (разрешается при загрузке), `DynamicResource` (следит за изменением); поздние словари перекрывают ранние.
-- `AppThemeBinding Light=..., Dark=...` для темы; смена: `Application.Current.UserAppTheme = AppTheme.Dark/Light/Unspecified`.
-- `OnPlatform` и `OnIdiom` в XAML для различий платформ и форм-факторов (`Phone`, `Tablet`, `Desktop`, `Watch`, `TV`).
-- Конвертеры `IValueConverter`; в CommunityToolkit.Maui готовые (`InvertedBoolConverter` и другие).
-- Behaviors: `EventToCommandBehavior`, `TextValidationBehavior` и т. д. из CommunityToolkit.Maui; подключение `UseMauiCommunityToolkit()` в `MauiProgram`.
-- Стили по умолчанию на `TargetType`, именованные по `x:Key`; `Style TargetType="Page" ApplyToDerivedTypes="True"` для общего фона.
-- Не вкладывать `CollectionView` в `ScrollView` без причины (теряется виртуализация); в примере так сделано для коротких списков.
+## XAML and bindings
+- `x:DataType` is mandatory for compiled bindings; in a `DataTemplate` and with `Source={RelativeSource AncestorType=...}` set the type explicitly (see the examples in `Pages/`).
+- Resources: `ResourceDictionary`, `StaticResource` (resolved at load), `DynamicResource` (tracks changes); later dictionaries override earlier ones.
+- `AppThemeBinding Light=..., Dark=...` for the theme; switching: `Application.Current.UserAppTheme = AppTheme.Dark/Light/Unspecified`.
+- `OnPlatform` and `OnIdiom` in XAML for differences of platforms and form factors (`Phone`, `Tablet`, `Desktop`, `Watch`, `TV`).
+- `IValueConverter` converters; CommunityToolkit.Maui has ready ones (`InvertedBoolConverter` and others).
+- Behaviors: `EventToCommandBehavior`, `TextValidationBehavior` etc. from CommunityToolkit.Maui; enabled by `UseMauiCommunityToolkit()` in `MauiProgram`.
+- Default styles by `TargetType`, named ones by `x:Key`; `Style TargetType="Page" ApplyToDerivedTypes="True"` for a shared background.
+- Do not nest a `CollectionView` in a `ScrollView` without a reason (virtualization is lost); the sample does so for short lists.
 
-- **Клавиатура Android в `Editor` (задача 050, собрано, на устройстве не проверено):** действие «Отправить» — `EditorHandler.Mapper.AppendToMapping`, `PlatformView.ImeOptions = ImeAction.Send`, `EditorAction` в `Platforms/Android/ChatEditorImeHandling.cs`. Чтобы клавиатура показала «Отправить», поле переводится в однострочный ввод (`SetRawInputType` без `TextFlagMultiLine`): в однострочном поле Android прокручивает длинный текст по горизонтали, а не переносит его. Это проверяет задача 016 (пункт 11). `KeyPress` у нативного поля начинается с `Handled = true`: клавиша, для которой обработчик не сбросил флаг, до поля не доходит. Gboard отправляет Backspace как `KEYCODE_DEL`, поэтому обработчик явно пропускает все клавиши, кроме Enter (правило — `Presentation/Utilities/ChatInputKeys`, задача 134; на устройстве не проверено).
-- **Прокрутка ленты к концу на Android (задача 159, на устройстве не проверено):** `CollectionView.ScrollTo(index, ScrollToPosition.End)` для строки выше окна показывает её верх, а не низ (наблюдение владельца, Galaxy S25, Android 17). Лента чата прокручивается к низу содержимого через `RecyclerView` (`Platforms/Android/TranscriptScroller`), а жест пользователя сам прокрутку не запускает.
-- **`SwipeView` и нажатие на Android (задача 162, на устройстве не проверено):** `Button` внутри `SwipeView` терял нажатие — вместо открытия раскрывались действия свайпа. Строка сессии открывается `TapGestureRecognizer` на всей строке, у `SwipeView` задан `Threshold`.
-- **Подпись APK:** релизный APK подписывается отладочным ключом сборочной машины, и сертификат меняется от релиза к релизу (v0.1.4 и v0.1.5 — разные SHA-256, проверено `apksigner verify --print-certs` 2026-10-31). Android не ставит APK с другой подписью поверх установленного: обновление требует удаления приложения с данными. Задача 163.
-- **Клавиши в `Editor` на Windows (проверено 2026-10-28, задача 056):** у `Editor` нет событий клавиш. Перехват — маппинг `EditorHandler.Mapper.AppendToMapping` и `PreviewKeyDown` у нативного WinUI `TextBox`: обычный `KeyDown` приходит уже после вставки перевода строки. Shift — `InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift)`. Так сделано поле чата `ChatEditor` (Enter — отправить, Shift+Enter — новая строка).
-- **Клавиатура Android и safe area (.NET 10, задача 095):** у `ContentPage` по умолчанию `SafeAreaEdges=None`, у layout — `Container`; клавиатура не входит в safe area layout. На семи корневых страницах стоит `SafeAreaEdges="All"` атрибутом, чтобы экранный ввод учитывался без дополнительного неявного стиля `ContentPage`, который перекрыл бы общий стиль `Page`. По [документации safe area](https://learn.microsoft.com/en-us/dotnet/maui/user-interface/safe-area?view=net-maui-10.0) для Android при необходимости `WindowSoftInputModeAdjust(Resize)` применяется вместе с `All`; [руководство по soft keyboard](https://learn.microsoft.com/en-us/dotnet/maui/android/platform-specifics/soft-keyboard-input-mode). Android target SDK текущей сборки — 36. Без режима окно панорамировалось и поле ввода оставалось под клавиатурой (Galaxy S25, Android 17, 2026-10-31); `App` включает `UseWindowSoftInputModeAdjust(Resize)` (задача 160, на устройстве после исправления не проверено).
+- **The Android keyboard in an `Editor` (task 050, built, not checked on a device):** the "Send" action is `EditorHandler.Mapper.AppendToMapping`, `PlatformView.ImeOptions = ImeAction.Send`, `EditorAction` in `Platforms/Android/ChatEditorImeHandling.cs`. For the keyboard to show "Send", the field is switched to single-line input (`SetRawInputType` without `TextFlagMultiLine`): in a single-line field Android scrolls long text horizontally instead of wrapping it. Task 016 checks this (item 11). `KeyPress` of the native field starts with `Handled = true`: a key for which the handler did not reset the flag does not reach the field. Gboard sends Backspace as `KEYCODE_DEL`, so the handler explicitly lets through all keys except Enter (the rule is `Presentation/Utilities/ChatInputKeys`, task 134; not checked on a device).
+- **Scrolling the feed to the end on Android (task 159, not checked on a device):** `CollectionView.ScrollTo(index, ScrollToPosition.End)` for a row above the window shows its top, not its bottom (the owner's observation, Galaxy S25, Android 17). The chat feed is scrolled to the bottom of the content through `RecyclerView` (`Platforms/Android/TranscriptScroller`), and the user's gesture does not start scrolling by itself.
+- **`SwipeView` and taps on Android (task 162, not checked on a device):** a `Button` inside a `SwipeView` lost the tap — the swipe actions opened instead. A session row is opened by a `TapGestureRecognizer` on the whole row, the `SwipeView` has a `Threshold`.
+- **APK signing:** the release APK is signed with the build machine's debug key, and the certificate changes from release to release (v0.1.4 and v0.1.5 have different SHA-256, checked with `apksigner verify --print-certs` on 2026-10-31). Android does not install an APK with another signature over the installed one: an update requires uninstalling the app with its data. Task 163.
+- **Keys in an `Editor` on Windows (checked 2026-10-28, task 056):** `Editor` has no key events. Interception is the `EditorHandler.Mapper.AppendToMapping` mapping and `PreviewKeyDown` of the native WinUI `TextBox`: the ordinary `KeyDown` comes after the line break is inserted. Shift — `InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift)`. This is how the `ChatEditor` chat field is made (Enter — send, Shift+Enter — a new line).
+- **The Android keyboard and the safe area (.NET 10, task 095):** a `ContentPage` has `SafeAreaEdges=None` by default, a layout `Container`; the keyboard is not part of the layout's safe area. The seven root pages have `SafeAreaEdges="All"` as an attribute, so that on-screen input is taken into account without an extra implicit `ContentPage` style that would override the shared `Page` style. Per the [safe area documentation](https://learn.microsoft.com/en-us/dotnet/maui/user-interface/safe-area?view=net-maui-10.0), on Android `WindowSoftInputModeAdjust(Resize)` is applied together with `All` when needed; [the soft keyboard guide](https://learn.microsoft.com/en-us/dotnet/maui/android/platform-specifics/soft-keyboard-input-mode). The Android target SDK of the current build is 36. Without the mode the window panned and the input field stayed under the keyboard (Galaxy S25, Android 17, 2026-10-31); `App` enables `UseWindowSoftInputModeAdjust(Resize)` (task 160, not checked on a device after the fix).
 
-## Разметка и списки
-- `Grid` (основной), `VerticalStackLayout`/`HorizontalStackLayout`, `FlexLayout` (перенос чипов), `AbsoluteLayout`, `ScrollView`.
-- Для коротких динамических списков `BindableLayout`; для длинных `CollectionView` с `LinearItemsLayout` или `GridItemsLayout` (сетка результатов: `GridItemsLayout` с `Span`, на узком экране две колонки, на широком больше; подгонять через `OnIdiom` или размер окна).
-- **Перенос чипов (задача 098):** у `FlexLayout` нет `Spacing`, зазор задан полями детей и отрицательным нижним полем контейнера. Ширина `Label` ограничивается `MaximumWidthRequest` из `SizeChanged` контейнера. Проверка на устройстве пока не выполнена.
-- **Прокрутка ленты чата (задача 097):** `CollectionView` с именем `Transcript` прокручивается через `ScrollTo(индекс, ScrollToPosition.End, animate: false)` внутри `Dispatcher.Dispatch` после изменения `Items`. Решение следует ли за концом ведёт `TranscriptFollower`: изменения строк всегда возобновляют follow, обновление содержимого карточки и размера — только пока follow включён. Направление пользовательской прокрутки берётся из `Scrolled.VerticalDelta` после фильтрации программной прокрутки, pending scroll и событий без вертикального движения; последний видимый индекс при движении вниз — сигнал возобновить follow, после чего лента позиционируется в конец. Корневые строки сообщений и прогонов сообщают об изменении размера. Android-сборка проверена, на устройстве не проверено.
-- `SelectionMode`, `SelectionChangedCommand`; после обработки выбор сбрасывать, иначе повторное нажатие не сработает (в примере этого нет — известная особенность).
-- `RefreshView` — стандартное pull-to-refresh MAUI; в примере используется Syncfusion `SfPullToRefresh`.
+## Layout and lists
+- `Grid` (the main one), `VerticalStackLayout`/`HorizontalStackLayout`, `FlexLayout` (wrapping chips), `AbsoluteLayout`, `ScrollView`.
+- For short dynamic lists `BindableLayout`; for long ones `CollectionView` with `LinearItemsLayout` or `GridItemsLayout` (the result grid: `GridItemsLayout` with `Span`, two columns on a narrow screen, more on a wide one; adjust through `OnIdiom` or the window size).
+- **Wrapping chips (task 098):** `FlexLayout` has no `Spacing`, the gap is set by the children's margins and a negative bottom margin of the container. The width of a `Label` is limited by `MaximumWidthRequest` from the container's `SizeChanged`. Not checked on a device yet.
+- **Scrolling the chat feed (task 097):** the `CollectionView` named `Transcript` is scrolled through `ScrollTo(index, ScrollToPosition.End, animate: false)` inside `Dispatcher.Dispatch` after `Items` change. The decision whether to follow the end is kept by `TranscriptFollower`: row changes always resume following, updates of card content and size only while following is on. The direction of the user's scroll comes from `Scrolled.VerticalDelta` after filtering out programmatic scrolling, a pending scroll and events without vertical movement; the last visible index while moving down is a signal to resume following, after which the feed is positioned at the end. Root message and run rows report size changes. The Android build is checked, not checked on a device.
+- `SelectionMode`, `SelectionChangedCommand`; reset the selection after handling, otherwise a repeated tap does not work (the sample does not do this — a known quirk).
+- `RefreshView` is the standard MAUI pull-to-refresh; the sample uses Syncfusion `SfPullToRefresh`.
 
-## Shell и навигация
-- `Shell` с `ShellContent`/`TabBar`/`FlyoutItem`; `Route` для верхнего уровня, `Routing.RegisterRoute` или `AddTransientWithShellRoute` для дочерних страниц.
-- `Shell.Current.GoToAsync("route?id=1")` для строки параметров, `GoToAsync("route", new ShellNavigationQueryParameters { {"key", obj} })` для объектов (одноразовая передача), `".."` — назад, `"//main"` — абсолютный маршрут.
-- Приёмник: `IQueryAttributable.ApplyQueryAttributes(IDictionary<string, object>)` или `[QueryProperty]`.
-- Для спецификации нужна нижняя навигация на узком экране и боковая на широком: `TabBar` для телефона, `Flyout` для десктопа; выбор через `OnIdiom` или раздельные оболочки (проверить, как лучше).
+## Shell and navigation
+- `Shell` with `ShellContent`/`TabBar`/`FlyoutItem`; `Route` for the top level, `Routing.RegisterRoute` or `AddTransientWithShellRoute` for child pages.
+- `Shell.Current.GoToAsync("route?id=1")` for a parameter string, `GoToAsync("route", new ShellNavigationQueryParameters { {"key", obj} })` for objects (a one-time hand-over), `".."` — back, `"//main"` — an absolute route.
+- The receiver: `IQueryAttributable.ApplyQueryAttributes(IDictionary<string, object>)` or `[QueryProperty]`.
+- The specification needs bottom navigation on a narrow screen and a side one on a wide screen: a `TabBar` for the phone, a `Flyout` for the desktop; the choice through `OnIdiom` or separate shells (check which is better).
 
 ## MVVM (CommunityToolkit.Mvvm)
-- `ObservableObject`, `[ObservableProperty]`, `[RelayCommand]` (асинхронные команды `AsyncRelayCommand`, отмена `IncludeCancelCommand = true`), `[NotifyCanExecuteChangedFor]`, `[NotifyPropertyChangedFor]`, `partial void OnXChanged(T value)`.
-- Асинхронная команда блокирует повторный вызов, пока выполняется, если `AllowConcurrentExecutions` не включён; это удобно для кнопки «Запустить».
-- `WeakReferenceMessenger` для сообщений между PageModel без прямых ссылок (например, «результат готов» → Галерея).
+- `ObservableObject`, `[ObservableProperty]`, `[RelayCommand]` (asynchronous commands `AsyncRelayCommand`, cancellation `IncludeCancelCommand = true`), `[NotifyCanExecuteChangedFor]`, `[NotifyPropertyChangedFor]`, `partial void OnXChanged(T value)`.
+- An asynchronous command blocks a repeated call while it runs unless `AllowConcurrentExecutions` is on; this is convenient for the "Run" button.
+- `WeakReferenceMessenger` for messages between PageModels without direct references (for example, "result ready" → Gallery).
 
-## Платформенные API (MAUI Essentials)
-- `Preferences` — несекретные настройки; не шифруется. Не для ключей.
-- `SecureStorage` — секреты (Keychain/Keystore/DPAPI); асинхронный `GetAsync/SetAsync/Remove`. Особенности: на Android данные привязаны к приложению, при автобэкапе и переустановке возможна потеря ключа шифрования (для приложений с `allowBackup="true"`, как в манифесте примера, нужны правила исключения; проверить по документации); на iOS и Mac нужны правильные Keychain-права для симулятора и распространения; в unpackaged Windows работает через DPAPI. Любой вызов оборачивать в `try/catch`: на некоторых устройствах он бросает исключение при недоступном хранилище.
-- `FileSystem.AppDataDirectory`, `CacheDirectory`, `OpenAppPackageFileAsync` (для `Resources/Raw`).
-- `FilePicker`, `MediaPicker` (референсные картинки: выбрать из галереи, снять, вставка из буфера), `Share`, `Clipboard`, `Launcher`, `Connectivity`, `DeviceInfo`, `DeviceDisplay`, `MainThread`, `SemanticScreenReader`, `Vibration`/`Haptic`.
-- Разрешения (`Permissions.RequestAsync<...>`) и их записи в манифестах нужны для камеры, чтения и записи фото.
+## Platform APIs (MAUI Essentials)
+- `Preferences` — non-secret settings; not encrypted. Not for keys.
+- `SecureStorage` — secrets (Keychain/Keystore/DPAPI); asynchronous `GetAsync/SetAsync/Remove`. Quirks: on Android the data is bound to the app, with auto backup and reinstall the encryption key may be lost (for apps with `allowBackup="true"`, as in the sample's manifest, exclusion rules are needed; check the documentation); on iOS and Mac the right Keychain entitlements are needed for the simulator and distribution; in unpackaged Windows it works through DPAPI. Wrap every call in `try/catch`: on some devices it throws when the store is unavailable.
+- `FileSystem.AppDataDirectory`, `CacheDirectory`, `OpenAppPackageFileAsync` (for `Resources/Raw`).
+- `FilePicker`, `MediaPicker` (reference pictures: pick from the gallery, take a photo, paste from the clipboard), `Share`, `Clipboard`, `Launcher`, `Connectivity`, `DeviceInfo`, `DeviceDisplay`, `MainThread`, `SemanticScreenReader`, `Vibration`/`Haptic`.
+- Permissions (`Permissions.RequestAsync<...>`) and their manifest entries are needed for the camera and for reading and writing photos.
 
-- **Картинка из файла на Windows (проверено 2026-10-28, задача 054):** `ImageSource.FromFile` с абсолютным путём, в котором есть `/` (`C:\…\Data\images/…/x.jpg`), картинку молча не показывает; тот же путь с `\` — показывает (проверено запуском у владельца). WinRT `StorageFile.GetFileFromPathAsync` ведёт себя так же: с `/` — 0x80070002 «файл не найден», с `\` — открывает (проверено в PowerShell). Использует ли MAUI именно этот вызов — не проверялось по исходникам. Вывод: путь к файлу для оболочки собирать с разделителями ОС (`FileImageStore.GetFullPath`), даже если в БД он хранится с `/`.
+- **A picture from a file on Windows (checked 2026-10-28, task 054):** `ImageSource.FromFile` with an absolute path that contains `/` (`C:\…\Data\images/…/x.jpg`) silently does not show the picture; the same path with `\` shows it (checked by a launch at the owner's). WinRT `StorageFile.GetFileFromPathAsync` behaves the same way: with `/` — 0x80070002 "file not found", with `\` — it opens (checked in PowerShell). Whether MAUI uses exactly this call was not checked in the sources. Conclusion: build the file path for the head with the OS separators (`FileImageStore.GetFullPath`), even if the DB stores it with `/`.
 
-## Сохранение изображения в галерею (из заметок: Android)
-- Android 10 (API 29) и выше: вставка через `MediaStore.Images.Media` с `ContentValues` (`DisplayName`, `MimeType`, `RelativePath = "Pictures/ImageGen"`, `IsPending`) и запись в `ContentResolver.OpenOutputStream` — разрешение записи не нужно. Android 9 и ниже: нужно разрешение `WRITE_EXTERNAL_STORAGE` и запись в публичную папку с запросом `MediaScanner` (проверить). Android 13 и выше для чтения чужих фото — `READ_MEDIA_IMAGES`; для сохранения собственных не требуется.
-- Код в `Platforms/Android` за интерфейсом ядра (например `IGallerySaver`), на других платформах свои реализации: iOS — `PHPhotoLibrary` (+ ключ `NSPhotoLibraryAddUsageDescription` в `Info.plist`), Mac Catalyst — `NSSavePanel`/Photos, Windows — `FileSavePicker` или копирование в `Pictures`.
-- Рядом хранится копия в собственном репозитории результатов, файл в галерее — экспорт.
+## Saving a picture to the gallery (from the notes: Android)
+- Android 10 (API 29) and higher: insert through `MediaStore.Images.Media` with `ContentValues` (`DisplayName`, `MimeType`, `RelativePath = "Pictures/ImageGen"`, `IsPending`) and write to `ContentResolver.OpenOutputStream` — no write permission is needed. Android 9 and lower: the `WRITE_EXTERNAL_STORAGE` permission and writing to a public folder with a `MediaScanner` request are needed (check). Android 13 and higher need `READ_MEDIA_IMAGES` to read other apps' photos; saving our own does not require it.
+- The code is in `Platforms/Android` behind a core interface (for example `IGallerySaver`), other platforms have their own implementations: iOS — `PHPhotoLibrary` (+ the `NSPhotoLibraryAddUsageDescription` key in `Info.plist`), Mac Catalyst — `NSSavePanel`/Photos, Windows — `FileSavePicker` or copying to `Pictures`.
+- A copy is kept in our own result repository next to it; the file in the gallery is an export.
 
-## Бэкап и перенос данных на Android (задача 115)
-- Приложение не участвует в автоматическом бэкапе: в `Platforms/Android/AndroidManifest.xml` стоит `android:allowBackup="false"`, плюс `android:fullBackupContent="@xml/backup_rules"` и `android:dataExtractionRules="@xml/data_extraction_rules"`.
-- Явные правила deny-all — defense in depth: документация Android не обещает, что инструмент переноса OEM учитывает один только флаг манифеста. `backup_rules.xml` (Android 11 и ниже) и `data_extraction_rules.xml` (Android 12+, секции `cloud-backup` и `device-transfer`) исключают все девять доменов схемы с `path="."`: `root`, `file`, `database`, `sharedpref`, `external`, `device_root`, `device_file`, `device_database`, `device_sharedpref`. Ни одного `include`.
-- Проверено: `ImageGen.Presentation.Tests/Design/AndroidBackupPolicyTests.cs` проверяет атрибуты манифеста, отсутствие `include` и точный набор доменов в обеих секциях; сборка Android и разбор итогового манифеста из APK (`aapt2 dump xmltree`) подтверждают, что правила попали в пакет.
-- **Не проверено на устройстве:** поведение переноса данных (D2D) на реальном телефоне. Source-тесты подтверждают конфигурацию, но не поведение OEM-инструмента.
-- Свой экспорт пользовательских данных (F7.6) ещё не реализован: приложение не умеет отдавать зашифрованную копию, поэтому и включать её в правила нечего.
+## Backup and data transfer on Android (task 115)
+- The app does not take part in automatic backup: `Platforms/Android/AndroidManifest.xml` has `android:allowBackup="false"`, plus `android:fullBackupContent="@xml/backup_rules"` and `android:dataExtractionRules="@xml/data_extraction_rules"`.
+- Explicit deny-all rules are defense in depth: the Android documentation does not promise that an OEM transfer tool respects the manifest flag alone. `backup_rules.xml` (Android 11 and lower) and `data_extraction_rules.xml` (Android 12+, the `cloud-backup` and `device-transfer` sections) exclude all nine domains of the schema with `path="."`: `root`, `file`, `database`, `sharedpref`, `external`, `device_root`, `device_file`, `device_database`, `device_sharedpref`. Not a single `include`.
+- Checked: `ImageGen.Presentation.Tests/Design/AndroidBackupPolicyTests.cs` checks the manifest attributes, the absence of `include` and the exact set of domains in both sections; the Android build and parsing the final manifest from the APK (`aapt2 dump xmltree`) confirm that the rules got into the package.
+- **Not checked on a device:** the behavior of data transfer (D2D) on a real phone. Source tests confirm the configuration, but not the behavior of the OEM tool.
+- Our own export of user data (F7.6) is not implemented yet: the app cannot give out an encrypted copy, so there is nothing to include in the rules.
 
-## Темизация, шрифты, иконки
-- Иконки через шрифт и `FontImageSource` (как в примере) или SVG через `MauiImage`.
-- Шрифты в `Resources/Fonts`, регистрация в `ConfigureFonts` с псевдонимом.
-- Цвета платформенных частей (Android `colors.xml`) дублируют палитру, не синхронизируются автоматически.
+## Theming, fonts, icons
+- Icons through a font and `FontImageSource` (as in the sample) or SVG through `MauiImage`.
+- Fonts in `Resources/Fonts`, registered in `ConfigureFonts` with an alias.
+- Colors of the platform parts (Android `colors.xml`) duplicate the palette and are not synchronized automatically.
 
-## Локализация
-- Ресурсы `.resx` + `CultureInfo`; в XAML через расширение разметки или обёртку над `ResourceManager`. Нужны русский и английский (F10.1). Строки в примере зашиты на английском.
+## Localization
+- `.resx` resources + `CultureInfo`; in XAML through a markup extension or a wrapper over `ResourceManager`. The UI is English only (F10.1, the owner's decision of 2026-10-31). The strings in the sample are hard-coded in English.
 
-## Доступность
-- `SemanticProperties.Description`, `Hint`, `HeadingLevel`; `AutomationProperties.IsInAccessibleTree`; минимальная цель касания 44; `SemanticScreenReader.Announce` для динамических сообщений; клавиатурная навигация на Windows (в примере обработчики `SingleSelectionFollowsFocus=false`, `IsTabStop`).
+## Accessibility
+- `SemanticProperties.Description`, `Hint`, `HeadingLevel`; `AutomationProperties.IsInAccessibleTree`; a minimum touch target of 44; `SemanticScreenReader.Announce` for dynamic messages; keyboard navigation on Windows (in the sample the handlers `SingleSelectionFollowsFocus=false`, `IsTabStop`).
 
-## Производительность
-- Включать компилируемые привязки и XAML SourceGen (в примере включены).
-- Крупные изображения: уменьшать превью (миниатюры в сетке), не грузить оригиналы; `Image.Source` из файла/потока, `ImageSource.FromFile`/`FromStream`; освобождать большие потоки.
-- Не создавать тысячи `View` в `BindableLayout`: для длинных лент `CollectionView`.
+## Performance
+- Enable compiled bindings and XAML SourceGen (enabled in the sample).
+- Large images: reduce previews (thumbnails in the grid), do not load originals; `Image.Source` from a file/stream, `ImageSource.FromFile`/`FromStream`; release large streams.
+- Do not create thousands of `View`s in a `BindableLayout`: `CollectionView` for long feeds.
 
-## Отладка и запуск
-- Windows: `dotnet build -f net10.0-windows10.0.19041.0`, запуск из Visual Studio или `dotnet run -f net10.0-windows10.0.19041.0`; Android: эмулятор и `dotnet build -t:Run -f net10.0-android` (проверить); iOS и Mac Catalyst только с Mac.
-- Hot Reload для XAML работает в Visual Studio/VS Code, в Debug.
-- Журнал: `builder.Logging.AddDebug()` (как в примере, только в `DEBUG`).
+## Debugging and running
+- Windows: `dotnet build -f net10.0-windows10.0.19041.0`, run from Visual Studio or `dotnet run -f net10.0-windows10.0.19041.0`; Android: an emulator and `dotnet build -t:Run -f net10.0-android` (check); iOS and Mac Catalyst only with a Mac.
+- XAML Hot Reload works in Visual Studio/VS Code, in Debug.
+- Logging: `builder.Logging.AddDebug()` (as in the sample, only in `DEBUG`).
 
-## Известные особенности из примера
-- Toast из CommunityToolkit.Maui на Windows не работает (в примере пропускается) — использовать Snackbar или собственное уведомление.
-- `Shell.Current.DisplayAlertAsync` — .NET 10 API; в более ранних версиях был `DisplayAlert`.
-- Windows: `CollectionView` по умолчанию выбирает элемент при фокусе; для клавиатурной доступности это отключено в `MauiProgram`.
+## Known quirks from the sample
+- The CommunityToolkit.Maui Toast does not work on Windows (the sample skips it) — use a Snackbar or our own notification.
+- `Shell.Current.DisplayAlertAsync` is a .NET 10 API; earlier versions had `DisplayAlert`.
+- Windows: `CollectionView` selects an item on focus by default; for keyboard accessibility this is disabled in `MauiProgram`.
 
-## Проверено пробной сборкой (2026-10-27, SDK 10.0.402, MAUI 10.0.110)
-Проверено в отдельной папке вне репозитория: шаблон `dotnet new maui` + центральные версии пакетов + сборка под Windows и Android + запуск под Windows.
-- Шаблон `dotnet new maui` создаёт пустое приложение (`MainPage` со счётчиком, `dotnet_bot.png`), `ApplicationId` `com.companyname.<имя>` и `$(MauiVersion)` в `PackageReference`. При `ManagePackageVersionsCentrally=true` атрибут `Version` в `PackageReference` запрещён: версии `Microsoft.Maui.Controls` и `Microsoft.Extensions.Logging.Debug` переносятся в `Directory.Packages.props`.
-- Файлы шаблона отформатированы табами: `dotnet format --verify-no-changes` падает, пока не выполнить один раз `dotnet format` без `--verify-no-changes` (при `.editorconfig` с `indent_style = space`).
-- С пакетом `CommunityToolkit.Maui` сборка падает с ошибкой `MCT001`, если в `MauiProgram` нет `.UseMauiCommunityToolkit()` сразу после `.UseMauiApp<App>()` (и `using CommunityToolkit.Maui;`).
-- Длинный путь к папке проекта ломает Windows-сборку: ошибка `MSB3030` про `WindowsAppSdk.AppxDeploymentExtensions.Desktop-EventLog-Instrumentation.dll` в `MsixContent`. Путь `C:\git\studious-goggles` подходит; клон в глубокую папку (например во временную) нет.
-- Строго типизированный класс из `.resx` без Visual Studio под Windows-целью не генерируется (под Android генерируется). Рабочий способ: `.resx` + вручную написанный класс доступа на `ResourceManager` и явный `LogicalName` у `EmbeddedResource` (имя ресурса проверено в собранной сборке).
-- `SecureStorage.Default.SetAsync/GetAsync` работает в неупакованном Windows-приложении (`WindowsPackageType=None`). `FileSystem.AppDataDirectory` там равен `%LOCALAPPDATA%\<издатель>\<ApplicationId>\Data` (у шаблона издатель `User Name`).
-- `dotnet build <slnx>` на Windows собирает MAUI-проект под все цели, включая iOS и Mac Catalyst; это долго. Для проверки ядра собирать и тестировать отдельные проекты.
+## Checked by a trial build (2026-10-27, SDK 10.0.402, MAUI 10.0.110)
+Checked in a separate folder outside the repository: the `dotnet new maui` template + central package versions + a build for Windows and Android + a launch on Windows.
+- The `dotnet new maui` template creates an empty app (`MainPage` with a counter, `dotnet_bot.png`), the `ApplicationId` `com.companyname.<name>` and `$(MauiVersion)` in `PackageReference`. With `ManagePackageVersionsCentrally=true` the `Version` attribute in `PackageReference` is forbidden: the versions of `Microsoft.Maui.Controls` and `Microsoft.Extensions.Logging.Debug` move to `Directory.Packages.props`.
+- The template files are formatted with tabs: `dotnet format --verify-no-changes` fails until `dotnet format` without `--verify-no-changes` is run once (with an `.editorconfig` with `indent_style = space`).
+- With the `CommunityToolkit.Maui` package the build fails with error `MCT001` if `MauiProgram` has no `.UseMauiCommunityToolkit()` right after `.UseMauiApp<App>()` (and `using CommunityToolkit.Maui;`).
+- A long path to the project folder breaks the Windows build: error `MSB3030` about `WindowsAppSdk.AppxDeploymentExtensions.Desktop-EventLog-Instrumentation.dll` in `MsixContent`. The path `C:\git\studious-goggles` works; a clone in a deep folder (for example a temporary one) does not.
+- A strongly typed class from `.resx` is not generated without Visual Studio for the Windows target (it is generated for Android). A working way: `.resx` + a hand-written accessor class on `ResourceManager` and an explicit `LogicalName` on the `EmbeddedResource` (the resource name was checked in the built assembly).
+- `SecureStorage.Default.SetAsync/GetAsync` works in an unpackaged Windows app (`WindowsPackageType=None`). `FileSystem.AppDataDirectory` there is `%LOCALAPPDATA%\<publisher>\<ApplicationId>\Data` (the template's publisher is `User Name`).
+- `dotnet build <slnx>` on Windows builds the MAUI project for all targets, including iOS and Mac Catalyst; it is slow. To check the core, build and test individual projects.
 
-## Что MAUI не даёт для этого проекта
-- Linux, Docker и веб: поэтому Web API + Vue вынесены в отдельную оболочку (`docs/architecture.md`, ADR 0001).
-- Шифрованная БД и фоновые сервисы: нужны отдельные решения.
-- **Темы MAUI без ThemeDictionaries (задача 062, собрано на Android):** `ResourceDictionary` с `ThemeDictionaries` в MAUI нет, поэтому шесть словарей (`Resources/Themes/<Стиль><Тема>.xaml` с code-behind) подменяются в `Application.Resources.MergedDictionaries` (`Services/MauiAppearanceApplier.cs`). Тема приложения — `Application.UserAppTheme`; системная — `Application.PlatformAppTheme` (не `RequestedTheme`: он показывает уже выбранную явно тему). Значения по платформе — `OnPlatform` (`WinUI`, `MacCatalyst`, `iOS`, `Android`); выравнивание и стиль шрифта — `x:Static` (`LayoutOptions.End`, `FontAttributes.Italic`).
-- **Копирование текста в MAUI (задача 055):** `Label` не выделяется, поэтому у ответа ассистента и у промпта прогона есть кнопка «Copy» (`Command="{Binding Copy.CopyCommand}"`), а «Copied» показывается через `CopyTextAction.IsCopied`. Долгое нажатие на сообщение не сделано. В Avalonia текст выделяется `SelectableTextBlock`.
-- **Стили MAUI на ресурсах Ig* (задача 064, собрано на Android):** `Resources/Styles/Styles.xaml` без ключей шаблона (`Colors.xaml` удалён). `IgControlHeight` — `OnPlatform` в `Themes/Common.xaml`, в стиле берётся через `StaticResource` (Common объединён первым в `App.xaml`): `DynamicResource` на `OnPlatform` не проверен. `Button.CornerRadius` в MAUI — `int`, поэтому в словарях темы есть `IgButtonCornerRadius` (`x:Int32`). Отдельный размер шрифта на iOS и Android (17 и 16) не применяется: `IgFontSizeBody` — обычное число (десктопное значение стиля). Классы `.primary`, `.ghost`, … — неявные стили (`Class="..."`); состояния кнопки — `VisualStateManager` в базовом стиле `Button`.
-- **Экран моделей сессии (задача 090):** страница и панель чата используют общий `Controls/SessionModelsView`. У `RadioButton` нет `Command`, поэтому выбор модели ассистента идёт через `CheckedChanged` в code-behind этого control; группа задаётся `RadioButtonGroup.GroupName` на контейнере списка. Порядок кнопок Save/Cancel задаётся там же через `Grid.SetColumn`: на Mac Catalyst Cancel слева. Вкладки и общие кнопки разделяют выбор изображения и ассистента; проверить клавиатурную навигацию и диктор вручную.
+## What MAUI does not give this project
+- Linux, Docker and the web: hence Web API + Vue are a separate head (`docs/architecture.md`, ADR 0001).
+- An encrypted DB and background services: separate solutions are needed.
+- **MAUI themes without ThemeDictionaries (task 062, built on Android):** MAUI has no `ResourceDictionary` with `ThemeDictionaries`, so six dictionaries (`Resources/Themes/<Style><Theme>.xaml` with code-behind) are swapped in `Application.Resources.MergedDictionaries` (`Services/MauiAppearanceApplier.cs`). The app theme is `Application.UserAppTheme`; the system one is `Application.PlatformAppTheme` (not `RequestedTheme`: it shows the theme already chosen explicitly). Values per platform are `OnPlatform` (`WinUI`, `MacCatalyst`, `iOS`, `Android`); alignment and font style are `x:Static` (`LayoutOptions.End`, `FontAttributes.Italic`).
+- **Copying text in MAUI (task 055):** a `Label` cannot be selected, so the assistant's answer and the run's prompt have a "Copy" button (`Command="{Binding Copy.CopyCommand}"`), and "Copied" is shown through `CopyTextAction.IsCopied`. Long press on a message is not done. In Avalonia the text is selectable with `SelectableTextBlock`.
+- **MAUI styles on the Ig* resources (task 064, built on Android):** `Resources/Styles/Styles.xaml` without the template's keys (`Colors.xaml` removed). `IgControlHeight` is `OnPlatform` in `Themes/Common.xaml`, taken in the style through `StaticResource` (Common is merged first in `App.xaml`): `DynamicResource` on `OnPlatform` is not checked. `Button.CornerRadius` in MAUI is an `int`, so the theme dictionaries have `IgButtonCornerRadius` (`x:Int32`). A separate font size on iOS and Android (17 and 16) is not applied: `IgFontSizeBody` is an ordinary number (the style's desktop value). The classes `.primary`, `.ghost`, … are implicit styles (`Class="..."`); the button states are a `VisualStateManager` in the base `Button` style.
+- **The session models screen (task 090):** the page and the chat panel use the shared `Controls/SessionModelsView`. `RadioButton` has no `Command`, so choosing the assistant model goes through `CheckedChanged` in the code-behind of this control; the group is set by `RadioButtonGroup.GroupName` on the list container. The order of the Save/Cancel buttons is set there too through `Grid.SetColumn`: on Mac Catalyst Cancel is on the left. Tabs and shared buttons separate the image and assistant choice; check keyboard navigation and the screen reader by hand.
 
-## Меню и ускорители (задача 073)
-- Строка меню — `ContentPage.MenuBarItems` (`MenuBarItem` → `MenuFlyoutItem`). Ускоритель — `KeyboardAccelerator` в `MenuFlyoutItem.KeyboardAccelerators`; модификатор через `Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Cmd}"` (собирается на Android, компилятор XAML принимает).
-- Буквенные ускорители без модификатора не ставим: они перехватывают ввод в поле чата (поэтому R, E и Ctrl+C без ускорителя).
-- Выбранная карточка — `ChatPageModel.SelectedCard`: тап по карточке (`TapGestureRecognizer` с `x:Reference Page`) вызывает `SelectCardCommand`; пункты меню «Card» привязаны к `SelectedCard.<Команда>`.
-- **Не проверено:** поведение строки меню и ускорителей под Windows и Mac Catalyst (нужны Windows и macOS, пункт в задаче 016); на телефонах `MenuBarItems` не показываются.
-- **Windows: `TouchBehavior` и кнопки внутри карточки** (задача 088, проверено на Windows 2026-11-01): `TouchBehavior` CommunityToolkit.Maui на родительском `Border` захватывает указатель, и вложенная `Button` не получает `Click` при клике мышью; UI Automation (`InvokePattern`) и правый клик при этом работают. Поэтому у карточки чата `TouchBehavior` выключен на WinUI (`IsEnabled="{OnPlatform WinUI=False, Default=True}"`), а «…» открывает `ContextFlyout` карточки из кода (`CardActionsFlyout`).
-- **`TouchBehavior` (CommunityToolkit.Maui 15.0.1):** `ShouldMakeChildrenInputTransparent` по умолчанию `true`; для `Border` с layout-содержимым поведение делает дочерние элементы прозрачными для ввода. Если внутри есть кнопки, устанавливать `false`. `Behavior` не наследует `BindingContext`: привязывать его явно к `BindingContext` элемента-хозяина через `x:Reference` и указывать `x:DataType` для компилируемой команды.
+## Menus and accelerators (task 073)
+- The menu bar is `ContentPage.MenuBarItems` (`MenuBarItem` → `MenuFlyoutItem`). An accelerator is a `KeyboardAccelerator` in `MenuFlyoutItem.KeyboardAccelerators`; the modifier through `Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Cmd}"` (builds on Android, the XAML compiler accepts it).
+- We do not set letter accelerators without a modifier: they intercept input in the chat field (hence R, E and Ctrl+C have no accelerator).
+- The selected card is `ChatPageModel.SelectedCard`: a tap on a card (`TapGestureRecognizer` with `x:Reference Page`) calls `SelectCardCommand`; the "Card" menu items are bound to `SelectedCard.<Command>`.
+- **Not checked:** the behavior of the menu bar and accelerators on Windows and Mac Catalyst (Windows and macOS are needed, an item in task 016); on phones `MenuBarItems` are not shown.
+- **Windows: `TouchBehavior` and buttons inside a card** (task 088, checked on Windows 2026-11-01): the CommunityToolkit.Maui `TouchBehavior` on the parent `Border` captures the pointer, and a nested `Button` does not get `Click` on a mouse click; UI Automation (`InvokePattern`) and the right click still work. So the chat card's `TouchBehavior` is off on WinUI (`IsEnabled="{OnPlatform WinUI=False, Default=True}"`), and "…" opens the card's `ContextFlyout` from code (`CardActionsFlyout`).
+- **`TouchBehavior` (CommunityToolkit.Maui 15.0.1):** `ShouldMakeChildrenInputTransparent` is `true` by default; for a `Border` with layout content the behavior makes the children transparent to input. If there are buttons inside, set `false`. A `Behavior` does not inherit the `BindingContext`: bind it explicitly to the host element's `BindingContext` through `x:Reference` and set `x:DataType` for a compiled command.
 
-## Публикация MAUI под Windows с RID
-- Для многоцелевого MAUI-проекта `dotnet publish -f net10.0-windows10.0.19041.0 -r <rid>` задаёт RID при restore всех target frameworks; при restore Android может завершиться `NU1102` для `Mono.win-x64`. `-p:TargetFrameworks=net10.0-windows10.0.19041.0` сужает restore приложения, но глобальное MSBuild-свойство попадает и в project references: в запуске 10 это привело к `NETSDK1005` — Core, Data и Presentation ожидали отсутствующий `net10.0`.
-- `-p:RuntimeIdentifierOverride=<rid>` не задаёт SDK RID: в релизе `v0.1.4` (проверено 2026-10-29) пакет `win-arm64` содержал x64 PE-файлы.
-- Рабочий способ проверен 2026-10-30 в GitHub Actions `release.yml`, запуск 11 (`441c03ac3cbb9cc0525e8d51f1da5093e1add720`): передать `-p:ImageGenWindowsRid=<rid>`, а в `ImageGen.Maui.csproj` установить `RuntimeIdentifier` только когда target platform — Windows и свойство задано. Так project references не получают RID и сохраняют свои TFM.
-- Шаг `Check PE machine` проверяет `ImageGen.Maui.exe`, `coreclr.dll` и `Microsoft.WindowsAppRuntime.Bootstrap.dll` до упаковки. Артефакты запуска 11 дополнительно проверены через `file`: все пять проверенных PE-файлов x64 пакета (`ImageGen.Maui.exe`, `coreclr.dll`, `hostfxr.dll`, `Microsoft.WindowsAppRuntime.Bootstrap.dll`, `Microsoft.ui.xaml.dll`) — x86-64; в arm64 пакете те же файлы — AArch64. Запуск пакета на Windows on ARM не проверен.
-
+## Publishing MAUI for Windows with a RID
+- For a multi-target MAUI project `dotnet publish -f net10.0-windows10.0.19041.0 -r <rid>` sets the RID during the restore of all target frameworks; the Android restore may end with `NU1102` for `Mono.win-x64`. `-p:TargetFrameworks=net10.0-windows10.0.19041.0` narrows the app's restore, but a global MSBuild property also gets into project references: in run 10 this led to `NETSDK1005` — Core, Data and Presentation expected the missing `net10.0`.
+- `-p:RuntimeIdentifierOverride=<rid>` does not set the SDK RID: in release `v0.1.4` (checked 2026-10-29) the `win-arm64` package contained x64 PE files.
+- A working way was checked on 2026-10-30 in GitHub Actions `release.yml`, run 11 (`441c03ac3cbb9cc0525e8d51f1da5093e1add720`): pass `-p:ImageGenWindowsRid=<rid>`, and in `ImageGen.Maui.csproj` set `RuntimeIdentifier` only when the target platform is Windows and the property is set. This way project references do not get the RID and keep their TFMs.
+- The `Check PE machine` step checks `ImageGen.Maui.exe`, `coreclr.dll` and `Microsoft.WindowsAppRuntime.Bootstrap.dll` before packaging. The artifacts of run 11 were additionally checked with `file`: all five checked PE files of the x64 package (`ImageGen.Maui.exe`, `coreclr.dll`, `hostfxr.dll`, `Microsoft.WindowsAppRuntime.Bootstrap.dll`, `Microsoft.ui.xaml.dll`) are x86-64; in the arm64 package the same files are AArch64. Running the package on Windows on ARM was not checked.

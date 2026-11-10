@@ -1,392 +1,392 @@
-# Спецификация: мульти-провайдерный клиент для генерации изображений
+# Specification: a multi-provider client for image generation
 
-Статус: черновик
-Код: скелет v0.1 в `ImageGen/` (`docs/architecture.md`)
-Цели и решения по платформе, добавленные после спецификации: `docs/product.md`.
+Status: draft
+Code: the v0.1 skeleton in `ImageGen/` (`docs/architecture.md`)
+Platform goals and decisions added after the specification: `docs/product.md`.
 
 Oct 27, 2026 · @Roman
 
-## Цель и охват
+## Goal and scope
 
-Продукт — клиент для генерации изображений: ключи встроенных провайдеров fal.ai, OpenRouter и Together AI подключаются один раз; Together доступен только для изображений и его live-ответ пока не проверен. Другие OpenAI-совместимые провайдеры добавляются через конфиг. Один промпт уходит сразу в несколько моделей, результаты появляются рядом с ценой и временем. Документ описывает функциональность и интерфейс.
+The product is a client for image generation: the keys of the built-in providers fal.ai, OpenRouter and Together AI are connected once; Together is available only for images and its live response has not been verified yet. Other OpenAI-compatible providers are added through the config. One prompt goes to several models at once, the results appear side by side with price and time. The document describes the functionality and the UI.
 
-**Принципы**
+**Principles**
 
-- Свои ключи (BYOK): приложение не продаёт генерации и не стоит между пользователем и провайдером по деньгам.
-- Один промпт, много моделей: параллельный запуск — основной сценарий, а не надстройка над одиночной генерацией.
-- Единые параметры: соотношение сторон, число картинок, seed задаются один раз, приложение переводит их в параметры каждого провайдера и показывает, что модель не поддерживает.
-- Результат не теряется: ссылки провайдеров истекают (fal хранит файл настраиваемый срок), поэтому результат сохраняется у пользователя сразу после готовности.
-- Прозрачность: у каждого запуска видны провайдер, модель, параметры, время и стоимость. Если провайдер отфильтровал картинку, это показано явно, а не пустым кадром.
-- Модерация провайдеров не обходится: приложение даёт только те настройки, которые провайдер сам документирует (например, переключатель safety checker у fal).
+- Own keys (BYOK): the app does not sell generations and does not stand between the user and the provider in money matters.
+- One prompt, many models: a parallel run is the main scenario, not an add-on over a single generation.
+- Common parameters: aspect ratio, number of pictures and seed are set once; the app translates them into each provider's parameters and shows what a model does not support.
+- The result is never lost: provider links expire (fal keeps the file for a configurable time), so the result is saved on the user's side right after it is ready.
+- Transparency: every run shows the provider, model, parameters, time and cost. If the provider filtered a picture, this is shown explicitly, not as an empty frame.
+- Provider moderation is not bypassed: the app offers only the settings the provider itself documents (for example, the safety checker switch at fal).
 
-**В объёме первой версии:** генерация из текста, редактирование по референсным картинкам, параллельный запуск и сравнение, галерея, учёт расходов.
+**In the scope of the first version:** generation from text, editing from reference pictures, parallel run and comparison, gallery, spending tracking.
 
-**Вне объёма первых версий:** видео и аудио (генерация музыки, звуков и видео запланирована для следующих версий: ADR 0027, задачи 199–209; спецификация поведения появится вместе с реализацией), обучение LoRA, редактор холста с масками, многопользовательский режим.
+**Out of the scope of the first versions:** video and audio (generation of music, sounds and video is planned for later versions: ADR 0027, tasks 199–209; the behavior specification comes with the implementation), LoRA training, a canvas editor with masks, multi-user mode.
 
-## Пользовательские сценарии
+## User scenarios
 
-Главный сценарий: один промпт, несколько моделей, результаты рядом. Остальные его обслуживают.
+The main scenario: one prompt, several models, results side by side. The others serve it.
 
-1. **Первая настройка.** Пользователь вводит ключи встроенных провайдеров fal, OpenRouter и Together AI; Together предоставляет только image models и не участвует в выборе модели ассистента. Другие провайдеры пользователь добавляет через конфиг. Приложение проверяет ключи и показывает каталог моделей.
-2. **Один промпт на несколько моделей.** Пользователь выбирает набор моделей (например «Фотореализм»), пишет промпт, нажимает «Запустить». Результаты появляются по мере готовности, под каждым видны модель, время и цена.
-3. **Сравнение.** Пользователь открывает два результата рядом, приближает деталь, отмечает лучший и добавляет его в избранное.
-4. **Доработка.** Лучший результат становится референсом, промпт меняется, запуск идёт на двух моделях из набора.
-5. **Отказ или фильтр.** Одна модель вернула чёрный кадр или ошибку. Пользователь видит причину и одним нажатием запускает тот же промпт на другой модели.
-6. **Повтор с изменением.** Пользователь открывает прошлый запуск из истории, меняет один параметр (например seed) и запускает снова.
-7. **Контроль расходов.** Пользователь смотрит траты за месяц по провайдерам и моделям и задаёт месячный лимит.
-8. **Новая модель.** Пользователь находит в каталоге свежую модель, пробует её на том же промпте и добавляет в свой набор.
+1. **First setup.** The user enters the keys of the built-in providers fal, OpenRouter and Together AI; Together provides only image models and does not take part in choosing the assistant model. The user adds other providers through the config. The app checks the keys and shows the model catalog.
+2. **One prompt for several models.** The user chooses a model set (for example "Photorealism"), writes a prompt and presses "Run". Results appear as they are ready; each shows the model, time and price.
+3. **Comparison.** The user opens two results side by side, zooms into a detail, marks the best one and adds it to favorites.
+4. **Refinement.** The best result becomes a reference, the prompt changes, the run goes to two models of the set.
+5. **Refusal or filter.** One model returned a black frame or an error. The user sees the reason and with one tap runs the same prompt on another model.
+6. **Repeat with a change.** The user opens a past run from the history, changes one parameter (for example the seed) and runs again.
+7. **Spending control.** The user looks at the month's spending by provider and model and sets a monthly limit.
+8. **A new model.** The user finds a fresh model in the catalog, tries it on the same prompt and adds it to their set.
 
-## Функциональные требования
+## Functional requirements
 
-Приоритеты: **P0** — нужно для первой версии, **P1** — следующая очередь, **P2** — позже.
+Priorities: **P0** — needed for the first version, **P1** — the next round, **P2** — later.
 
-### 1. Подключения к провайдерам
+### 1. Provider connections
 
-- **F1.1 (P0)** Ключ вводится для каждого из трёх провайдеров отдельно, можно подключить любое подмножество.
-- **F1.2 (P0)** При сохранении ключ проверяется, статус виден всегда: «работает», «неверный ключ», «нет связи».
-- **F1.3 (P0)** Сохранённый ключ не показывается целиком, виден только конец. Ключ можно заменить или удалить.
-- **F1.4 (P1)** Несколько подключений к одному провайдеру (например личный и рабочий ключ), у каждого своё имя.
-- **F1.5 (P2)** Баланс или остаток средств, если провайдер отдаёт его по API.
+- **F1.1 (P0)** A key is entered for each of the three providers separately; any subset can be connected.
+- **F1.2 (P0)** On saving, the key is checked; the status is always visible: "works", "invalid key", "no connection".
+- **F1.3 (P0)** A saved key is never shown whole, only its end is visible. The key can be replaced or deleted.
+- **F1.4 (P1)** Several connections to one provider (for example a personal and a work key), each with its own name.
+- **F1.5 (P2)** The balance or remaining funds, if the provider returns it through the API.
 
-### 2. Каталог моделей
+### 2. Model catalog
 
-- **F2.1 (P0)** Единый список моделей всех подключённых провайдеров: название, провайдер, оценка цены за запуск, число референсов, пометка о лицензии, если она известна (например «некоммерческая»).
-- **F2.2 (P0)** Поиск и фильтры: провайдер, цена, поддержка референсов, формат вывода, возможность вернуть текст вместе с картинкой.
-- **F2.3 (P0)** Карточка модели: описание, поддерживаемые параметры с допустимыми значениями, цена с единицей (за картинку, за мегапиксель, за токены), ограничения (картинок за запрос, референсов, наличие seed).
-- **F2.4 (P1)** Список OpenRouter обновляется из его API автоматически, новые модели получают метку «новая».
-- **F2.5 (P1)** Модель fal добавляется вручную по идентификатору: приложение читает схему входа модели и строит поля параметров. У OpenAI-совместимого провайдера модели перечисляются в конфиге (`imageModels`), без чтения схемы.
-- **F2.6 (P1)** Одна и та же модель у разных провайдеров (например FLUX) показывается как варианты с разной ценой.
-- **F2.7 (P1)** Избранные и скрытые модели.
+- **F2.1 (P0)** One list of the models of all connected providers: name, provider, price estimate per run, number of references, a license mark if known (for example "non-commercial").
+- **F2.2 (P0)** Search and filters: provider, price, reference support, output format, the ability to return text together with the picture.
+- **F2.3 (P0)** A model card: description, supported parameters with allowed values, price with a unit (per picture, per megapixel, per tokens), limits (pictures per request, references, seed availability).
+- **F2.4 (P1)** The OpenRouter list is refreshed from its API automatically; new models get a "new" label.
+- **F2.5 (P1)** A fal model is added by hand by its identifier: the app reads the model's input schema and builds the parameter fields. For an OpenAI-compatible provider the models are listed in the config (`imageModels`), without reading a schema.
+- **F2.6 (P1)** The same model at different providers (for example FLUX) is shown as variants with different prices.
+- **F2.7 (P1)** Favorite and hidden models.
 
-### 3. Наборы моделей и пресеты
+### 3. Model sets and presets
 
-- **F3.1 (P0)** Именованный набор моделей для одновременного запуска, выбирается одним нажатием.
-- **F3.2 (P0)** Быстрый выбор галочками в каталоге без создания набора.
-- **F3.3 (P1)** Пресет общих параметров (соотношение сторон, число картинок, качество, формат) отдельно от набора.
-- **F3.4 (P1)** Для модели внутри набора можно задать собственные значения (например качество high у модели OpenAI).
-- **F3.5 (P2)** Стартовые наборы («Фотореализм», «Быстрые черновики», «Текст на картинке»), собранные по каталогу.
+- **F3.1 (P0)** A named model set for a simultaneous run, chosen with one tap.
+- **F3.2 (P0)** Quick selection with checkboxes in the catalog without creating a set.
+- **F3.3 (P1)** A preset of common parameters (aspect ratio, number of pictures, quality, format) separate from the set.
+- **F3.4 (P1)** A model inside a set can have its own values (for example high quality for an OpenAI model).
+- **F3.5 (P2)** Starter sets ("Photorealism", "Quick drafts", "Text in the picture") assembled from the catalog.
 
-### 4. Ввод запроса
+### 4. Request input
 
-- **F4.1 (P0)** Поле промпта. Негативный промпт показывается, только если его принимает хотя бы одна выбранная модель.
-- **F4.2 (P0)** Общие параметры для всех моделей: соотношение сторон, разрешение, число картинок на модель, seed, формат, качество.
-- **F4.3 (P0)** Для каждой выбранной модели видно, какие общие параметры она применит, заменит или проигнорирует. Если модель принимает одну картинку за запрос, приложение само делает несколько запросов.
-- **F4.4 (P0)** Оценка стоимости до запуска: сумма по моделям и числу запусков; неизвестная часть обозначена отдельно, оценка по мегапикселям помечена «≈».
-- **F4.5 (P1)** Референсные картинки: загрузка, вставка, ссылка. Модели, которые не вмещают столько референсов (лимиты от 1 до 16), помечаются, приложение предлагает убрать лишние.
-- **F4.6 (P1)** Расширенные параметры провайдера (например улучшение промпта у fal, выбор провайдера у OpenRouter) в сворачиваемом блоке.
-- **F4.7 (P1)** Переключатель safety checker там, где провайдер его документирует. По умолчанию действует поведение провайдера, рядом пояснение, что у части моделей отключить фильтр нельзя.
-- **F4.8 (P2)** Улучшение промпта по просьбе, с показом «до и после»; применять или нет, решает пользователь.
-- **F4.9 (P0)** Img2Text: по готовой картинке (загруженной, из галереи или результата) создаётся текстовое описание или промпт. Результат подставляется в поле промпта только по действию пользователя; провайдер и модель для описания видны, стоимость учитывается как у обычного задания.
+- **F4.1 (P0)** The prompt field. A negative prompt is shown only if at least one selected model accepts it.
+- **F4.2 (P0)** Common parameters for all models: aspect ratio, resolution, number of pictures per model, seed, format, quality.
+- **F4.3 (P0)** For each selected model it is visible which common parameters it applies, replaces or ignores. If a model accepts one picture per request, the app makes several requests itself.
+- **F4.4 (P0)** A cost estimate before the run: the sum over models and the number of runs; the unknown part is marked separately, an estimate by megapixels is marked "≈".
+- **F4.5 (P1)** Reference pictures: upload, paste, link. Models that cannot take that many references (limits from 1 to 16) are marked, the app offers to remove the extra ones.
+- **F4.6 (P1)** Advanced provider parameters (for example prompt enhancement at fal, provider choice at OpenRouter) in a collapsible block.
+- **F4.7 (P1)** A safety checker switch where the provider documents it. By default the provider's behavior applies, with an explanation next to it that for some models the filter cannot be turned off.
+- **F4.8 (P2)** Prompt improvement on request, with a "before and after" view; the user decides whether to apply it.
+- **F4.9 (P0)** Img2Text: from a finished picture (uploaded, from the gallery or a result) a text description or a prompt is created. The result goes into the prompt field only by the user's action; the provider and model of the description are visible, the cost is accounted as for an ordinary job.
 
-### 5. Запуск и задания
+### 5. Runs and jobs
 
-- **F5.1 (P0)** «Запустить» создаёт группу запусков: по заданию на модель.
-- **F5.2 (P0)** Задания идут параллельно и независимо, сбой одного не влияет на остальные.
-- **F5.3 (P0)** Состояния задания: в очереди, идёт, готово, ошибка, отменено, отфильтровано. Позиция в очереди показывается там, где провайдер её отдаёт.
-- **F5.4 (P0)** Отмена одного задания и всей группы. Если провайдер не гарантирует остановку, статус «запрос на отмену отправлен».
-- **F5.5 (P0)** Повтор задания: тот же запрос, с другим seed, на другой модели.
-- **F5.6 (P1)** Если задание долго не отвечает, приложение предлагает подождать или отменить. Порог настраивается.
-- **F5.7 (P1)** Ограничение числа одновременных заданий на провайдера, чтобы не упереться в лимиты.
-- **F5.8 (P1)** Уведомление о завершении группы, когда приложение свёрнуто.
-- **F5.9 (P2)** Пониженный приоритет для фоновых запусков, если провайдер его поддерживает.
+- **F5.1 (P0)** "Run" creates a run group: one job per model.
+- **F5.2 (P0)** Jobs run in parallel and independently; a failure of one does not affect the others.
+- **F5.3 (P0)** Job states: queued, running, done, failed, cancelled, filtered. The queue position is shown where the provider returns it.
+- **F5.4 (P0)** Cancelling one job and the whole group. If the provider does not guarantee stopping, the status is "cancellation request sent".
+- **F5.5 (P0)** Repeating a job: the same request, with another seed, on another model.
+- **F5.6 (P1)** If a job does not answer for a long time, the app offers to wait or cancel. The threshold is configurable.
+- **F5.7 (P1)** A limit of concurrent jobs per provider, so as not to hit the rate limits.
+- **F5.8 (P1)** A notification when a group finishes while the app is minimized.
+- **F5.9 (P2)** A lower priority for background runs if the provider supports it.
 
-### 6. Результаты и сравнение
+### 6. Results and comparison
 
-- **F6.1 (P0)** Сетка результатов: карточка на задание с миниатюрой, моделью, временем, ценой и статусом. Карточка оживает, как только результат готов.
-- **F6.2 (P0)** Просмотр результата в модальном окне на всю клиентскую область; исходный размер вписывается без обрезки. Можно листать успешные результаты той же группы. Нативный fullscreen: Avalonia и MAUI Android (задача137), MAUI Windows (139); iOS/Mac Catalyst остаются непроверенными.
-- **F6.3 (P0)** Сравнение двух успешных результатов одной сессии: открыть из меню карточки и выбрать вторую картинку с подписью модели, seed и цены. Показывать рядом или поверх друг друга со слайдером; масштаб и сдвиг синхронны и нормализованы к viewport. Сохранять исходные пропорции. Если сессия или файл уже удалены, показать сообщение и закрыть сравнение; после закрытия освободить загруженные изображения.
-- **F6.4 (P0)** Действия над результатом: скачать, копировать, поделиться, в избранное, использовать как референс, повторить, удалить.
-- **F6.5 (P0)** Отфильтрованный провайдером результат показывается отдельной карточкой с пояснением и кнопкой «запустить на другой модели».
-- **F6.6 (P1)** Отметка «лучший в группе» и оценка. Накопленные отметки дают сводку: какая модель чаще выигрывает на ваших промптах.
-- **F6.7 (P1)** Полные параметры запуска: что реально отправлено провайдеру и какой seed он вернул.
-- **F6.8 (P2)** Серия промптов: таблица, где строки — промпты, столбцы — модели.
+- **F6.1 (P0)** A result grid: a card per job with a thumbnail, model, time, price and status. The card comes alive as soon as the result is ready.
+- **F6.2 (P0)** Viewing a result in a modal window over the whole client area; the original size is fitted without cropping. The successful results of the same group can be paged through. Native fullscreen: Avalonia and MAUI Android (task 137), MAUI Windows (139); iOS/Mac Catalyst stay unverified.
+- **F6.3 (P0)** Comparing two successful results of one session: open from the card menu and choose the second picture with a caption of model, seed and price. Show side by side or overlaid with a slider; zoom and offset are synchronized and normalized to the viewport. Keep the original proportions. If the session or the file is already deleted, show a message and close the comparison; after closing, release the loaded images.
+- **F6.4 (P0)** Actions on a result: download, copy, share, add to favorites, use as a reference, repeat, delete.
+- **F6.5 (P0)** A result filtered by the provider is shown as a separate card with an explanation and a "run on another model" button.
+- **F6.6 (P1)** A "best in group" mark and a rating. The accumulated marks give a summary: which model wins more often on your prompts.
+- **F6.7 (P1)** The full run parameters: what was actually sent to the provider and which seed it returned.
+- **F6.8 (P2)** A prompt series: a table where rows are prompts and columns are models.
 
-### 7. Галерея и история
+### 7. Gallery and history
 
-- **F7.1 (P0)** Сохраняются все запуски: картинка, промпт, параметры, модель, провайдер, время, цена.
-- **F7.2 (P0)** Картинка скачивается и сохраняется сразу при готовности: fal хранит файл настраиваемый срок, OpenRouter и OpenAI-совместимый провайдер отдают картинку только в ответе.
-- **F7.3 (P0)** Лента истории по группам. Открытие группы возвращает композер с тем же промптом, параметрами и набором; галерея всех сохранённых успешных изображений открывает исходную сессию.
-- **F7.4 (P1)** Фильтры галереи по модели и периоду (всё время, последние 7 или 30 календарных дней). Полнотекстовый поиск, фильтр провайдера отдельно от модели, избранное и оценки пока не реализованы.
-- **F7.5 (P1)** Теги и коллекции.
-- **F7.6 (P1)** Экспорт и резервная копия: картинки и файл с описаниями запусков.
-- **F7.7 (P1)** Удаление с подтверждением. Независимый журнал сохраняет платные операции после удаления картинки или сессии; неизвестная цена не считается нулевой.
-- **F7.8 (P2)** Синхронизация между устройствами (зависит от выбора платформы).
+- **F7.1 (P0)** All runs are saved: picture, prompt, parameters, model, provider, time, price.
+- **F7.2 (P0)** The picture is downloaded and saved as soon as it is ready: fal keeps the file for a configurable time, OpenRouter and OpenAI-compatible providers return the picture only in the response.
+- **F7.3 (P0)** A history feed by groups. Opening a group brings back the composer with the same prompt, parameters and set; the gallery of all saved successful images opens the source session.
+- **F7.4 (P1)** Gallery filters by model and period (all time, the last 7 or 30 calendar days). Full-text search, a provider filter separate from the model, favorites and ratings are not implemented yet.
+- **F7.5 (P1)** Tags and collections.
+- **F7.6 (P1)** Export and backup: pictures and a file with run descriptions.
+- **F7.7 (P1)** Deleting with confirmation. An independent ledger keeps the paid operations after a picture or session is deleted; an unknown price is not counted as zero.
+- **F7.8 (P2)** Synchronization between devices (depends on the platform choice).
 
-### 8. Расходы
+### 8. Spending
 
-- **F8.1 (P0)** Стоимость задания: оценка до запуска, фактическая сумма после (если провайдер её возвращает, как OpenRouter через usage.cost), иначе цена по прайсу с пометкой «≈». Повторная запись обновляет ту же операцию; нулевая цена хранится отдельно от неизвестной.
-- **F8.2 (P0)** Итог по группе запусков.
-- **F8.3 (P1)** Экран расходов: за локальный день, ISO-неделю (с понедельника), локальный месяц, по провайдеру и модели; отдельно показывается число операций с неизвестной ценой по существующим сессиям.
-- **F8.4 (P1)** Месячный лимит и порог «предупредить, если запуск стоит больше X». Порог выключен по умолчанию; ручной запуск требует подтверждения, а для ассистента предупреждение показано до отправки сообщения без запрета.
-- **F8.5 (P2)** Цена за удачный результат: расход модели, делённый на число отметок «лучший».
+- **F8.1 (P0)** The cost of a job: an estimate before the run, the actual amount after (if the provider returns it, as OpenRouter does through usage.cost), otherwise the price-list price marked "≈". A repeated write updates the same operation; a zero price is stored separately from an unknown one.
+- **F8.2 (P0)** The total of a run group.
+- **F8.3 (P1)** The spending screen: for the local day, the ISO week (from Monday), the local month, by provider and model; the number of operations with an unknown price in existing sessions is shown separately.
+- **F8.4 (P1)** A monthly limit and a threshold "warn if a run costs more than X". The threshold is off by default; a manual run requires confirmation, and for the assistant the warning is shown before the message is sent, without forbidding it.
+- **F8.5 (P2)** The price per successful result: the model's spending divided by the number of "best" marks.
 
-### 9. Ошибки и модерация
+### 9. Errors and moderation
 
-- **F9.1 (P0)** Ошибки объясняются понятно, с исходным текстом провайдера. Различаются: неверный ключ, нет средств, превышен лимит, модель недоступна, отклонено модерацией, таймаут, сбой сети.
-- **F9.2 (P0)** Фильтрация провайдером (чёрный кадр у fal, отказ у других) — отдельное состояние, а не сбой и не пустая картинка.
-- **F9.3 (P1)** Автоповтор при временных ошибках с ограничением числа попыток и в пределах лимита расходов.
-- **F9.4 (P0)** Приложение не переписывает промпт скрытно и не подменяет модель без ведома пользователя.
+- **F9.1 (P0)** Errors are explained clearly, with the provider's original text. Distinguished: invalid key, no funds, rate limit, model unavailable, rejected by moderation, timeout, network failure.
+- **F9.2 (P0)** Filtering by the provider (a black frame at fal, a refusal at others) is a separate state, not a failure and not an empty picture.
+- **F9.3 (P1)** Automatic retry on temporary errors with a limited number of attempts and within the spending limit.
+- **F9.4 (P0)** The app does not rewrite the prompt in secret and does not substitute the model without the user's knowledge.
 
-### 10. Настройки, безопасность и приватность
+### 10. Settings, security and privacy
 
-- **F10.1 (P0)** Светлая и тёмная тема. Язык интерфейса — только английский (решение владельца 2026-10-31, задача 028 отменена); промпты генерации — на английском; ассистент отвечает на языке, на котором пишет пользователь.
-- **F10.2 (P0)** Место хранения результатов.
-- **F10.3 (P0)** Ключи хранятся в защищённом хранилище платформы и не попадают в журналы и экспорт.
-- **F10.4 (P1)** Параметры по умолчанию, формат файлов, шаблон имени файла.
-- **F10.5 (P1)** Хешированный идентификатор пользователя для параметра user у fal и OpenRouter.
-- **F10.6 (P1)** Понятное предупреждение: промпты и референсные картинки уходят провайдеру.
+- **F10.1 (P0)** A light and a dark theme. The UI language is English only (the owner's decision of 2026-10-31, task 028 cancelled); generation prompts are in English; the assistant answers in the language the user writes in.
+- **F10.2 (P0)** The result storage location.
+- **F10.3 (P0)** Keys are stored in the platform's secure store and never get into logs and exports.
+- **F10.4 (P1)** Default parameters, file format, the file name template.
+- **F10.5 (P1)** A hashed user identifier for the user parameter at fal and OpenRouter.
+- **F10.6 (P1)** A clear warning: prompts and reference pictures go to the provider.
 
-## Интерфейс: экраны и макеты
+## UI: screens and mockups
 
-Пять разделов: **Студия** (запуск и результаты), **Галерея** (история), **Модели** (каталог и наборы), **Расходы**, **Настройки** (подключения и параметры по умолчанию). На широком экране разделы идут в верхней или боковой панели, на узком — во вкладках внизу, а композер поднимается из нижней части экрана. Макеты схематичны: цены и значения иллюстративны, ограничения моделей взяты из [каталога OpenRouter](https://openrouter.ai/blog/insights/image-generation-models-compared/) на 11.09.2026.
+Five sections: **Studio** (run and results), **Gallery** (history), **Models** (catalog and sets), **Spending**, **Settings** (connections and default parameters). On a wide screen the sections are in the top or side bar, on a narrow one in bottom tabs, and the composer rises from the bottom of the screen. The mockups are schematic: prices and values are illustrative, model limits are taken from the [OpenRouter catalog](https://openrouter.ai/blog/insights/image-generation-models-compared/) as of 11.09.2026.
 
-### Студия (широкий экран)
+### Studio (wide screen)
 
-Главный экран: сверху ввод запроса, под ним сетка результатов текущей группы запусков.
+The main screen: request input on top, the result grid of the current run group below.
 
 ```text
 +--------------------------------------------------------------------------+
-| Студия  Галерея  Модели  Расходы  Настройки          fal OK  Repl OK  OR OK |
+| Studio  Gallery  Models  Spending  Settings          fal OK  Repl OK  OR OK |
 +--------------------------------------------------------------------------+
-| Промпт                                                                   |
+| Prompt                                                                   |
 | +----------------------------------------------------------------------+ |
-| | Портрет мужчины у окна, дым от сигареты в луче света, 35 мм, зерно   | |
+| | Portrait of a man by a window, cigarette smoke in a ray, 35 mm, grain| |
 | +----------------------------------------------------------------------+ |
-| Референсы: [+]    Набор: [Фотореализм v] 4 модели    Параметры: 1:1 1K x1 |
-| Оценка: ~ $0.17                                         [  Запустить  ]  |
+| References: [+]    Set: [Photorealism v] 4 models   Params: 1:1 1K x1    |
+| Estimate: ~ $0.17                                       [     Run     ]  |
 +--------------------------------------------------------------------------+
-| Группа 14:52   3 из 4 готово   $0.17                     [Отменить всё]  |
+| Group 14:52   3 of 4 done   $0.17                       [Cancel all]     |
 | +-------------+ +-------------+ +-------------+ +-------------+          |
-| |             | |             | |  идёт...    | | ! отфильтро-|          |
-| |  картинка   | |  картинка   | |  в очереди:2| | вано провай-|          |
-| |             | |             | |             | | дером       |          |
+| |             | |             | | running...  | | ! filtered  |          |
+| |   picture   | |   picture   | | queue: 2    | | by the      |          |
+| |             | |             | |             | | provider    |          |
 | +-------------+ +-------------+ +-------------+ +-------------+          |
 | | FLUX.2 Klein| | Qwen Image 3| | Seedream 5  | | Grok Imagine|          |
 | | OpenRouter  | | OpenRouter  | | Lite, fal   | | OpenRouter  |          |
-| | 5.8 c $0.009| | 13 c  $0.03 | | ...         | | 3.6 c $0.05 |          |
-| | * v ~ ...   | | * v ~ ...   | | [Отмена]    | | [Др. модель]|          |
+| | 5.8 s $0.009| | 13 s  $0.03 | | ...         | | 3.6 s $0.05 |          |
+| | * v ~ ...   | | * v ~ ...   | | [Cancel]    | | [Other model]|         |
 | +-------------+ +-------------+ +-------------+ +-------------+          |
 +--------------------------------------------------------------------------+
 ```
 
-Обозначения: `*` лучший в группе, `v` скачать, `~` повторить, `...` остальные действия. Карточки занимают место сразу при запуске, чтобы сетка не перестраивалась, когда приходят результаты. Порядок карточек совпадает с порядком выбора моделей.
+Legend: `*` best in group, `v` download, `~` repeat, `...` other actions. Cards take their place right at the run, so that the grid does not reflow when results arrive. The card order matches the order in which the models were selected.
 
-### Состояния карточки задания
+### Job card states
 
-| Состояние | Что видно на карточке | Доступные действия |
+| State | What the card shows | Available actions |
 | --- | --- | --- |
-| В очереди | Заглушка, позиция в очереди, если провайдер её отдаёт | Отмена |
-| Идёт | Заглушка с индикатором, логи провайдера по нажатию | Отмена |
-| Готово | Картинка, модель, провайдер, время, цена | Просмотр, скачать, в избранное, лучший, референс, повтор, удалить |
-| Ошибка | Короткая причина понятным языком, исходный текст по нажатию | Повторить, на другой модели |
-| Отменено | Серая заглушка, пометка «запрос на отмену отправлен», если остановка не гарантирована | Повторить |
-| Отфильтровано | Пометка «отфильтровано провайдером», пояснение, что это решение провайдера | На другой модели, открыть настройки модерации модели (если есть) |
+| Queued | A placeholder, the queue position if the provider returns it | Cancel |
+| Running | A placeholder with an indicator, provider logs on tap | Cancel |
+| Done | The picture, model, provider, time, price | View, download, favorite, best, reference, repeat, delete |
+| Failed | A short reason in plain language, the original text on tap | Repeat, on another model |
+| Cancelled | A gray placeholder, the mark "cancellation request sent" if stopping is not guaranteed | Repeat |
+| Filtered | The mark "filtered by the provider", an explanation that this is the provider's decision | On another model, open the model's moderation settings (if any) |
 
-### Выбор моделей
+### Choosing models
 
-Открывается панелью или отдельным экраном из композера и из раздела «Модели».
+Opens as a panel or a separate screen from the composer and from the "Models" section.
 
 ```text
 +--------------------------------------------------------------------------+
-| Модели                                                          [Готово] |
-| Поиск [ flux_______ ]  Провайдер [Все v]  [ ] с референсами  Цена [Любая v] |
+| Models                                                           [Done]  |
+| Search [ flux_______ ]  Provider [All v]  [ ] with references  Price [Any v] |
 +--------------------------------------------------------------------------+
-| Набор: [Фотореализм v]  [Сохранить как набор]       выбрано: 4  ~ $0.17  |
+| Set: [Photorealism v]  [Save as a set]              selected: 4  ~ $0.17 |
 +--------------------------------------------------------------------------+
-| [x] FLUX.2 Klein         OpenRouter  $0.014 / картинка   референсов: 4   |
-| [x] Qwen Image 3         OpenRouter  $0.03  / картинка   референсов: 4   |
-| [x] Seedream 5.0 Lite    OpenRouter  $0.035 / картинка   референсов: 14  |
-|     также у: fal.ai, Together AI (варианты с другой ценой)            |
-| [x] Grok Imagine 2.0     OpenRouter  $0.06  / картинка   референсов: 3   |
-| [ ] FLUX.2 Pro           OpenRouter  $0.03  / мегапиксель референсов: 8   |
-| [ ] GPT Image 2          OpenRouter  от $0.006 (токены)  референсов: 16  |
+| [x] FLUX.2 Klein         OpenRouter  $0.014 / picture    references: 4   |
+| [x] Qwen Image 3         OpenRouter  $0.03  / picture    references: 4   |
+| [x] Seedream 5.0 Lite    OpenRouter  $0.035 / picture    references: 14  |
+|     also at: fal.ai, Together AI (variants with another price)          |
+| [x] Grok Imagine 2.0     OpenRouter  $0.06  / picture    references: 3   |
+| [ ] FLUX.2 Pro           OpenRouter  $0.03  / megapixel  references: 8   |
+| [ ] GPT Image 2          OpenRouter  from $0.006 (tokens) references: 16 |
 +--------------------------------------------------------------------------+
-| [+ Добавить модель fal по идентификатору]                               |
+| [+ Add a fal model by identifier]                                       |
 +--------------------------------------------------------------------------+
 ```
 
-Пометки в строке: «новая», «открытая модель», «лицензия: некоммерческая», «нельзя отключить фильтр». Строка раскрывается в карточку модели с параметрами, ценой и ограничениями.
+Marks in a row: "new", "open model", "license: non-commercial", "the filter cannot be turned off". A row expands into a model card with parameters, price and limits.
 
-### Применение параметров к моделям
+### Applying parameters to models
 
-Один набор параметров в Студии применяется к каждой модели по-своему. Перед запуском приложение показывает, что будет передано, что заменено ближайшим допустимым значением и что отброшено. Пользователь видит это до траты денег, а не после.
+One parameter set in the Studio is applied to each model in its own way. Before the run the app shows what will be passed, what is replaced with the nearest allowed value and what is dropped. The user sees this before spending money, not after.
 
-| Параметр в Студии | Как применяется | Если модель не поддерживает |
+| Parameter in the Studio | How it is applied | If the model does not support it |
 | --- | --- | --- |
-| Соотношение сторон | Передаётся как есть | Ближайшее допустимое, на карточке пометка «Соотношение сторон: 3:2 → 4:3» (замена; если 1:1 допустимо, замены нет) |
-| Размер / разрешение | Пресет или ширина × высота, смотря что принимает модель | Ближайший пресет, пометка на карточке |
-| Количество картинок | Один запрос на N картинок, если модель умеет; иначе N запросов | Отдельные запросы, цена умножается |
-| Seed | Передаётся, если модель его принимает | Параметр отбрасывается, на карточке «seed не поддерживается» |
-| Референсные картинки | Передаются до лимита модели (у разных моделей от 1 до 16) | Модель отмечена «без референсов» и пропускается, если референсы обязательны |
-| Фильтр безопасности | Настройка включена/выключена там, где провайдер это разрешает | Остаётся фильтр провайдера, на карточке пометка «нельзя отключить» |
-| Формат файла | PNG, JPEG или WebP | Формат по умолчанию модели |
+| Aspect ratio | Passed as is | The nearest allowed one, the card shows "Aspect ratio: 3:2 → 4:3" (a replacement; if 1:1 is allowed, there is no replacement) |
+| Size / resolution | A preset or width × height, whichever the model accepts | The nearest preset, a mark on the card |
+| Number of pictures | One request for N pictures if the model can; otherwise N requests | Separate requests, the price is multiplied |
+| Seed | Passed if the model accepts it | The parameter is dropped, the card shows "seed not supported" |
+| Reference pictures | Passed up to the model's limit (from 1 to 16 for different models) | The model is marked "no references" and skipped if references are required |
+| Safety filter | The setting is on/off where the provider allows it | The provider's filter stays, the card shows "cannot be turned off" |
+| File format | PNG, JPEG or WebP | The model's default format |
 
 ```text
 +------------------------------------------------------------------------+
-| Проверка перед запуском                                       [Назад]  |
+| Check before the run                                           [Back]  |
 +------------------------------------------------------------------------+
-| FLUX.2 Klein      OK: все параметры применены                          |
-| Qwen Image 3      seed передан, 4 референса из 5 (лимит модели)        |
-| Seedream Lite     соотношение 3:2 заменено на 4:3                      |
-| Grok Imagine      seed не поддерживается и отброшен                    |
+| FLUX.2 Klein      OK: all parameters applied                           |
+| Qwen Image 3      seed passed, 4 references of 5 (the model's limit)   |
+| Seedream Lite     aspect ratio 3:2 replaced with 4:3                   |
+| Grok Imagine      seed not supported and dropped                       |
 +------------------------------------------------------------------------+
-| Оценка: ~ $0.14                                    [  Запустить  ]     |
+| Estimate: ~ $0.14                                  [     Run     ]     |
 +------------------------------------------------------------------------+
 ```
 
-### Сравнение результатов
+### Comparing results
 
-Два результата открываются рядом, поверх друг друга со слайдером или с наложением. Зум и перемещение синхронны. Под каждой картинкой время, цена и seed, чтобы сравнение было честным. Кнопка «Лучший» запоминает выбор в группе и показывается в Галерее.
+Two results open side by side, on top of each other with a slider, or overlaid. Zoom and panning are synchronized. Under each picture are the time, price and seed, so that the comparison is fair. The "Best" button remembers the choice in the group and is shown in the Gallery.
 
 ```text
 +------------------------------------------------------------------------+
-| Сравнение                                                    [Закрыть] |
+| Comparison                                                     [Close] |
 | A: FLUX.2 Klein (OpenRouter)          B: Qwen Image 3 (OpenRouter)     |
 | +------------------------------+ +------------------------------+      |
 | |                              | |                              |      |
-| |          картинка A          | |          картинка B          |      |
+| |          picture A           | |          picture B           |      |
 | |                              | |                              |      |
 | +------------------------------+ +------------------------------+      |
-| Режим: (o) рядом  ( ) слайдер  ( ) наложение   Зум 100% [x] синхр.     |
-| A: 5.8 c  $0.014  seed 424242        B: 13 c  $0.03  seed 424242       |
-| Промпт: Портрет мужчины у окна...              [Лучший: A] [Лучший: B] |
+| Mode: (o) side by side ( ) slider ( ) overlay  Zoom 100% [x] sync      |
+| A: 5.8 s  $0.014  seed 424242        B: 13 s  $0.03  seed 424242       |
+| Prompt: Portrait of a man by a window...         [Best: A] [Best: B]   |
 +------------------------------------------------------------------------+
 ```
 
-### Галерея
+### Gallery
 
-Каждая группа запусков показывается строкой миниатюр с промптом, числом моделей, отметкой лучшего результата и общей ценой. Поиск идёт по промптам. Фильтры: модель, провайдер, избранное, тег. Из группы можно повторить запуск с теми же параметрами или открыть любой результат на сравнение.
+Each run group is shown as a row of thumbnails with the prompt, the number of models, the best-result mark and the total price. Search goes over prompts. Filters: model, provider, favorites, tag. From a group you can repeat the run with the same parameters or open any result for comparison.
 
 ```text
 +------------------------------------------------------------------------+
-| Поиск [_______] Модель [Все v] Провайдер [Все v] [ ] избранное         |
+| Search [_______] Model [All v] Provider [All v] [ ] favorites          |
 +------------------------------------------------------------------------+
-| Сегодня                                                                |
+| Today                                                                  |
 | +---+ +---+ +---+ +---+                                                |
-| |   | |   | |   | |   |   Портрет мужчины у окна, дым от сигареты...   |
-| |   | |   | |   | |   |   4 модели, лучший: Qwen Image 3, $0.14        |
-| +---+ +---+ +---+ +---+   [Открыть] [Повторить] [Удалить]              |
+| |   | |   | |   | |   |   Portrait of a man by a window, smoke...      |
+| |   | |   | |   | |   |   4 models, best: Qwen Image 3, $0.14          |
+| +---+ +---+ +---+ +---+   [Open] [Repeat] [Delete]                     |
 |                                                                        |
-| Вчера                                                                  |
+| Yesterday                                                              |
 | +---+ +---+ +---+ +---+                                                |
-| |   | |   | |   | |   |   Неоновая вывеска ночью, мокрый асфальт...    |
-| |   | |   | |   | |   |   3 модели, лучший: не отмечен, $0.09          |
-| +---+ +---+ +---+ +---+   [Открыть] [Повторить] [Удалить]              |
+| |   | |   | |   | |   |   A neon sign at night, wet asphalt...         |
+| |   | |   | |   | |   |   3 models, best: not marked, $0.09            |
+| +---+ +---+ +---+ +---+   [Open] [Repeat] [Delete]                     |
 |                                                                        |
 +------------------------------------------------------------------------+
 ```
 
-### Подключения
+### Connections
 
-Ключи вводятся один раз. После ввода приложение делает пробный запрос и показывает статус. Ключ виден только последними четырьмя символами. Предупреждение о том, куда уходят промпты и референсы, показано на этом же экране.
+Keys are entered once. After entering, the app makes a test request and shows the status. The key is visible only by its last four characters. The warning about where prompts and references go is shown on the same screen.
 
 ```text
 +------------------------------------------------------------------------+
-| Настройки: Подключения                                                 |
+| Settings: Connections                                                  |
 +------------------------------------------------------------------------+
-| fal.ai       ключ: ........a1f3   работает         [Заменить] [Удалить]|
-| Together AI  ключ: ........9c20   неверный ключ    [Заменить] [Удалить]|
-| OpenRouter   не подключён                          [Подключить]        |
-| [+ Добавить ещё одно подключение]                                      |
+| fal.ai       key: ........a1f3   works            [Replace] [Delete]   |
+| Together AI  key: ........9c20   invalid key      [Replace] [Delete]   |
+| OpenRouter   not connected                        [Connect]            |
+| [+ Add another connection]                                             |
 +------------------------------------------------------------------------+
-| [x] Отправлять провайдерам хешированный идентификатор пользователя     |
-| Промпты и референсные картинки отправляются выбранным провайдерам.     |
+| [x] Send a hashed user identifier to the providers                     |
+| Prompts and reference pictures are sent to the chosen providers.       |
 +------------------------------------------------------------------------+
 ```
 
-### Расходы
+### Spending
 
-Расходы считаются по факту, если провайдер вернул цену (OpenRouter даёт её в ответе), иначе по оценке по прайсу с пометкой «оценка». Месячный лимит предупреждает перед запуском, когда оценка группы превышает остаток.
+Spending is counted from the actual amount if the provider returned a price (OpenRouter gives it in the response), otherwise from the price-list estimate marked "estimate". The monthly limit warns before a run when the group's estimate exceeds the remainder.
 
 ```text
 +------------------------------------------------------------------------+
-| Расходы   Период [Октябрь 2026 v]             Лимит: $20.00 [Изменить] |
+| Spending   Period [October 2026 v]            Limit: $20.00 [Change]   |
 +------------------------------------------------------------------------+
-| Итого: $4.83 из $20.00   [#####....................]  24%              |
+| Total: $4.83 of $20.00   [#####....................]  24%              |
 |                                                                        |
-| По провайдерам                 По моделям                              |
+| By provider                    By model                                |
 | OpenRouter  $3.10  ########    FLUX.2 Klein      $0.41  ##             |
 | fal.ai      $1.45  ####        Qwen Image 3      $1.20  #####          |
 | Together AI $0.28  #           Grok Imagine 2.0  $1.62  ######         |
 |                                                                        |
-| Дороже всего запуск: Seedream 5.0 Pro, $0.09 за картинку               |
+| Most expensive run: Seedream 5.0 Pro, $0.09 per picture                |
 +------------------------------------------------------------------------+
 ```
 
-### Узкий экран (телефон)
+### Narrow screen (phone)
 
-На узком экране элементы Студии идут один под другим: промпт, набор моделей, кнопка запуска, затем карточки в две колонки. Разделы — нижняя навигация. Все функции доступны те же, меняется только раскладка.
+On a narrow screen the Studio elements go one under another: the prompt, the model set, the run button, then the cards in two columns. Sections are the bottom navigation. All the same functions are available, only the layout changes.
 
 ```text
 +------------------------+
-| Студия              [=]|
+| Studio              [=]|
 +------------------------+
-| Промпт                 |
-| [Портрет мужчины у     |
-|  окна, дым от сига..]  |
+| Prompt                 |
+| [Portrait of a man by  |
+|  a window, smoke..]    |
 |                        |
-| Набор: Фотореализм     |
-| 4 модели   ~ $0.14     |
-| [     Запустить     ]  |
+| Set: Photorealism      |
+| 4 models   ~ $0.14     |
+| [        Run        ]  |
 +------------------------+
-| Группа 14:52           |
-| 2 готово, 1 идёт,      |
-| 1 отфильтровано        |
+| Group 14:52            |
+| 2 done, 1 running,     |
+| 1 filtered             |
 | +------+ +------+      |
 | | img  | | img  |      |
 | |Klein | |Qwen  |      |
 | +------+ +------+      |
 | +------+ +------+      |
-| | идёт | |! фил.|      |
+| | run. | |! filt|      |
 | |Seedr.| |Grok  |      |
 | +------+ +------+      |
 +------------------------+
-| Студ  Гал  Мод  Расх   |
+| Stud  Gal  Mod  Spend  |
 +------------------------+
 ```
 
-### Общие правила интерфейса
+### General UI rules
 
-- Карточки результатов занимают место сразу после запуска, сетка не прыгает, когда приходят картинки.
-- Ошибка одной модели не блокирует остальные; на её карточке текст причины провайдера и кнопка «Повторить» или «Другая модель».
-- Отфильтрованный результат (чёрный кадр или отказ) помечается отдельным состоянием, а не обычной ошибкой, чтобы было видно, что виноват провайдер, а не сбой.
-- До запуска всегда видна оценка цены, после — фактическая.
-- Результат сохраняется локально сразу по получении, потому что fal хранит файл настраиваемый срок, а OpenRouter и OpenAI-совместимый провайдер отдают картинку в ответе.
-- Тексты статусов дублируются значками и не зависят только от цвета.
+- Result cards take their place right after the run; the grid does not jump when pictures arrive.
+- An error of one model does not block the others; its card has the provider's reason text and a "Repeat" or "Other model" button.
+- A filtered result (a black frame or a refusal) is marked as a separate state, not an ordinary error, so that it is visible that the provider is responsible, not a failure.
+- The price estimate is always visible before the run, the actual price after.
+- The result is saved locally as soon as it is received, because fal keeps the file for a configurable time, and OpenRouter and OpenAI-compatible providers return the picture in the response.
+- Status texts are duplicated by icons and do not depend on color alone.
 
-## Сущности данных
+## Data entities
 
-Концептуальная модель: что приложение хранит и как это связано, без привязки к способу хранения.
+A conceptual model: what the app stores and how it is related, without tying it to a storage method.
 
-| Сущность | Что это | Основные поля |
+| Entity | What it is | Main fields |
 | --- | --- | --- |
-| Подключение | Доступ к одному провайдеру | провайдер, ключ (скрыт), статус проверки, дата проверки |
-| Модель каталога | Модель, доступная через подключение | идентификатор, провайдер, название, поддерживаемые параметры, лимит референсов, единица и цена, пометки (новая, открытая, лицензия, фильтр) |
-| Набор моделей | Именованный список моделей | название, модели, порядок |
-| Пресет параметров | Сохранённые настройки | название, соотношение сторон, размер, количество, формат, seed |
-| Референс | Загруженная входная картинка | файл, название, теги, где использовалась |
-| Группа запусков | Один нажатый «Запустить» | промпт, набор параметров, список моделей, время, оценка и итоговая цена, лучший результат |
-| Задание | Запуск одной модели в группе | модель, подключение, состояние, применённые и отброшенные параметры, время, ошибка |
-| Результат | Полученная картинка | файл, размеры, seed, фактическая цена, признак «отфильтровано», избранное |
-| Бюджет | Лимит расходов | период, сумма, порог предупреждения |
-| Тег и коллекция | Ручная организация результатов | название, список результатов |
+| Connection | Access to one provider | provider, key (hidden), check status, check date |
+| Catalog model | A model available through a connection | identifier, provider, name, supported parameters, reference limit, unit and price, marks (new, open, license, filter) |
+| Model set | A named list of models | name, models, order |
+| Parameter preset | Saved settings | name, aspect ratio, size, number, format, seed |
+| Reference | An uploaded input picture | file, name, tags, where it was used |
+| Run group | One press of "Run" | prompt, parameter set, model list, time, estimate and final price, best result |
+| Job | The run of one model in a group | model, connection, state, applied and dropped parameters, time, error |
+| Result | A received picture | file, dimensions, seed, actual price, the "filtered" flag, favorite |
+| Budget | A spending limit | period, amount, warning threshold |
+| Tag and collection | Manual organization of results | name, list of results |
 
-## Ограничения, риски и открытые вопросы
+## Constraints, risks and open questions
 
-Главный риск продукта — различия между провайдерами: один промпт и один набор параметров дают неодинаково точные запросы, цены и сроки хранения. Интерфейс должен это показывать, а не прятать.
+The main product risk is the differences between providers: one prompt and one parameter set produce requests of unequal accuracy, prices and retention times. The UI must show this, not hide it.
 
-| Ограничение или риск | Что происходит | Как отвечает продукт |
+| Constraint or risk | What happens | How the product answers |
 | --- | --- | --- |
-| Разные наборы параметров | seed, размеры и число референсов отличаются по моделям | Проверка перед запуском (раздел 6.4) |
-| Ссылки на результаты истекают | fal хранит файл по настройке; OpenRouter и OpenAI-совместимый провайдер отдают картинку в ответе | Сохранение файла сразу по получении |
-| Разные единицы цены | За картинку, за мегапиксель, за токены; объявленная цена может отличаться от списанной | Оценка до запуска и факт после, отдельно |
-| Отмена не всегда работает | fal: запрос уже на генерации может дойти до конца | Статус «отмена запрошена» вместо «отменено» |
-| Ограничения частоты | у каждого провайдера свои ограничения (у fal — очередь) | Очередь запусков и понятное сообщение при отказе |
-| Разная модерация | У OpenRouter остаётся фильтр провайдера модели; у fal фильтр можно выключить не везде, чёрный кадр — это срабатывание фильтра | Отдельное состояние «отфильтровано», пометка «нельзя отключить» |
-| Вебхуки требуют публичного адреса | Клиент без сервера их получить не может | Опрос статуса или поток событий |
-| Лицензии моделей | Например, Qwen-Image-2.1 — только некоммерческая | Пометка лицензии в списке моделей |
-| Политики провайдеров | Правила сервисов и законы применяются всегда | Приложение не обходит фильтры провайдеров, только честно их показывает и предлагает другую модель |
+| Different parameter sets | seed, sizes and the number of references differ between models | The check before the run (section 6.4) |
+| Result links expire | fal keeps the file per its setting; OpenRouter and OpenAI-compatible providers return the picture in the response | Saving the file as soon as it is received |
+| Different price units | Per picture, per megapixel, per tokens; the declared price may differ from the charged one | An estimate before the run and the actual amount after, separately |
+| Cancellation does not always work | fal: a request already being generated may run to the end | The status "cancellation requested" instead of "cancelled" |
+| Rate limits | each provider has its own limits (fal has a queue) | A run queue and a clear message on refusal |
+| Different moderation | At OpenRouter the model provider's filter stays; at fal the filter cannot be turned off everywhere, a black frame means the filter fired | A separate "filtered" state, the mark "cannot be turned off" |
+| Webhooks need a public address | A client without a server cannot receive them | Status polling or an event stream |
+| Model licenses | For example, Qwen-Image-2.1 is non-commercial only | A license mark in the model list |
+| Provider policies | Service rules and laws always apply | The app does not bypass provider filters, it only shows them honestly and offers another model |
 
-## Открытые вопросы
+## Open questions
 
-Текущие продуктовые вопросы, включая параметры и проверку реальных API, ведутся в `docs/status.md`. Платформенные и продуктовые решения зафиксированы в `docs/product.md`.
+Current product questions, including parameters and checking the real APIs, are kept in `docs/status.md`. Platform and product decisions are recorded in `docs/product.md`.
