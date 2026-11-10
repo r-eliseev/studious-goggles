@@ -101,6 +101,16 @@ public static class AppResources
 
     public static string SemanticSearchMeaningUnavailable => Get(nameof(SemanticSearchMeaningUnavailable));
 
+    public static string SemanticSearchModelSearch => Get(nameof(SemanticSearchModelSearch));
+
+    public static string SemanticSearchChangeModel => Get(nameof(SemanticSearchChangeModel));
+
+    public static string SemanticSearchChangeModelPromptFormat => Get(nameof(SemanticSearchChangeModelPromptFormat));
+
+    public static string SemanticSearchModelUnavailableFormat => Get(nameof(SemanticSearchModelUnavailableFormat));
+
+    public static string SemanticSearchUnavailableOptionFormat => Get(nameof(SemanticSearchUnavailableOptionFormat));
+
     public static string Stop => Get(nameof(Stop));
 
     public static string Saved => Get(nameof(Saved));
