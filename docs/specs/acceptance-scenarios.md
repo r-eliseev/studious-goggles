@@ -45,7 +45,7 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 | KEY-07 | Settings: OpenRouter shows only the last four characters of the key; an unconfigured provider shows "Not connected" | F1.3, S6.4 | planned |
 | KEY-08 | Settings: replacing the key with an invalid one → an error, the old key keeps working | F1.3 | planned |
 | KEY-09 | Settings: deleting the OpenRouter key → the provider is "Not connected"; the next time the session list opens — the key screen | F1.3 | planned |
-| KEY-10 | Any scenario: no requests to addresses outside the fake (self-check of the world) | ADR 0031 | planned |
+| KEY-10 | Any scenario: no requests to addresses outside the fake (self-check of the world) | ADR 0031 | done |
 | KEY-11 | The key screen is rotated to landscape and back → the key field stays visible (`@e2e-only`, replaces `FirstRunTests.Rotate_KeepsKeyScreen`) | F10.1 | planned |
 
 ### Sessions (`Sessions.feature`, task 255)

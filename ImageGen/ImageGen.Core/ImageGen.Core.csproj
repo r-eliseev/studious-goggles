@@ -12,5 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="ImageGen.Core.Tests" />
+    <InternalsVisibleTo Include="ImageGen.Acceptance.Tests" />
   </ItemGroup>
 </Project>

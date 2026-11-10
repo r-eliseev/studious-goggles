@@ -13,3 +13,7 @@ Package references:
 - [Avalonia.Headless 12.1.4](https://www.nuget.org/packages/Avalonia.Headless/12.1.4)
 
 Reqnroll 3.3 writes generated `*.feature.cs` files beside the feature files by default. Set `ReqnrollUseIntermediateOutputPathForCodeBehind` to `true` to keep generated files in the intermediate `obj/` directory ([Reqnroll build setup](https://docs.reqnroll.net/latest/installation/setup-project.html)).
+
+## HTTP client injection
+
+The desktop composition's `configureTestServices` callback runs after `RegisterDesktop`. A test can use `ConfigureHttpClientDefaults` to replace the primary handler for OpenRouter and default OpenAI-compatible transports. fal registers its own named transport (`FalImageProvider.TransportName`) with a redirect-disabled primary handler, so the default primary handler does not replace it. The acceptance world must also configure the same fake as the primary handler for that named fal client. This was verified through the real OpenRouter, fal and Together key-check clients plus a localhost-only probe of the fal `IHttpClientFactory` client.

@@ -1,6 +1,6 @@
 ---
 id: 253
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-09
@@ -84,6 +84,16 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+- Added the desktop composition test hook and verified test registrations replace platform services. Confirmed `ConfigureHttpClientDefaults` reaches default OpenRouter/Together clients while fal's explicitly configured named transport needs a matching test handler; recorded this in `docs/knowledge/acceptance-tests.md`.
+- Added a strict scenario `FakeNetwork` with host/path routes, safe request recording and redaction, held/cancelled responses, and tests for unknown routes, request recording, and cancellation.
+- Added `FakeOpenRouter` for key checks, image catalog and prices, assistant replies/tool calls/errors, generated PNGs, filtering, errors, and held generations.
+- Added `AppWorld` with isolated repository-local data, in-memory secrets, deterministic time and seeds, platform fakes, restart support and idle draining. Added world persistence self-check.
+- Added shared scenario setup/steps; converted KEY-01 and added the KEY-10 unknown-route scenario. Removed the task 252 harness doubles.
+- Verification: Acceptance tests 7 passed; Avalonia tests 187 passed, 2 environment skips; Avalonia and Acceptance formatting passed; `bash scripts/check.sh` passed.
+- Deviation: video generation routes are deferred to task 265, as permitted by the plan; no real video request shape was required here.
+
+Status: done
 
 ## Комментарии
 
