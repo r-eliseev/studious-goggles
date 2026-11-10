@@ -653,8 +653,10 @@ public class SessionsPageModelTests : IDisposable
         var catalog = new ChatModelCatalogService(ProviderDoubles.Router(), NullLogger<ChatModelCatalogService>.Instance);
         var sessions = new SessionService(_sessionRepository, Substitute.For<IChatMessageRepository>(), _runs, _files, catalog, TimeProvider.System, Substitute.For<IConversationSummaryRepository>(), _changes, Substitute.For<ISessionGenerationCoordinator>(), DefaultAssistantModels.Create());
         var apiKeys = new ApiKeyService(ProviderDoubles.Router(_provider), _secrets, NullLogger<ApiKeyService>.Instance);
+        var searchSettings = Substitute.For<ISemanticSearchSettingsStore>();
+        searchSettings.GetModelAsync(Arg.Any<CancellationToken>()).Returns(SemanticSearchModels.Default);
         var semanticSearch = new SemanticSearchService(_searchTexts, _textEmbeddings, _providerRouter, _semanticIndex,
-            TimeProvider.System, NullLogger<SemanticSearchService>.Instance);
+            searchSettings, TimeProvider.System, NullLogger<SemanticSearchService>.Instance);
         return new SessionsPageModel(CreateInitializer(), apiKeys, sessions, _navigation, _dialogs, time ?? TimeProvider.System,
             _tracker, new SessionSearchService(_searchTexts), semanticSearch, _semanticIndex, _changes, _mainThread,
             ErrorAlerts.Create(_dialogs), DefaultAssistantModels.Create(defaultAssistant));

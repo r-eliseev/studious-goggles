@@ -60,7 +60,7 @@ public class SqliteDatabaseTests
             names.Add(reader.GetString(0));
         }
 
-        Assert.Equal(["chat_attachments", "chat_messages", "conversation_summaries", "expenses", "generations", "image_descriptions", "image_models", "runs", "sessions", "text_embeddings", "video_models"], names);
+        Assert.Equal(["chat_attachments", "chat_messages", "conversation_summaries", "embedding_models", "expenses", "generations", "image_descriptions", "image_models", "runs", "sessions", "text_embeddings", "video_models"], names);
     }
 
     [Fact]

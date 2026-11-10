@@ -20,7 +20,7 @@ public sealed class OpenRouterClient(
     ISecretStore secretStore,
     TimeProvider timeProvider,
     ILogger<OpenRouterClient>? logger = null)
-    : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient, ISynchronousImageTransport, ITextEmbeddingClient, IVideoModelProvider, IQueuedVideoProvider
+    : ProviderClientBase(config, httpClientFactory, secretStore, timeProvider), IModelProvider, IAssistantChatClient, ISynchronousImageTransport, ITextEmbeddingClient, IVideoModelProvider, IEmbeddingModelProvider, IQueuedVideoProvider
 {
     private const int PriceRequestParallelism = 4;
     private readonly ILogger<OpenRouterClient> _logger = logger ?? NullLogger<OpenRouterClient>.Instance;
@@ -109,6 +109,41 @@ public sealed class OpenRouterClient(
                 GeneratesAudio = ReadNullableBoolean(item["generate_audio"]),
                 SupportsSeed = ReadNullableBoolean(item["seed"]),
                 PriceSkus = ReadVideoPrices(item["pricing_skus"], id),
+                FetchedAt = fetchedAt,
+            });
+        }
+
+        return result;
+    }
+
+    public async Task<IReadOnlyList<EmbeddingModel>> ListEmbeddingModelsAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var request = CreateRequest(HttpMethod.Get, "embeddings/models", null);
+        var root = await SendJsonAsync(request, cancellationToken);
+        var fetchedAt = TimeProvider.GetUtcNow();
+        var result = new List<EmbeddingModel>();
+        if (root["data"] is not JsonArray data)
+        {
+            return result;
+        }
+
+        foreach (var item in data.OfType<JsonObject>())
+        {
+            var id = ReadString(item["id"]);
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                continue;
+            }
+
+            result.Add(new EmbeddingModel
+            {
+                ProviderId = Config.Id,
+                Id = id,
+                Name = ReadString(item["name"]) ?? id,
+                Description = ReadString(item["description"]) ?? string.Empty,
+                ContextLength = ReadInt(item["context_length"]),
+                PricePerTokenUsd = ReadDecimal(item["pricing"]?["prompt"]),
                 FetchedAt = fetchedAt,
             });
         }
@@ -541,8 +576,9 @@ public sealed class OpenRouterClient(
         return new AssistantChatResult(text, toolCalls, ReadCost(root), ReadPromptTokens(root));
     }
 
-    public async Task<EmbeddingResult> EmbedAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken)
+    public async Task<EmbeddingResult> EmbedAsync(string modelId, IReadOnlyList<string> texts, CancellationToken cancellationToken)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(modelId);
         ArgumentNullException.ThrowIfNull(texts);
         if (texts.Count == 0)
         {
@@ -553,7 +589,7 @@ public sealed class OpenRouterClient(
         var input = new JsonArray(texts.Select(text => (JsonNode?)JsonValue.Create(text)).ToArray());
         var body = new JsonObject
         {
-            ["model"] = SemanticSearchModels.Default,
+            ["model"] = modelId,
             ["input"] = input,
         };
         using var request = await CreateAuthorizedRequestAsync(HttpMethod.Post, "embeddings", body, cancellationToken);
@@ -562,7 +598,7 @@ public sealed class OpenRouterClient(
         var model = root["model"] is JsonValue modelNode && modelNode.TryGetValue<string>(out var responseModel)
             && !string.IsNullOrWhiteSpace(responseModel)
             ? responseModel
-            : SemanticSearchModels.Default;
+            : modelId;
         return new EmbeddingResult(vectors, model, vectors[0].Length, ReadCost(root));
     }
 
@@ -723,6 +759,11 @@ public sealed class OpenRouterClient(
 
     private static int? ReadInt(JsonNode? node) =>
         node is JsonValue value && value.TryGetValue<int>(out var number) ? number : null;
+
+    private static decimal? ReadDecimal(JsonNode? node) =>
+        decimal.TryParse(ReadString(node), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : node is JsonValue value && value.TryGetValue<decimal>(out parsed) ? parsed : null;
 
     private static int ReadMaxImages(JsonObject? parameters)
     {

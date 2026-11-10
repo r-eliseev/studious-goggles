@@ -28,7 +28,7 @@ public sealed class SemanticSearchServiceTests
             Embedding("title:a", sessionA, SearchTextKind.Title, sources[0].Text, [0.8f, 0.6f]),
             Embedding("prompt:b", sessionB, SearchTextKind.Prompt, sources[1].Text, [0.1f, 0.995f]),
         ]);
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(new EmbeddingResult([[1f, 0f]], "baai/bge-m3", 2, null));
 
         var hits = await setup.Service.SearchAsync("  northern   sky ", ct);
@@ -36,7 +36,7 @@ public sealed class SemanticSearchServiceTests
         Assert.Equal(sessionA, hits[0].SessionId);
         Assert.Equal("North star observatory", hits[0].Snippet);
         Assert.True(hits[0].Score > hits[1].Score);
-        await setup.Client.Received(1).EmbedAsync(
+        await setup.Client.Received(1).EmbedAsync("baai/bge-m3",
             Arg.Is<IReadOnlyList<string>>(texts => texts.SequenceEqual(new[] { "northern sky" })), Arg.Any<CancellationToken>());
         setup.Service.Dispose();
     }
@@ -47,7 +47,7 @@ public sealed class SemanticSearchServiceTests
         var ct = TestContext.Current.CancellationToken;
         var source = new SearchSource("title:a", Guid.NewGuid(), SearchTextKind.Title, "blue lake");
         var setup = Create([source], [Embedding("title:a", source.SessionId, SearchTextKind.Title, source.Text, [1f, 0f])]);
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(new EmbeddingResult([[1f, 0f]], "BAAI/bge-m3", 2, 0.00000016m));
 
         var hits = await setup.Service.SearchAsync("blue lake", ct);
@@ -67,7 +67,7 @@ public sealed class SemanticSearchServiceTests
 
         Assert.Empty(await setup.Service.SearchAsync("ab", ct));
         Assert.Empty(await setup.Service.SearchAsync("fox", ct));
-        await setup.Client.DidNotReceive().EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+        await setup.Client.DidNotReceive().EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
         setup.Service.Dispose();
     }
 
@@ -81,7 +81,7 @@ public sealed class SemanticSearchServiceTests
         Assert.Empty(await setup.Service.SearchAsync(new string('x', 8_193), ct));
 
         Assert.Equal("query_too_long", setup.Service.LastErrorCode);
-        await setup.Client.DidNotReceive().EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+        await setup.Client.DidNotReceive().EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
         setup.Service.Dispose();
     }
 
@@ -91,13 +91,30 @@ public sealed class SemanticSearchServiceTests
         var ct = TestContext.Current.CancellationToken;
         var source = new SearchSource("title:a", Guid.NewGuid(), SearchTextKind.Title, "blue lake");
         var setup = Create([source], [Embedding("title:a", source.SessionId, SearchTextKind.Title, source.Text, [1f, 0f])]);
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(new EmbeddingResult([[1f, 0f]], "baai/bge-m3", 2, null));
 
         await setup.Service.SearchAsync("blue lake", ct);
         await setup.Service.SearchAsync("blue lake", ct);
 
-        await setup.Client.Received(1).EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+        await setup.Client.Received(1).EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+        setup.Service.Dispose();
+    }
+
+    [Fact]
+    public async Task SearchAsync_UsesSelectedModelAndExcludesVectorsFromOtherModels()
+    {
+        const string selectedModel = "vendor/embedding-v2";
+        var ct = TestContext.Current.CancellationToken;
+        var source = new SearchSource("title:a", Guid.NewGuid(), SearchTextKind.Title, "blue lake");
+        var setup = Create([source], [Embedding("title:a", source.SessionId, SearchTextKind.Title, source.Text, [1f, 0f])], modelId: selectedModel);
+        setup.Client.EmbedAsync(selectedModel, Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(new EmbeddingResult([[1f, 0f]], selectedModel, 2, null));
+
+        var hits = await setup.Service.SearchAsync("blue lake", ct);
+
+        Assert.Empty(hits);
+        await setup.Client.Received(1).EmbedAsync(selectedModel, Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
         setup.Service.Dispose();
     }
 
@@ -107,7 +124,7 @@ public sealed class SemanticSearchServiceTests
         var ct = TestContext.Current.CancellationToken;
         var source = new SearchSource("title:a", Guid.NewGuid(), SearchTextKind.Title, "blue lake");
         var setup = Create([source], [Embedding("title:a", source.SessionId, SearchTextKind.Title, source.Text, [1f, 0f])]);
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(new EmbeddingResult([[1f, 0f]], "baai/bge-m3", 2, 0.03m));
 
         await setup.Service.SearchAsync("blue lake", ct);
@@ -117,7 +134,7 @@ public sealed class SemanticSearchServiceTests
         setup.Service.Dispose();
 
         var failed = Create([source], [Embedding("title:a", source.SessionId, SearchTextKind.Title, source.Text, [1f, 0f])]);
-        failed.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        failed.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(_ => Task.FromException<EmbeddingResult>(new ProviderException(ErrorKind.Network, "offline")));
 
         Assert.Empty(await failed.Service.SearchAsync("blue lake", ct));
@@ -128,7 +145,8 @@ public sealed class SemanticSearchServiceTests
     private static (SemanticSearchService Service, ITextEmbeddingClient Client, ITextEmbeddingRepository Repository) Create(
         IReadOnlyList<SearchSource> sources,
         IReadOnlyList<TextEmbedding> embeddings,
-        bool ready = true)
+        bool ready = true,
+        string modelId = SemanticSearchModels.Default)
     {
         var textSource = Substitute.For<ISearchTextSource>();
         textSource.ListSourcesAsync(Arg.Any<CancellationToken>()).Returns(sources);
@@ -138,11 +156,13 @@ public sealed class SemanticSearchServiceTests
         var router = Substitute.For<IProviderRouter>();
         router.GetTextEmbeddingClient(ProviderIds.OpenRouter).Returns(client);
         var index = Substitute.For<ISemanticIndexStatusProvider>();
+        var settings = Substitute.For<ISemanticSearchSettingsStore>();
+        settings.GetModelAsync(Arg.Any<CancellationToken>()).Returns(modelId);
         index.GetStatusAsync(Arg.Any<CancellationToken>()).Returns(new SemanticIndexStatus(true, embeddings.Count, 0,
             ready ? SemanticIndexState.Ready : SemanticIndexState.Unavailable));
         index.GetStatusSnapshot().Returns(new SemanticIndexStatus(true, embeddings.Count, 0,
             ready ? SemanticIndexState.Ready : SemanticIndexState.Unavailable));
-        var service = new SemanticSearchService(textSource, repository, router, index, TimeProvider.System,
+        var service = new SemanticSearchService(textSource, repository, router, index, settings, TimeProvider.System,
             NullLogger<SemanticSearchService>.Instance);
         return (service, client, repository);
     }

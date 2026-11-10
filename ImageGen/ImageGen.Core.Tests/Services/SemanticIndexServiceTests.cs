@@ -1,6 +1,7 @@
 using ImageGen.Core.Domain.Expenses;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Keys;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Search;
 using ImageGen.Core.Services;
@@ -18,7 +19,7 @@ public class SemanticIndexServiceTests
         var ct = TestContext.Current.CancellationToken;
         var source = Source(SearchTextKind.Title, "  red   fox ");
         var setup = Create([source]);
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(new EmbeddingResult([[0.5f, 0.25f]], "baai/bge-m3", 2, 0.02m));
 
         await setup.Service.EnableAsync(ct);
@@ -26,7 +27,7 @@ public class SemanticIndexServiceTests
 
         Assert.Equal(1, status.Indexed);
         Assert.Equal(0, status.Pending);
-        await setup.Client.Received(1).EmbedAsync(
+        await setup.Client.Received(1).EmbedAsync("baai/bge-m3",
             Arg.Is<IReadOnlyList<string>>(texts => texts.SequenceEqual(new[] { "red fox" })), Arg.Any<CancellationToken>());
         var saved = Assert.Single(setup.Repository.Items.Values);
         Assert.Equal(source.SourceKey, saved.SourceKey);
@@ -42,7 +43,7 @@ public class SemanticIndexServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         var setup = Create([Source(SearchTextKind.Prompt, "a small house")]);
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(call => Task.FromResult(Result(call.Arg<IReadOnlyList<string>>().Count)));
 
         await setup.Service.EnableAsync(ct);
@@ -50,7 +51,7 @@ public class SemanticIndexServiceTests
         var status = await setup.Service.GetStatusAsync(ct);
 
         Assert.Equal(SemanticIndexState.Ready, status.State);
-        await setup.Client.Received(1).EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+        await setup.Client.Received(1).EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
         await setup.Service.DisposeAsync();
     }
 
@@ -65,7 +66,7 @@ public class SemanticIndexServiceTests
 
         Assert.Equal(SemanticIndexState.Unavailable, status.State);
         Assert.Equal("missing_key", status.ErrorCode);
-        await setup.Client.DidNotReceive().EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+        await setup.Client.DidNotReceive().EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
         await setup.Service.DisposeAsync();
     }
 
@@ -77,7 +78,7 @@ public class SemanticIndexServiceTests
         var setup = Create([source]);
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(async call =>
             {
                 entered.TrySetResult();
@@ -108,7 +109,7 @@ public class SemanticIndexServiceTests
                 readsAtReady.TrySetResult(setup.Sources.ListSourcesAsyncCalls);
             }
         };
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(call => Task.FromResult(Result(call.Arg<IReadOnlyList<string>>().Count)));
 
         await setup.Service.EnableAsync(ct);
@@ -126,7 +127,7 @@ public class SemanticIndexServiceTests
         var ct = TestContext.Current.CancellationToken;
         var setup = Create([Source(SearchTextKind.Prompt, "red fox")]);
         var attempts = 0;
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
                 if (Interlocked.Increment(ref attempts) < 3)
@@ -150,16 +151,66 @@ public class SemanticIndexServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         var setup = Create([Source(SearchTextKind.Title, "fox")]);
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(_ => Task.FromException<EmbeddingResult>(
                 new ProviderException(ErrorKind.ModelUnavailable, "missing model", statusCode: 404)));
 
         await setup.Service.EnableAsync(ct);
         var status = await WaitForStateAsync(setup.Service, SemanticIndexState.Unavailable, ct);
 
-        Assert.Equal("ModelUnavailable", status.ErrorCode);
-        await setup.Client.Received(1).EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+        Assert.Equal("model_unavailable", status.ErrorCode);
+        await setup.Client.Received(1).EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
         Assert.Empty(setup.Delay.Delays);
+        await setup.Service.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task ChangeModelAsync_ClearsOldVectorsAndIndexesUsingSelectedModel()
+    {
+        const string selectedModel = "vendor/embedding-v2";
+        var ct = TestContext.Current.CancellationToken;
+        var setup = Create([Source(SearchTextKind.Title, "fox")]);
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(call => Task.FromResult(Result(call.Arg<IReadOnlyList<string>>().Count)));
+        setup.Client.EmbedAsync(selectedModel, Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(call => Task.FromResult(new EmbeddingResult(
+                Enumerable.Range(0, call.Arg<IReadOnlyList<string>>().Count).Select(_ => new[] { 1f, 0f }).ToArray(),
+                selectedModel, 2, null)));
+
+        await setup.Service.EnableAsync(ct);
+        await WaitForStateAsync(setup.Service, SemanticIndexState.Ready, ct);
+        await setup.Service.ChangeModelAsync(selectedModel, ct);
+        await WaitForStateAsync(setup.Service, SemanticIndexState.Ready, ct);
+
+        Assert.Equal(selectedModel, Assert.Single(setup.Repository.Items.Values).Model);
+        await setup.Client.Received(1).EmbedAsync(selectedModel, Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+        await setup.Service.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task EstimateReindexAsync_TenFourHundredCharacterSources_CalculatesTokensAndCost()
+    {
+        const string selectedModel = "vendor/embedding-v2";
+        var setup = Create(Enumerable.Range(0, 10).Select(_ => Source(SearchTextKind.Title, new string('x', 400))).ToArray());
+
+        var estimate = await setup.Service.EstimateReindexAsync(selectedModel, TestContext.Current.CancellationToken);
+
+        Assert.Equal(new ReindexEstimate(10, 1_000, 0.00001m), estimate);
+        await setup.Service.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task EnableAsync_SelectedModelMissingFromCatalog_ReportsUnavailableWithoutEmbeddingRequest()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var setup = Create([Source(SearchTextKind.Title, "fox")], modelId: "vendor/retired-model");
+
+        await setup.Service.EnableAsync(ct);
+        var status = await WaitForStateAsync(setup.Service, SemanticIndexState.Unavailable, ct);
+
+        Assert.Equal("model_unavailable", status.ErrorCode);
+        Assert.Equal("vendor/retired-model", status.ErrorDetail);
+        await setup.Client.DidNotReceive().EmbedAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
         await setup.Service.DisposeAsync();
     }
 
@@ -170,7 +221,7 @@ public class SemanticIndexServiceTests
         var source = Source(SearchTextKind.Title, "first version");
         var setup = Create([source]);
         var calls = 0;
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
                 Interlocked.Increment(ref calls);
@@ -200,7 +251,7 @@ public class SemanticIndexServiceTests
         var setup = Create(sources);
         var attempts = 0;
         var secondBatchStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(async call =>
             {
                 var attempt = Interlocked.Increment(ref attempts);
@@ -233,7 +284,7 @@ public class SemanticIndexServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         var setup = Create([Source(SearchTextKind.Title, "finite only")]);
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(new EmbeddingResult([[float.NaN, 1f]], "baai/bge-m3", 2, null));
 
         await setup.Service.EnableAsync(ct);
@@ -250,7 +301,7 @@ public class SemanticIndexServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         var setup = Create([Source(SearchTextKind.Title, "finite only")]);
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(new EmbeddingResult([[float.NaN, 1f]], "baai/bge-m3", 2, 0.001m));
 
         await setup.Service.EnableAsync(ct);
@@ -267,7 +318,7 @@ public class SemanticIndexServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         var setup = Create([Source(SearchTextKind.Title, "model mismatch")]);
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(new EmbeddingResult([[0.5f]], "parasail-bge-m3", 1, 0.00000016m));
 
         await setup.Service.EnableAsync(ct);
@@ -277,7 +328,7 @@ public class SemanticIndexServiceTests
         Assert.Equal("baai/bge-m3", Assert.Single(setup.Repository.Items.Values).Model);
         Assert.Equal("baai/bge-m3", Assert.Single(setup.Repository.Expenses).ModelId);
         await setup.Service.GetStatusAsync(ct);
-        await setup.Client.Received(1).EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+        await setup.Client.Received(1).EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
         await setup.Service.DisposeAsync();
     }
 
@@ -286,7 +337,7 @@ public class SemanticIndexServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         var setup = Create([Source(SearchTextKind.Title, "model casing")]);
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(new EmbeddingResult([[0.5f]], "BAAI/BGE-M3", 1, null));
 
         await setup.Service.EnableAsync(ct);
@@ -306,7 +357,7 @@ public class SemanticIndexServiceTests
             .ToArray();
         var setup = Create(sources);
         var attempts = 0;
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
                 var attempt = Interlocked.Increment(ref attempts);
@@ -343,7 +394,7 @@ public class SemanticIndexServiceTests
         var setup = Create(sources);
         var calls = 0;
         var batchSizes = new List<int>();
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
                 Interlocked.Increment(ref calls);
@@ -374,7 +425,7 @@ public class SemanticIndexServiceTests
         var firstBatchStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseFirstBatch = new TaskCompletionSource<EmbeddingResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         var calls = 0;
-        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        setup.Client.EmbedAsync("baai/bge-m3", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
                 var count = call.Arg<IReadOnlyList<string>>().Count;
@@ -407,21 +458,34 @@ public class SemanticIndexServiceTests
 
     private static (SemanticIndexService Service, MemorySources Sources, MemoryEmbeddings Repository, ITextEmbeddingClient Client, SessionChangeNotifier Changes, RecordingDelay Delay) Create(
         IReadOnlyList<SearchSource> sources,
-        bool hasKey = true)
+        bool hasKey = true,
+        string modelId = SemanticSearchModels.Default)
     {
         var sourceStore = new MemorySources(sources);
         var repository = new MemoryEmbeddings();
         var client = Substitute.For<ITextEmbeddingClient>();
         var router = Substitute.For<IProviderRouter>();
         router.GetTextEmbeddingClient(ProviderIds.OpenRouter).Returns(client);
+        var provider = Substitute.For<IEmbeddingModelProvider>();
+        provider.ListEmbeddingModelsAsync(Arg.Any<CancellationToken>()).Returns(new[] { CreateModel(SemanticSearchModels.Default, 0.00000001m), CreateModel("vendor/embedding-v2", 0.00000001m) });
+        router.GetEmbeddingModelProvider(ProviderIds.OpenRouter).Returns(provider);
+        var modelRepository = Substitute.For<IEmbeddingModelRepository>();
+        modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(new[] { CreateModel(SemanticSearchModels.Default, 0.00000001m), CreateModel("vendor/embedding-v2", 0.00000001m) });
+        var catalog = new EmbeddingModelCatalogService(router, modelRepository, NullLogger<EmbeddingModelCatalogService>.Instance);
         var secrets = Substitute.For<ImageGen.Core.Platform.ISecretStore>();
         secrets.GetAsync(SecretNames.OpenRouterApiKey, Arg.Any<CancellationToken>()).Returns(hasKey ? "test-key" : null);
         var settings = Substitute.For<ISemanticSearchSettingsStore>();
+        settings.GetModelAsync(Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult(modelId));
         var enabled = false;
         settings.GetEnabledAsync(Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult(enabled));
         settings.SetEnabledAsync(Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns(call =>
         {
             enabled = call.Arg<bool>();
+            return Task.CompletedTask;
+        });
+        settings.SetModelAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            modelId = call.Arg<string>();
             return Task.CompletedTask;
         });
         var delay = new RecordingDelay();
@@ -436,9 +500,21 @@ public class SemanticIndexServiceTests
             changes,
             delay,
             TimeProvider.System,
-            NullLogger<SemanticIndexService>.Instance);
+            NullLogger<SemanticIndexService>.Instance,
+            catalog);
         return (service, sourceStore, repository, client, changes, delay);
     }
+
+    private static EmbeddingModel CreateModel(string id, decimal? price) => new()
+    {
+        ProviderId = ProviderIds.OpenRouter,
+        Id = id,
+        Name = id == "vendor/embedding-v2" ? "Embedding v2" : "BAAI BGE M3",
+        Description = "Test embedding model",
+        ContextLength = 8_192,
+        PricePerTokenUsd = price,
+        FetchedAt = new DateTimeOffset(2026, 11, 10, 0, 0, 0, TimeSpan.Zero),
+    };
 
     private static SearchSource Source(SearchTextKind kind, string text)
     {

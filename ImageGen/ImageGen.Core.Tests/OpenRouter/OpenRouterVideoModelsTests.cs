@@ -75,6 +75,27 @@ public sealed class OpenRouterVideoModelsTests
         Assert.Empty(handler.Requests);
     }
 
+    [Fact]
+    public async Task ListEmbeddingModelsAsync_MapsCatalogWithoutApiKey()
+    {
+        var handler = StubHttpMessageHandler.Json(HttpStatusCode.OK, """
+            {"data":[
+              {"id":"vendor/embed-a","name":"A","description":"first","context_length":8192,"pricing":{"prompt":"0.00000001"}},
+              {"id":"vendor/embed-b","name":"B","description":"second","context_length":4096,"pricing":{"prompt":"0.00000002"}},
+              {"id":"vendor/embed-c","name":"C","description":"third","context_length":2048,"pricing":{"prompt":"0.00000003"}}]}
+            """);
+        var client = CreateClient(handler, storedKey: null);
+
+        var models = await client.ListEmbeddingModelsAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, models.Count);
+        Assert.Equal("vendor/embed-a", models[0].Id);
+        Assert.Equal(0.00000001m, models[0].PricePerTokenUsd);
+        Assert.Equal(8192, models[0].ContextLength);
+        Assert.Equal("https://openrouter.ai/api/v1/embeddings/models", handler.Requests[0].RequestUri!.ToString());
+        Assert.Null(handler.Requests[0].Headers.Authorization);
+    }
+
     private static OpenRouterClient CreateClient(
         StubHttpMessageHandler handler,
         ILogger<OpenRouterClient>? logger = null,
