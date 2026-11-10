@@ -1,3 +1,4 @@
+using System.Globalization;
 using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Platform;
@@ -12,6 +13,7 @@ using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Resources.Strings;
 using ImageGen.Presentation.Services;
 using ImageGen.Presentation.Tests.TestDoubles;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
@@ -35,6 +37,7 @@ public sealed class SettingsPageModelTests : IDisposable
     private readonly ISessionRepository _sessions = Substitute.For<ISessionRepository>();
     private readonly IImageFileStore _files = Substitute.For<IImageFileStore>();
     private readonly ISessionGenerationCoordinator _generationCoordinator = Substitute.For<ISessionGenerationCoordinator>();
+    private readonly CapturingLogger<SettingsPageModel> _settingsLogger = new();
     private readonly SessionChangeNotifier _changes = new(NullLogger<SessionChangeNotifier>.Instance);
     private readonly ISemanticIndexStatusProvider _indexStatus = Substitute.For<ISemanticIndexStatusProvider>();
     private HistoryService CreateHistory() => new(_sessions, _files, _generationCoordinator, _changes, NullLogger<HistoryService>.Instance, _indexStatus);
@@ -479,6 +482,34 @@ public sealed class SettingsPageModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ClearLogs_DeletionFails_ReportsFailuresAndLogsExceptionType()
+    {
+        var paths = CreateLogFiles("imagegen-20261101.log", "imagegen-20261102.log", "imagegen-20261103.log");
+        _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+        var model = CreateModel(path =>
+        {
+            if (path == paths[0])
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            File.Delete(path);
+        });
+
+        await model.ClearLogsCommand.ExecuteAsync(null);
+
+        Assert.True(File.Exists(paths[0]));
+        Assert.False(File.Exists(paths[1]));
+        Assert.True(File.Exists(paths[2]));
+        await _dialogs.Received(1).AlertAsync(AppResources.SettingsLogs,
+            string.Format(CultureInfo.CurrentCulture, AppResources.SettingsLogsClearedWithFailures, 1, 1));
+        Assert.Contains(_settingsLogger.Entries, entry => entry.Level == LogLevel.Warning
+            && entry.Message.Contains(nameof(UnauthorizedAccessException), StringComparison.Ordinal)
+            && entry.Message.Contains("1", StringComparison.Ordinal)
+            && !entry.Message.Contains(_directory, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task ClearHistory_Cancel_KeepsHistory()
     {
         _dialogs.ConfirmAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(false);
@@ -520,11 +551,11 @@ public sealed class SettingsPageModelTests : IDisposable
         Assert.True(CreateModel().CanOpenLogs);
     }
 
-    private SettingsPageModel CreateModel() => new(_appearance, _keyService, _registry, _navigation, _folders, _logSharer, new TestPaths(_directory), _dialogs,
+    private SettingsPageModel CreateModel(Action<string>? deleteLogFile = null) => new(_appearance, _keyService, _registry, _navigation, _folders, _logSharer, new TestPaths(_directory), _dialogs,
         ErrorAlerts.Create(_dialogs), new ChatModelCatalogService(_router, NullLogger<ChatModelCatalogService>.Instance), _defaultAssistantModel,
         _semanticIndex, _semanticSettings,
         new EmbeddingModelCatalogService(_router, _embeddingModelRepository, NullLogger<EmbeddingModelCatalogService>.Instance),
-        _mainThread, CreateHistory(), _currentSession);
+        _mainThread, CreateHistory(), _currentSession, _settingsLogger, deleteLogFile);
 
     private static EmbeddingModel EmbeddingModel(string id, string name, int? contextLength, decimal? price) => new()
     {

@@ -298,6 +298,8 @@ public static class AppResources
 
     public static string SettingsLogsCleared => Get(nameof(SettingsLogsCleared));
 
+    public static string SettingsLogsClearedWithFailures => Get(nameof(SettingsLogsClearedWithFailures));
+
     public static string SettingsNoLogs => Get(nameof(SettingsNoLogs));
 
     public static string SessionsToday => Get(nameof(SessionsToday));

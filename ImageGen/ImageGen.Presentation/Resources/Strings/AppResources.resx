@@ -680,6 +680,9 @@
   <data name="SettingsLogsCleared" xml:space="preserve">
     <value>Deleted {0} log files. The current file is kept.</value>
   </data>
+  <data name="SettingsLogsClearedWithFailures" xml:space="preserve">
+    <value>Deleted {0} log files; {1} could not be deleted. The current file is kept.</value>
+  </data>
   <data name="SettingsNoLogs" xml:space="preserve">
     <value>No log files yet.</value>
   </data>
