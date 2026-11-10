@@ -72,3 +72,9 @@ An agent cannot play a video, but it can see pictures. So a video is split into 
   - The whole 1024×768 desktop is recorded. Behind the app window the runner's console with its JSON logs is visible; no secrets are seen in them.
   - The error "OpenRouter rejected this key." is in the recording.
   - The MAUI key field on Windows shows the entered key in plain text (`sk-or-e2e-invalid`) for about 0.2 s and only then masks it. The key was entered by fast FlaUI typing. How the field behaves on paste is not checked. Task 251.
+
+### UI E2E after task 251
+
+Run [42808851378](https://github.com/r-eliseev/studious-goggles/actions/runs/42808851378) passed on both platforms. Android artifacts now include `screenshot.png` for every test. The final frames of `InvalidKey_ShowsError` show “OpenRouter rejected this key.”; `Rotate_KeepsKeyScreen` waits for the key field before rotating and its recording shows that screen in landscape. The Windows `InvalidKey_ShowsError` recording and screenshot also show the final provider error.
+
+The temporary paste check passed in run [42806400823](https://github.com/r-eliseev/studious-goggles/actions/runs/42806400823). A contact sheet from its video showed the pasted key masked in every sampled frame. The temporary test was removed after recording this observation in `docs/knowledge/maui.md`.
