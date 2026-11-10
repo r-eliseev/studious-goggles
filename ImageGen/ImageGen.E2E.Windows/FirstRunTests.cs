@@ -1,5 +1,6 @@
-using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Text;
 using Allure.NUnit;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Input;
@@ -68,21 +69,82 @@ public sealed class FirstRunTests : WindowsTestBase
 
     private static void SetClipboardText(string text)
     {
-        var startInfo = new ProcessStartInfo("powershell.exe")
+        var content = Encoding.Unicode.GetBytes(text + '\0');
+        var buffer = GlobalAlloc(MovableMemory, (UIntPtr)content.Length);
+        if (buffer == IntPtr.Zero)
         {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-        startInfo.ArgumentList.Add("-NoProfile");
-        startInfo.ArgumentList.Add("-NonInteractive");
-        startInfo.ArgumentList.Add("-Command");
-        startInfo.ArgumentList.Add($"Set-Clipboard -Value '{text}'");
+            throw new InvalidOperationException("Could not allocate Windows clipboard memory.");
+        }
 
-        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Could not set the Windows clipboard.");
-        process.WaitForExit();
-        if (process.ExitCode != 0)
+        try
         {
-            throw new InvalidOperationException("Setting the Windows clipboard failed.");
+            var lockedBuffer = GlobalLock(buffer);
+            if (lockedBuffer == IntPtr.Zero)
+            {
+                throw new InvalidOperationException("Could not lock Windows clipboard memory.");
+            }
+
+            try
+            {
+                Marshal.Copy(content, 0, lockedBuffer, content.Length);
+            }
+            finally
+            {
+                GlobalUnlock(buffer);
+            }
+
+            if (!OpenClipboard(IntPtr.Zero))
+            {
+                throw new InvalidOperationException("Could not open the Windows clipboard.");
+            }
+
+            try
+            {
+                if (!EmptyClipboard() || SetClipboardData(UnicodeText, buffer) == IntPtr.Zero)
+                {
+                    throw new InvalidOperationException("Could not set the Windows clipboard text.");
+                }
+
+                buffer = IntPtr.Zero;
+            }
+            finally
+            {
+                CloseClipboard();
+            }
+        }
+        finally
+        {
+            if (buffer != IntPtr.Zero)
+            {
+                GlobalFree(buffer);
+            }
         }
     }
+
+    private const uint UnicodeText = 13;
+    private const uint MovableMemory = 2;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GlobalAlloc(uint flags, UIntPtr bytes);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GlobalLock(IntPtr memory);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GlobalUnlock(IntPtr memory);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GlobalFree(IntPtr memory);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool OpenClipboard(IntPtr windowHandle);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool EmptyClipboard();
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SetClipboardData(uint format, IntPtr memory);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool CloseClipboard();
 }
