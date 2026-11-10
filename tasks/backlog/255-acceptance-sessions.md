@@ -72,3 +72,11 @@ Plan approved, status `approved`. Changes of the same day apply: the Gherkin sce
 
 ### 2026-11-10, codex-gpt6
 The approved plan omits fake prompt result control needed by SES-03/04. Initial Reqnroll attempts at SES-02 send and SES-05 delete did not complete within the headless scenario timeout; no product code was changed. Request plan review before extending the file list or marking these product flows as defects.
+
+### 2026-11-10, codex-gpt6 — plan amendment requested
+Please amend the approved plan to:
+- allow `ImageGen/ImageGen.Acceptance.Tests/Support/FakePlatform.cs` to queue a `PromptAsync` result so SES-03/04 can exercise rename through the session row command;
+- allow investigation and fixes in the acceptance harness/steps needed to run SES-02 (first-message title) and SES-05 (delete confirmation) without bypassing the UI/page-model flow;
+- retain the current rule against changing product behavior to make an acceptance scenario pass. If investigation confirms a product/specification discrepancy, record it with `@ignore @bug-NNN` and a follow-up task.
+
+Until this plan update is approved, the implementation remains limited to SES-01, SES-06 and SES-09.
