@@ -1,8 +1,8 @@
 ---
 id: 246
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-07T11:55:46Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -57,6 +57,10 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-10, codex-gpt6
+- Job `build-avalonia-ios` прошёл в scheduled run [42794177774](https://github.com/r-eliseev/studious-goggles/actions/runs/42794177774).
+- Симуляторный запуск подтвердил экран первого запуска «Connect OpenRouter» в run [42405774295](https://github.com/r-eliseev/studious-goggles/actions/runs/42405774295). Визуальная проверка безопасных отступов на реальном устройстве не выполнялась; известные чёрные полосы описаны ранее и не мешают запуску.
 
 ### 2026-11-07, codex-gpt6 (в работе)
 - Первый CI build выявил сигнатуру `SecKeyChain.QueryAsRecord` (`SecRecord` возвращается, `SecStatusCode` идёт через `out`), nullable UIKit view и устаревший `UIApplication.KeyWindow`; исправлены.

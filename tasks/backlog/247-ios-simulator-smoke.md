@@ -1,8 +1,8 @@
 ---
 id: 247
-status: in-progress
+status: blocked
 assignee: codex-gpt6
-claimed: 2026-11-07T12:11:27Z
+claimed: 2026-11-10T20:30:00Z
 created: 2026-11-07
 ---
 
@@ -55,6 +55,10 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-10, codex-gpt6
+- Последние три ночных прогона: MAUI прошёл все три; Avalonia прошёл [42465262394](https://github.com/r-eliseev/studious-goggles/actions/runs/42465262394) и [42596262790](https://github.com/r-eliseev/studious-goggles/actions/runs/42596262790), но в [42794177774](https://github.com/r-eliseev/studious-goggles/actions/runs/42794177774) завершился после запуска: `launched=true`, `aliveAfter30s=false`, `crashReports=0` (артефакт `ios-smoke-avalonia`). Критерий трёх последовательных зелёных прогонов для Avalonia не выполнен.
+- Артефакт последнего запуска скачан и просмотрен: `launch.log` содержит только `getpwuid_r did not find a match for uid 501`; `simulator.log` пуст. Причину выхода по имеющимся логам установить нельзя. Статус `blocked`, claim оставлен по правилу для неизвестного блокера до решения/дополнительных данных владельца.
 
 ### 2026-11-07, codex-gpt6 (в работе)
 - `apple-sim-pick.py` выбирает последнюю доступную iOS runtime и первый поддерживаемый ею iPhone, без зашитых версии/модели. Проверка на сохранённом инвентаре `tmp/apple-preflight-run4/` выбрала iOS 26.5 / iPhone 17 Pro.

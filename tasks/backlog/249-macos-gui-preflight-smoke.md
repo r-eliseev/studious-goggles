@@ -1,8 +1,8 @@
 ---
 id: 249
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-07T12:19:55Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -54,6 +54,10 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-10, codex-gpt6
+- Три последовательных scheduled `smoke-macos` прогона успешны: [42465262394](https://github.com/r-eliseev/studious-goggles/actions/runs/42465262394), [42596262790](https://github.com/r-eliseev/studious-goggles/actions/runs/42596262790), [42794177774](https://github.com/r-eliseev/studious-goggles/actions/runs/42794177774). Во всех GUI-сессия доступна, `accessibilityOk=true`, `nonUniformRatio` около 0.999, crash reports и app failures отсутствуют.
+- Условия для Mac2 выполнены: предложение отдельной задачи UI-тестов Mac2 4.6.1 добавлено в `docs/status.md`; решение остаётся владельцу.
 
 ### 2026-11-07, codex-gpt6 (в работе)
 - Первый автоматический smoke на `main` — run [42381579325](https://github.com/r-eliseev/studious-goggles/actions/runs/42381579325) — остановился до проверки GUI-приложений: `sips -s format bmp` сформировал 32-bit BMP с `BI_BITFIELDS` (`compression=3`), а парсер принимал только `compression=0`.
