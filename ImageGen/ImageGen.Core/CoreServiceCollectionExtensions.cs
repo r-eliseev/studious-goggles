@@ -53,6 +53,7 @@ public static class CoreServiceCollectionExtensions
         services.AddSingleton<ApiKeyService>();
         services.AddSingleton<ModelCatalogService>();
         services.AddSingleton<VideoModelCatalogService>();
+        services.AddSingleton<EmbeddingModelCatalogService>();
         services.AddSingleton<AudioModelCatalogService>();
         services.AddSingleton<CostEstimator>();
         services.AddSingleton<SessionService>();

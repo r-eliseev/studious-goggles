@@ -132,7 +132,7 @@ public class ProviderRouterTests
     {
         var client = _router.GetTextEmbeddingClient("local");
 
-        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync(["text"], TestContext.Current.CancellationToken));
+        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync("baai/bge-m3", ["text"], TestContext.Current.CancellationToken));
 
         Assert.Equal(ErrorKind.ModelUnavailable, error.Kind);
     }

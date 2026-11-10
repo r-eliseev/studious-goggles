@@ -2,5 +2,5 @@ namespace ImageGen.Core.Providers;
 
 public interface ITextEmbeddingClient
 {
-    Task<EmbeddingResult> EmbedAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken);
+    Task<EmbeddingResult> EmbedAsync(string modelId, IReadOnlyList<string> texts, CancellationToken cancellationToken);
 }

@@ -58,6 +58,17 @@ public sealed class ProviderRouter(
             ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support video models.");
     }
 
+    public IEmbeddingModelProvider GetEmbeddingModelProvider(string providerId)
+    {
+        if (registry.Get(providerId).Kind != ProviderKind.OpenRouter)
+        {
+            throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support embedding models.");
+        }
+
+        return GetConnection(providerId) as IEmbeddingModelProvider
+            ?? throw new ProviderException(ErrorKind.ModelUnavailable, $"Provider '{providerId}' does not support embedding models.");
+    }
+
     public IQueuedVideoProvider GetQueuedVideoProvider(string providerId)
     {
         if (registry.Get(providerId).Kind != ProviderKind.OpenRouter)
