@@ -11,6 +11,7 @@
 | knowledge/ | environment and facts about .NET, MAUI, Avalonia, providers; [Avalonia mobile](knowledge/avalonia-mobile.md) | before platform work |
 | knowledge/docker.md | building, running and storing data of the Web host in Docker | for a self-hosted Web run |
 | knowledge/ui-e2e.md | facts about the MAUI E2E test environment in GitHub Actions | when working on the E2E infrastructure |
+| knowledge/acceptance-tests.md | Reqnroll and Avalonia Headless acceptance test setup | when working on acceptance tests |
 | knowledge/apple-ci.md | verified Xcode/.NET versions and Apple builds in GitHub Actions | before Apple builds and iOS E2E |
 | design/ | platform guidelines and design tokens (`implementation.md`, `tokens.json`) | before layout work |
 | decisions/ | ADRs and the `_template.md` template | for contested changes |

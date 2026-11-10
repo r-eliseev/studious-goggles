@@ -36,7 +36,7 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 ### First launch and keys (`FirstRunAndKeys.feature`, task 254)
 | id | Scenario: condition → expectation | Requirements | Status |
 |---|---|---|---|
-| KEY-01 | First launch without a key → the key screen opens, not the session list (`@e2e`, replaces `FirstRunTests.Launch_ShowsFirstRunKeyScreen`) | S1, F1.1 | planned |
+| KEY-01 | First launch without a key → the key screen opens, not the session list (`@e2e`, replaces `FirstRunTests.Launch_ShowsFirstRunKeyScreen`) | S1, F1.1 | done |
 | KEY-02 | A valid OpenRouter key → status "works", then the assistant model choice; after choosing — the session list | F1.2, S1.3 | planned |
 | KEY-03 | An invalid key (401) → an "invalid key" message with the provider's name, we stay on the key screen, the key is not saved (`@e2e`, replaces `FirstRunTests.InvalidKey_ShowsError`; on a device the message may also be "no connection") | F1.2 | planned |
 | KEY-04 | No connection → a "no connection" message, the key is not saved | F1.2 | planned |
