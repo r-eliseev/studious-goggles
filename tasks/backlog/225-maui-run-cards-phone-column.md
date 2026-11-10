@@ -1,8 +1,8 @@
 ---
 id: 225
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-10T16:27:22Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -48,6 +48,12 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+- Extracted the generation card into the page resource `GenerationCardTemplate` and reused it from both layouts. Wide windows keep the wrapping `FlexLayout`; narrow windows use one centered `VerticalStackLayout` with 8 dp spacing. The card now has centered horizontal alignment and no asymmetric margin.
+- Exposed the page's measured `IsWide` state as a typed `ChatPage` property so the two layout bindings remain compiled.
+- Added markup coverage for the single shared template, both hosts, breakpoint binding and card centering. Added the phone layout scenario to task 140.
+- Verification passed: Presentation tests (543), MAUI Android build (0 warnings/errors), formatting for Presentation.Tests and MAUI, and `bash scripts/check.sh`.
+- Manual visual verification on an Android phone remains in task 140.
 
 ## Комментарии
 

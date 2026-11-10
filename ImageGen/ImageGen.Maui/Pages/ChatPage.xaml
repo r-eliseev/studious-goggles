@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:pm="clr-namespace:ImageGen.Presentation.PageModels"
              xmlns:pmui="clr-namespace:ImageGen.Maui.PageModels"
+             xmlns:pages="clr-namespace:ImageGen.Maui.Pages"
              xmlns:strings="clr-namespace:ImageGen.Presentation.Resources.Strings"
              xmlns:appearance="clr-namespace:ImageGen.Presentation.Appearance"
              xmlns:converters="clr-namespace:ImageGen.Maui.Converters"
@@ -20,112 +21,8 @@
             <converters:ActionsSheetCommandConverter x:Key="ActionsSheetCommand" />
             <toolkit:IsNotNullConverter x:Key="IsNotNull" />
 
-            <pmui:ChatItemTemplateSelector x:Key="ChatItemSelector">
-                <pmui:ChatItemTemplateSelector.MessageTemplate>
-                    <DataTemplate x:DataType="pm:MessageItemViewModel">
-                        <Border Background="{DynamicResource IgUserMessageBackgroundBrush}"
-                                Padding="{DynamicResource IgUserMessagePadding}"
-                                StrokeThickness="0"
-                                HorizontalOptions="{DynamicResource IgUserMessageAlignment}"
-                                Margin="0,4"
-                                SizeChanged="OnTranscriptRowSizeChanged"
-                                SemanticProperties.Description="{Binding Text}">
-                            <Border.StrokeShape>
-                                <RoundRectangle CornerRadius="{DynamicResource IgUserMessageCornerRadius}" />
-                            </Border.StrokeShape>
-                            <VerticalStackLayout Spacing="2">
-                                <Label Text="{Binding RoleText}"
-                                       FontFamily="{DynamicResource IgRoleFont}"
-                                       FontAttributes="Bold"
-                                       FontSize="{DynamicResource IgFontSizeMeta}"
-                                       IsVisible="{Binding IsUser}" />
-                                <Label Text="{Binding Text}" LineBreakMode="WordWrap">
-                                    <Label.Triggers>
-                                        <DataTrigger TargetType="Label" Binding="{Binding IsError}" Value="True">
-                                            <Setter Property="TextColor" Value="{DynamicResource IgErrColor}" />
-                                        </DataTrigger>
-                                    </Label.Triggers>
-                                </Label>
-                                <Button StyleClass="ghost,small"
-                                        Text="{x:Static strings:AppResources.Copy}"
-                                        Command="{Binding Copy.CopyCommand}"
-                                        HorizontalOptions="Start"
-                                        SemanticProperties.Description="{x:Static strings:AppResources.Copy}">
-                                    <Button.Triggers>
-                                        <DataTrigger TargetType="Button" Binding="{Binding IsUser}" Value="True">
-                                            <Setter Property="IsVisible" Value="False" />
-                                        </DataTrigger>
-                                    </Button.Triggers>
-                                </Button>
-                                <Button StyleClass="ghost,small"
-                                        Text="{x:Static strings:AppResources.TryAgain}"
-                                        Command="{Binding RetryCommand}"
-                                        IsVisible="{Binding CanRetry}"
-                                        HorizontalOptions="Start"
-                                        SemanticProperties.Description="{x:Static strings:AppResources.TryAgain}" />
-                                <Label StyleClass="meta" Text="{x:Static strings:AppResources.Copied}" IsVisible="{Binding Copy.IsCopied}" />
-                            </VerticalStackLayout>
-                        </Border>
-                    </DataTemplate>
-                </pmui:ChatItemTemplateSelector.MessageTemplate>
-                <pmui:ChatItemTemplateSelector.SummaryTemplate>
-                    <!-- The thin line after the last message the summary covers (task 084). -->
-                    <DataTemplate x:DataType="pm:SummaryMarkerViewModel">
-                        <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8" Margin="0,8">
-                            <BoxView Grid.Column="0" HeightRequest="1" Color="{DynamicResource IgLineColor}" VerticalOptions="Center" />
-                            <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="Center">
-                                <Label StyleClass="meta" Text="{Binding Text}" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" />
-                                <Button StyleClass="ghost,small"
-                                        Text="{Binding ShowText}"
-                                        Command="{Binding ShowCommand}"
-                                        HorizontalOptions="Center"
-                                        SemanticProperties.Description="{Binding ShowText}" />
-                            </VerticalStackLayout>
-                            <BoxView Grid.Column="2" HeightRequest="1" Color="{DynamicResource IgLineColor}" VerticalOptions="Center" />
-                        </Grid>
-                    </DataTemplate>
-                </pmui:ChatItemTemplateSelector.SummaryTemplate>
-
-                <pmui:ChatItemTemplateSelector.RunTemplate>
-                    <DataTemplate x:DataType="pm:RunItemViewModel">
-                        <Border StrokeThickness="{DynamicResource IgRunBorderThickness}"
-                                Stroke="{DynamicResource IgLineColor}"
-                                Padding="{DynamicResource IgRunPadding}"
-                                Margin="0,4"
-                                SizeChanged="OnTranscriptRowSizeChanged"
-                                SemanticProperties.Description="{Binding PromptText}">
-                            <Border.StrokeShape>
-                                <RoundRectangle CornerRadius="{DynamicResource IgRadiusMd}" />
-                            </Border.StrokeShape>
-                            <VerticalStackLayout Spacing="8">
-                                <HorizontalStackLayout Spacing="8">
-                                    <Label StyleClass="meta" Text="{Binding HeaderText}" VerticalTextAlignment="Center" />
-                                    <Button StyleClass="ghost,small" Text="{x:Static strings:AppResources.CancelRun}" Command="{Binding CancelRunCommand}"
-                                            IsVisible="{Binding HasActiveGenerations}" SemanticProperties.Description="{x:Static strings:AppResources.CancelRun}" />
-                                </HorizontalStackLayout>
-                                <Border Background="{DynamicResource IgPromptBackgroundBrush}"
-                                        Padding="{DynamicResource IgPromptPadding}"
-                                        StrokeThickness="0">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="{DynamicResource IgRadiusSm}" />
-                                    </Border.StrokeShape>
-                                    <Label Text="{Binding PromptText}"
-                                           TextColor="{DynamicResource IgPromptForegroundColor}"
-                                           FontFamily="{DynamicResource IgPromptFont}"
-                                           FontAttributes="{DynamicResource IgPromptFontStyle}"
-                                           LineBreakMode="WordWrap" />
-                                </Border>
-                                <Button StyleClass="ghost,small"
-                                        Text="{x:Static strings:AppResources.Copy}"
-                                        Command="{Binding Copy.CopyCommand}"
-                                        HorizontalOptions="Start"
-                                        SemanticProperties.Description="{x:Static strings:AppResources.Copy}" />
-                                <Label StyleClass="meta" Text="{x:Static strings:AppResources.Copied}" IsVisible="{Binding Copy.IsCopied}" />
-                                <FlexLayout Wrap="Wrap" Direction="Row" JustifyContent="Start" AlignItems="Start"
-                                            BindableLayout.ItemsSource="{Binding Generations}">
-                                    <BindableLayout.ItemTemplate>
-                                        <DataTemplate x:DataType="pm:GenerationItemViewModel">
-                                            <Border x:Name="CardRoot" WidthRequest="280" Margin="0,0,8,8" Padding="8"
+            <DataTemplate x:Key="GenerationCardTemplate" x:DataType="pm:GenerationItemViewModel">
+                                            <Border x:Name="CardRoot" WidthRequest="280" HorizontalOptions="Center" Margin="0" Padding="8"
                                                     Background="{DynamicResource IgCardBackgroundBrush}"
                                                     StrokeThickness="{DynamicResource IgCardBorderThickness}"
                                                     Stroke="{DynamicResource IgLineColor}"
@@ -352,8 +249,123 @@
                                                 </VerticalStackLayout>
                                             </Border>
                                         </DataTemplate>
-                                    </BindableLayout.ItemTemplate>
-                                </FlexLayout>
+
+            <pmui:ChatItemTemplateSelector x:Key="ChatItemSelector">
+                <pmui:ChatItemTemplateSelector.MessageTemplate>
+                    <DataTemplate x:DataType="pm:MessageItemViewModel">
+                        <Border Background="{DynamicResource IgUserMessageBackgroundBrush}"
+                                Padding="{DynamicResource IgUserMessagePadding}"
+                                StrokeThickness="0"
+                                HorizontalOptions="{DynamicResource IgUserMessageAlignment}"
+                                Margin="0,4"
+                                SizeChanged="OnTranscriptRowSizeChanged"
+                                SemanticProperties.Description="{Binding Text}">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="{DynamicResource IgUserMessageCornerRadius}" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="{Binding RoleText}"
+                                       FontFamily="{DynamicResource IgRoleFont}"
+                                       FontAttributes="Bold"
+                                       FontSize="{DynamicResource IgFontSizeMeta}"
+                                       IsVisible="{Binding IsUser}" />
+                                <Label Text="{Binding Text}" LineBreakMode="WordWrap">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsError}" Value="True">
+                                            <Setter Property="TextColor" Value="{DynamicResource IgErrColor}" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                                <Button StyleClass="ghost,small"
+                                        Text="{x:Static strings:AppResources.Copy}"
+                                        Command="{Binding Copy.CopyCommand}"
+                                        HorizontalOptions="Start"
+                                        SemanticProperties.Description="{x:Static strings:AppResources.Copy}">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button" Binding="{Binding IsUser}" Value="True">
+                                            <Setter Property="IsVisible" Value="False" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+                                <Button StyleClass="ghost,small"
+                                        Text="{x:Static strings:AppResources.TryAgain}"
+                                        Command="{Binding RetryCommand}"
+                                        IsVisible="{Binding CanRetry}"
+                                        HorizontalOptions="Start"
+                                        SemanticProperties.Description="{x:Static strings:AppResources.TryAgain}" />
+                                <Label StyleClass="meta" Text="{x:Static strings:AppResources.Copied}" IsVisible="{Binding Copy.IsCopied}" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </pmui:ChatItemTemplateSelector.MessageTemplate>
+                <pmui:ChatItemTemplateSelector.SummaryTemplate>
+                    <!-- The thin line after the last message the summary covers (task 084). -->
+                    <DataTemplate x:DataType="pm:SummaryMarkerViewModel">
+                        <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8" Margin="0,8">
+                            <BoxView Grid.Column="0" HeightRequest="1" Color="{DynamicResource IgLineColor}" VerticalOptions="Center" />
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="Center">
+                                <Label StyleClass="meta" Text="{Binding Text}" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" />
+                                <Button StyleClass="ghost,small"
+                                        Text="{Binding ShowText}"
+                                        Command="{Binding ShowCommand}"
+                                        HorizontalOptions="Center"
+                                        SemanticProperties.Description="{Binding ShowText}" />
+                            </VerticalStackLayout>
+                            <BoxView Grid.Column="2" HeightRequest="1" Color="{DynamicResource IgLineColor}" VerticalOptions="Center" />
+                        </Grid>
+                    </DataTemplate>
+                </pmui:ChatItemTemplateSelector.SummaryTemplate>
+
+                <pmui:ChatItemTemplateSelector.RunTemplate>
+                    <DataTemplate x:DataType="pm:RunItemViewModel">
+                        <Border StrokeThickness="{DynamicResource IgRunBorderThickness}"
+                                Stroke="{DynamicResource IgLineColor}"
+                                Padding="{DynamicResource IgRunPadding}"
+                                Margin="0,4"
+                                SizeChanged="OnTranscriptRowSizeChanged"
+                                SemanticProperties.Description="{Binding PromptText}">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="{DynamicResource IgRadiusMd}" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="8">
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label StyleClass="meta" Text="{Binding HeaderText}" VerticalTextAlignment="Center" />
+                                    <Button StyleClass="ghost,small" Text="{x:Static strings:AppResources.CancelRun}" Command="{Binding CancelRunCommand}"
+                                            IsVisible="{Binding HasActiveGenerations}" SemanticProperties.Description="{x:Static strings:AppResources.CancelRun}" />
+                                </HorizontalStackLayout>
+                                <Border Background="{DynamicResource IgPromptBackgroundBrush}"
+                                        Padding="{DynamicResource IgPromptPadding}"
+                                        StrokeThickness="0">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="{DynamicResource IgRadiusSm}" />
+                                    </Border.StrokeShape>
+                                    <Label Text="{Binding PromptText}"
+                                           TextColor="{DynamicResource IgPromptForegroundColor}"
+                                           FontFamily="{DynamicResource IgPromptFont}"
+                                           FontAttributes="{DynamicResource IgPromptFontStyle}"
+                                           LineBreakMode="WordWrap" />
+                                </Border>
+                                <Button StyleClass="ghost,small"
+                                        Text="{x:Static strings:AppResources.Copy}"
+                                        Command="{Binding Copy.CopyCommand}"
+                                        HorizontalOptions="Start"
+                                        SemanticProperties.Description="{x:Static strings:AppResources.Copy}" />
+                                <Label StyleClass="meta" Text="{x:Static strings:AppResources.Copied}" IsVisible="{Binding Copy.IsCopied}" />
+                                <FlexLayout Wrap="Wrap" Direction="Row" JustifyContent="Start" AlignItems="Start"
+                                            IsVisible="{Binding Source={x:Reference Page}, Path=IsWide, x:DataType=pages:ChatPage}"
+                                            BindableLayout.ItemsSource="{Binding Generations}"
+                                            BindableLayout.ItemTemplate="{StaticResource GenerationCardTemplate}" />
+                                <VerticalStackLayout Spacing="8"
+                                                     BindableLayout.ItemsSource="{Binding Generations}"
+                                                     BindableLayout.ItemTemplate="{StaticResource GenerationCardTemplate}">
+                                    <VerticalStackLayout.Triggers>
+                                        <DataTrigger TargetType="VerticalStackLayout"
+                                                     Binding="{Binding Source={x:Reference Page}, Path=IsWide, x:DataType=pages:ChatPage}"
+                                                     Value="True">
+                                            <Setter Property="IsVisible" Value="False" />
+                                        </DataTrigger>
+                                    </VerticalStackLayout.Triggers>
+                                </VerticalStackLayout>
                             </VerticalStackLayout>
                         </Border>
                     </DataTemplate>
