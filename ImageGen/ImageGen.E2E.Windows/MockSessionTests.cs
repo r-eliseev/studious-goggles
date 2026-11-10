@@ -1,6 +1,5 @@
 using Allure.NUnit;
 using FlaUI.Core.AutomationElements;
-using FlaUI.Core.Tools;
 using ImageGen.E2E.Common;
 using NUnit.Framework;
 
@@ -42,13 +41,4 @@ public sealed class MockSessionTests : WindowsTestBase
                 && !text.Contains("Error", StringComparison.Ordinal));
     }
 
-    private FlaUI.Core.AutomationElements.AutomationElement FindByName(string name, TimeSpan? timeout = null)
-    {
-        var element = Retry.WhileNull(
-                () => Window.FindFirstDescendant(condition => condition.ByName(name)),
-                timeout ?? TimeSpan.FromSeconds(20),
-                TimeSpan.FromMilliseconds(250))
-            .Result;
-        return element ?? throw new InvalidOperationException($"Element '{name}' was not found.");
-    }
 }

@@ -178,6 +178,18 @@ public abstract class WindowsTestBase
         return element ?? throw new InvalidOperationException($"AutomationId '{id}' was not found within {timeout}.");
     }
 
+    protected AutomationElement FindByName(string name, TimeSpan? timeout = null)
+    {
+        var automation = _automation ?? throw new InvalidOperationException("The UI automation session is not available.");
+        var element = Retry.WhileNull(
+                () => automation.GetDesktop().FindAllDescendants()
+                    .FirstOrDefault(candidate => candidate.Name.Contains(name, StringComparison.OrdinalIgnoreCase)),
+                timeout ?? ElementTimeout,
+                TimeSpan.FromMilliseconds(250))
+            .Result;
+        return element ?? throw new InvalidOperationException($"Element '{name}' was not found on the desktop.");
+    }
+
     protected AutomationElement WaitForText(string id, TimeSpan timeout)
         => WaitForText(id, timeout, text => !string.IsNullOrWhiteSpace(text));
 
