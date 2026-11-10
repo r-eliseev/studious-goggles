@@ -20,4 +20,6 @@ public sealed class Run
     public VideoParameters? VideoParameters { get; set; }
 
     public Guid? FirstFrameGenerationId { get; set; }
+
+    public AudioParameters? AudioParameters { get; set; }
 }

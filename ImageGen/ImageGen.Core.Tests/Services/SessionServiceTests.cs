@@ -215,6 +215,37 @@ public class SessionServiceTests
     }
 
     [Fact]
+    public async Task UpdateAudioSettingsAsync_ValidatesAndSavesAudioModelsAndVoice()
+    {
+        var session = ExistingSession();
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        var model = new AudioModel
+        {
+            ProviderId = ProviderIds.OpenRouter,
+            Id = "speech/model",
+            Name = "Speech",
+            Output = AudioOutput.Speech,
+            FetchedAt = Now,
+        };
+        var repository = Substitute.For<IAudioModelRepository>();
+        repository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<AudioModel>>([model]));
+        var providers = Substitute.For<IProviderRouter>();
+        var catalog = new AudioModelCatalogService(providers, repository, NullLogger<AudioModelCatalogService>.Instance);
+        var service = new SessionService(
+            _sessions, _messages, _runs, _files, Catalog(AssistantWithTools), TimeProvider.System,
+            _summaries, _changes, _generationCoordinator, DefaultAssistantModels.Create(), audioModels: catalog);
+
+        var updated = await service.UpdateAudioSettingsAsync(
+            session.Id, [new ModelRef(ProviderIds.OpenRouter, "speech/model")], new AudioParameters { Voice = "alloy" },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal([new ModelRef(ProviderIds.OpenRouter, "speech/model")], updated.Settings.AudioModels);
+        Assert.Equal("alloy", updated.Settings.AudioParameters.Voice);
+        await _sessions.Received(1).UpdateAsync(session, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task DeleteAsync_DeletesRecordsAndFiles()
     {
         var id = Guid.NewGuid();

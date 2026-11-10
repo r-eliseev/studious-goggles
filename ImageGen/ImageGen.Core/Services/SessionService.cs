@@ -17,7 +17,8 @@ public sealed class SessionService(
     SessionChangeNotifier changes,
     ISessionGenerationCoordinator generationCoordinator,
     IDefaultAssistantModel defaultAssistantModel,
-    VideoModelCatalogService? videoModels = null)
+    VideoModelCatalogService? videoModels = null,
+    AudioModelCatalogService? audioModels = null)
 {
     public async Task<Session> CreateAsync(CancellationToken cancellationToken)
     {
@@ -82,6 +83,8 @@ public sealed class SessionService(
             Parameters = session.Settings.Parameters,
             VideoModels = session.Settings.VideoModels,
             VideoParameters = session.Settings.VideoParameters,
+            AudioModels = session.Settings.AudioModels,
+            AudioParameters = session.Settings.AudioParameters,
         };
         session.UpdatedAt = timeProvider.GetUtcNow();
         await sessions.UpdateAsync(session, cancellationToken);
@@ -161,6 +164,40 @@ public sealed class SessionService(
             ?? throw new InvalidOperationException($"Session {sessionId} not found.");
         session.Settings.VideoModels = selected;
         session.Settings.VideoParameters = parameters;
+        session.UpdatedAt = timeProvider.GetUtcNow();
+        await sessions.UpdateAsync(session, cancellationToken);
+        changes.Notify(sessionId);
+        return session;
+    }
+
+    /// <summary>Validates and saves the selected audio models and shared voice setting.</summary>
+    public async Task<Session> UpdateAudioSettingsAsync(
+        Guid sessionId,
+        IReadOnlyList<ModelRef> models,
+        AudioParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(models);
+        ArgumentNullException.ThrowIfNull(parameters);
+        if (audioModels is null)
+        {
+            throw new InvalidOperationException("The audio model catalog is not configured.");
+        }
+
+        var selected = models.Distinct().ToList();
+        foreach (var reference in selected)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (await audioModels.FindAsync(reference, cancellationToken) is null)
+            {
+                throw new ArgumentException($"Audio model {reference} is not available.", nameof(models));
+            }
+        }
+
+        var session = await sessions.GetAsync(sessionId, cancellationToken)
+            ?? throw new InvalidOperationException($"Session {sessionId} not found.");
+        session.Settings.AudioModels = selected;
+        session.Settings.AudioParameters = parameters;
         session.UpdatedAt = timeProvider.GetUtcNow();
         await sessions.UpdateAsync(session, cancellationToken);
         changes.Notify(sessionId);

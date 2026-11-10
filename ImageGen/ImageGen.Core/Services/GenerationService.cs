@@ -27,7 +27,8 @@ public sealed class GenerationService(
     SessionChangeNotifier changes,
     IDebugTrace? trace = null,
     IAsyncDelay? delay = null,
-    VideoModelCatalogService? videoCatalog = null) : ISessionGenerationCoordinator
+    VideoModelCatalogService? videoCatalog = null,
+    AudioModelCatalogService? audioCatalog = null) : ISessionGenerationCoordinator
 {
     private readonly IDebugTrace _trace = trace ?? NullDebugTrace.Instance;
     private readonly IAsyncDelay _delay = delay ?? new SystemAsyncDelay(timeProvider);
@@ -95,6 +96,23 @@ public sealed class GenerationService(
 
         await job.Started.Task.ConfigureAwait(false);
 
+        if (generation.Kind == MediaKind.Audio)
+        {
+            try
+            {
+                job.Source.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                return GenerationCancelResult.NotActive;
+            }
+
+            await job.SubmitSettled.Task.ConfigureAwait(false);
+            var audioResult = await PersistUserCancellationAsync(job).ConfigureAwait(false);
+            logger.LogInformation("Provider cancellation is unconfirmed; stopped waiting for generation {GenerationId}.", job.GenerationId);
+            return audioResult == GenerationCancelResult.Cancelled ? GenerationCancelResult.StoppedWaiting : audioResult;
+        }
+
         var requestedBeforeSubmit = job.TryCancelBeforeSubmission();
         if (requestedBeforeSubmit)
         {
@@ -122,7 +140,7 @@ public sealed class GenerationService(
             }
 
             var result = await PersistUserCancellationAsync(job).ConfigureAwait(false);
-            logger.LogInformation("Video job cannot be cancelled at the provider; stopped waiting for generation {GenerationId}.", job.GenerationId);
+            logger.LogInformation("Provider cancellation is unconfirmed; stopped waiting for generation {GenerationId}.", job.GenerationId);
             return result == GenerationCancelResult.Cancelled ? GenerationCancelResult.StoppedWaiting : result;
         }
 
@@ -253,6 +271,73 @@ public sealed class GenerationService(
         CancellationToken cancellationToken) =>
         await StartVideoRunAsync(sessionId, prompt, models, parameters, firstFrameGenerationId, RunOrigin.Assistant, null, cancellationToken)
             .ConfigureAwait(false);
+
+    /// <summary>Starts one audio generation per selected model, using the session's shared voice setting.</summary>
+    public async Task<Run> StartAudioRunAsync(
+        Guid sessionId,
+        string prompt,
+        IReadOnlyList<ModelRef> models,
+        CancellationToken cancellationToken)
+    {
+        var session = await GetSessionAsync(sessionId, cancellationToken).ConfigureAwait(false);
+        return await StartAudioRunAsync(sessionId, prompt, models, session.Settings.AudioParameters, RunOrigin.Assistant, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private async Task<Run> StartAudioRunAsync(
+        Guid sessionId,
+        string prompt,
+        IReadOnlyList<ModelRef> models,
+        AudioParameters parameters,
+        RunOrigin origin,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(models);
+        ArgumentNullException.ThrowIfNull(parameters);
+        if (models.Count == 0)
+        {
+            throw new ArgumentException("At least one audio model is required.", nameof(models));
+        }
+
+        var text = NormalizePrompt(prompt);
+        using var lease = AcquireStartLease(sessionId);
+        await GetSessionAsync(sessionId, cancellationToken).ConfigureAwait(false);
+        var now = timeProvider.GetUtcNow();
+        var run = new Run
+        {
+            Id = Guid.NewGuid(),
+            SessionId = sessionId,
+            Prompt = text,
+            Origin = origin,
+            CreatedAt = now,
+            AudioParameters = parameters,
+        };
+        var generations = models.Select((model, index) => new Generation
+        {
+            Id = Guid.NewGuid(),
+            RunId = run.Id,
+            SessionId = sessionId,
+            ProviderId = model.ProviderId,
+            ModelId = model.ModelId,
+            Prompt = text,
+            Seed = seeds.NextSeed(),
+            SeedApplied = false,
+            Status = GenerationStatus.Queued,
+            Kind = MediaKind.Audio,
+            CreatedAt = now,
+            SortOrder = index,
+        }).ToList();
+
+        await runs.AddRunAsync(run, generations, cancellationToken).ConfigureAwait(false);
+        changes.Notify(sessionId);
+        foreach (var generation in generations)
+        {
+            LogStatus(generation);
+            Launch(generation, lease.State, (job, token) => ExecuteAudioAsync(generation, parameters, job, token));
+        }
+
+        return run;
+    }
 
     private async Task<Run> StartVideoRunAsync(
         Guid sessionId,
@@ -430,6 +515,12 @@ public sealed class GenerationService(
             return await StartVideoRunAsync(source.SessionId, source.Prompt, [SourceModel(source)], videoRun.VideoParameters!,
                 videoRun.FirstFrameGenerationId, RunOrigin.Repeat, source.Seed, cancellationToken);
         }
+        if (source.Kind == MediaKind.Audio)
+        {
+            var audioRun = await GetAudioRunAsync(source, cancellationToken);
+            return await StartAudioRunAsync(source.SessionId, source.Prompt, [SourceModel(source)], audioRun.AudioParameters!,
+                RunOrigin.Repeat, cancellationToken);
+        }
 
         using var lease = AcquireStartLease(source.SessionId);
         var requested = await GetRunParametersAsync(source.RunId, cancellationToken);
@@ -441,6 +532,10 @@ public sealed class GenerationService(
     public async Task<Run> NewSeedAsync(Guid generationId, CancellationToken cancellationToken)
     {
         var source = await GetSourceAsync(generationId, cancellationToken);
+        if (source.Kind == MediaKind.Audio)
+        {
+            throw new InvalidOperationException("New seed is not supported for audio.");
+        }
         if (source.Kind == MediaKind.Video)
         {
             var videoRun = await GetVideoRunAsync(source, cancellationToken);
@@ -465,6 +560,12 @@ public sealed class GenerationService(
             return await StartVideoRunAsync(source.SessionId, text, [SourceModel(source)], videoRun.VideoParameters!,
                 videoRun.FirstFrameGenerationId, RunOrigin.Edit, source.Seed, cancellationToken);
         }
+        if (source.Kind == MediaKind.Audio)
+        {
+            var audioRun = await GetAudioRunAsync(source, cancellationToken);
+            return await StartAudioRunAsync(source.SessionId, text, [SourceModel(source)], audioRun.AudioParameters!,
+                RunOrigin.Edit, cancellationToken);
+        }
 
         using var lease = AcquireStartLease(source.SessionId);
         var requested = await GetRunParametersAsync(source.RunId, cancellationToken);
@@ -477,9 +578,9 @@ public sealed class GenerationService(
     {
         ArgumentNullException.ThrowIfNull(model);
         var source = await GetSourceAsync(generationId, cancellationToken);
-        if (source.Kind == MediaKind.Video)
+        if (source.Kind is MediaKind.Video or MediaKind.Audio)
         {
-            throw new InvalidOperationException("Run on model is not supported for video.");
+            throw new InvalidOperationException($"Run on model is not supported for {source.Kind.ToString().ToLowerInvariant()}.");
         }
 
         using var lease = AcquireStartLease(source.SessionId);
@@ -776,6 +877,18 @@ public sealed class GenerationService(
         return run;
     }
 
+    private async Task<Run> GetAudioRunAsync(Generation source, CancellationToken cancellationToken)
+    {
+        var run = await runs.GetRunAsync(source.RunId, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"Run {source.RunId} not found.");
+        if (run.AudioParameters is null)
+        {
+            throw new InvalidOperationException($"Run {source.RunId} has no audio parameters.");
+        }
+
+        return run;
+    }
+
     private async Task<Run> CreateRunAsync(
         Guid sessionId,
         string prompt,
@@ -1038,6 +1151,79 @@ public sealed class GenerationService(
         if (handle is not null && !generation.IsFinished)
         {
             await WatchVideoAsync(generation, queued, handle, job, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task ExecuteAudioAsync(
+        Generation generation,
+        AudioParameters parameters,
+        RunningJob job,
+        CancellationToken cancellationToken)
+    {
+        job.MarkPreparing();
+        string? savedPath = null;
+        try
+        {
+            var modelReference = new ModelRef(generation.ProviderId, generation.ModelId);
+            var model = audioCatalog is null
+                ? null
+                : await audioCatalog.FindAsync(modelReference, cancellationToken).ConfigureAwait(false);
+            if (model is null)
+            {
+                throw new ProviderException(ErrorKind.ModelUnavailable, "The selected audio model is not available.");
+            }
+
+            generation.Status = GenerationStatus.Running;
+            await SaveAndNotifyAsync(generation, cancellationToken).ConfigureAwait(false);
+            var provider = providers.GetAudioGenerationProvider(generation.ProviderId);
+            await using var response = await provider.GenerateAudioAsync(
+                new AudioGenerationRequest(model, generation.Prompt, parameters.Voice), cancellationToken).ConfigureAwait(false);
+            generation.CostUsd = response.CostUsd;
+            savedPath = await files.SaveMediaStreamAsync(
+                generation.SessionId,
+                generation.Id,
+                response.Content,
+                response.MediaType,
+                ProviderResponseLimits.Audio,
+                cancellationToken).ConfigureAwait(false);
+            generation.ImagePath = savedPath;
+            generation.MediaType = response.MediaType;
+            generation.Status = GenerationStatus.Succeeded;
+            generation.CompletedAt = timeProvider.GetUtcNow();
+            await PersistStateWithRetryAsync(generation, cancellationToken).ConfigureAwait(false);
+            NotifyConfirmedState(generation);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            if (savedPath is not null)
+            {
+                try
+                {
+                    await files.DeleteFileAsync(savedPath, CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (Exception cleanupException)
+                {
+                    logger.LogWarning("Could not clean up audio file for generation {GenerationId} in session {SessionId}.", generation.Id, generation.SessionId);
+                    logger.LogDebug(cleanupException, "Audio file cleanup detail for generation {GenerationId}.", generation.Id);
+                }
+
+                generation.ImagePath = null;
+                generation.MediaType = null;
+            }
+
+            generation.Status = GenerationStatus.Failed;
+            generation.ErrorKind = exception is ProviderException providerException ? providerException.Kind : ErrorKind.Unknown;
+            generation.ErrorMessage = exception.Message;
+            generation.CompletedAt = timeProvider.GetUtcNow();
+            await SaveAndNotifyAsync(generation, CancellationToken.None).ConfigureAwait(false);
+        }
+        finally
+        {
+            job.CompleteSubmitPhase();
         }
     }
 

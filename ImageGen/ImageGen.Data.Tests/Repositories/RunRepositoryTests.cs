@@ -110,6 +110,23 @@ public class RunRepositoryTests
     }
 
     [Fact]
+    public async Task AddRunAsync_AudioParameters_PersistsAndReadsBack()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var test = await TestDatabase.CreateAsync(ct);
+        var session = TestData.Session();
+        await new SessionRepository(test.Database).AddAsync(session, ct);
+        var repository = new RunRepository(test.Database);
+        var run = TestData.Run(session.Id, TestData.BaseTime);
+        run.AudioParameters = new AudioParameters { Voice = "alloy" };
+
+        await repository.AddRunAsync(run, [], ct);
+
+        var loaded = await repository.GetRunAsync(run.Id, ct);
+        Assert.Equal(run.AudioParameters, loaded!.AudioParameters);
+    }
+
+    [Fact]
     public async Task UpdateGenerationAsync_AllFields_AreSaved()
     {
         var ct = TestContext.Current.CancellationToken;
