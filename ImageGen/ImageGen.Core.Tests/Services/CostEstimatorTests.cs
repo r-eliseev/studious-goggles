@@ -95,6 +95,33 @@ public sealed class CostEstimatorTests
         Assert.False(estimate.IsApproximate);
     }
 
+    [Fact]
+    public async Task EstimateAudioAsync_SpeechPrice_MultipliesByTextLength()
+    {
+        var providers = Substitute.For<IProviderRouter>();
+        var repository = Substitute.For<IAudioModelRepository>();
+        repository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(
+            Task.FromResult<IReadOnlyList<AudioModel>>([
+                new AudioModel
+                {
+                    ProviderId = ProviderIds.OpenRouter,
+                    Id = "speech/model",
+                    Name = "Speech",
+                    Output = AudioOutput.Speech,
+                    PricePerInputCharacterUsd = 0.00002m,
+                    FetchedAt = DateTimeOffset.UnixEpoch,
+                },
+            ]));
+        var audioCatalog = new AudioModelCatalogService(providers, repository, NullLogger<AudioModelCatalogService>.Instance);
+        var estimator = new CostEstimator(CreateEmptyImageCatalog(), audioCatalog: audioCatalog);
+
+        var estimate = await estimator.EstimateAudioAsync(
+            [Ref("speech/model")], "hello", TestContext.Current.CancellationToken);
+
+        Assert.Equal(0.0001m, estimate.KnownUsd);
+        Assert.Empty(estimate.UnknownModels);
+    }
+
     private static CostEstimator CreateEstimator(params ImageModel[] models)
     {
         var providers = Substitute.For<IProviderRouter>();
@@ -104,6 +131,15 @@ public sealed class CostEstimatorTests
             .Returns(Task.FromResult<IReadOnlyList<ImageModel>>(models));
         var catalog = new ModelCatalogService(providers, repository, NullLogger<ModelCatalogService>.Instance);
         return new CostEstimator(catalog);
+    }
+
+    private static ModelCatalogService CreateEmptyImageCatalog()
+    {
+        var providers = Substitute.For<IProviderRouter>();
+        var repository = Substitute.For<IImageModelRepository>();
+        repository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<ImageModel>>([]));
+        return new ModelCatalogService(providers, repository, NullLogger<ModelCatalogService>.Instance);
     }
 
     private static CostEstimator CreateVideoEstimator(params VideoModel[] models)

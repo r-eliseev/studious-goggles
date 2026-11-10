@@ -9,6 +9,7 @@ namespace ImageGen.Core.Serialization;
 [JsonSerializable(typeof(SessionSettings))]
 [JsonSerializable(typeof(GenerationParameters))]
 [JsonSerializable(typeof(VideoParameters))]
+[JsonSerializable(typeof(AudioParameters))]
 [JsonSerializable(typeof(List<Guid>))]
 [JsonSerializable(typeof(List<ModelParameter>))]
 [JsonSerializable(typeof(List<ImageModelPrice>))]

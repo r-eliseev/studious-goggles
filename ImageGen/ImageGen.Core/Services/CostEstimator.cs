@@ -5,8 +5,44 @@ using ImageGen.Core.Providers;
 
 namespace ImageGen.Core.Services;
 
-public sealed class CostEstimator(ModelCatalogService catalog, VideoModelCatalogService? videoCatalog = null)
+public sealed class CostEstimator(
+    ModelCatalogService catalog,
+    VideoModelCatalogService? videoCatalog = null,
+    AudioModelCatalogService? audioCatalog = null)
 {
+    public async Task<CostEstimate> EstimateAudioAsync(
+        IReadOnlyList<ModelRef> models,
+        string? speechText,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(models);
+        var known = 0m;
+        var unknown = new List<ModelRef>();
+        foreach (var reference in models.Distinct())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            AudioModel? model;
+            try
+            {
+                model = audioCatalog is null ? null : await audioCatalog.FindAsync(reference, cancellationToken).ConfigureAwait(false);
+            }
+            catch (ProviderException)
+            {
+                model = null;
+            }
+
+            if (model?.Output != AudioOutput.Speech || model.PricePerInputCharacterUsd is null || speechText is null)
+            {
+                unknown.Add(reference);
+                continue;
+            }
+
+            known += model.PricePerInputCharacterUsd.Value * speechText.Length;
+        }
+
+        return new CostEstimate(known, unknown, IsApproximate: false);
+    }
+
     public async Task<CostEstimate> EstimateVideoAsync(
         IReadOnlyList<ModelRef> models,
         VideoParameters parameters,

@@ -23,8 +23,8 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
         {
             command.Transaction = transaction;
             command.CommandText = """
-                INSERT INTO runs (id, session_id, prompt, origin, created_at, parameters_json, video_parameters_json, first_frame_generation_id)
-                VALUES (@id, @session_id, @prompt, @origin, @created_at, @parameters_json, @video_parameters_json, @first_frame_generation_id);
+                INSERT INTO runs (id, session_id, prompt, origin, created_at, parameters_json, video_parameters_json, first_frame_generation_id, audio_parameters_json)
+                VALUES (@id, @session_id, @prompt, @origin, @created_at, @parameters_json, @video_parameters_json, @first_frame_generation_id, @audio_parameters_json);
                 """;
             command.Parameters.AddWithValue("@id", SqliteValues.FromGuid(run.Id));
             command.Parameters.AddWithValue("@session_id", SqliteValues.FromGuid(run.SessionId));
@@ -34,6 +34,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
             command.Parameters.AddWithValue("@parameters_json", ParameterJson.Run(run.Parameters));
             command.Parameters.AddWithValue("@video_parameters_json", SqliteValues.FromNullableString(ParameterJson.VideoRun(run.VideoParameters)));
             command.Parameters.AddWithValue("@first_frame_generation_id", SqliteValues.FromNullableGuid(run.FirstFrameGenerationId));
+            command.Parameters.AddWithValue("@audio_parameters_json", SqliteValues.FromNullableString(ParameterJson.AudioRun(run.AudioParameters)));
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
 
@@ -60,7 +61,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
     {
         await using var connection = await database.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT id, session_id, prompt, origin, created_at, parameters_json, video_parameters_json, first_frame_generation_id FROM runs WHERE id = @id;";
+        command.CommandText = "SELECT id, session_id, prompt, origin, created_at, parameters_json, video_parameters_json, first_frame_generation_id, audio_parameters_json FROM runs WHERE id = @id;";
         command.Parameters.AddWithValue("@id", SqliteValues.FromGuid(id));
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         return await reader.ReadAsync(cancellationToken) ? ReadRun(reader) : null;
@@ -86,7 +87,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
         await using var connection = await database.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT id, session_id, prompt, origin, created_at, parameters_json, video_parameters_json, first_frame_generation_id
+            SELECT id, session_id, prompt, origin, created_at, parameters_json, video_parameters_json, first_frame_generation_id, audio_parameters_json
             FROM runs
             WHERE session_id = @session_id
             ORDER BY created_at ASC;
@@ -275,6 +276,7 @@ public sealed class RunRepository(SqliteDatabase database) : IRunRepository
         Parameters = ParameterJson.ReadRun(SqliteValues.GetNullableString(reader, "parameters_json")),
         VideoParameters = ParameterJson.ReadVideoRun(SqliteValues.GetNullableString(reader, "video_parameters_json")),
         FirstFrameGenerationId = SqliteValues.GetNullableGuid(reader, "first_frame_generation_id"),
+        AudioParameters = ParameterJson.ReadAudioRun(SqliteValues.GetNullableString(reader, "audio_parameters_json")),
     };
 
     private static Generation ReadGeneration(SqliteDataReader reader)

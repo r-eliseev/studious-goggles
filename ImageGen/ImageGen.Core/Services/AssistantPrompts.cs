@@ -14,6 +14,8 @@ public static class AssistantPrompts
 
     public const string GenerateVideoToolName = "generate_video";
 
+    public const string GenerateAudioToolName = "generate_audio";
+
     public const string GenerateImagesToolDescription = "Generate images from a complete, self-contained prompt in English.";
 
     /// <summary>JSON Schema of the <c>generate_images</c> arguments.</summary>
@@ -27,6 +29,17 @@ public static class AssistantPrompts
     public const string GenerateVideoToolSchema = """
         {"type":"object","properties":{"prompt":{"type":"string","description":"Complete video prompt in English."},"first_frame_image_id":{"type":"string","description":"Optional id of a successful image generation from this session."}},"required":["prompt"]}
         """;
+
+    public const string GenerateAudioToolDescription = "Generate music, songs, melodies, sounds, ambience, or spoken audio when the user asks for it.";
+
+    /// <summary>JSON Schema of the <c>generate_audio</c> arguments.</summary>
+    public const string GenerateAudioToolSchema = """
+        {"type":"object","properties":{"prompt":{"type":"string","description":"Description of the requested sound or music."},"speech_text":{"type":"string","description":"Exact text to speak for speech models; when omitted, use prompt."}},"required":["prompt"]}
+        """;
+
+    public const string AudioSystemInstruction =
+        "When the user explicitly asks for music, a song, melody, sound effect, ambience, or spoken audio, call generate_audio. "
+        + "Use speech_text only for exact text to be spoken.";
 
     public const string VideoSystemInstruction =
         "When the user explicitly asks for a video, clip, or animation, call generate_video. "
@@ -61,11 +74,14 @@ public static class AssistantPrompts
     /// Estimated tokens of the fixed part of every request: the system prompt, the current prompt line and the tool
     /// description and schema (C1.1).
     /// </summary>
-    public static int FixedTokens(string currentLine, bool includeVideoTool = false) =>
+    public static int FixedTokens(string currentLine, bool includeVideoTool = false, bool includeAudioTool = false) =>
         TokenEstimator.Estimate(System) + TokenEstimator.Estimate(currentLine)
         + TokenEstimator.Estimate(GenerateImagesToolDescription) + TokenEstimator.Estimate(GenerateImagesToolSchema)
         + (includeVideoTool
             ? TokenEstimator.Estimate(VideoSystemInstruction) + TokenEstimator.Estimate(GenerateVideoToolDescription) + TokenEstimator.Estimate(GenerateVideoToolSchema)
+            : 0)
+        + (includeAudioTool
+            ? TokenEstimator.Estimate(AudioSystemInstruction) + TokenEstimator.Estimate(GenerateAudioToolDescription) + TokenEstimator.Estimate(GenerateAudioToolSchema)
             : 0);
 
     /// <summary>

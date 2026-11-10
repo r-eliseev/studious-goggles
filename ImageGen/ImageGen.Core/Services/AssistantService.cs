@@ -163,11 +163,11 @@ public sealed class AssistantService(
             toolCallCount = reply.ToolCalls.Count;
             logger.LogDebug("Assistant reply in session {SessionId}: {Text}", sessionId, reply.Text);
             var generationCalls = reply.ToolCalls
-                .Where(call => call.Name is AssistantPrompts.GenerateImagesToolName or AssistantPrompts.GenerateVideoToolName)
+                .Where(call => call.Name is AssistantPrompts.GenerateImagesToolName or AssistantPrompts.GenerateVideoToolName or AssistantPrompts.GenerateAudioToolName)
                 .ToList();
-            if (generationCalls.Select(generationCall => generationCall.Name).Distinct(StringComparer.Ordinal).Count() > 1)
+            if (generationCalls.Count > 1)
             {
-                logger.LogWarning("Assistant requested both image and video generation in session {SessionId}; running the first tool call.", sessionId);
+                logger.LogWarning("Assistant requested multiple generation tools in session {SessionId}; running the first tool call.", sessionId);
             }
 
             var call = generationCalls.FirstOrDefault();
@@ -200,6 +200,26 @@ public sealed class AssistantService(
                         session.Settings.VideoParameters,
                         firstFrameGenerationId,
                         cancellationToken);
+                    return new AcceptedTurnOutcome(run, AssistantPrompts.RunMessage(reply.Text), null, messageCount, toolCallCount);
+                }
+                catch (ArgumentException)
+                {
+                    return new AcceptedTurnOutcome(null, string.Empty, ErrorKind.InvalidToolCall, messageCount, toolCallCount);
+                }
+            }
+
+            if (call?.Name == AssistantPrompts.GenerateAudioToolName)
+            {
+                if (session.Settings.AudioModels.Count == 0
+                    || !TryReadAudioArguments(call.ArgumentsJson, out var prompt))
+                {
+                    return new AcceptedTurnOutcome(null, string.Empty, ErrorKind.InvalidToolCall, messageCount, toolCallCount);
+                }
+
+                try
+                {
+                    var run = await generations.StartAudioRunAsync(
+                        session.Id, prompt, session.Settings.AudioModels, cancellationToken);
                     return new AcceptedTurnOutcome(run, AssistantPrompts.RunMessage(reply.Text), null, messageCount, toolCallCount);
                 }
                 catch (ArgumentException)
@@ -347,6 +367,49 @@ public sealed class AssistantService(
         }
     }
 
+    private static bool TryReadAudioArguments(string argumentsJson, out string prompt)
+    {
+        prompt = string.Empty;
+        if (string.IsNullOrWhiteSpace(argumentsJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(argumentsJson);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object
+                || !root.TryGetProperty("prompt", out var promptValue)
+                || promptValue.ValueKind != JsonValueKind.String
+                || string.IsNullOrWhiteSpace(promptValue.GetString()))
+            {
+                return false;
+            }
+
+            prompt = promptValue.GetString()!.Trim();
+            if (root.TryGetProperty("speech_text", out var speechValue))
+            {
+                if (speechValue.ValueKind != JsonValueKind.String)
+                {
+                    return false;
+                }
+
+                var speechText = speechValue.GetString()?.Trim();
+                if (!string.IsNullOrEmpty(speechText))
+                {
+                    prompt = speechText;
+                }
+            }
+
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
     private async Task<(Run? Run, string Text, ErrorKind? Error)> StartRunReplyAsync(
         Session session,
         string? assistantText,
@@ -422,7 +485,8 @@ public sealed class AssistantService(
         var cappedTotal = cappedUser.Count + cappedLastRun.Count;
 
         var includeVideoTool = session.Settings.VideoModels.Count > 0;
-        var fixedTokens = AssistantPrompts.FixedTokens(currentLine, includeVideoTool);
+        var includeAudioTool = session.Settings.AudioModels.Count > 0;
+        var fixedTokens = AssistantPrompts.FixedTokens(currentLine, includeVideoTool, includeAudioTool);
         var summaryTokens = summary is null ? 0 : TokenEstimator.Estimate(AssistantPrompts.SummaryLine(summary.Text));
         var contextLength = await chatModels.ContextLengthAsync(assistantModel, cancellationToken);
         var factor = correction.FactorFor(assistantModel);
@@ -487,6 +551,10 @@ public sealed class AssistantService(
         {
             chat.Add(AssistantChatMessage.System(AssistantPrompts.VideoSystemInstruction));
         }
+        if (includeAudioTool)
+        {
+            chat.Add(AssistantChatMessage.System(AssistantPrompts.AudioSystemInstruction));
+        }
 
         chat.Add(AssistantChatMessage.System(currentLine));
         if (summary is not null)
@@ -518,6 +586,13 @@ public sealed class AssistantService(
                 AssistantPrompts.GenerateVideoToolName,
                 AssistantPrompts.GenerateVideoToolDescription,
                 AssistantPrompts.GenerateVideoToolSchema));
+        }
+        if (includeAudioTool)
+        {
+            tools.Add(new AssistantTool(
+                AssistantPrompts.GenerateAudioToolName,
+                AssistantPrompts.GenerateAudioToolDescription,
+                AssistantPrompts.GenerateAudioToolSchema));
         }
 
         var estimated = fixedTokens + summaryTokens

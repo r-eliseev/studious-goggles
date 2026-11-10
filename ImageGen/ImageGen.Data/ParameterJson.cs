@@ -35,6 +35,12 @@ internal static class ParameterJson
     public static VideoParameters? ReadVideoRun(string? json) =>
         json is null ? null : JsonSerializer.Deserialize(json, CoreJsonContext.Default.VideoParameters);
 
+    public static string? AudioRun(AudioParameters? parameters) =>
+        parameters is null ? null : JsonSerializer.Serialize(parameters, CoreJsonContext.Default.AudioParameters);
+
+    public static AudioParameters? ReadAudioRun(string? json) =>
+        json is null ? null : JsonSerializer.Deserialize(json, CoreJsonContext.Default.AudioParameters);
+
     public static string Outcomes(IReadOnlyList<ParameterOutcome> outcomes) =>
         JsonSerializer.Serialize(outcomes.ToList(), CoreJsonContext.Default.ListParameterOutcome);
 

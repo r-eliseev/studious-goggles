@@ -1,8 +1,8 @@
 ---
 id: 222
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-10T12:59:14Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -55,6 +55,18 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+Implemented audio session settings and validation, persisted voice settings per run, asynchronous audio generation and streaming storage, interruption recovery through the existing recovery path, local cancellation with `StoppedWaiting`, Repeat/Edit support, and rejection of New seed/Run on model. Added the conditional `generate_audio` assistant tool, exact speech character cost estimation, an audio parameter migration, and updated the media generation specification.
+
+Files changed: Core session/run models and services, Core tests, Data migration/repository/serialization and tests, and `docs/specs/media-generation.md`.
+
+Verification passed:
+- `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj` — 846 passed.
+- `dotnet test --project ImageGen/ImageGen.Data.Tests/ImageGen.Data.Tests.csproj` — 149 passed.
+- `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj` — 536 passed.
+- `dotnet format` verification for Core, Core.Tests, Data, and Data.Tests.
+- `bash scripts/check.sh`.
+
+The plan's listed files did not include the run audio settings migration and repository serialization needed to preserve the voice for Repeat/Edit; those were added as required by the acceptance criteria. No live paid provider request was performed.
 
 ## Комментарии
 
