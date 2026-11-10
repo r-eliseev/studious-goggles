@@ -5,6 +5,13 @@ namespace ImageGen.E2E.Windows;
 
 internal sealed class VideoRecorder : IDisposable
 {
+    internal static void CaptureFinalFrame(Action screenshot, Action hold, Action stopRecording)
+    {
+        screenshot();
+        hold();
+        stopRecording();
+    }
+
     private Process? _process;
     private Task<string>? _standardError;
     private string? _logPath;

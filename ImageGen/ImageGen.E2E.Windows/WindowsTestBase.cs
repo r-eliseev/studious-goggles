@@ -14,6 +14,7 @@ namespace ImageGen.E2E.Windows;
 public abstract class WindowsTestBase
 {
     private const string InvalidKey = "sk-or-e2e-invalid";
+    private const int FinalFrameHold = 1500;
     private static readonly TimeSpan ElementTimeout = TimeSpan.FromSeconds(20);
     private readonly List<string> _errors = [];
     private Application? _application;
@@ -80,9 +81,8 @@ public abstract class WindowsTestBase
             return;
         }
 
-        if (failed)
-        {
-            Try("screenshot", () =>
+        VideoRecorder.CaptureFinalFrame(
+            () => Try("screenshot", () =>
             {
                 if (_window is not null)
                 {
@@ -90,7 +90,16 @@ public abstract class WindowsTestBase
                     Capture.Element(_window).ToFile(path);
                     Attach("screenshot.png", "image/png", path);
                 }
-            });
+            }),
+            () => Thread.Sleep(FinalFrameHold),
+            () => Try("screen recording", () =>
+            {
+                _recorder?.Stop();
+                Attach("recording.mp4", "video/mp4", Path.Combine(_artifactDirectory, "recording.mp4"));
+            }));
+
+        if (failed)
+        {
             Try("UI tree", () =>
             {
                 if (_window is not null)
@@ -114,11 +123,6 @@ public abstract class WindowsTestBase
                     _application.Kill();
                 }
             }
-        });
-        Try("screen recording", () =>
-        {
-            _recorder?.Stop();
-            Attach("recording.mp4", "video/mp4", Path.Combine(_artifactDirectory, "recording.mp4"));
         });
         Try("application log", CopyApplicationLog);
         Try("metadata", () =>
