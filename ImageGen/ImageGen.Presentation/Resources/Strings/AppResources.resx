@@ -101,6 +101,11 @@
   <data name="SemanticSearchWords" xml:space="preserve"><value>Words</value></data>
   <data name="SemanticSearchMeaning" xml:space="preserve"><value>Meaning</value></data>
   <data name="SemanticSearchMeaningUnavailable" xml:space="preserve"><value>Enable semantic search and finish indexing to search by meaning.</value></data>
+  <data name="SemanticSearchModelSearch" xml:space="preserve"><value>Search embedding models</value></data>
+  <data name="SemanticSearchChangeModel" xml:space="preserve"><value>Change model</value></data>
+  <data name="SemanticSearchChangeModelPromptFormat" xml:space="preserve"><value>Re-index {0} texts with {1}? About {2} tokens, {3}. Semantic search works on the new model as indexing progresses.</value></data>
+  <data name="SemanticSearchModelUnavailableFormat" xml:space="preserve"><value>The embedding model {0} is no longer available. Choose another model to re-index.</value></data>
+  <data name="SemanticSearchUnavailableOptionFormat" xml:space="preserve"><value>{0} — unavailable</value></data>
   <data name="ClearSearch" xml:space="preserve">
     <value>Clear search</value>
   </data>

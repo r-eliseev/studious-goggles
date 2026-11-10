@@ -15,6 +15,17 @@
             <VerticalStackLayout Spacing="8">
                 <Label StyleClass="section" Text="{x:Static strings:AppResources.SemanticSearchTitle}" />
                 <Label StyleClass="meta" Text="{Binding SemanticSearchStatusText}" />
+                <Entry Text="{Binding EmbeddingModelSearchText, Mode=TwoWay}"
+                       Placeholder="{x:Static strings:AppResources.SemanticSearchModelSearch}"
+                       SemanticProperties.Description="{x:Static strings:AppResources.SemanticSearchModelSearch}" />
+                <Picker ItemsSource="{Binding FilteredEmbeddingModels}"
+                        ItemDisplayBinding="{Binding DisplayName}"
+                        SelectedItem="{Binding SelectedEmbeddingModel, Mode=TwoWay}"
+                        Title="{x:Static strings:AppResources.SemanticSearchModelSearch}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.SemanticSearchModelSearch}" />
+                <Button StyleClass="ghost" Text="{x:Static strings:AppResources.SemanticSearchChangeModel}"
+                        Command="{Binding ChangeEmbeddingModelCommand}"
+                        SemanticProperties.Description="{x:Static strings:AppResources.SemanticSearchChangeModel}" />
                 <HorizontalStackLayout Spacing="8">
                     <Button StyleClass="ghost" Text="{Binding SemanticSearchToggleText}"
                             Command="{Binding ToggleSemanticSearchCommand}"
