@@ -14,7 +14,7 @@ The Windows scenario uses a short-lived self-signed `localhost` certificate inst
 
 The `reactivecircus/android-emulator-runner` action's `script` input executes each non-empty line as a separate shell command. Multi-line shell control structures therefore belong in a checked-in script invoked by one `script` command; otherwise a `for ... do` block can fail because its `done` is run in a different shell.
 
-Build the mock host before starting its background process in the hosted UI job. `dotnet run` can spend longer than the readiness timeout compiling a new project; launching the already built Release output with `dotnet run --no-build -c Release` keeps readiness checks focused on server startup.
+Build the mock host before starting its background process in the hosted UI job. Launch the built Release DLL directly with `dotnet <path-to-mock.dll>` so `dotnet run` does not perform project discovery or build work in the readiness window. On Windows, use `curl.exe` for the HTTPS readiness check and retain its exit code, HTTP status and error output for diagnosis.
 
 ## Preflight 238
 

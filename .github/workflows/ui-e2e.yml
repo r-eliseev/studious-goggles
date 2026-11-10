@@ -198,19 +198,27 @@ jobs:
           New-Item -ItemType Directory -Force -Path reports/windows/allure-results | Out-Null
           $mockLog = Join-Path $env:GITHUB_WORKSPACE 'reports/windows/mock-provider/mock-provider.log'
           $mockError = Join-Path $env:GITHUB_WORKSPACE 'reports/windows/mock-provider/mock-provider-error.log'
-          $mock = Start-Process dotnet -ArgumentList @('run', '--no-build', '-c', 'Release', '--project', 'ImageGen/ImageGen.E2E.MockProvider', '--', '--urls', 'https://0.0.0.0:5443') -PassThru -RedirectStandardOutput $mockLog -RedirectStandardError $mockError
+          $mockDll = Join-Path $env:GITHUB_WORKSPACE 'ImageGen/ImageGen.E2E.MockProvider/bin/Release/net10.0/ImageGen.E2E.MockProvider.dll'
+          $mock = Start-Process dotnet -ArgumentList @($mockDll, '--urls', 'https://0.0.0.0:5443') -PassThru -RedirectStandardOutput $mockLog -RedirectStandardError $mockError
           try {
             $ready = $false
+            $lastHealthError = 'The mock process has not answered yet.'
             for ($attempt = 0; $attempt -lt 120; $attempt++) {
-              try {
-                $response = Invoke-WebRequest -Uri 'https://localhost:5443/v1/models' -Headers @{ Authorization = 'Bearer e2e-mock-key' } -TimeoutSec 2
-                if ($response.StatusCode -eq 200) { $ready = $true; break }
+              if ($mock.HasExited) {
+                $lastHealthError = "The mock process exited with code $($mock.ExitCode)."
+                break
               }
-              catch { Start-Sleep -Seconds 1 }
+              try {
+                $status = & curl.exe --silent --show-error --fail --max-time 5 --output NUL --write-out '%{http_code}' --header 'Authorization: Bearer e2e-mock-key' 'https://localhost:5443/v1/models'
+                if ($LASTEXITCODE -eq 0 -and $status -eq '200') { $ready = $true; break }
+                $lastHealthError = "curl exited with code $LASTEXITCODE and HTTP status '$status'."
+              }
+              catch { $lastHealthError = $_.Exception.Message }
+              Start-Sleep -Seconds 1
             }
             if (-not $ready) {
               Get-Content $mockLog, $mockError -ErrorAction SilentlyContinue
-              throw 'The HTTPS E2E mock provider did not become ready.'
+              throw "The HTTPS E2E mock provider did not become ready: $lastHealthError"
             }
             dotnet test --project ImageGen/ImageGen.E2E.Windows/ImageGen.E2E.Windows.csproj --report-trx --results-directory reports/windows
           }
