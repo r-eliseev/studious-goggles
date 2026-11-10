@@ -1,6 +1,6 @@
 ---
 id: 234
-status: approved
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -29,7 +29,7 @@ Android-голова Avalonia использует значок пробника
 2. Подключить в обоих проектах; тест `MainWindow.Icon`.
 3. Сборки; документация; пункты 046 и 198.
 
-Файлы: `ImageGen/ImageGen.Avalonia.Android/Resources/mipmap-*/appicon*.png` (новые), `ImageGen/ImageGen.Avalonia.Android/MainActivity.cs`, `ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj`, удаление `ImageGen/ImageGen.Avalonia.Android/Icon.png`, `ImageGen/ImageGen.Avalonia/Assets/appicon.png`, `ImageGen/ImageGen.Avalonia/Assets/appicon.ico` (новые), `ImageGen/ImageGen.Avalonia/Views/MainWindow.axaml`, `ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj`, `ImageGen/ImageGen.Avalonia.Tests/Views/` (тест значка), `docs/knowledge/avalonia-mobile.md`, `tasks/backlog/046-desktop-manual-check.md`, `tasks/backlog/198-avalonia-android-manual-check.md`.
+Файлы: `ImageGen/ImageGen.Avalonia.Android/Resources/mipmap-*/appicon*.png` (новые), `ImageGen/ImageGen.Avalonia.Android/MainActivity.cs`, `ImageGen/ImageGen.Avalonia.Android/Resources/drawable/splash_screen.xml` (обновлён после ошибки сборки), `ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj`, удаление `ImageGen/ImageGen.Avalonia.Android/Icon.png`, `ImageGen/ImageGen.Avalonia/Assets/appicon.png`, `ImageGen/ImageGen.Avalonia/Assets/appicon.ico` (новые), `ImageGen/ImageGen.Avalonia/Views/MainWindow.axaml`, `ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj`, `ImageGen/ImageGen.Avalonia.Tests/Views/` (тест значка), `docs/knowledge/avalonia-mobile.md`, `tasks/backlog/046-desktop-manual-check.md`, `tasks/backlog/198-avalonia-android-manual-check.md`.
 
 ### Проверка
 ```
@@ -49,6 +49,14 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-10, codex-gpt6 (completed)
+
+- Generated the Omnilite desktop PNG/ICO and Android density/round-icon PNGs from the existing MAUI SVG assets. Removed the old Avalonia logo and wired the new assets to the Android launcher, desktop window and Windows executable. Updated the Android splash resource to reference the replacement mipmap.
+- Added a headless test that verifies `MainWindow.Icon`, documented regeneration tools and steps in `docs/knowledge/avalonia-mobile.md`, and recorded owner-run visual checks in tasks 046 and 198.
+- Verification: desktop build and Android Release build succeeded with 0 warnings/errors; Avalonia tests passed (180 passed, 2 platform/environment skips); formatting passed for Avalonia, Avalonia.Android and Avalonia.Tests; `git diff --check` passed.
+- The Windows desktop icon and Android launcher appearance still need the manual checks listed in tasks 046 and 198.
+- Plan difference: the Android splash drawable also referenced the deleted legacy icon, so it was switched to the new mipmap after the first Android build exposed the stale reference.
 
 ## Комментарии
 
