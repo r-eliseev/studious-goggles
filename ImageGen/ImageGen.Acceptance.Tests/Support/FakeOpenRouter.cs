@@ -15,11 +15,20 @@ public sealed class FakeOpenRouter
     private readonly ConcurrentQueue<AssistantReply> _assistantReplies = new();
     private readonly ConcurrentDictionary<string, GenerationReply> _generationReplies = new(StringComparer.Ordinal);
     private IReadOnlyList<ImageModel> _imageModels = [];
+    private HttpStatusCode _keyStatusCode = HttpStatusCode.OK;
+    private bool _keyNetworkError;
 
     public FakeOpenRouter(FakeNetwork network)
     {
         _network = network;
-        network.AddResponse(HttpMethod.Get, Host, "/api/v1/key", HttpStatusCode.OK, "{}");
+        network.AddRoute(HttpMethod.Get, Host, "/api/v1/key", (_, cancellationToken) =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_keyNetworkError) throw new HttpRequestException("Fake OpenRouter connection failure.");
+            return Task.FromResult(JsonResponse(_keyStatusCode, "{}"));
+        });
+        network.AddResponse(HttpMethod.Get, Host, "/api/v1/embeddings/models", HttpStatusCode.OK, "{\"data\":[]}");
+        network.AddResponse(HttpMethod.Get, Host, "/api/v1/models", HttpStatusCode.OK, "{\"data\":[]}");
         network.AddRoute(HttpMethod.Get, Host, "/api/v1/images/models", (_, _) => Task.FromResult(JsonResponse(HttpStatusCode.OK, ImageModelsJson())));
         network.AddRoute(HttpMethod.Get, Host, "/api/v1/images/models/*/endpoints", (request, _) =>
         {
@@ -51,6 +60,14 @@ public sealed class FakeOpenRouter
         ArgumentNullException.ThrowIfNull(models);
         _imageModels = models.ToArray();
     }
+
+    public void SetKeyResponse(HttpStatusCode statusCode)
+    {
+        _keyStatusCode = statusCode;
+        _keyNetworkError = false;
+    }
+
+    public void SetKeyNetworkError() => _keyNetworkError = true;
 
     public void QueueAssistantText(string text) => _assistantReplies.Enqueue(new AssistantReply(text));
 

@@ -44,7 +44,18 @@ public sealed class CommonSteps(ScenarioContext scenario)
     {
         await World.Secrets.SetAsync(SecretNames.OpenRouterApiKey, "e2e-mock-key", TestContext.Current.CancellationToken).ConfigureAwait(false);
         World.Network.RegisterSecret("e2e-mock-key");
+        await HeadlessApp.RunAsync(async cancellationToken =>
+        {
+            await World.StartAsync(cancellationToken);
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(false);
     }
+
+    [Given("OpenRouter rejects key checks with HTTP {int}")]
+    public void GivenOpenRouterRejectsKeyChecksWithHttp(int statusCode) => World.OpenRouter.SetKeyResponse((HttpStatusCode)statusCode);
+
+    [Given("OpenRouter has no connection")]
+    public void GivenOpenRouterHasNoConnection() => World.OpenRouter.SetKeyNetworkError();
 
     [Given("the OpenRouter image model catalog:")]
     public void GivenTheOpenRouterImageModelCatalog(DataTable table)
