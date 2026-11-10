@@ -84,7 +84,7 @@ public class OpenRouterClientTests
             """);
         var client = CreateClient(handler);
 
-        var result = await client.EmbedAsync(["first", "second"], TestContext.Current.CancellationToken);
+        var result = await client.EmbedAsync("vendor/custom-embedding", ["first", "second"], TestContext.Current.CancellationToken);
 
         Assert.Equal("https://openrouter.ai/api/v1/embeddings", handler.Requests[0].RequestUri!.ToString());
         Assert.Equal("Bearer " + ApiKey, handler.Requests[0].Headers.Authorization!.ToString());
@@ -94,7 +94,7 @@ public class OpenRouterClientTests
         Assert.Equal(new[] { 0.25f, 0.5f }, result.Vectors[1]);
         Assert.Equal(0.00000016m, result.CostUsd);
         var request = JsonNode.Parse(handler.RequestBodies[0])!.AsObject();
-        Assert.Equal(EmbeddingModel, request["model"]!.GetValue<string>());
+        Assert.Equal("vendor/custom-embedding", request["model"]!.GetValue<string>());
         Assert.Equal("[\"first\",\"second\"]", request["input"]!.ToJsonString());
         Assert.Equal(2, request.Count);
     }
@@ -104,7 +104,7 @@ public class OpenRouterClientTests
     {
         var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, "{}"), storedKey: null);
 
-        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync(["text"], TestContext.Current.CancellationToken));
+        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync("baai/bge-m3", ["text"], TestContext.Current.CancellationToken));
 
         Assert.Equal(ErrorKind.InvalidKey, error.Kind);
     }
@@ -121,7 +121,7 @@ public class OpenRouterClientTests
         var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, json));
 
         IReadOnlyList<string> texts = textCount == 2 ? ["one", "two"] : ["one"];
-        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync(texts, TestContext.Current.CancellationToken));
+        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync("baai/bge-m3", texts, TestContext.Current.CancellationToken));
 
         Assert.Equal(ErrorKind.Unknown, error.Kind);
     }
@@ -138,7 +138,7 @@ public class OpenRouterClientTests
         var client = CreateClient(StubHttpMessageHandler.Json(HttpStatusCode.OK, json));
 
         IReadOnlyList<string> texts = textCount == 2 ? ["one", "two"] : ["one"];
-        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync(texts, TestContext.Current.CancellationToken));
+        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync("baai/bge-m3", texts, TestContext.Current.CancellationToken));
 
         Assert.Equal(message, error.Message);
     }
@@ -151,7 +151,7 @@ public class OpenRouterClientTests
     {
         var client = CreateClient(StubHttpMessageHandler.Json(status, "{}"));
 
-        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync(["text"], TestContext.Current.CancellationToken));
+        var error = await Assert.ThrowsAsync<ProviderException>(() => client.EmbedAsync("baai/bge-m3", ["text"], TestContext.Current.CancellationToken));
 
         Assert.Equal(expected, error.Kind);
     }
@@ -168,7 +168,7 @@ public class OpenRouterClientTests
         });
         var client = CreateClient(handler);
         using var cancellation = new CancellationTokenSource();
-        var pending = client.EmbedAsync(["text"], cancellation.Token);
+        var pending = client.EmbedAsync("baai/bge-m3", ["text"], cancellation.Token);
         await entered.Task.WaitAsync(TestContext.Current.CancellationToken);
         cancellation.Cancel();
 

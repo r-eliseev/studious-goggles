@@ -4,12 +4,13 @@ using ImageGen.Core.Domain.Models;
 namespace ImageGen.Core.Providers;
 
 /// <summary>Combines one synchronous image/chat client with a prepared in-memory queued adapter.</summary>
-public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelProvider, IAssistantChatClient, IQueuedImageProvider, ITextEmbeddingClient, IVideoModelProvider, IQueuedVideoProvider
+public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelProvider, IAssistantChatClient, IQueuedImageProvider, ITextEmbeddingClient, IVideoModelProvider, IEmbeddingModelProvider, IQueuedVideoProvider
 {
     private readonly IModelProvider _imageProvider;
     private readonly IAssistantChatClient _chatClient;
     private readonly ITextEmbeddingClient? _textEmbeddingClient;
     private readonly IVideoModelProvider? _videoModelProvider;
+    private readonly IEmbeddingModelProvider? _embeddingModelProvider;
     private readonly IQueuedVideoProvider? _queuedVideoProvider;
     private readonly InMemoryQueuedImageProvider _queuedImages;
 
@@ -30,6 +31,7 @@ public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelP
         _chatClient = chatClient;
         _textEmbeddingClient = imageProvider as ITextEmbeddingClient ?? chatClient as ITextEmbeddingClient;
         _videoModelProvider = imageProvider as IVideoModelProvider ?? chatClient as IVideoModelProvider;
+        _embeddingModelProvider = imageProvider as IEmbeddingModelProvider ?? chatClient as IEmbeddingModelProvider;
         _queuedVideoProvider = imageProvider as IQueuedVideoProvider ?? chatClient as IQueuedVideoProvider;
         _queuedImages = new InMemoryQueuedImageProvider(transport, providerId, timeProvider);
     }
@@ -55,17 +57,23 @@ public sealed class InMemoryQueuedImageConnection : IProviderConnection, IModelP
     public Task<IReadOnlyList<ChatModel>> ListChatModelsAsync(CancellationToken cancellationToken) =>
         _chatClient.ListChatModelsAsync(cancellationToken);
 
-    public Task<EmbeddingResult> EmbedAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken) =>
+    public Task<EmbeddingResult> EmbedAsync(string modelId, IReadOnlyList<string> texts, CancellationToken cancellationToken) =>
         (_textEmbeddingClient ?? throw new ProviderException(
             ImageGen.Core.Domain.Generations.ErrorKind.ModelUnavailable,
             "This provider does not support text embeddings."))
-        .EmbedAsync(texts, cancellationToken);
+        .EmbedAsync(modelId, texts, cancellationToken);
 
     public Task<IReadOnlyList<VideoModel>> ListVideoModelsAsync(CancellationToken cancellationToken) =>
         (_videoModelProvider ?? throw new ProviderException(
             ImageGen.Core.Domain.Generations.ErrorKind.ModelUnavailable,
             "This provider does not support video models."))
         .ListVideoModelsAsync(cancellationToken);
+
+    public Task<IReadOnlyList<ImageGen.Core.Domain.Models.EmbeddingModel>> ListEmbeddingModelsAsync(CancellationToken cancellationToken) =>
+        (_embeddingModelProvider ?? throw new ProviderException(
+            ImageGen.Core.Domain.Generations.ErrorKind.ModelUnavailable,
+            "This provider does not support embedding models."))
+        .ListEmbeddingModelsAsync(cancellationToken);
 
     public Task<ProviderJobHandle> SubmitAsync(VideoGenerationRequest request, CancellationToken cancellationToken) =>
         (_queuedVideoProvider ?? throw new ProviderException(

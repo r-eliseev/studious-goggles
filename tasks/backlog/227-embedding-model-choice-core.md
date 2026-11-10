@@ -1,8 +1,8 @@
 ---
 id: 227
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-10T12:06:38Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -36,7 +36,7 @@ created: 2026-11-07
 4. Каталог: тип, провайдер, миграция, репозиторий, служба.
 5. `ChangeModelAsync`, `EstimateReindexAsync`, статус `model_unavailable`.
 
-Файлы: `ImageGen/ImageGen.Core/Domain/Models/EmbeddingModel.cs`, `ImageGen/ImageGen.Core/Providers/IEmbeddingModelProvider.cs`, `ImageGen/ImageGen.Core/Providers/ITextEmbeddingClient.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Providers/InMemoryQueuedImageConnection.cs`, `ImageGen/ImageGen.Core/Providers/ProviderRouter.cs`, `ImageGen/ImageGen.Core/Providers/IProviderRouter.cs`, `ImageGen/ImageGen.Core/Services/EmbeddingModelCatalogService.cs`, `ImageGen/ImageGen.Core/Storage/IEmbeddingModelRepository.cs`, `ImageGen/ImageGen.Core/Services/SemanticIndexService.cs`, `ImageGen/ImageGen.Core/Services/SemanticSearchService.cs`, `ImageGen/ImageGen.Core/Search/ISemanticSearchSettingsStore.cs`, `ImageGen/ImageGen.Core/Search/ISemanticIndexController.cs`, `ImageGen/ImageGen.Core/Search/ReindexEstimate.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data/Migrations/NNNN_embedding_models.sql`, `ImageGen/ImageGen.Data/Repositories/EmbeddingModelRepository.cs`, `ImageGen/ImageGen.Data/DataServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Presentation/Search/SearchSettingsFile.cs`, `ImageGen/ImageGen.LiveCheck/Scenarios/LiveCheckRunner.cs`, тесты Core, Data, Presentation, LiveCheck.
+Файлы: `ImageGen/ImageGen.Core/Domain/Models/EmbeddingModel.cs`, `ImageGen/ImageGen.Core/Providers/IEmbeddingModelProvider.cs`, `ImageGen/ImageGen.Core/Providers/ITextEmbeddingClient.cs`, `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs`, `ImageGen/ImageGen.Core/Providers/InMemoryQueuedImageConnection.cs`, `ImageGen/ImageGen.Core/Providers/ProviderRouter.cs`, `ImageGen/ImageGen.Core/Providers/IProviderRouter.cs`, `ImageGen/ImageGen.Core/Services/EmbeddingModelCatalogService.cs`, `ImageGen/ImageGen.Core/Storage/IEmbeddingModelRepository.cs`, `ImageGen/ImageGen.Core/Services/SemanticIndexService.cs`, `ImageGen/ImageGen.Core/Services/SemanticSearchService.cs`, `ImageGen/ImageGen.Core/Search/ISemanticSearchSettingsStore.cs`, `ImageGen/ImageGen.Core/Search/ISemanticIndexController.cs`, `ImageGen/ImageGen.Core/Search/ReindexEstimate.cs`, `ImageGen/ImageGen.Core/CoreServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Data/Migrations/0017_embedding_models.sql`, `ImageGen/ImageGen.Data/Repositories/EmbeddingModelRepository.cs`, `ImageGen/ImageGen.Data/DataServiceCollectionExtensions.cs`, `ImageGen/ImageGen.Presentation/Search/SearchSettingsFile.cs`, `ImageGen/ImageGen.LiveCheck/Scenarios/LiveCheckRunner.cs`, `docs/specs/chat-sessions.md`, тесты Core, Data, Presentation, LiveCheck.
 
 ### Проверка
 ```
@@ -59,6 +59,12 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+Implemented selectable OpenRouter embedding models, including a public catalog endpoint, SQLite cache, model-aware embedding requests, persisted search settings, model-aware indexing/search, index replacement, model availability status, and token/cost estimates. Updated the chat-session search specification.
+
+Verification passed: Core tests (816), Data tests (147), Presentation tests (531), LiveCheck tests (12); `dotnet format` verification for Core, Core.Tests, Data, Data.Tests, Presentation, Presentation.Tests, and LiveCheck; `bash scripts/check.sh`.
+
+The migration is `0017_embedding_models.sql` on this task branch, where it follows the current main schema. When integrating into PR #93, it must be renumbered to `0018_embedding_models.sql` because that PR already contains `0017_audio_models.sql`.
 
 ## Комментарии
 

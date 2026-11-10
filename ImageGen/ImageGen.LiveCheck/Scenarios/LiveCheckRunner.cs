@@ -258,7 +258,7 @@ public sealed class LiveCheckRunner(LiveCheckOptions options, TimeProvider timeP
         {
             var router = services!.GetRequiredService<IProviderRouter>();
             var client = router.GetTextEmbeddingClient(provider);
-            var result = await client.EmbedAsync(["A short search phrase", "Another short phrase"], cancellationToken);
+            var result = await client.EmbedAsync("baai/bge-m3", ["A short search phrase", "Another short phrase"], cancellationToken);
             var tracePath = Path.Combine(options.OutputDirectory, traceRelativePath);
             var traceLine = (await File.ReadAllLinesAsync(tracePath, cancellationToken))
                 .Reverse()
