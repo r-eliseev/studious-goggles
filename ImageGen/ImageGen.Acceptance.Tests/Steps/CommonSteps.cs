@@ -57,6 +57,9 @@ public sealed class CommonSteps(ScenarioContext scenario)
     [Given("OpenRouter has no connection")]
     public void GivenOpenRouterHasNoConnection() => World.OpenRouter.SetKeyNetworkError();
 
+    [When("the current time advances by {int} day")]
+    public void WhenCurrentTimeAdvancesByDays(int days) => World.Time.Advance(TimeSpan.FromDays(days));
+
     [Given("the OpenRouter image model catalog:")]
     public void GivenTheOpenRouterImageModelCatalog(DataTable table)
     {

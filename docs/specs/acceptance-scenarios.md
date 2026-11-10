@@ -52,15 +52,15 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 ### Sessions (`Sessions.feature`, task 255)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| SES-01 | A new session → an empty chat; it is at the top of the session list | S1.1 | planned |
+| SES-01 | A new session → an empty chat; it is at the top of the session list | S1.1 | done |
 | SES-02 | A first message longer than 40 characters → the session title is the first 40 characters | S1.2 | planned |
 | SES-03 | Renaming: the new title is visible in the list and the chat; the list order does not change | S1.2 | planned |
 | SES-04 | Renaming to an empty string or to more than 40 characters is not accepted | S1.2 | planned |
 | SES-05 | Deleting with confirmation → the session is not in the list, also after a restart; declining the confirmation → the session stays | S1.1 | planned |
-| SES-06 | A new session gets the default settings: one model `black-forest-labs/flux.2-klein-4b`, one run, the assistant model from Settings | S1.3 | planned |
+| SES-06 | A new session gets the default settings: one model `black-forest-labs/flux.2-klein-4b`, one run, the assistant model from Settings | S1.3 | done |
 | SES-07 | Changing the default assistant model in Settings affects only new sessions | S1.3 | planned |
 | SES-08 | The list row shows the number of runs ("· 2 runs") after two runs | S1.2 | planned |
-| SES-09 | Sessions are grouped: today's in "Today", older ones in "Earlier" (time from `FakeTimeProvider`) | S1.1 | planned |
+| SES-09 | Sessions are grouped: today's in "Today", older ones in "Earlier" (time from `FakeTimeProvider`) | S1.1 | done |
 | SES-10 | An example from the empty list starts a new session with this text | S1.1 | planned |
 | SES-11 | Clearing the whole history from Settings: sessions and files deleted, keys and settings kept | S1.4 | planned (273) |
 
