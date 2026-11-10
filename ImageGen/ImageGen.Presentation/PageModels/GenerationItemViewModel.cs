@@ -188,7 +188,11 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     public partial bool IsImage { get; set; }
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(NewSeedCommand))]
+    [NotifyPropertyChangedFor(nameof(CanShowNewSeed))]
     public partial bool IsAudio { get; set; }
+
+    public bool CanShowNewSeed => !IsAudio;
 
     [ObservableProperty]
     public partial string MediaFilePath { get; set; } = "";
@@ -289,8 +293,10 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(IsFinished))]
     private Task RepeatAsync() => _repeat(this);
 
-    [RelayCommand(CanExecute = nameof(IsFinished))]
+    [RelayCommand(CanExecute = nameof(CanNewSeed))]
     private Task NewSeedAsync() => _newSeed(this);
+
+    private bool CanNewSeed() => IsFinished && !IsAudio;
 
     [RelayCommand(CanExecute = nameof(IsFinished))]
     private Task EditAsync() => _edit(this);
@@ -318,7 +324,8 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     private Task CompareAsync() => _compare?.Invoke(this) ?? Task.CompletedTask;
 
     [RelayCommand(CanExecute = nameof(CanPlayMedia))]
-    private Task PlayMediaAsync() => _mediaPlayer?.ShowAsync(MediaFilePath, AppResources.PlayVideo, CancellationToken.None) ?? Task.CompletedTask;
+    private Task PlayMediaAsync() => _mediaPlayer?.ShowAsync(
+        MediaFilePath, IsAudio ? AppResources.PlayAudio : AppResources.PlayVideo, CancellationToken.None) ?? Task.CompletedTask;
 
     [RelayCommand(CanExecute = nameof(CanCancel))]
     private Task CancelAsync() => _cancel?.Invoke(this) ?? Task.CompletedTask;
@@ -334,7 +341,7 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     public void SetStoppedWaiting()
     {
         _stoppedWaiting = true;
-        CancellationStatusText = AppResources.StoppedWaitingVideo;
+        CancellationStatusText = AppResources.StoppedWaitingMedia;
         HasCancellationStatus = true;
     }
 
@@ -374,23 +381,27 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         var actions = new List<(string Label, Func<GenerationItemViewModel, Task> Run)>
         {
             (AppResources.Repeat, _repeat),
-            (AppResources.NewSeed, _newSeed),
             (AppResources.ActionEditPrompt, _edit),
             (AppResources.CopyPrompt, card => card._clipboard.SetTextAsync(card.Prompt)),
         };
+        if (!IsAudio)
+        {
+            actions.Insert(1, (AppResources.NewSeed, _newSeed));
+        }
         if (!IsVideo && !IsAudio)
         {
             actions.Insert(3, (AppResources.ActionPromptFromImage, card => _describe(card, DescriptionMode.Prompt)));
             actions.Insert(3, (AppResources.ActionDescribeImage, card => _describe(card, DescriptionMode.Description)));
         }
 
-        if (HasImage)
+        if (HasMedia)
         {
             actions.Add((SaveLabel, card => card.SaveAsync()));
-            if (_compare is not null)
-            {
-                actions.Add((AppResources.Compare, card => card._compare!(card)));
-            }
+        }
+
+        if (HasImage && _compare is not null)
+        {
+            actions.Add((AppResources.Compare, card => card._compare!(card)));
         }
 
         if (IsFailedOrFiltered && !IsVideo && !IsAudio)
@@ -485,9 +496,9 @@ public sealed partial class GenerationItemViewModel : ObservableObject
         OnPropertyChanged(nameof(SaveLabel));
         IsRunning = generation.Status is GenerationStatus.Queued or GenerationStatus.Running;
         IsCancelRequested = IsRunning && generation.CancelRequestedAt is not null;
-        if (_stoppedWaiting && IsVideo && IsCancelled)
+        if (_stoppedWaiting && (IsVideo || IsAudio) && IsCancelled)
         {
-            CancellationStatusText = AppResources.StoppedWaitingVideo;
+            CancellationStatusText = AppResources.StoppedWaitingMedia;
             HasCancellationStatus = true;
         }
         else if (generation.IsFinished || (!IsCancelRequested && CancellationStatusText != AppResources.CancelFailed))
@@ -579,7 +590,9 @@ public sealed partial class GenerationItemViewModel : ObservableObject
     {
         if (generation.CostUsd is not { } cost)
         {
-            return "";
+            return generation.Kind == MediaKind.Audio && generation.Status == GenerationStatus.Succeeded
+                ? AppResources.AudioPriceUnknown
+                : "";
         }
 
         var price = cost.ToString("0.####", CultureInfo.InvariantCulture);

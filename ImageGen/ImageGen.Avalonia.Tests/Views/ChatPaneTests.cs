@@ -39,7 +39,7 @@ public class ChatPaneTests
 
         var view = SidePane(shell).GetVisualDescendants().OfType<SessionModelsView>().Single();
         var tabs = view.GetVisualDescendants().OfType<TabControl>().Single();
-        Assert.Equal(3, tabs.Items.Count);
+        Assert.Equal(4, tabs.Items.Count);
 
         var save = view.FindControl<Button>("SaveButton")!;
         var cancel = view.FindControl<Button>("CancelButton")!;

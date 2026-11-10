@@ -428,8 +428,20 @@ public class ChatPageModelTests
         await _model.OnAppearingAsync();
 
         Assert.Equal("Red fox", _model.Title);
-        Assert.Equal(string.Format(AppResources.ModelsButtonFormat, 1, 2), _model.ModelsButtonText);
+        Assert.Equal(string.Format(AppResources.ModelsButtonFormat, 1, 2, 0, 0), _model.ModelsButtonText);
         Assert.Empty(_model.Items);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_ModelsButtonIncludesAudioAndVideoCounts()
+    {
+        _session.Settings.RunsPerModel = 1;
+        _session.Settings.VideoModels = [new ModelRef(ProviderIds.OpenRouter, "video/model")];
+        _session.Settings.AudioModels = [new ModelRef(ProviderIds.OpenRouter, "audio/model")];
+
+        await _model.OnAppearingAsync();
+
+        Assert.Equal(string.Format(AppResources.ModelsButtonFormat, 1, 1, 1, 1), _model.ModelsButtonText);
     }
 
     [Fact]

@@ -188,7 +188,7 @@
     <value>Assistant</value>
   </data>
   <data name="ModelsButtonFormat" xml:space="preserve">
-    <value>Models: {0} × {1}</value>
+    <value>Models: {0} × {1} · video {2} · audio {3}</value>
   </data>
   <data name="RunPromptFormat" xml:space="preserve">
     <value>Prompt: {0}</value>
@@ -532,6 +532,36 @@
   </data>
   <data name="VideoModelsSelectedFormat" xml:space="preserve">
     <value>Video models · {0} selected</value>
+  </data>
+  <data name="AudioModelsTitle" xml:space="preserve">
+    <value>Audio models</value>
+  </data>
+  <data name="AudioModelsSelectedFormat" xml:space="preserve">
+    <value>Audio models · {0} selected</value>
+  </data>
+  <data name="AudioMusicSoundGroup" xml:space="preserve">
+    <value>Music &amp; sound</value>
+  </data>
+  <data name="AudioSpeechGroup" xml:space="preserve">
+    <value>Speech</value>
+  </data>
+  <data name="AudioPriceUnknown" xml:space="preserve">
+    <value>price unknown</value>
+  </data>
+  <data name="AudioPricePerThousandFormat" xml:space="preserve">
+    <value>{0} / 1K chars</value>
+  </data>
+  <data name="SessionAudioVoice" xml:space="preserve">
+    <value>Voice</value>
+  </data>
+  <data name="SessionAudioVoiceHint" xml:space="preserve">
+    <value>If the provider requires a voice and none is set, generation will fail with its error message.</value>
+  </data>
+  <data name="StoppedWaitingMedia" xml:space="preserve">
+    <value>Stopped waiting. The provider may still charge for this generation.</value>
+  </data>
+  <data name="PlayAudio" xml:space="preserve">
+    <value>Play audio</value>
   </data>
   <data name="VideoPriceUnknown" xml:space="preserve">
     <value>price unknown</value>

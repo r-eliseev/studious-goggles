@@ -23,7 +23,7 @@
                            IsVisible="{Binding IsBusy}"
                            VerticalOptions="Start" />
 
-        <Grid Grid.Row="2" ColumnDefinitions="*,*,*" RowDefinitions="Auto,2">
+        <Grid Grid.Row="2" ColumnDefinitions="*,*,*,*" RowDefinitions="Auto,2">
             <Button Grid.Column="0"
                     StyleClass="ghost"
                     Text="{x:Static strings:AppResources.ImageModelsTab}"
@@ -39,6 +39,11 @@
                     Text="{x:Static strings:AppResources.VideoModelsTitle}"
                     Command="{Binding ShowVideoModelsCommand}"
                     SemanticProperties.Description="{Binding VideoModelsTabAutomationName}" />
+            <Button Grid.Column="3"
+                    StyleClass="ghost"
+                    Text="{x:Static strings:AppResources.AudioModelsTitle}"
+                    Command="{Binding ShowAudioModelsCommand}"
+                    SemanticProperties.Description="{Binding AudioModelsTabAutomationName}" />
             <BoxView Grid.Row="1"
                      Grid.Column="0"
                      Color="{DynamicResource IgAccentColor}"
@@ -49,6 +54,8 @@
                      IsVisible="{Binding IsAssistantTabSelected}" />
             <BoxView Grid.Row="1" Grid.Column="2" Color="{DynamicResource IgAccentColor}"
                      IsVisible="{Binding IsVideoModelsTabSelected}" />
+            <BoxView Grid.Row="1" Grid.Column="3" Color="{DynamicResource IgAccentColor}"
+                     IsVisible="{Binding IsAudioModelsTabSelected}" />
         </Grid>
 
         <Grid Grid.Row="3">
@@ -168,6 +175,43 @@
                                 </Grid>
                             </DataTemplate>
                         </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </ScrollView>
+            </Grid>
+            <Grid RowDefinitions="Auto,*" IsVisible="{Binding IsAudioModelsTabSelected}">
+                <Label StyleClass="section" Text="{Binding SelectedAudioCountText}" />
+                <ScrollView Grid.Row="1">
+                    <VerticalStackLayout Spacing="8">
+                        <Label StyleClass="section" Text="{x:Static strings:AppResources.AudioMusicSoundGroup}" />
+                        <VerticalStackLayout Spacing="4" BindableLayout.ItemsSource="{Binding MusicSoundModels}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="pm:AudioModelOptionViewModel">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="0,4">
+                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                  SemanticProperties.Description="{Binding Name}" />
+                                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                            <Label Text="{Binding Name}" />
+                                            <Label StyleClass="meta" Text="{Binding PriceText}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                        <Label StyleClass="section" Text="{x:Static strings:AppResources.AudioSpeechGroup}" />
+                        <VerticalStackLayout Spacing="4" BindableLayout.ItemsSource="{Binding SpeechModels}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="pm:AudioModelOptionViewModel">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="0,4">
+                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                  SemanticProperties.Description="{Binding Name}" />
+                                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                            <Label Text="{Binding Name}" />
+                                            <Label StyleClass="meta" Text="{Binding PriceText}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
                     </VerticalStackLayout>
                 </ScrollView>
             </Grid>

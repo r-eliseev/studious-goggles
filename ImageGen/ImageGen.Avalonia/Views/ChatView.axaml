@@ -161,7 +161,7 @@
                                                 <Border.ContextMenu>
                                                     <ContextMenu>
                                                         <MenuItem Header="{markup:Res Repeat}" Command="{Binding RepeatCommand}" InputGesture="R" />
-                                                        <MenuItem Header="{markup:Res NewSeed}" Command="{Binding NewSeedCommand}" InputGesture="Shift+R" />
+                                                        <MenuItem Header="{markup:Res NewSeed}" Command="{Binding NewSeedCommand}" IsVisible="{Binding CanShowNewSeed}" InputGesture="Shift+R" />
                                                         <MenuItem Header="{markup:Res ActionEditPrompt}" Command="{Binding EditCommand}" InputGesture="E" />
                                                         <MenuItem Header="{markup:Res ActionDescribeImage}" Command="{Binding DescribeCommand}" IsVisible="{Binding IsImage}" />
                                                         <MenuItem Header="{markup:Res ActionPromptFromImage}" Command="{Binding DescribePromptCommand}" IsVisible="{Binding IsImage}" />
@@ -203,7 +203,14 @@
                                                                 </Border>
                                                                 <Border IsVisible="{Binding IsAudio}" Background="{DynamicResource IgSunkenBrush}"
                                                                         AutomationProperties.Name="{Binding SummaryText}">
-                                                                    <TextBlock Classes="icon" Text="&#xE0C7;" FontSize="32" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                                    <Panel>
+                                                                        <TextBlock Classes="icon" Text="&#xE0C7;" FontSize="32" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                                        <Button Content="" IsVisible="{Binding CanPlayMedia}"
+                                                                                Command="{Binding PlayMediaCommand}"
+                                                                                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                                                                Background="Transparent" BorderBrush="Transparent"
+                                                                                AutomationProperties.Name="{markup:Res PlayAudio}" />
+                                                                    </Panel>
                                                                 </Border>
                                                                 <Button Content=""
                                                                         IsVisible="{Binding HasImage}"
@@ -339,6 +346,7 @@
                                                             <TextBlock Classes="icon" Text="&#xE146;" />
                                                         </Button>
                                                         <Button Classes="ghost icon small" Command="{Binding NewSeedCommand}"
+                                                                IsVisible="{Binding CanShowNewSeed}"
                                                                 ToolTip.Tip="{markup:Res NewSeed}"
                                                                 AutomationProperties.Name="{markup:Res NewSeed}">
                                                             <TextBlock Classes="icon" Text="&#xE2C5;" />

@@ -148,7 +148,7 @@
                                                 <FlyoutBase.ContextFlyout>
                                                     <MenuFlyout>
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.Repeat}" Command="{Binding RepeatCommand}" />
-                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.NewSeed}" Command="{Binding NewSeedCommand}" />
+                                                        <MenuFlyoutItem Text="{x:Static strings:AppResources.NewSeed}" Command="{Binding NewSeedCommand}" IsEnabled="{Binding CanShowNewSeed}" />
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionEditPrompt}" Command="{Binding EditCommand}" />
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionDescribeImage}" Command="{Binding DescribeCommand}" IsEnabled="{Binding IsImage}" />
                                                         <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionPromptFromImage}" Command="{Binding DescribePromptCommand}" IsEnabled="{Binding IsImage}" />
@@ -378,7 +378,7 @@
         <!-- The card actions act on the card the user touched last (ChatPageModel.SelectedCard). Letter keys have no accelerator: they would take the typing in the input box. -->
         <MenuBarItem Text="{x:Static strings:AppResources.MenuCard}">
             <MenuFlyoutItem Text="{x:Static strings:AppResources.Repeat}" Command="{Binding SelectedCard.RepeatCommand}" />
-            <MenuFlyoutItem Text="{x:Static strings:AppResources.NewSeed}" Command="{Binding SelectedCard.NewSeedCommand}" />
+            <MenuFlyoutItem Text="{x:Static strings:AppResources.NewSeed}" Command="{Binding SelectedCard.NewSeedCommand}" IsEnabled="{Binding SelectedCard.CanShowNewSeed}" />
             <MenuFlyoutItem Text="{x:Static strings:AppResources.ActionEditPrompt}" Command="{Binding SelectedCard.EditCommand}" />
             <MenuFlyoutItem Text="{Binding SelectedCard.SaveLabel}" Command="{Binding SelectedCard.SaveCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>

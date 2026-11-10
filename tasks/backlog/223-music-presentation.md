@@ -1,8 +1,8 @@
 ---
 id: 223
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-10T15:30:14Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -55,6 +55,13 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+- Added audio model selection to the session model screen, grouped into Music & sound and Speech, with search, selection counts, speech pricing per 1K characters, and saved selections. The chat model chip now includes audio counts.
+- Added the session voice setting for selected speech models. Added audio card price/status/actions, disabled image-only actions for audio, and kept the MAUI player conditional on audio with media. Avalonia shows Play only when an audio playback service supports it; image viewer remains hidden for audio cards.
+- Updated `tasks/backlog/140-android-manual-check.md` and `tasks/backlog/046-desktop-manual-check.md` with owner-run audio checks.
+- Verification passed: Presentation tests (542), Avalonia headless tests (182 passed, 2 platform skips), MAUI Android build, Avalonia Android Release build, formatting for Presentation/Avalonia/MAUI, and `bash scripts/check.sh`.
+- Manual playback on a physical Android device and desktop was not available in this environment; the scenarios are listed in tasks 140 and 046.
+- The actual MAUI model picker is `Controls/SessionModelsView.xaml`; the task's file list named the obsolete `Pages/SessionModelsPage.xaml` path. `MenuFlyoutItem` does not support `IsVisible` in the Android XAML compiler, so audio-only New seed is disabled through `IsEnabled` and the command itself rejects audio.
 
 ## Комментарии
 

@@ -200,6 +200,26 @@ public static class AppResources
 
     public static string VideoModelsSelectedFormat => Get(nameof(VideoModelsSelectedFormat));
 
+    public static string AudioModelsTitle => Get(nameof(AudioModelsTitle));
+
+    public static string AudioModelsSelectedFormat => Get(nameof(AudioModelsSelectedFormat));
+
+    public static string AudioMusicSoundGroup => Get(nameof(AudioMusicSoundGroup));
+
+    public static string AudioSpeechGroup => Get(nameof(AudioSpeechGroup));
+
+    public static string AudioPriceUnknown => Get(nameof(AudioPriceUnknown));
+
+    public static string AudioPricePerThousandFormat => Get(nameof(AudioPricePerThousandFormat));
+
+    public static string SessionAudioVoice => Get(nameof(SessionAudioVoice));
+
+    public static string SessionAudioVoiceHint => Get(nameof(SessionAudioVoiceHint));
+
+    public static string StoppedWaitingMedia => Get(nameof(StoppedWaitingMedia));
+
+    public static string PlayAudio => Get(nameof(PlayAudio));
+
     public static string VideoPriceUnknown => Get(nameof(VideoPriceUnknown));
 
     public static string VideoPriceForDurationFormat => Get(nameof(VideoPriceForDurationFormat));

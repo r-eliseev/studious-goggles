@@ -58,12 +58,15 @@ public class MauiSessionModelsMarkupTests
             .ToList();
         var imageTab = buttons.Single(element => (string?)element.Attribute("Command") == "{Binding ShowImageModelsCommand}");
         var assistantTab = buttons.Single(element => (string?)element.Attribute("Command") == "{Binding ShowAssistantModelCommand}");
+        var audioTab = buttons.Single(element => (string?)element.Attribute("Command") == "{Binding ShowAudioModelsCommand}");
         var groupToggles = buttons.Where(element => (string?)element.Attribute("Command") == "{Binding ToggleCommand}").ToArray();
 
         Assert.Equal("{x:Static strings:AppResources.ImageModelsTab}", (string?)imageTab.Attribute("Text"));
         Assert.Equal("{Binding ImageModelsTabAutomationName}", (string?)imageTab.Attribute("SemanticProperties.Description"));
         Assert.Equal("{x:Static strings:AppResources.AssistantModelTitle}", (string?)assistantTab.Attribute("Text"));
         Assert.Equal("{Binding AssistantTabAutomationName}", (string?)assistantTab.Attribute("SemanticProperties.Description"));
+        Assert.Equal("{x:Static strings:AppResources.AudioModelsTitle}", (string?)audioTab.Attribute("Text"));
+        Assert.Equal("{Binding AudioModelsTabAutomationName}", (string?)audioTab.Attribute("SemanticProperties.Description"));
         Assert.Equal(2, groupToggles.Length);
         Assert.All(groupToggles, button => Assert.Equal("{Binding AutomationName}", (string?)button.Attribute("SemanticProperties.Description")));
     }
