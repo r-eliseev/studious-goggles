@@ -20,7 +20,7 @@
     <PackageReference Include="Xamarin.AndroidX.Core.SplashScreen" />
   </ItemGroup>
   <ItemGroup>
-    <AndroidResource Include="Icon.png" Link="Resources/drawable/icon.png" />
+    <AndroidResource Include="Resources\mipmap-*\appicon*.png" />
     <AndroidResource Include="Resources/**/*.xml" />
     <ProjectReference Include="../ImageGen.Core/ImageGen.Core.csproj" />
     <ProjectReference Include="../ImageGen.Data/ImageGen.Data.csproj" />

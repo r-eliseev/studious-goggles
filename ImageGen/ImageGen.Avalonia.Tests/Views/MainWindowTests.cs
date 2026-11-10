@@ -15,5 +15,6 @@ public class MainWindowTests
 
         Assert.True(window.IsVisible);
         Assert.Equal(AppResources.AppTitle, window.Title);
+        Assert.NotNull(window.Icon);
     }
 }
