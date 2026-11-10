@@ -2,7 +2,7 @@
 set -euo pipefail
 
 mkdir -p reports/android/mock-provider
-dotnet run --project ImageGen/ImageGen.E2E.MockProvider -- --urls https://0.0.0.0:5443 > reports/android/mock-provider/mock-provider.log 2>&1 &
+dotnet run --no-build -c Release --project ImageGen/ImageGen.E2E.MockProvider -- --urls https://0.0.0.0:5443 > reports/android/mock-provider/mock-provider.log 2>&1 &
 mock_pid=$!
 trap 'kill "$mock_pid" 2>/dev/null || true' EXIT
 

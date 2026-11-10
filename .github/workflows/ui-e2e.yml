@@ -66,6 +66,8 @@ jobs:
         with:
           name: android-apk
           path: publish/android
+      - name: Build E2E mock provider
+        run: dotnet build ImageGen/ImageGen.E2E.MockProvider/ImageGen.E2E.MockProvider.csproj -c Release
       - name: Create one-off HTTPS certificates for the mock provider
         shell: bash
         run: |
@@ -155,6 +157,8 @@ jobs:
         with:
           name: windows-app
           path: publish/win-x64
+      - name: Build E2E mock provider
+        run: dotnet build ImageGen/ImageGen.E2E.MockProvider/ImageGen.E2E.MockProvider.csproj -c Release
       - name: Install FFmpeg
         run: choco install ffmpeg -y --no-progress
       - name: Run Windows interactive preflight
@@ -192,7 +196,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path reports/windows/allure-results | Out-Null
           $mockLog = Join-Path $env:GITHUB_WORKSPACE 'reports/windows/mock-provider/mock-provider.log'
           $mockError = Join-Path $env:GITHUB_WORKSPACE 'reports/windows/mock-provider/mock-provider-error.log'
-          $mock = Start-Process dotnet -ArgumentList @('run', '--project', 'ImageGen/ImageGen.E2E.MockProvider', '--', '--urls', 'https://0.0.0.0:5443') -PassThru -RedirectStandardOutput $mockLog -RedirectStandardError $mockError
+          $mock = Start-Process dotnet -ArgumentList @('run', '--no-build', '-c', 'Release', '--project', 'ImageGen/ImageGen.E2E.MockProvider', '--', '--urls', 'https://0.0.0.0:5443') -PassThru -RedirectStandardOutput $mockLog -RedirectStandardError $mockError
           try {
             $ready = $false
             for ($attempt = 0; $attempt -lt 120; $attempt++) {

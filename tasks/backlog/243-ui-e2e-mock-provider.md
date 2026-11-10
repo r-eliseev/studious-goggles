@@ -106,6 +106,7 @@ bash scripts/check.sh
 - Added the Windows first-run/generation scenario, optional provider-config seeding in `WindowsTestBase`, and CI setup for a trusted localhost certificate and HTTPS mock process. Windows E2E project build succeeded (0 warnings/errors); the Windows UI scenario requires the hosted interactive runner.
 - `git diff --check` passed and the workflow YAML parses. The Windows E2E CI run is pending after this change.
 - The first hosted Android attempt failed before test discovery: `android-emulator-runner` executes each `script` line in a separate shell, so its multiline loops were split and Bash reported `expecting "done"`. Moved the Android sequence to `ci/android-mock-e2e.sh` and made the workflow invoke that script as one command; `bash -n`, YAML parsing, and `git diff --check` pass. Re-running CI.
+- The next hosted run confirmed Windows certificate trust and HTTPS startup, but the mock provider finished its first `dotnet run` compilation only after the 120-second readiness loop expired. CI now builds the mock before starting either UI runner and launches it with `--no-build`; this avoids compiling in the background readiness window. Re-running CI.
 - Passed targeted `dotnet test` for `E2eProvidersConfigTests` and `AutomationIdsTests`, all 4 mock endpoint tests, and `dotnet format --verify-no-changes` for the mock, mock tests, E2E Common, E2E Android, Core.Tests, Presentation.Tests and MAUI projects. CI is pending.
 
 ## Комментарии
