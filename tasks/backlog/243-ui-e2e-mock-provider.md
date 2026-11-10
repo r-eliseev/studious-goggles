@@ -113,6 +113,7 @@ bash scripts/check.sh
 - The latest Android run installed the system CA, connected to the HTTPS mock, and passed the existing first-run tests; the new scenario failed because the native Picker row text is `E2E Mock (e2e-mock)`, not exactly `E2E Mock`. Changed the locator to match the visible prefix. Windows will use the same PR's updated button-name lookup.
 - The latest Windows run reached the session page but the desktop UI tree contains controls that do not expose the UIA Name property. The desktop lookup now skips those unsupported properties while scanning for the requested accessible name.
 - The following hosted Windows run showed `NullReferenceException` in the same lookup: some UIA elements return a null `Name` instead of throwing `PropertyNotSupportedException`. The screenshot confirms the `New session` button is visible. Updated the lookup to ignore null names too; awaiting the next hosted run.
+- The next Windows run passed the first-run provider/key/model selection and reached the session model picker. Its screenshot shows provider groups, with `e2e (1)` collapsed; the test incorrectly expected an `All models` option. Changed the scenario to expand the e2e provider group and select its image model.
 - Passed targeted `dotnet test` for `E2eProvidersConfigTests` and `AutomationIdsTests`, all 4 mock endpoint tests, and `dotnet format --verify-no-changes` for the mock, mock tests, E2E Common, E2E Android, Core.Tests, Presentation.Tests and MAUI projects. CI is pending.
 
 ## Комментарии

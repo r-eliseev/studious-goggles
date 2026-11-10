@@ -24,10 +24,7 @@ public sealed class MockSessionTests : WindowsTestBase
 
         FindByName("New session").AsButton().Invoke();
         Find(TestIds.ChatModels).AsButton().Invoke();
-        FindByName("All models").Click();
-        var search = Window.FindFirstDescendant(condition => condition.ByControlType(FlaUI.Core.Definitions.ControlType.Edit));
-        Assert.That(search, Is.Not.Null, "The model picker search field should be available.");
-        search!.AsTextBox().Enter("e2e/image");
+        FindByName("e2e (1)").Click();
         FindByName("E2E Image", TimeSpan.FromSeconds(15)).Click();
 
         Find(TestIds.ChatInput).AsTextBox().Enter("a red square");
