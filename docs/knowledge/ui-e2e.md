@@ -12,6 +12,8 @@ The E2E provider config is delivered after each `mobile: clearApp`, because clea
 
 The Windows scenario uses a short-lived self-signed `localhost` certificate installed in the hosted runner's Local Machine Root store. The test base copies `e2e-providers.json` into the app data directory after clearing it and before launch. The mock process runs alongside the Windows UI tests and is stopped afterward; certificate files and mock logs stay in the runner's temporary/report directories.
 
+The `reactivecircus/android-emulator-runner` action's `script` input executes each non-empty line as a separate shell command. Multi-line shell control structures therefore belong in a checked-in script invoked by one `script` command; otherwise a `for ... do` block can fail because its `done` is run in a different shell.
+
 ## Preflight 238
 
 The first two runs through `workflow_dispatch` on the branch `task/217-embedding-provider-model-name`, commit `fa3187de662ca9fa6a0e25a78466c746245fac79`: [run 42366477520](https://github.com/r-eliseev/studious-goggles/actions/runs/42366477520), [run 42366566469](https://github.com/r-eliseev/studious-goggles/actions/runs/42366566469). The Android APK and the unpackaged Windows app were built in both runs. The Windows preflight succeeded in both. The Android preflight of the second run installed Appium 3.9.0 and UiAutomator2 8.7.3, but doctor exited with code 1, because the emulator was not yet in PATH before emulator-runner. Fixed by running doctor after the emulator starts.

@@ -69,7 +69,7 @@ created: 2026-11-07
 
 Файлы:
 - проект мока: `ImageGen/ImageGen.E2E.MockProvider/` (новый) и `ImageGen/ImageGen.E2E.MockProvider.Tests/` (новый), включая их `.csproj`, endpoint code, embedded PNG resource, and WebApplicationFactory tests;
-- `ImageGen/ImageGen.E2E.Common/e2e-providers.json` (новый), `ImageGen/ImageGen.E2E.Common/TestIds.cs`;
+- `ImageGen/ImageGen.E2E.Common/e2e-providers.json` (новый), `ImageGen/ImageGen.E2E.Common/TestIds.cs`, `ImageGen/ImageGen.E2E.Common/ci/android-mock-e2e.sh` (новый);
 - тесты: `ImageGen/ImageGen.Core.Tests/Providers/E2eProvidersConfigTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`, `ImageGen/ImageGen.Presentation.Tests/E2E/AutomationIdsTests.cs`;
 - E2E: `ImageGen/ImageGen.E2E.Android/MockSessionTests.cs` (новый), `ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj`, `ImageGen/ImageGen.E2E.Windows/MockSessionTests.cs` (новый), `ImageGen/ImageGen.E2E.Windows/WindowsTestBase.cs`;
 - при варианте с конфигом сети: `ImageGen/ImageGen.Maui/ImageGen.Maui.csproj`, `ImageGen/ImageGen.Maui/Platforms/Android/Resources/xml/e2e_network_security_config.xml` (новый);
@@ -105,6 +105,7 @@ bash scripts/check.sh
 - Added the Android first-run scenario and per-reset provider config installation. `dotnet build ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj --no-restore` and Android-target MAUI build succeeded (0 warnings/errors). The hosted emulator scenario has not run yet; this local environment has no emulator binary or connected device.
 - Added the Windows first-run/generation scenario, optional provider-config seeding in `WindowsTestBase`, and CI setup for a trusted localhost certificate and HTTPS mock process. Windows E2E project build succeeded (0 warnings/errors); the Windows UI scenario requires the hosted interactive runner.
 - `git diff --check` passed and the workflow YAML parses. The Windows E2E CI run is pending after this change.
+- The first hosted Android attempt failed before test discovery: `android-emulator-runner` executes each `script` line in a separate shell, so its multiline loops were split and Bash reported `expecting "done"`. Moved the Android sequence to `ci/android-mock-e2e.sh` and made the workflow invoke that script as one command; `bash -n`, YAML parsing, and `git diff --check` pass. Re-running CI.
 - Passed targeted `dotnet test` for `E2eProvidersConfigTests` and `AutomationIdsTests`, all 4 mock endpoint tests, and `dotnet format --verify-no-changes` for the mock, mock tests, E2E Common, E2E Android, Core.Tests, Presentation.Tests and MAUI projects. CI is pending.
 
 ## Комментарии
