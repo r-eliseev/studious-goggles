@@ -210,3 +210,32 @@
 - 214 | backlog | done | 2026-11-07 | MAUI: нажатие на сессию открывает её, а не кнопки Rename/Delete | `tasks/backlog/214-maui-session-row-tap.md`
 - 215 | backlog | done | 2026-11-07 | Семантический индекс: понятная причина сбоя и проверка эмбеддингов вживую | `tasks/backlog/215-semantic-index-failure-diagnostics.md`
 - 216 | backlog | done | 2026-11-07 | MAUI: ресурсы оформления не того типа (предупреждения в журнале) | `tasks/backlog/216-maui-resource-type-warnings.md`
+- 167 | backlog | cancelled | 2026-11-07 | Генерация музыки | `tasks/backlog/167-music-generation.md`
+- 207 | backlog | done | 2026-11-10 | Avalonia desktop: плеер видео и аудио в отдельном окне (LibVLC) | `tasks/backlog/207-avalonia-media-player.md`
+- 217 | backlog | done | 2026-11-07 | Семантический индекс: OpenRouter отвечает именем провайдера модели | `tasks/backlog/217-embedding-provider-model-name.md`
+- 218 | backlog | done | 2026-11-07 | MAUI: плеер только у карточек видео и аудио | `tasks/backlog/218-maui-media-player-only-for-media.md`
+- 219 | backlog | done | 2026-11-07 | MAUI: видео в ленте — Play открывает полноэкранный плеер | `tasks/backlog/219-maui-video-card-fullscreen-player.md`
+- 220 | backlog | done | 2026-11-07 | Видео-карточка: кадр-обложка и пропорции | `tasks/backlog/220-maui-video-poster-frame.md`
+- 221 | backlog | done | 2026-11-10 | OpenRouter: генерация аудио — все модели с аудио- и речевым выходом | `tasks/backlog/221-openrouter-lyria-audio-client.md`
+- 222 | backlog | done | 2026-11-10 | Генерация аудио: запуск, сохранение, настройки сессии, инструмент ассистента | `tasks/backlog/222-music-generation-pipeline.md`
+- 223 | backlog | done | 2026-11-10 | Аудио в интерфейсе: выбор моделей, карточка с плеером | `tasks/backlog/223-music-presentation.md`
+- 224 | backlog | done | 2026-11-10 | Avalonia Android: встроенный плеер Android (Media3) для видео и аудио | `tasks/backlog/224-avalonia-android-media3-player.md`
+- 225 | backlog | done | 2026-11-10 | MAUI: карточки прогона на телефоне — одна колонка по центру | `tasks/backlog/225-maui-run-cards-phone-column.md`
+- 226 | backlog | done | 2026-11-10 | Семантический индекс: статус не застревает (повторное включение, возврат ключа) | `tasks/backlog/226-semantic-index-status-fixes.md`
+- 227 | backlog | done | 2026-11-10 | Семантический поиск: выбор модели эмбеддингов и переиндексация (ядро) | `tasks/backlog/227-embedding-model-choice-core.md`
+- 228 | backlog | done | 2026-11-10 | Семантический поиск: выбор модели эмбеддингов в настройках | `tasks/backlog/228-embedding-model-choice-ui.md`
+- 229 | backlog | done | 2026-11-07 | Полная очистка истории | `tasks/backlog/229-clear-history.md`
+- 231 | backlog | done | 2026-11-07 | Поиск: выборка источников пачки по индексам таблиц | `tasks/backlog/231-search-source-lookup-by-table.md`
+- 232 | backlog | done | 2026-11-10 | Clear logs: культура сообщения и неудавшиеся удаления | `tasks/backlog/232-logs-clear-nits.md`
+- 233 | backlog | done | 2026-11-10 | Avalonia Android: сохранение картинки на Android 6–9 | `tasks/backlog/233-avalonia-android-legacy-gallery-save.md`
+- 234 | backlog | done | 2026-11-10 | Avalonia: значок Omnilite (Android и desktop) | `tasks/backlog/234-avalonia-app-icon.md`
+- 238 | backlog | done | 2026-11-07 | UI-тесты: проверка инфраструктуры CI (preflight) Android и Windows | `tasks/backlog/238-ui-e2e-ci-preflight.md`
+- 239 | backlog | done | 2026-11-07 | MAUI: постоянные AutomationId для UI-тестов | `tasks/backlog/239-maui-automation-ids.md`
+- 240 | backlog | done | 2026-11-07 | UI-тесты Android: проект, фикстура с видео и smoke-сценарии | `tasks/backlog/240-ui-e2e-android-smoke.md`
+- 241 | backlog | done | 2026-11-07 | UI-тесты Windows (экспериментально): FlaUI, видео FFmpeg, smoke-сценарии | `tasks/backlog/241-ui-e2e-windows-smoke.md`
+- 242 | backlog | done | 2026-11-07 | UI-тесты: общий отчёт Allure HTML и статусы в PR | `tasks/backlog/242-ui-e2e-allure-report.md`
+- 244 | backlog | done | 2026-11-07 | Apple CI: проверка инструментов (preflight) и таблица совместимости Xcode/.NET | `tasks/backlog/244-apple-ci-preflight.md`
+- 251 | backlog | done | 2026-11-10 | UI-тесты: конечное состояние на записи, поворот на экране ключа, маскировка ключа на Windows | `tasks/backlog/251-ui-e2e-final-state-evidence.md`
+- 252 | backlog | done | 2026-11-10 | Acceptance scenarios: Reqnroll, the project and headless Avalonia | `tasks/backlog/252-acceptance-reqnroll-setup.md`
+- 253 | backlog | done | 2026-11-10 | Приёмочные сценарии: мир приложения — сценарный фейк сети, время, сиды, перезапуск | `tasks/backlog/253-acceptance-app-world.md`
+- 254 | backlog | done | 2026-11-10 | Приёмочные сценарии: первый запуск и ключи провайдеров | `tasks/backlog/254-acceptance-first-run-keys.md`

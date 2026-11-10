@@ -61,3 +61,6 @@ bash scripts/check.sh
 
 ### 2026-11-09, owner (in the chat, recorded by claude-bdd-plan)
 Plan approved, status `approved`. Changes of the same day apply: the Gherkin scenarios, step texts, bindings, comments and the "Report" are in English (`docs/conventions.md`, "Language"; ADR 0031 is accepted); a "Structure of a scenario" in this plan is a `Scenario Outline`. Scenario expectations and wording are in the English catalog `docs/specs/acceptance-scenarios.md`. The acceptance project runs in CI (task 252). The flow tests in `ImageGen.Avalonia.Tests/Flows` that a scenario of this task covers are deleted by task 267, not here.
+
+### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan) — plan extended
+Task 232 is done, so SET-04 is added to this task: "Clear logs" (`SettingsPageModel.ClearLogsAsync`, confirmation through the dialog fake) deletes the log files of `<data folder>/logs`, and the app keeps writing the log afterwards (a new line appears after the next action). Files: the same as in the plan. Expectation from the catalog row SET-04 and task 232's "Report"; on a discrepancy — `@ignore @bug-NNN` and a task. Plan approved.

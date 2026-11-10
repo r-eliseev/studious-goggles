@@ -1,6 +1,6 @@
 ---
 id: 198
-status: planned
+status: approved
 assignee:
 claimed:
 created: 2026-11-06
@@ -44,3 +44,6 @@ ADR 0026: решение о замене MAUI на Android принимаетс�
 
 ### 2026-11-06, claude-audit
 Создано по поручению владельца вместе с 191–197. Ручная задача: выполняет владелец на телефоне.
+
+### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan)
+Plan approved ("approve all tasks with plans").

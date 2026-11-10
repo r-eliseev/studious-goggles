@@ -37,7 +37,8 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 | id | Scenario: condition → expectation | Requirements | Status |
 |---|---|---|---|
 | KEY-01 | First launch without a key → the key screen opens, not the session list (`@e2e`, replaces `FirstRunTests.Launch_ShowsFirstRunKeyScreen`) | S1, F1.1 | done |
-| KEY-02 | A valid OpenRouter key → status "works", then the assistant model choice; after choosing — the session list | F1.2, S1.3 | discrepancy (272) |
+| KEY-02 | A valid key of the default assistant provider (OpenRouter) → status "works", the session list opens without the model choice (corrected 2026-11-10, task 272) | F1.2, S1.3, S6.4 | planned (272) |
+| KEY-12 | On the key screen the user chooses another configured chat provider and saves its key → the model choice of that provider opens; the chosen model becomes the default for new sessions | S6.4 | planned (272) |
 | KEY-03 | An invalid key (401) → an "invalid key" message with the provider's name, we stay on the key screen, the key is not saved (`@e2e`, replaces `FirstRunTests.InvalidKey_ShowsError`; on a device the message may also be "no connection") | F1.2 | done |
 | KEY-04 | No connection → a "no connection" message, the key is not saved | F1.2 | done |
 | KEY-05 | The error text and the app log do not contain the entered key | F1.3, F10.3 | done |
@@ -61,7 +62,7 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 | SES-08 | The list row shows the number of runs ("· 2 runs") after two runs | S1.2 | planned |
 | SES-09 | Sessions are grouped: today's in "Today", older ones in "Earlier" (time from `FakeTimeProvider`) | S1.1 | planned |
 | SES-10 | An example from the empty list starts a new session with this text | S1.1 | planned |
-| SES-11 | Clearing the whole history from Settings: sessions and files deleted, keys and settings kept | S1.4 | after 229 |
+| SES-11 | Clearing the whole history from Settings: sessions and files deleted, keys and settings kept | S1.4 | planned (273) |
 
 ### Chat and assistant (`ChatAssistant.feature`, task 256)
 | id | Scenario | Requirements | Status |
@@ -130,7 +131,7 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 | SET-01 | The default style is Quiet, the theme is as in the system | S6.1, S6.2 | planned |
 | SET-02 | Changing the style and the theme applies immediately and is kept after a restart | S6.3 | planned |
 | SET-03 | Settings is entered from the sessions screen; the screen is called "Settings" | S6.4 | planned |
-| SET-04 | Clear logs deletes the log files, the app keeps writing the log | — | after 232 |
+| SET-04 | Clear logs deletes the log files, the app keeps writing the log | — | planned (261) |
 
 ### Spending (`Spending.feature`, task 262)
 | id | Scenario | Requirements | Status |
@@ -148,7 +149,7 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 | SRCH-02 | Words: nothing found → the "no results" state; clearing the search returns the list | S1.4 | planned |
 | SRCH-03 | Meaning is off by default; turning it on in Settings indexes the history (embeddings from the fake) | S1.4 | planned |
 | SRCH-04 | Meaning: results are not mixed with Words | S1.4 | planned |
-| SRCH-05 | The index status and the choice of the embedding model | — | after 226–228 |
+| SRCH-05 | The index status and the choice of the embedding model | — | planned (263) |
 
 ### Gallery, viewer and comparison (`Gallery.feature`, task 264)
 | id | Scenario | Requirements | Status |
@@ -166,7 +167,7 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 | VID-02 | With a video model: a `generate_video` call → an asynchronous job, polling, the card is "done" with a video file | media-generation | planned |
 | VID-03 | A video download error → "failed", no partial file | media-generation | planned |
 | VID-04 | Cancelling a video → "cancelled" with a warning that the provider may continue | media-generation | planned |
-| VID-05 | Audio | — | after 221–223 |
+| VID-05 | Audio: with an audio model the assistant gets `generate_audio`, the card becomes done with an audio file | media-generation | planned (265) |
 
 ### Migrated flow tests (task 267)
 Task 267 maps every test of `ImageGen.Avalonia.Tests/Flows/*FlowTests.cs` to a scenario above; flow tests without a matching scenario get new rows here (next free id in the area) before they are deleted.
