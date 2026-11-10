@@ -70,6 +70,128 @@ public class SemanticIndexServiceTests
     }
 
     [Fact]
+    public async Task EnableAsync_AfterReady_ReindexesNewSources()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var first = Source(SearchTextKind.Title, "first source");
+        var second = Source(SearchTextKind.Title, "second source");
+        var setup = Create([first]);
+        var calls = 0;
+        var secondCall = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                if (Interlocked.Increment(ref calls) == 2)
+                {
+                    secondCall.TrySetResult();
+                }
+
+                return Task.FromResult(Result(call.Arg<IReadOnlyList<string>>().Count));
+            });
+
+        await setup.Service.EnableAsync(ct);
+        await WaitForStateAsync(setup.Service, SemanticIndexState.Ready, ct);
+        setup.Sources.Items = [first, second];
+
+        await setup.Service.EnableAsync(ct);
+        await secondCall.Task.WaitAsync(TimeSpan.FromSeconds(5), ct);
+        var status = await WaitForStateAsync(setup.Service, SemanticIndexState.Ready, ct);
+
+        Assert.Equal(2, status.Indexed);
+        Assert.Equal(2, calls);
+        await setup.Service.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task GetStatusAsync_AfterReadyWithNewSource_ReportsPendingAndStartsIndexing()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var first = Source(SearchTextKind.Title, "first source");
+        var second = Source(SearchTextKind.Title, "second source");
+        var setup = Create([first]);
+        var calls = 0;
+        var secondCall = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                if (Interlocked.Increment(ref calls) == 2)
+                {
+                    secondCall.TrySetResult();
+                }
+
+                return Task.FromResult(Result(call.Arg<IReadOnlyList<string>>().Count));
+            });
+
+        await setup.Service.EnableAsync(ct);
+        await WaitForStateAsync(setup.Service, SemanticIndexState.Ready, ct);
+        setup.Sources.Items = [first, second];
+
+        var status = await setup.Service.GetStatusAsync(ct);
+
+        Assert.Equal(1, status.Pending);
+        await secondCall.Task.WaitAsync(TimeSpan.FromSeconds(5), ct);
+        await WaitForStateAsync(setup.Service, SemanticIndexState.Ready, ct);
+        Assert.Equal(2, calls);
+        await setup.Service.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task GetStatusAsync_AfterMissingKeyReturns_RestartsIndexing()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var first = Source(SearchTextKind.Title, "first source");
+        var second = Source(SearchTextKind.Title, "second source");
+        var setup = Create([first]);
+        var calls = 0;
+        var secondCall = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                if (Interlocked.Increment(ref calls) == 2)
+                {
+                    secondCall.TrySetResult();
+                }
+
+                return Task.FromResult(Result(call.Arg<IReadOnlyList<string>>().Count));
+            });
+
+        await setup.Service.EnableAsync(ct);
+        await WaitForStateAsync(setup.Service, SemanticIndexState.Ready, ct);
+        setup.SecretStore.GetAsync(SecretNames.OpenRouterApiKey, Arg.Any<CancellationToken>()).Returns((string?)null);
+        var missingKey = await setup.Service.GetStatusAsync(ct);
+        Assert.Equal("missing_key", missingKey.ErrorCode);
+        setup.Sources.Items = [first, second];
+
+        setup.SecretStore.GetAsync(SecretNames.OpenRouterApiKey, Arg.Any<CancellationToken>()).Returns("test-key");
+        var resumed = await setup.Service.GetStatusAsync(ct);
+
+        Assert.NotEqual(SemanticIndexState.Unavailable, resumed.State);
+        await secondCall.Task.WaitAsync(TimeSpan.FromSeconds(5), ct);
+        var ready = await WaitForStateAsync(setup.Service, SemanticIndexState.Ready, ct);
+        Assert.Equal(2, ready.Indexed);
+        Assert.Equal(2, calls);
+        await setup.Service.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task GetStatusAsync_AfterProviderFailure_KeepsFailedStateUntilRetry()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var setup = Create([Source(SearchTextKind.Title, "source")]);
+        setup.Client.EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromException<EmbeddingResult>(new ProviderException(ErrorKind.Unknown, "provider error")));
+
+        await setup.Service.EnableAsync(ct);
+        await WaitForStateAsync(setup.Service, SemanticIndexState.Failed, ct);
+        var status = await setup.Service.GetStatusAsync(ct);
+
+        Assert.Equal(SemanticIndexState.Failed, status.State);
+        Assert.Equal(nameof(ErrorKind.Unknown), status.ErrorCode);
+        await setup.Client.Received(1).EmbedAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+        await setup.Service.DisposeAsync();
+    }
+
+    [Fact]
     public async Task IndexAsync_SourceDeletedDuringProviderCall_DoesNotPersistStaleVector()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -405,7 +527,7 @@ public class SemanticIndexServiceTests
         await setup.Service.DisposeAsync();
     }
 
-    private static (SemanticIndexService Service, MemorySources Sources, MemoryEmbeddings Repository, ITextEmbeddingClient Client, SessionChangeNotifier Changes, RecordingDelay Delay) Create(
+    private static (SemanticIndexService Service, MemorySources Sources, MemoryEmbeddings Repository, ITextEmbeddingClient Client, ImageGen.Core.Platform.ISecretStore SecretStore, SessionChangeNotifier Changes, RecordingDelay Delay) Create(
         IReadOnlyList<SearchSource> sources,
         bool hasKey = true)
     {
@@ -437,7 +559,7 @@ public class SemanticIndexServiceTests
             delay,
             TimeProvider.System,
             NullLogger<SemanticIndexService>.Instance);
-        return (service, sourceStore, repository, client, changes, delay);
+        return (service, sourceStore, repository, client, secrets, changes, delay);
     }
 
     private static SearchSource Source(SearchTextKind kind, string text)
