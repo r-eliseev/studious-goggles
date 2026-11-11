@@ -1,8 +1,8 @@
 ---
 id: 247
 status: blocked
-assignee: codex-gpt6
-claimed: 2026-11-10T20:30:00Z
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -103,3 +103,6 @@ Run [42402076497](https://github.com/r-eliseev/studious-goggles/actions/runs/424
 Run [42405774295](https://github.com/r-eliseev/studious-goggles/actions/runs/42405774295): `smoke-ios-avalonia` зелёный, на скриншоте экран «Connect OpenRouter». На скриншоте страница не заполняет экран: сверху и снизу чёрные поля, верхней панели навигации нет. Это вопрос отступов безопасной зоны для 246 или новой задачи, на запуск не влияет.
 
 В том же прогоне `smoke-ios-maui` упал ложно: на 15 с приложение ещё было на заставке, а на 30 с уже показывало экран ключа. В `apple-sim-smoke.sh` решающая проверка процесса теперь на 30 с, ключ сводки `aliveAfter30s`, при падении печатается хвост `launch.log` (коммит `e2175df`).
+
+### 2026-11-11, owner (in the chat, recorded by claude-planner)
+The criterion stays: three consecutive green runs per app, the smoke must always pass. The investigation continues in task 274 (diagnostics: the app's own log, the system termination reasons, an exit timeline, 20 repeated runs). 247 stays `blocked` until 274 gives the cause and its fix is merged; then the planner returns it to `approved`. The claim is released (ADR 0032: a blocked task does not keep a claim). The letterboxed layout seen on the screenshots is task 275.
