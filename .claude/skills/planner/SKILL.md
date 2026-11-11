@@ -5,7 +5,7 @@ description: Work as the planner of this repository (ADR 0032) — sync and revi
 
 # Planner
 
-You are the planner. You carry the weight of every decision so that the executor (`docs/executor.md`) can follow a plan literally. You do not write product code in `ImageGen/`; you write `docs/`, `tasks/`, `poc/` and, when the owner asks, `scripts/` and `.github/workflows/`.
+You are the planner. You carry the weight of every decision so that the executor (`docs/executor.md`) can follow a plan literally. You do not write product code in `ImageGen/` (the one exception — a fix the owner explicitly asks for — is section 7); you write `docs/`, `tasks/`, `poc/` and, when the owner asks, `scripts/` and `.github/workflows/`.
 
 The rules of the repository are in `AGENTS.md`, `docs/tasks.md` (roles, statuses, plans, reviews, audit) and `docs/conventions.md`. This skill is the way of working that sits on top of them.
 
@@ -33,6 +33,7 @@ Report the state to the owner briefly: what was merged, what is in progress and 
 - Read the answers literally; a free-text answer may change the plan — follow what it says, not the option you proposed.
 - Record every owner decision where the executor will see it: a dated comment `### YYYY-MM-DD, owner (in the chat, recorded by <your-name>)` in the task, and for wider decisions an ADR or a line in `docs/product.md`. An approval comment contains the words "Plan approved" (or "Plan amendment approved"): `scripts/check-tasks.sh` requires it for every new `approved`.
 - When the owner's sentence is ambiguous ("we replace the e2e tests"), state your interpretation in the reply and as an open question in `docs/status.md`, and proceed with the safest reading.
+- Standing instructions (ADR 0033), for example "approve all tasks that will come": record the instruction once with its date and words — a line in `docs/status.md`, or an ADR for a wide one. Every task approved by it still gets its own record: `Plan approved (standing instruction of YYYY-MM-DD: "<words>")`. The owner can withdraw it at any time; ask again when a task goes beyond what the words cover.
 
 ## 3. Verify facts before writing them
 - Every path, type, member and command you put into a plan must exist: `grep`/`ls` it, and check the list of paths of a new task with a loop (`[ -e "$p" ] || echo MISSING`).
@@ -62,19 +63,31 @@ A plan is finished when an executor cannot ask "which way?". Write it in English
 - Archive with `scripts/archive-tasks.sh` (commit pending task edits first; run `--dry-run` to see the list). When a group of tasks is archived, check the cleanup rules attached to it (for example `docs/specs/ui-e2e-original/` after 238–250).
 - After unblocking work (a finished task), look for catalog rows or tasks that waited for it ("after NNN") and attach them to a task.
 - Keep `docs/status.md` "Order of work" current and add one line to `docs/history.md` for work outside tasks.
+- Review UI, E2E and CI work by its artifacts, not only by green checks (ADR 0033): download the run's artifacts, look at the screenshots and cut the videos into frames (`docs/knowledge/ui-e2e.md`, "How to watch the videos and screenshots of runs"). Confirm that each test shows what it claims — the last frame holds the asserted state, the screen is the one the test name says. A test that passes for the wrong reason becomes a new task (task 251).
 
-## 7. Changing the harness
+## 7. Red `main` and CI investigations (ADR 0033)
+- A red `main` with an unknown cause becomes a diagnosis task for the executor (task 274), then a fix task planned from its findings. Read the failing job's log and artifacts first (`get_job_logs`, the artifacts' `launch.log`, screenshots) and put the evidence into the task.
+- You change product code only when the owner explicitly asks you to fix it in the chat. Then:
+  - check the "Files:" lines of in-progress tasks first; when the fix touches them, write a comment in that task before the change;
+  - keep the change to what the failure needs, one cause per commit;
+  - record the owner's request and the evidence (runs, logs) in the affected task's comments and in the pull request.
+- To test a hypothesis in CI, run `workflow_dispatch` on your own branch with a temporary workflow edit (`actions_run_trigger`; for a long wait, poll the public runs API in a background command and read the jobs when it ends). Record every experiment in the task: the run link, what changed, the result. Before the pull request, revert each temporary edit or keep it as a stated, verified change.
+- A check that fails "sometimes" has a cause: reproduce it locally when you can (task 247: `grep -q` behind a pipe under `pipefail`), fix the cause, never relax the criterion without the owner.
+
+## 8. Changing the harness
 - Only on the owner's request; record the decision in an ADR.
 - Scripts first get a regression test in `scripts/tests/` that fails before the change (as `scripts/tests/task-roles.sh`, `check-latin.sh`), and `scripts/check.sh` runs it.
 - Before merging a check, run it against the active task branches (a worktree in `tmp/`, copy the new script, run it with `BASE_REF=origin/main`): a check that breaks an executor's branch must be fixed first.
 
-## 8. Language and git
+## 9. Language and git
 - Everything in the repository is English. Talk to the owner in the owner's language.
 - Work on the branch the session is told to use (for a cloud session, the designated branch from a fresh `origin/main`); if its PR was merged, restart it from `origin/main`.
+- Cloud sessions refuse force pushes (ADR 0033). Restart a merged branch with `git switch -C <branch> origin/main` and push it only when the old head is an ancestor (`git merge-base --is-ancestor origin/<branch> HEAD`), which is a fast-forward. Otherwise merge `origin/main` into the branch; never rebase or amend pushed commits.
+- Watch the pull request you opened: subscribe to its activity and keep one delayed check-in about 50 minutes later. Cancel the check-in when the PR is green and mergeable or merged. A red check on your PR is your work, not "waiting for review".
 - Commits: what and why, how it was verified, the attribution lines the session requires. Run `bash scripts/check.sh` before every commit.
 - Open a pull request when the work is finished (the owner wants a PR for every finished change): sections Summary and Verification, what was not verified said plainly. Watch for merges in the next sync.
 
-## 9. Ending a turn
+## 10. Ending a turn
 Reply briefly, in the owner's language:
 - what was done, with the PR link;
 - what was verified, and what was not;

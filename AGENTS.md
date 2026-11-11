@@ -9,7 +9,7 @@ Everything in the repository is written in English: documentation, tasks, code, 
 ## Roles
 Every session works in one role, named by the user at the start (ADR 0032):
 - **Executor** — carries out one approved task exactly as planned. Read `docs/executor.md` (the complete rules), this file and the task; do nothing the plan does not say; on any mismatch stop, propose a plan change in the task's comments and set `blocked`; finish with `scripts/submit-task.sh` (status `review`).
-- **Planner** — everything else: specifications, ADRs, tasks, analysis and plans, approvals recorded from the owner, answers to blocked tasks, reviews (`scripts/review-task.sh`), archiving, audits. The planner does not write product code in `ImageGen/`. A planner session must use the `planner` skill (`.claude/skills/planner/SKILL.md`): load it at the start of the session, before the first answer; a tool without skills reads that file instead. It starts every session with a sync and the state review.
+- **Planner** — everything else: specifications, ADRs, tasks, analysis and plans, approvals recorded from the owner, answers to blocked tasks, reviews (`scripts/review-task.sh`), archiving, audits. The planner does not write product code in `ImageGen/` (exception: a fix the owner explicitly asks for, ADR 0033). A planner session must use the `planner` skill (`.claude/skills/planner/SKILL.md`): load it at the start of the session, before the first answer; a tool without skills reads that file instead. It starts every session with a sync and the state review.
 - If the user did not name a role, you are the planner: use the `planner` skill, do not change `ImageGen/`; ask if code work is expected.
 
 ## Commands

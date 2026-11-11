@@ -69,7 +69,7 @@ Your name is the `AGENT_NAME` environment variable or the name the user gave. If
 - Write the plan in English (`docs/conventions.md`, "Language").
 
 ## Approval
-Approval of a plan is the `approved` status set by the owner, or an explicit "plan approved" by the owner in the chat or in the comments; then the planner records it as a comment `### YYYY-MM-DD, owner (in the chat, recorded by <planner-name>)` with the words "Plan approved" and sets `approved`. Nobody writes code without approval.
+Approval of a plan is the `approved` status set by the owner, or an explicit "plan approved" by the owner in the chat or in the comments; then the planner records it as a comment `### YYYY-MM-DD, owner (in the chat, recorded by <planner-name>)` with the words "Plan approved" and sets `approved`. A standing instruction of the owner ("approve all tasks that will come") is recorded once in `docs/status.md` with its date and words; each task approved by it gets its own record `Plan approved (standing instruction of YYYY-MM-DD: "<words>")` (ADR 0033). Nobody writes code without approval.
 
 ## Finishing (executor)
 1. Run the tests and the linter.
