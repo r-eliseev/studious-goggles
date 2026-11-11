@@ -17,8 +17,9 @@ Current statuses are in the task cards and the output of `scripts/list-tasks.sh`
 
 Before a claim, check the dependencies and the environment in the card. There are no Windows tasks in the queue (088, 139, 148 done 2026-11-01, their manual items are in 016).
 
-### Standing instructions of the owner (ADR 0033)
+### Standing instructions of the owner (ADR 0033–0034)
 - **2026-11-07**, in the chat (translated from Russian): "approve all tasks that will come". A task approved by it gets its own record `Plan approved (standing instruction of 2026-11-07: "approve all tasks that will come")`. In force until the owner withdraws it.
+- **2026-11-11**, in the chat (translated from Russian; ADR 0034): execute approved tasks and tasks returned for changes one at a time; update the existing PR after each task, do not wait for merges, and keep working across routine messages. This executor authorization remains active until the owner changes or withdraws it. Dependencies, environment limits, active branches, and missing credentials still block the affected task; continue with another independent authorized task where possible.
 
 ### Queues by dependency
 - Sessions/screen: 021–024 done.
