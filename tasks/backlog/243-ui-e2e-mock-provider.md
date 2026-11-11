@@ -73,7 +73,7 @@ created: 2026-11-07
 - тесты: `ImageGen/ImageGen.Core.Tests/Providers/E2eProvidersConfigTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`, `ImageGen/ImageGen.Presentation.Tests/E2E/AutomationIdsTests.cs`;
 - E2E: `ImageGen/ImageGen.E2E.Android/MockSessionTests.cs` (новый), `ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj`, `ImageGen/ImageGen.E2E.Windows/MockSessionTests.cs` (новый), `ImageGen/ImageGen.E2E.Windows/WindowsTestBase.cs`;
 - при варианте с конфигом сети: `ImageGen/ImageGen.Maui/ImageGen.Maui.csproj`, `ImageGen/ImageGen.Maui/Platforms/Android/Resources/xml/e2e_network_security_config.xml` (новый);
-- `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml` (id карточки);
+- `ImageGen/ImageGen.Maui/Controls/SessionsListView.xaml` (test id for the list-pane new-session action), `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml` (id карточки);
 - общие: `ImageGen/Directory.Packages.props`, `ImageGen/ImageGen.slnx`, `.github/workflows/ui-e2e.yml`;
 - документация: `docs/knowledge/ui-e2e.md`, `docs/decisions/0029-ui-e2e-tests.md`.
 
@@ -117,6 +117,7 @@ bash scripts/check.sh
 - The next Windows screenshot confirmed that the e2e group expanded and the image model was selected, but the test stayed on the model page because it did not press `Save`. Added the save action before looking for the chat input.
 - The Android run then failed at the `New session` locator. Its captured UI hierarchy exposes the visible button with `content-desc="New session"`, while XPath by visible text returned no element. Changed the Android test to locate it by Appium AccessibilityId.
 - The next Android run passed the `New session` step and reached session model selection. The model search element became stale during page refresh; the report screenshot shows the e2e provider group collapsed. Added a bounded retry using the search bar accessibility name and expanded the provider group before selecting the model.
+- On the following Android run, Appium still failed to locate `New session` by accessibility description although its captured UI tree includes the button. Added a dedicated `sessions.list.new` automation id for this pane action and changed the scenario to use it.
 - Passed targeted `dotnet test` for `E2eProvidersConfigTests` and `AutomationIdsTests`, all 4 mock endpoint tests, and `dotnet format --verify-no-changes` for the mock, mock tests, E2E Common, E2E Android, Core.Tests, Presentation.Tests and MAUI projects. CI is pending.
 
 ## Комментарии

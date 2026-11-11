@@ -58,7 +58,7 @@ public sealed class MockSessionTests : AndroidTestBase
         Driver.FindElement(By.XPath("//*[contains(@text, 'E2E Assistant')]")).Click();
         Find(TestIds.ApiKeyUseModel).Click();
 
-        Driver.FindElement(MobileBy.AccessibilityId("New session")).Click();
+        Find(TestIds.SessionsListNew).Click();
         Find(TestIds.ChatModels).Click();
         EnterModelSearch("e2e/image");
         var e2eGroup = new WebDriverWait(Driver, TimeSpan.FromSeconds(15)).Until(driver =>

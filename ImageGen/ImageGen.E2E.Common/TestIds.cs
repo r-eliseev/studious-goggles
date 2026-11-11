@@ -10,6 +10,7 @@ public static class TestIds
     public const string ApiKeyUseModel = "apikey.useModel";
     public const string ApiKeyBusy = "apikey.busy";
     public const string SessionsNew = "sessions.new";
+    public const string SessionsListNew = "sessions.list.new";
     public const string SessionsList = "sessions.list";
     public const string SessionsSettings = "sessions.settings";
     public const string ChatInput = "chat.input";
