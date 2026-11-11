@@ -145,6 +145,34 @@ public sealed class RunsSteps(ScenarioContext scenario)
         return true;
     }, TestContext.Current.CancellationToken);
 
+    [Then("model {string} generations are filtered and model {string} generations are done")]
+    public Task ThenModelGenerationsAreFilteredAndModelGenerationsAreDone(string filteredModelId, string doneModelId) => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        bool HasTerminalRun() => Chat.Items.OfType<RunItemViewModel>().Any(run =>
+            run.Generations.Count == 4 && run.Generations.All(generation => generation.IsDone || generation.IsFailed || generation.IsFiltered));
+
+        await World.WaitUntilAsync(HasTerminalRun, "all filtered and successful generations to finish", cancellationToken);
+        var run = Assert.Single(Chat.Items.OfType<RunItemViewModel>());
+        var filtered = run.Generations.Where(generation => generation.ModelId == filteredModelId).ToArray();
+        var done = run.Generations.Where(generation => generation.ModelId == doneModelId).ToArray();
+        Assert.Equal(2, filtered.Length);
+        Assert.Equal(2, done.Length);
+        Assert.All(filtered, generation =>
+        {
+            Assert.True(generation.IsFiltered);
+            Assert.False(generation.IsFailed);
+            Assert.Equal(GenerationStatusKind.Filtered, generation.StatusKind);
+            Assert.Equal(AppResources.StatusFiltered, generation.StatusText);
+        });
+        Assert.All(done, generation =>
+        {
+            Assert.Equal(GenerationStatusKind.Done, generation.StatusKind);
+            Assert.Equal(AppResources.StatusSucceeded, generation.StatusText);
+            Assert.True(generation.HasImage);
+        });
+        return true;
+    }, TestContext.Current.CancellationToken);
+
     private static bool IsImageRequest(FakeNetwork.RecordedRequest request) =>
         request.Method == "POST" && new Uri(request.Address).AbsolutePath == "/api/v1/images";
 

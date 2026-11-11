@@ -66,6 +66,7 @@ bash scripts/check.sh
 - Verification: `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait "Category=runs"` passed (1/1); `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` passed.
 - GEN-02 is implemented with a fake model whose catalog omits `seed`; two requests are checked for no `seed` property and both cards show `seed not supported`. The filtered runs acceptance test passed (2/2); formatting passed.
 - GEN-03 is implemented; both failed cards for one model show the failed state/reason while both cards for the other model succeed with images. The filtered runs acceptance test passed (3/3); formatting passed.
+- GEN-04 is implemented; filtered generations keep `Filtered`/`IsFiltered` and never set `IsFailed`, while the second model succeeds. The filtered runs acceptance test passed (4/4); formatting passed.
 
 ## Комментарии
 

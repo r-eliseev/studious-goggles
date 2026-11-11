@@ -62,3 +62,24 @@ Feature: Runs and generations
       | vendor/alpha                     |
     And the user sends the message "Draw a sleeping fox"
     Then model "vendor/alpha" generations are failed and model "black-forest-labs/flux.2-klein-4b" generations are done
+
+  @GEN-04 @S3.5 @F6.5 @F9.2
+  Scenario: Provider filtering has its own state and does not fail another model
+    Given the OpenRouter image model catalog:
+      | id                                | name       | seed | price per MP |
+      | black-forest-labs/flux.2-klein-4b | Flux Klein | true | 0.014        |
+      | vendor/alpha                      | Alpha      | true | 0.02         |
+    And the user has a saved OpenRouter key
+    And the assistant answers with:
+      | response        | prompt                                  |
+      | generate_images | A red fox in a snowy forest. |
+    And the provider answers generation for model "vendor/alpha" with:
+      | response  |
+      | filtering |
+    When the user creates a new session
+    And the user selects these image models with two runs per model:
+      | model id                         |
+      | black-forest-labs/flux.2-klein-4b |
+      | vendor/alpha                     |
+    And the user sends the message "Draw a fox in snow"
+    Then model "vendor/alpha" generations are filtered and model "black-forest-labs/flux.2-klein-4b" generations are done
