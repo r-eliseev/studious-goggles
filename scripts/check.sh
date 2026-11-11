@@ -5,5 +5,6 @@ rc=0
 bash scripts/check-docs.sh || rc=1
 bash scripts/check-tasks.sh || rc=1
 bash scripts/tests/check-latin.sh >/dev/null || rc=1
+bash scripts/tests/task-roles.sh >/dev/null || rc=1
 if [ $rc -eq 0 ]; then echo "Харнес: все проверки пройдены"; fi
 exit $rc

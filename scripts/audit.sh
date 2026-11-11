@@ -28,8 +28,8 @@ else
   echo "  пропущено: не удалось вычислить дату (нужен GNU или BSD date)"
 fi
 
-echo; echo "== 3. Задачи, которые ждут человека (planned, blocked)"
-waiting=$(bash scripts/list-tasks.sh planned; bash scripts/list-tasks.sh blocked)
+echo; echo "== 3. Tasks waiting for the planner or the owner (todo, planned, blocked, review)"
+waiting=$(bash scripts/list-tasks.sh todo; bash scripts/list-tasks.sh planned; bash scripts/list-tasks.sh blocked; bash scripts/list-tasks.sh review)
 if [ -n "$waiting" ]; then echo "$waiting" | sed 's/^/  /'; else echo "  нет"; fi
 
 echo; echo "== 4. Документы, которые, возможно, устарели (отстали от кода в ImageGen/ на $doc_days дн. и больше)"

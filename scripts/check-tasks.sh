@@ -3,7 +3,7 @@
 cd "$(dirname "$0")/.."
 . scripts/tasks-lib.sh
 fail=0
-allowed=" todo planned approved in-progress done blocked cancelled "
+allowed=" todo planned approved in-progress review done blocked cancelled "
 ids=" "
 filled() { awk -v h="$2" '$0=="## " h {p=1; next} /^## /{p=0} p && NF {f=1} END{exit !f}' "$1"; }
 
@@ -19,7 +19,7 @@ while IFS= read -r f; do
   fi
   if [ -n "$st" ]; then
     case "$allowed" in *" $st "*) ;; *) echo "ОШИБКА: $f: неизвестный статус '$st'"; fail=1 ;; esac
-    case "$st" in planned|approved|in-progress|done)
+    case "$st" in planned|approved|in-progress|review|done)
       { filled "$f" "План" || filled "$f" "Plan"; } || { echo "ОШИБКА: $f: статус '$st', но раздел 'План' пуст"; fail=1; } ;;
     esac
     if [ "$st" = "done" ]; then
@@ -41,6 +41,47 @@ while IFS= read -r f; do
     echo "ОШИБКА: $f: указан assignee, но нет claimed"; fail=1
   fi
 done < <(find tasks -type f -name '[0-9][0-9]*-*.md' | sort)
+
+# Planner and executor rules (ADR 0032, docs/tasks.md "Roles"): checked against the base version of each task file.
+#   - the executor does not change Description, Acceptance criteria, Analysis or Plan: approved/in-progress -> in-progress/review/blocked keeps them;
+#   - review: the Report is filled and the claim is released (scripts/submit-task.sh);
+#   - done (newly): the Review section is filled by the planner (scripts/review-task.sh);
+#   - approved (newly): a new approval record ("Plan approved" / "Plan amendment approved") is added to the file.
+section_text() {  # <file> <heading> [<heading>]: the body of the first matching "## " section
+  awk -v a="$2" -v b="${3:-$2}" '($0=="## " a || $0=="## " b){p=1; next} /^## /{p=0} p' "$1"
+}
+approvals() { grep -ciE 'plan( amendment)? approved|план одобрен' "$1" || true; }
+base="${BASE_REF:-origin/main}"
+if git rev-parse --verify -q "$base^{commit}" >/dev/null 2>&1; then
+  oldf=$(mktemp)
+  while IFS= read -r f; do
+    st=$(task_field "$f" status); as=$(task_field "$f" assignee)
+    if git cat-file -e "$base:$f" 2>/dev/null; then git show "$base:$f" > "$oldf"; old=$(task_field "$oldf" status); else
+      # Archived in the base (a branch that is not rebased yet still has the file): not a change of this branch.
+      git show "$base:tasks/DONE.md" 2>/dev/null | grep -q "^- $(task_field "$f" id) |" && continue
+      : > "$oldf"; old=""
+    fi
+    case "$old:$st" in approved:in-progress|approved:review|approved:blocked|in-progress:in-progress|in-progress:review|in-progress:blocked)
+      for sec in "Описание|Description" "Критерии готовности|Acceptance criteria" "Анализ|Analysis" "План|Plan"; do
+        if [ "$(section_text "$f" "${sec%%|*}" "${sec##*|}")" != "$(section_text "$oldf" "${sec%%|*}" "${sec##*|}")" ]; then
+          echo "ERROR: $f: section '${sec##*|}' changed while executing (status $old -> $st); only the planner changes it, the executor writes a question in Comments"; fail=1
+        fi
+      done ;;
+    esac
+    if [ "$st" = "review" ]; then
+      { filled "$f" "Отчёт" || filled "$f" "Report"; } || { echo "ERROR: $f: status 'review', but the Report is empty"; fail=1; }
+      [ -z "$as" ] || { echo "ERROR: $f: status 'review', but the task is still claimed ($as): scripts/submit-task.sh"; fail=1; }
+    fi
+    if [ "$st" = "done" ] && [ "$old" != "done" ]; then
+      filled "$f" "Review" || { echo "ERROR: $f: status 'done', but the 'Review' section is empty: the planner reviews the task (scripts/review-task.sh)"; fail=1; }
+    fi
+    # Sending a reviewed task back (review -> approved) keeps the already approved plan: no new record needed.
+    if [ "$st" = "approved" ] && [ "$old" != "approved" ] && [ "$old" != "review" ]; then
+      [ "$(approvals "$f")" -gt "$(approvals "$oldf")" ] || { echo "ERROR: $f: status 'approved' without a new approval record ('Plan approved' in Comments)"; fail=1; }
+    fi
+  done < <(find tasks -type f -name '[0-9][0-9]*-*.md' | sort)
+  rm -f "$oldf"
+fi
 
 # Номер задачи не должен повторять номер из журнала завершённых (tasks/DONE.md)
 for d in $(task_done_ids .); do
