@@ -104,7 +104,7 @@ public sealed class MockSessionTests : AndroidTestBase
             ?? throw new InvalidOperationException("ANDROID_HOME or ANDROID_SDK_ROOT must be set.");
         var adb = Path.Combine(androidHome, "platform-tools", "adb");
         var remoteHierarchy = "/sdcard/e2e-models.xml";
-        RunAdb(adb, "shell", "uiautomator", "dump", remoteHierarchy);
+        RunAdbWithRetry(adb, "shell", "uiautomator", "dump", remoteHierarchy);
         var hierarchy = RunAdb(adb, "shell", "cat", remoteHierarchy);
         var group = System.Text.RegularExpressions.Regex.Match(
             hierarchy,
@@ -177,5 +177,24 @@ public sealed class MockSessionTests : AndroidTestBase
         }
 
         return output;
+    }
+
+    private static string RunAdbWithRetry(string adb, params string[] arguments)
+    {
+        InvalidOperationException? lastFailure = null;
+        for (var attempt = 0; attempt < 10; attempt++)
+        {
+            try
+            {
+                return RunAdb(adb, arguments);
+            }
+            catch (InvalidOperationException exception)
+            {
+                lastFailure = exception;
+                Thread.Sleep(TimeSpan.FromSeconds(2));
+            }
+        }
+
+        throw new InvalidOperationException("The Android UI hierarchy could not be dumped after 10 attempts.", lastFailure);
     }
 }
