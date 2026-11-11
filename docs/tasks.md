@@ -10,6 +10,8 @@ Every agent works in one of two roles; the user names it at the start of the ses
 - **Planner** — carries the weight: talks with the owner, writes specifications, ADRs and the scenario catalog, creates tasks, writes "Analysis" and "Plan" (with POCs in `poc/` when an unknown must be removed), records the owner's approvals, answers the executor's questions and amends plans, reviews finished tasks, archives, audits, keeps `docs/status.md`. The planner never writes product code in `ImageGen/`, never claims a task and never sets `in-progress` or `review`.
 - **Executor** — carries out one approved task exactly as planned. Its complete rules are in `docs/executor.md`; the rest of this file is for the planner. The executor never writes or changes "Description", "Acceptance criteria", "Analysis" or "Plan", never sets `planned`, `approved` or `done`, and never decides anything that the plan does not say: it stops, writes the finding with a proposed plan change and sets `blocked`.
 
+The planner's way of working — the session sync, questions to the owner, verifying facts, executor-proof plans, reviews, harness changes — is the `planner` skill, `.claude/skills/planner/SKILL.md`; every planner session uses it.
+
 Plans are written for the executor: concrete steps, the exact files, the expected failing reason of each test, the verification commands. If an executor could ask "which way?", the plan is not finished.
 
 ## Statuses and who sets them
