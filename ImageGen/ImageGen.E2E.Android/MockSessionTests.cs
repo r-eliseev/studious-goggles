@@ -60,7 +60,21 @@ public sealed class MockSessionTests : AndroidTestBase
 
         Driver.FindElement(MobileBy.AccessibilityId("New session")).Click();
         Find(TestIds.ChatModels).Click();
-        Driver.FindElement(By.ClassName("android.widget.EditText")).SendKeys("e2e/image");
+        EnterModelSearch("e2e/image");
+        var e2eGroup = new WebDriverWait(Driver, TimeSpan.FromSeconds(15)).Until(driver =>
+        {
+            try
+            {
+                return driver.FindElements(MobileBy.AndroidUIAutomator("new UiSelector().descriptionContains(\"e2e (1)\")"))
+                    .FirstOrDefault();
+            }
+            catch (StaleElementReferenceException)
+            {
+                return null;
+            }
+        });
+        Assert.That(e2eGroup, Is.Not.Null, "The e2e provider model group should be available.");
+        e2eGroup!.Click();
         Driver.FindElement(MobileBy.AccessibilityId("E2E Image, E2E Mock (e2e-mock)")).Click();
         Driver.FindElement(By.XPath("//*[@text='Save']")).Click();
 
@@ -79,6 +93,29 @@ public sealed class MockSessionTests : AndroidTestBase
                 }));
 
         Assert.That(successfulImage, Is.Not.Null, "The E2E image generation should finish successfully.");
+    }
+
+
+    private void EnterModelSearch(string searchText)
+    {
+        new WebDriverWait(Driver, TimeSpan.FromSeconds(15)).Until(driver =>
+        {
+            try
+            {
+                var search = driver.FindElement(MobileBy.AccessibilityId("Search models"));
+                search.Clear();
+                search.SendKeys(searchText);
+                return true;
+            }
+            catch (NoSuchElementException)
+            {
+                return false;
+            }
+            catch (StaleElementReferenceException)
+            {
+                return false;
+            }
+        });
     }
 
     private static string RunAdb(string adb, params string[] arguments)
