@@ -59,3 +59,18 @@ Feature: Chat and assistant
     When the user creates a new session
     And the user enters "   " in the chat input
     Then sending a chat message is unavailable
+
+  @CHAT-06 @S2.5
+  Scenario: Retrying an assistant error starts the requested generation
+    Given the user has a saved OpenRouter key
+    And the assistant answers with:
+      | response | status | body                           |
+      | error    | 500    | {"error":{"message":"failure"}} |
+    And the assistant answers with:
+      | response        | prompt                                     |
+      | generate_images | A red bicycle leaning against a brick wall. |
+    When the user creates a new session
+    And the user sends the message "Draw a red bicycle"
+    Then an assistant error message "Something went wrong." is shown
+    When the user retries the assistant response
+    Then the assistant tool prompt "A red bicycle leaning against a brick wall." is preserved in the run, card, and generation request

@@ -72,7 +72,7 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 | CHAT-03 | The assistant receives the system prompt and the prompt of the last run (the fake checks the request body) | S2.1 | done |
 | CHAT-04 | An assistant error (500, 429, 401) → a separate message with the reason; the user's message is not lost; it can be sent again | S2.5 | done |
 | CHAT-05 | An empty message is not sent (the command is unavailable) | S2.1 | done |
-| CHAT-06 | Retry after an assistant error: the second answer is normal → the run starts | S2.5 | planned |
+| CHAT-06 | Retry after an assistant error: the second answer is normal → the run starts | S2.5 | done |
 | CHAT-07 | The session's assistant model is visible in the chat | S1.3 | planned |
 | CHAT-08 | A picture attachment goes into the generation as a reference if the model supports them | F4.5 | planned |
 

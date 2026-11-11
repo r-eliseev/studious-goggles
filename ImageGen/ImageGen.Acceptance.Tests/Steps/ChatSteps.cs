@@ -27,6 +27,14 @@ public sealed class ChatSteps(ScenarioContext scenario)
     public void ThenAnAssistantErrorMessageIsShown(string text) =>
         Assert.Contains(Chat.Items.OfType<MessageItemViewModel>(), message => message.IsError && !message.IsUser && message.Text == text);
 
+    [When("the user retries the assistant response")]
+    public Task WhenTheUserRetriesTheAssistantResponse() => HeadlessApp.RunAsync(async _ =>
+    {
+        var error = Assert.Single(Chat.Items.OfType<MessageItemViewModel>(), message => message.IsError && message.CanRetry);
+        await error.RetryCommand.ExecuteAsync(null);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
     [Then("no run is shown in the chat")]
     public void ThenNoRunIsShownInTheChat() =>
         Assert.DoesNotContain(Chat.Items, item => item is RunItemViewModel);

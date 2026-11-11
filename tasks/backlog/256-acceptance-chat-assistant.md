@@ -62,6 +62,7 @@ bash scripts/check.sh
 - CHAT-03 is implemented; the second chat request is checked for both `AssistantPrompts.System` and the latest run's `CurrentPrompt` system message. The filtered chat acceptance run passed (3/3); formatting passed.
 - CHAT-04 is implemented as an outline for HTTP 500, 429, and 401. Each example verifies the user message remains and an error message matches its `ErrorKindText`. The filtered chat acceptance run passed (6/6); formatting passed.
 - CHAT-05 is implemented; whitespace-only input disables `SendCommand`. The filtered chat acceptance run passed (7/7); formatting passed.
+- CHAT-06 is implemented; after an assistant error, retrying its message consumes the queued tool response and starts a run with the exact prompt. The filtered chat acceptance run passed (8/8); formatting passed.
 
 ## Комментарии
 
