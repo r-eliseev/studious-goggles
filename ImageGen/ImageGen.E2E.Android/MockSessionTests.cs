@@ -105,14 +105,20 @@ public sealed class MockSessionTests : AndroidTestBase
         var adb = Path.Combine(androidHome, "platform-tools", "adb");
         var group = System.Text.RegularExpressions.Regex.Match(
             Driver.PageSource,
-            "text=\"e2e \\(1\\) · 0 selected\"[^>]*bounds=\"\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]\"");
+            "<[^>]*text=\"e2e \\(1\\) · 0 selected\"[^>]*>");
         if (!group.Success)
         {
             throw new AssertionException("The e2e model group was not present in the Android UI hierarchy.");
         }
 
-        var x = (int.Parse(group.Groups[1].Value) + int.Parse(group.Groups[3].Value)) / 2;
-        var y = (int.Parse(group.Groups[2].Value) + int.Parse(group.Groups[4].Value)) / 2;
+        var bounds = System.Text.RegularExpressions.Regex.Match(group.Value, "bounds=\"\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]\"");
+        if (!bounds.Success)
+        {
+            throw new AssertionException("The e2e model group did not expose screen bounds.");
+        }
+
+        var x = (int.Parse(bounds.Groups[1].Value) + int.Parse(bounds.Groups[3].Value)) / 2;
+        var y = (int.Parse(bounds.Groups[2].Value) + int.Parse(bounds.Groups[4].Value)) / 2;
         RunAdb(adb, "shell", "input", "tap", x.ToString(), y.ToString());
     }
 
