@@ -59,6 +59,7 @@ bash scripts/check.sh
 - CHAT-01 is implemented in `Features/ChatAssistant.feature`; the step bindings assert the assistant text appears in the feed and no run item is present.
 - Verification: `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait "Category=chat"` passed (1/1); `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` passed.
 - CHAT-02 is implemented; the scenario checks exact prompt equality in the run, generation card, and `/api/v1/images` request, and checks that the request model matches the card model. The filtered chat acceptance run passed (2/2); formatting passed.
+- CHAT-03 is implemented; the second chat request is checked for both `AssistantPrompts.System` and the latest run's `CurrentPrompt` system message. The filtered chat acceptance run passed (3/3); formatting passed.
 
 ## Комментарии
 

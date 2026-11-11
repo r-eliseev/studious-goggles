@@ -21,3 +21,17 @@ Feature: Chat and assistant
     When the user creates a new session
     And the user sends the message "Draw a red bicycle"
     Then the assistant tool prompt "A red bicycle with a brass bell, leaning against a brick wall." is preserved in the run, card, and generation request
+
+  @CHAT-03 @S2.1
+  Scenario: The assistant receives its system prompt and the last run prompt
+    Given the user has a saved OpenRouter key
+    And the assistant answers with:
+      | response        | prompt                                              |
+      | generate_images | A watercolor lighthouse on a rocky coast at sunset. |
+    And the assistant answers with:
+      | response | text                      |
+      | text     | I will warm the lighting. |
+    When the user creates a new session
+    And the user sends the message "Paint a lighthouse"
+    And the user sends the message "Make the lighting warmer"
+    Then the latest assistant request contains the system prompt and current run prompt "A watercolor lighthouse on a rocky coast at sunset."
