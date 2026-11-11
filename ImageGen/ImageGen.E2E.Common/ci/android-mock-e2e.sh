@@ -48,11 +48,13 @@ adb push "$E2E_CA_CERT" "$cert_path"
 adb shell chown 0:0 "$cert_path"
 adb shell chmod 644 "$cert_path"
 adb shell restorecon "$cert_path"
+adb shell ls -lZ "$cert_path"
 adb reboot
 adb wait-for-device
 booted=false
 for attempt in $(seq 1 180); do
-  if [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" == 1 ]]; then
+  boot_state="$(adb shell getprop sys.boot_completed | tr -d '\r' || true)"
+  if [[ "$boot_state" == 1 ]]; then
     booted=true
     break
   fi
