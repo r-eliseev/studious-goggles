@@ -119,6 +119,7 @@ bash scripts/check.sh
 - The next Android run passed the `New session` step and reached session model selection. The model search element became stale during page refresh; the report screenshot shows the e2e provider group collapsed. Added a bounded retry using the search bar accessibility name and expanded the provider group before selecting the model.
 - On the following Android run, Appium still failed to locate `New session` by accessibility description although its captured UI tree includes the button. Added a dedicated `sessions.list.new` automation id for this pane action and changed the scenario to use it.
 - The next Android run reached the session model page with the search query applied, but its failure screenshot showed the `e2e (1)` image group still collapsed. The description selector may have matched a hidden group; restrict it to displayed elements and assert the expanded state before selecting the image model.
+- The next Windows run reached the chat with the prompt visible, but its send button remained disabled after FlaUI `Enter`. Changed prompt entry to real keyboard input and added a wait/assertion for the send command to become enabled.
 - Passed targeted `dotnet test` for `E2eProvidersConfigTests` and `AutomationIdsTests`, all 4 mock endpoint tests, and `dotnet format --verify-no-changes` for the mock, mock tests, E2E Common, E2E Android, Core.Tests, Presentation.Tests and MAUI projects. CI is pending.
 
 ## Комментарии

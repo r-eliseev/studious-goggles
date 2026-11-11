@@ -1,5 +1,7 @@
 using Allure.NUnit;
 using FlaUI.Core.AutomationElements;
+using FlaUI.Core.Input;
+using FlaUI.Core.Tools;
 using ImageGen.E2E.Common;
 using NUnit.Framework;
 
@@ -28,7 +30,14 @@ public sealed class MockSessionTests : WindowsTestBase
         FindByName("E2E Image", TimeSpan.FromSeconds(15)).Click();
         FindByName("Save").AsButton().Invoke();
 
-        Find(TestIds.ChatInput).AsTextBox().Enter("a red square");
+        Find(TestIds.ChatInput).Click();
+        Keyboard.Type("a red square");
+        var sendEnabled = Retry.WhileFalse(
+                () => Find(TestIds.ChatSend).IsEnabled,
+                TimeSpan.FromSeconds(10),
+                TimeSpan.FromMilliseconds(250))
+            .Success;
+        Assert.That(sendEnabled, Is.True, "The send button should enable after entering a prompt.");
         Find(TestIds.ChatSend).AsButton().Invoke();
         WaitForText(TestIds.ChatRun, TimeSpan.FromSeconds(30));
         WaitForText(
