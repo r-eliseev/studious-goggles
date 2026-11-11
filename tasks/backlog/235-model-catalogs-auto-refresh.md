@@ -1,6 +1,6 @@
 ---
 id: 235
-status: approved
+status: blocked
 assignee:
 claimed:
 created: 2026-11-07
@@ -60,3 +60,6 @@ bash scripts/check.sh
 
 ### 2026-11-07, владелец (в чате, записал claude-audit)
 Предложение одобрено («Да»); план одобрен ранее данным поручением «заапрувь все таски которые будут».
+
+### 2026-11-11, codex-gpt6
+Status reconciliation: the existing task branch records a plan mismatch (catalog services absorb provider failures and log independently; Web startup uses `StartupInitializer`), but the base task card still says `approved`. Set this task to `blocked` and clear the stale claim. The plan needs an amendment before implementation can proceed.
