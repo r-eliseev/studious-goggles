@@ -65,7 +65,7 @@ public sealed class MockSessionTests : AndroidTestBase
         {
             try
             {
-                return driver.FindElements(MobileBy.AndroidUIAutomator("new UiSelector().descriptionContains(\"e2e (1)\")"))
+                return driver.FindElements(MobileBy.AndroidUIAutomator("new UiSelector().descriptionContains(\"e2e (1) · 0 selected\")"))
                     .FirstOrDefault(element => element.Displayed);
             }
             catch (StaleElementReferenceException)
@@ -80,7 +80,7 @@ public sealed class MockSessionTests : AndroidTestBase
             try
             {
                 return driver.FindElements(MobileBy.AndroidUIAutomator(
-                        "new UiSelector().descriptionContains(\"e2e (1)\").descriptionContains(\"expanded\")"))
+                        "new UiSelector().descriptionContains(\"e2e (1) · 0 selected, expanded\")"))
                     .Any(element => element.Displayed);
             }
             catch (StaleElementReferenceException)
