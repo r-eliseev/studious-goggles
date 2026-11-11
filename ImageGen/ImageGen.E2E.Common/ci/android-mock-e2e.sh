@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+adb_binary="$(command -v adb)"
+adb() {
+  timeout --foreground --kill-after=5s 60s "$adb_binary" "$@"
+}
+
 mkdir -p reports/android/mock-provider
 dotnet ImageGen/ImageGen.E2E.MockProvider/bin/Release/net10.0/ImageGen.E2E.MockProvider.dll --urls https://0.0.0.0:5443 > reports/android/mock-provider/mock-provider.log 2>&1 &
 mock_pid=$!
@@ -61,9 +66,10 @@ adb root
 adb wait-for-device
 adb reverse tcp:5443 tcp:5443
 
-appium driver doctor uiautomator2
-bash ImageGen/ImageGen.E2E.Common/ci/android-preflight.sh
+timeout --foreground --kill-after=5s 120s appium driver doctor uiautomator2
+timeout --foreground --kill-after=5s 300s bash ImageGen/ImageGen.E2E.Common/ci/android-preflight.sh
 mkdir -p reports/android/allure-results
 APP_APK="$(find "$GITHUB_WORKSPACE/publish/android" -maxdepth 1 -type f -name '*-Signed.apk' -print -quit)" \
-  dotnet test --project ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj \
+  timeout --foreground --kill-after=15s 360s dotnet test \
+    --project ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj \
     --report-trx --results-directory reports/android

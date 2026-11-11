@@ -69,7 +69,7 @@ created: 2026-11-07
 
 Файлы:
 - проект мока: `ImageGen/ImageGen.E2E.MockProvider/` (новый) и `ImageGen/ImageGen.E2E.MockProvider.Tests/` (новый), включая их `.csproj`, endpoint code, embedded PNG resource, and WebApplicationFactory tests;
-- `ImageGen/ImageGen.E2E.Common/e2e-providers.json` (новый), `ImageGen/ImageGen.E2E.Common/TestIds.cs`, `ImageGen/ImageGen.E2E.Common/ci/android-mock-e2e.sh` (новый);
+- `ImageGen/ImageGen.E2E.Common/e2e-providers.json` (новый), `ImageGen/ImageGen.E2E.Common/TestIds.cs`, `ImageGen/ImageGen.E2E.Common/ci/android-mock-e2e.sh` (новый), `ImageGen/ImageGen.E2E.Common/ci/android-preflight.sh`;
 - тесты: `ImageGen/ImageGen.Core.Tests/Providers/E2eProvidersConfigTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`, `ImageGen/ImageGen.Presentation.Tests/E2E/AutomationIdsTests.cs`;
 - E2E: `ImageGen/ImageGen.E2E.Android/MockSessionTests.cs` (новый), `ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj`, `ImageGen/ImageGen.E2E.Windows/MockSessionTests.cs` (новый), `ImageGen/ImageGen.E2E.Windows/WindowsTestBase.cs`;
 - при варианте с конфигом сети: `ImageGen/ImageGen.Maui/ImageGen.Maui.csproj`, `ImageGen/ImageGen.Maui/Platforms/Android/Resources/xml/e2e_network_security_config.xml` (новый);
@@ -120,6 +120,7 @@ bash scripts/check.sh
 - On the following Android run, Appium still failed to locate `New session` by accessibility description although its captured UI tree includes the button. Added a dedicated `sessions.list.new` automation id for this pane action and changed the scenario to use it.
 - The next Android run reached the session model page with the search query applied, but its failure screenshot showed the `e2e (1)` image group still collapsed. The description selector may have matched a hidden group; restrict it to displayed elements and assert the expanded state before selecting the image model.
 - The next Windows run reached the chat with the prompt visible, but its send button remained disabled after FlaUI `Enter`. Changed prompt entry to real keyboard input and added a wait/assertion for the send command to become enabled.
+- The following CI run passed Windows but its Android emulator step remained `in_progress` for over 45 minutes without making the job logs available. Canceled that hung run; added per-command ADB deadlines, bounded Appium/preflight/test commands, and reduced the Android job timeout to 25 minutes so a repeat hang fails promptly with uploaded reports when possible. The exact stalled command is unknown until the bounded rerun reports it.
 - Passed targeted `dotnet test` for `E2eProvidersConfigTests` and `AutomationIdsTests`, all 4 mock endpoint tests, and `dotnet format --verify-no-changes` for the mock, mock tests, E2E Common, E2E Android, Core.Tests, Presentation.Tests and MAUI projects. CI is pending.
 
 ## Комментарии
