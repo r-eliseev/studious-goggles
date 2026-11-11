@@ -73,7 +73,16 @@ public sealed class MockSessionTests : AndroidTestBase
                     return false;
                 }
 
-                collapsedGroup.Click();
+                var bounds = collapsedGroup.GetAttribute("bounds") ?? string.Empty;
+                var coordinates = System.Text.RegularExpressions.Regex.Match(bounds, @"\[(\d+),(\d+)\]\[(\d+),(\d+)\]");
+                if (!coordinates.Success)
+                {
+                    return false;
+                }
+
+                var x = (int.Parse(coordinates.Groups[1].Value) + int.Parse(coordinates.Groups[3].Value)) / 2;
+                var y = (int.Parse(coordinates.Groups[2].Value) + int.Parse(coordinates.Groups[4].Value)) / 2;
+                Driver.ExecuteScript("mobile: clickGesture", new Dictionary<string, object> { ["x"] = x, ["y"] = y });
                 return true;
             }
             catch (NoSuchElementException)
