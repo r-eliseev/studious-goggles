@@ -103,8 +103,11 @@ public sealed class MockSessionTests : AndroidTestBase
             ?? Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT")
             ?? throw new InvalidOperationException("ANDROID_HOME or ANDROID_SDK_ROOT must be set.");
         var adb = Path.Combine(androidHome, "platform-tools", "adb");
+        var remoteHierarchy = "/sdcard/e2e-models.xml";
+        RunAdb(adb, "shell", "uiautomator", "dump", remoteHierarchy);
+        var hierarchy = RunAdb(adb, "shell", "cat", remoteHierarchy);
         var group = System.Text.RegularExpressions.Regex.Match(
-            Driver.PageSource,
+            hierarchy,
             "<[^>]*text=\"e2e[^\"]*0 selected\"[^>]*>");
         if (!group.Success)
         {
