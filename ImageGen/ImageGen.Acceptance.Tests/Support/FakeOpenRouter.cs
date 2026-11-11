@@ -99,6 +99,22 @@ public sealed class FakeOpenRouter
         return held;
     }
 
+    public void CompleteHeldGeneration(string modelId, int width = 64, int height = 64, decimal cost = 0.01m)
+    {
+        if (!_generationReplies.TryGetValue(modelId, out var reply) || reply.Held is not { } held)
+        {
+            throw new InvalidOperationException($"No held generation exists for model '{modelId}'.");
+        }
+
+        var b64 = Convert.ToBase64String(CreatePng(width, height));
+        var responseBody = new JsonObject
+        {
+            ["data"] = new JsonArray(new JsonObject { ["b64_json"] = b64, ["media_type"] = "image/png" }),
+            ["usage"] = new JsonObject { ["cost"] = cost },
+        }.ToJsonString();
+        held.Release(HttpStatusCode.OK, responseBody);
+    }
+
     private Task<HttpResponseMessage> HandleChatAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

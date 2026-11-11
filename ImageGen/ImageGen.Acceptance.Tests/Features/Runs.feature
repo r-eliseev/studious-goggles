@@ -83,3 +83,18 @@ Feature: Runs and generations
       | vendor/alpha                     |
     And the user sends the message "Draw a fox in snow"
     Then model "vendor/alpha" generations are filtered and model "black-forest-labs/flux.2-klein-4b" generations are done
+
+  @GEN-05 @S3.5
+  Scenario: A running generation becomes done when the provider answers
+    Given the user has a saved OpenRouter key
+    And the assistant answers with:
+      | response        | prompt                                   |
+      | generate_images | A blue whale beneath a moonlit sea. |
+    And the provider answers generation for model "black-forest-labs/flux.2-klein-4b" with:
+      | response |
+      | hold     |
+    When the user creates a new session
+    And the user sends the message "Draw a whale underwater"
+    Then model "black-forest-labs/flux.2-klein-4b" has an active generation card
+    When the provider completes generation for model "black-forest-labs/flux.2-klein-4b"
+    Then model "black-forest-labs/flux.2-klein-4b" has a done generation card with an image

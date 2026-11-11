@@ -18,6 +18,36 @@ public sealed class RunsSteps(ScenarioContext scenario)
 
     private ChatPageModel Chat => Assert.IsType<ChatPageModel>(Assert.IsType<ChatView>(World.Window.PageArea.Content).DataContext);
 
+    [When("the provider completes generation for model {string}")]
+    public void WhenTheProviderCompletesGenerationForModel(string modelId) => World.OpenRouter.CompleteHeldGeneration(modelId);
+
+    [Then("model {string} has an active generation card")]
+    public Task ThenModelHasAnActiveGenerationCard(string modelId) => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        bool HasActiveCard() => Chat.Items.OfType<RunItemViewModel>()
+            .SelectMany(run => run.Generations)
+            .Any(generation => generation.ModelId == modelId && generation.IsActive);
+
+        await World.WaitUntilAsync(HasActiveCard, $"model '{modelId}' to have an active generation card", cancellationToken);
+        var card = Assert.Single(Chat.Items.OfType<RunItemViewModel>().SelectMany(run => run.Generations), generation => generation.ModelId == modelId);
+        Assert.True(card.IsActive);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [Then("model {string} has a done generation card with an image")]
+    public Task ThenModelHasADoneGenerationCardWithAnImage(string modelId) => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        bool HasDoneCard() => Chat.Items.OfType<RunItemViewModel>()
+            .SelectMany(run => run.Generations)
+            .Any(generation => generation.ModelId == modelId && generation.IsDone && generation.HasImage);
+
+        await World.WaitUntilAsync(HasDoneCard, $"model '{modelId}' to have a completed image card", cancellationToken);
+        var card = Assert.Single(Chat.Items.OfType<RunItemViewModel>().SelectMany(run => run.Generations), generation => generation.ModelId == modelId);
+        Assert.True(card.IsDone);
+        Assert.True(card.HasImage);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
     [Given("the seed source returns:")]
     public void GivenTheSeedSourceReturns(DataTable table) =>
         World.Seeds.SetSequence(table.Rows.Select(row => long.Parse(row["seed"], System.Globalization.CultureInfo.InvariantCulture)));

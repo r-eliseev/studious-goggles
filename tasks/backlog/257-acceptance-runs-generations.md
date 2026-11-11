@@ -67,6 +67,7 @@ bash scripts/check.sh
 - GEN-02 is implemented with a fake model whose catalog omits `seed`; two requests are checked for no `seed` property and both cards show `seed not supported`. The filtered runs acceptance test passed (2/2); formatting passed.
 - GEN-03 is implemented; both failed cards for one model show the failed state/reason while both cards for the other model succeed with images. The filtered runs acceptance test passed (3/3); formatting passed.
 - GEN-04 is implemented; filtered generations keep `Filtered`/`IsFiltered` and never set `IsFailed`, while the second model succeeds. The filtered runs acceptance test passed (4/4); formatting passed.
+- GEN-05 is implemented; a held fake provider response keeps the model card active, and releasing it completes the card with an image. The filtered runs acceptance test passed (5/5); formatting passed.
 
 ## Комментарии
 
