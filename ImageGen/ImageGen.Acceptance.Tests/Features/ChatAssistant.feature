@@ -74,3 +74,9 @@ Feature: Chat and assistant
     Then an assistant error message "Something went wrong." is shown
     When the user retries the assistant response
     Then the assistant tool prompt "A red bicycle leaning against a brick wall." is preserved in the run, card, and generation request
+
+  @CHAT-07 @S1.3
+  Scenario: The session assistant model is visible in the chat
+    Given the user has a saved OpenRouter key
+    When the user creates a new session
+    Then the chat shows the default assistant model
