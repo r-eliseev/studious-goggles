@@ -61,27 +61,38 @@ public sealed class MockSessionTests : AndroidTestBase
         Find(TestIds.SessionsListNew).Click();
         Find(TestIds.ChatModels).Click();
         EnterModelSearch("e2e/image");
-        var e2eGroup = new WebDriverWait(Driver, TimeSpan.FromSeconds(15)).Until(driver =>
+        new WebDriverWait(Driver, TimeSpan.FromSeconds(15)).Until(driver =>
         {
             try
             {
-                return driver.FindElements(MobileBy.AndroidUIAutomator("new UiSelector().descriptionContains(\"e2e (1) · 0 selected\")"))
+                var collapsedGroup = driver.FindElements(MobileBy.AndroidUIAutomator(
+                        "new UiSelector().text(\"e2e (1) · 0 selected\").clickable(true)"))
                     .FirstOrDefault(element => element.Displayed);
+                if (collapsedGroup is null)
+                {
+                    return false;
+                }
+
+                collapsedGroup.Click();
+                return true;
+            }
+            catch (NoSuchElementException)
+            {
+                return false;
             }
             catch (StaleElementReferenceException)
             {
-                return null;
+                return false;
             }
         });
-        Assert.That(e2eGroup, Is.Not.Null, "The e2e provider model group should be available.");
-        e2eGroup!.Click();
-        new WebDriverWait(Driver, TimeSpan.FromSeconds(10)).Until(driver =>
+        new WebDriverWait(Driver, TimeSpan.FromSeconds(15)).Until(driver =>
         {
             try
             {
                 return driver.FindElements(MobileBy.AndroidUIAutomator(
-                        "new UiSelector().descriptionContains(\"e2e (1) · 0 selected, expanded\")"))
-                    .Any(element => element.Displayed);
+                        "new UiSelector().text(\"e2e (1) · 0 selected\").clickable(true)"))
+                    .Any(element => element.Displayed
+                        && element.GetAttribute("contentDescription")?.EndsWith(", expanded", StringComparison.Ordinal) == true);
             }
             catch (StaleElementReferenceException)
             {
