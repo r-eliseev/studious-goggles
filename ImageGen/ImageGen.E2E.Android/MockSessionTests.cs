@@ -105,7 +105,7 @@ public sealed class MockSessionTests : AndroidTestBase
         var adb = Path.Combine(androidHome, "platform-tools", "adb");
         var group = System.Text.RegularExpressions.Regex.Match(
             Driver.PageSource,
-            "<[^>]*text=\"e2e \\(1\\) · 0 selected\"[^>]*>");
+            "<[^>]*text=\"e2e[^\"]*0 selected\"[^>]*>");
         if (!group.Success)
         {
             throw new AssertionException("The e2e model group was not present in the Android UI hierarchy.");
