@@ -28,6 +28,29 @@ fi
 
 adb root
 adb wait-for-device
+remount_output="$(adb remount 2>&1)" || { printf '%s\n' "$remount_output"; exit 1; }
+printf '%s\n' "$remount_output"
+if grep -qi 'reboot' <<< "$remount_output"; then
+  adb reboot || true
+  adb wait-for-device
+  remount_booted=false
+  for attempt in $(seq 1 180); do
+    boot_state="$(adb shell getprop sys.boot_completed | tr -d '\r' || true)"
+    if [[ "$boot_state" == 1 ]]; then
+      remount_booted=true
+      break
+    fi
+    sleep 1
+  done
+  if [[ "$remount_booted" != true ]]; then
+    echo 'Android emulator did not finish booting after writable-system remount.' >&2
+    exit 1
+  fi
+  adb root
+  adb wait-for-device
+  remount_output="$(adb remount 2>&1)" || { printf '%s\n' "$remount_output"; exit 1; }
+  printf '%s\n' "$remount_output"
+fi
 cert_hash="$(openssl x509 -subject_hash_old -noout -in "$E2E_CA_CERT" | head -n 1)"
 cert_path="/system/etc/security/cacerts/${cert_hash}.0"
 adb push "$E2E_CA_CERT" "$cert_path"
