@@ -4,6 +4,7 @@ using ImageGen.Acceptance.Tests.Support;
 using ImageGen.Avalonia.Services.Navigation;
 using ImageGen.Avalonia.Views;
 using ImageGen.Presentation.PageModels;
+using ImageGen.Presentation.Resources.Strings;
 using Microsoft.Extensions.DependencyInjection;
 using Reqnroll;
 using Xunit;
@@ -88,6 +89,30 @@ public sealed class RunsSteps(ScenarioContext scenario)
                 .Order()
                 .ToArray();
             Assert.Equal(new[] { firstSeed, secondSeed }.Order(), seeds);
+        }
+
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [Then("model {string} receives requests without a seed and the cards show seed not supported")]
+    public Task ThenModelReceivesRequestsWithoutASeedAndCardsShowSeedNotSupported(string modelId) => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        bool HasTwoFinishedCards() => Chat.Items.OfType<RunItemViewModel>().Any(run =>
+            run.Generations.Count == 2 && run.Generations.All(generation => generation.IsDone));
+
+        await World.WaitUntilAsync(HasTwoFinishedCards, "the two generations to finish", cancellationToken);
+        var run = Assert.Single(Chat.Items.OfType<RunItemViewModel>());
+        var cards = run.Generations.Where(generation => generation.ModelId == modelId).ToArray();
+        Assert.Equal(2, cards.Length);
+        Assert.All(cards, card => Assert.Equal(AppResources.SeedNotSupported, card.SeedText));
+
+        var requests = World.Network.Requests.Where(request =>
+            IsImageRequest(request) && ReadString(request.Body!, "model") == modelId).ToArray();
+        Assert.Equal(2, requests.Length);
+        foreach (var request in requests)
+        {
+            using var body = JsonDocument.Parse(request.Body!);
+            Assert.False(body.RootElement.TryGetProperty("seed", out _));
         }
 
         return true;

@@ -170,11 +170,17 @@ public sealed class FakeOpenRouter
         var models = new JsonArray();
         foreach (var model in _imageModels)
         {
+            var supportedParameters = new JsonObject();
+            if (model.SupportsSeed)
+            {
+                supportedParameters["seed"] = true;
+            }
+
             models.Add(new JsonObject
             {
                 ["id"] = model.Id,
                 ["name"] = model.Name,
-                ["supported_parameters"] = new JsonObject { ["seed"] = model.SupportsSeed },
+                ["supported_parameters"] = supportedParameters,
             });
         }
 
