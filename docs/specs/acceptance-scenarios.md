@@ -68,7 +68,7 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
 | CHAT-01 | The assistant answers with text → an assistant message in the feed, no run | S2.2 | done |
-| CHAT-02 | The assistant calls `generate_images` → a run block in the feed with the exact prompt of the tool, the card has the same prompt (`@e2e` after 243, replaces `MockSessionTests.FirstRunWithMock_GeneratesImage`) | S2.2, S2.3, F9.4 | planned |
+| CHAT-02 | The assistant calls `generate_images` → a run block in the feed with the exact prompt of the tool, the card has the same prompt (`@e2e` after 243, replaces `MockSessionTests.FirstRunWithMock_GeneratesImage`) | S2.2, S2.3, F9.4 | done |
 | CHAT-03 | The assistant receives the system prompt and the prompt of the last run (the fake checks the request body) | S2.1 | planned |
 | CHAT-04 | An assistant error (500, 429, 401) → a separate message with the reason; the user's message is not lost; it can be sent again | S2.5 | planned |
 | CHAT-05 | An empty message is not sent (the command is unavailable) | S2.1 | planned |
