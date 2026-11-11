@@ -66,7 +66,7 @@ public sealed class MockSessionTests : AndroidTestBase
             try
             {
                 return driver.FindElements(MobileBy.AndroidUIAutomator("new UiSelector().descriptionContains(\"e2e (1)\")"))
-                    .FirstOrDefault();
+                    .FirstOrDefault(element => element.Displayed);
             }
             catch (StaleElementReferenceException)
             {
@@ -75,6 +75,19 @@ public sealed class MockSessionTests : AndroidTestBase
         });
         Assert.That(e2eGroup, Is.Not.Null, "The e2e provider model group should be available.");
         e2eGroup!.Click();
+        new WebDriverWait(Driver, TimeSpan.FromSeconds(10)).Until(driver =>
+        {
+            try
+            {
+                return driver.FindElements(MobileBy.AndroidUIAutomator(
+                        "new UiSelector().descriptionContains(\"e2e (1)\").descriptionContains(\"expanded\")"))
+                    .Any(element => element.Displayed);
+            }
+            catch (StaleElementReferenceException)
+            {
+                return false;
+            }
+        });
         Driver.FindElement(MobileBy.AccessibilityId("E2E Image, E2E Mock (e2e-mock)")).Click();
         Driver.FindElement(By.XPath("//*[@text='Save']")).Click();
 
