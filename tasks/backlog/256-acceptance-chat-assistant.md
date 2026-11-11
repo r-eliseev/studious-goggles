@@ -1,8 +1,8 @@
 ---
 id: 256
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-11T12:23:35Z
+status: blocked
+assignee:
+claimed:
 created: 2026-11-09
 ---
 
@@ -64,6 +64,7 @@ bash scripts/check.sh
 - CHAT-05 is implemented; whitespace-only input disables `SendCommand`. The filtered chat acceptance run passed (7/7); formatting passed.
 - CHAT-06 is implemented; after an assistant error, retrying its message consumes the queued tool response and starts a run with the exact prompt. The filtered chat acceptance run passed (8/8); formatting passed.
 - CHAT-07 is implemented and reuses the existing model-label assertion also used by SES-06. The filtered chat acceptance run passed (9/9); formatting passed.
+- CHAT-08 is not implemented: the approved plan limits `FakeOpenRouter.cs` changes to new assistant responses, but a reference-capable model is needed to exercise this criterion.
 
 ## Комментарии
 
@@ -72,3 +73,6 @@ bash scripts/check.sh
 
 ### 2026-11-09, owner (in the chat, recorded by claude-bdd-plan)
 Plan approved, status `approved`. Changes of the same day apply: the Gherkin scenarios, step texts, bindings, comments and the "Report" are in English (`docs/conventions.md`, "Language"; ADR 0031 is accepted); a "Structure of a scenario" in this plan is a `Scenario Outline`. Scenario expectations and wording are in the English catalog `docs/specs/acceptance-scenarios.md`. The acceptance project runs in CI (task 252). The flow tests in `ImageGen.Avalonia.Tests/Flows` that a scenario of this task covers are deleted by task 267, not here.
+
+### 2026-11-11, codex-gpt6
+Plan mismatch for CHAT-08: `ReferenceImageLimit.Of` only permits a generation to send references when the selected catalog model declares an `input_references` range. `ImageGen/ImageGen.Acceptance.Tests/Support/FakeOpenRouter.cs` currently serializes only `seed` in fake image model parameters, so the configured models cannot take references. The approved plan permits changes to this fake only for additional assistant responses. Proposed plan change: allow a configurable `input_references` maximum in the fake image-model catalog response, and configure a reference-capable model in CHAT-08 before attaching an image. Keep product code unchanged. The task is blocked until this file-scope change is approved.
