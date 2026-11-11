@@ -28,20 +28,6 @@ fi
 
 adb root
 adb wait-for-device
-remount_output="$(adb remount 2>&1)" || { printf '%s\n' "$remount_output"; exit 1; }
-printf '%s\n' "$remount_output"
-if grep -qi 'reboot' <<< "$remount_output"; then
-  adb reboot
-  adb wait-for-device
-  for attempt in $(seq 1 180); do
-    if [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" == 1 ]]; then break; fi
-    sleep 1
-  done
-  adb root
-  adb wait-for-device
-  adb remount
-fi
-
 cert_hash="$(openssl x509 -subject_hash_old -noout -in "$E2E_CA_CERT" | head -n 1)"
 cert_path="/system/etc/security/cacerts/${cert_hash}.0"
 adb push "$E2E_CA_CERT" "$cert_path"
