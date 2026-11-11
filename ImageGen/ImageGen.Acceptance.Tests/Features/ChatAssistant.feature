@@ -35,3 +35,20 @@ Feature: Chat and assistant
     And the user sends the message "Paint a lighthouse"
     And the user sends the message "Make the lighting warmer"
     Then the latest assistant request contains the system prompt and current run prompt "A watercolor lighthouse on a rocky coast at sunset."
+
+  @CHAT-04 @S2.5
+  Scenario Outline: An assistant request error appears in the chat and keeps the user message
+    Given the user has a saved OpenRouter key
+    And the assistant answers with:
+      | response | status | body                           |
+      | error    | <status> | {"error":{"message":"failure"}} |
+    When the user creates a new session
+    And the user sends the message "Draw a red bicycle"
+    Then the user message "Draw a red bicycle" remains in the chat
+    And an assistant error message "<error>" is shown
+
+    Examples:
+      | status | error                                        |
+      | 500    | Something went wrong.                       |
+      | 429    | The provider is limiting requests. Try again later. |
+      | 401    | The API key was rejected.                   |

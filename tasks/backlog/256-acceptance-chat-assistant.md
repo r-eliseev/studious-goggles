@@ -60,6 +60,7 @@ bash scripts/check.sh
 - Verification: `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait "Category=chat"` passed (1/1); `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` passed.
 - CHAT-02 is implemented; the scenario checks exact prompt equality in the run, generation card, and `/api/v1/images` request, and checks that the request model matches the card model. The filtered chat acceptance run passed (2/2); formatting passed.
 - CHAT-03 is implemented; the second chat request is checked for both `AssistantPrompts.System` and the latest run's `CurrentPrompt` system message. The filtered chat acceptance run passed (3/3); formatting passed.
+- CHAT-04 is implemented as an outline for HTTP 500, 429, and 401. Each example verifies the user message remains and an error message matches its `ErrorKindText`. The filtered chat acceptance run passed (6/6); formatting passed.
 
 ## Комментарии
 

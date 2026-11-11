@@ -19,6 +19,14 @@ public sealed class ChatSteps(ScenarioContext scenario)
     public void ThenTheAssistantMessageIsShown(string text) =>
         Assert.Contains(Chat.Items.OfType<MessageItemViewModel>(), message => message.Text == text);
 
+    [Then("the user message {string} remains in the chat")]
+    public void ThenTheUserMessageRemainsInTheChat(string text) =>
+        Assert.Contains(Chat.Items.OfType<MessageItemViewModel>(), message => message.IsUser && message.Text == text);
+
+    [Then("an assistant error message {string} is shown")]
+    public void ThenAnAssistantErrorMessageIsShown(string text) =>
+        Assert.Contains(Chat.Items.OfType<MessageItemViewModel>(), message => message.IsError && !message.IsUser && message.Text == text);
+
     [Then("no run is shown in the chat")]
     public void ThenNoRunIsShownInTheChat() =>
         Assert.DoesNotContain(Chat.Items, item => item is RunItemViewModel);
