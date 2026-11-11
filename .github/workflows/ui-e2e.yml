@@ -56,7 +56,7 @@ jobs:
   test-android:
     needs: build-android
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -66,6 +66,42 @@ jobs:
         with:
           name: android-apk
           path: publish/android
+      - name: Build E2E mock provider
+        run: dotnet build ImageGen/ImageGen.E2E.MockProvider/ImageGen.E2E.MockProvider.csproj -c Release
+      - name: Create one-off HTTPS certificates for the mock provider
+        shell: bash
+        run: |
+          set -euo pipefail
+          tls_dir="$RUNNER_TEMP/e2e-mock-tls"
+          mkdir -p "$tls_dir" reports/android/mock-provider
+          openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 2 \
+            -keyout "$tls_dir/root-ca.key" -out "$tls_dir/root-ca.pem" \
+            -subj "/CN=Omnilite E2E Mock Root" \
+            -addext "basicConstraints=critical,CA:TRUE" \
+            -addext "keyUsage=critical,keyCertSign,cRLSign"
+          openssl req -newkey rsa:2048 -nodes \
+            -keyout "$tls_dir/mock-server.key" -out "$tls_dir/mock-server.csr" \
+            -subj "/CN=localhost"
+          cat > "$tls_dir/mock-server.ext" <<'EOF'
+          basicConstraints=critical,CA:FALSE
+          keyUsage=critical,digitalSignature,keyEncipherment
+          extendedKeyUsage=serverAuth
+          subjectAltName=DNS:localhost
+          EOF
+          openssl x509 -req -sha256 -days 2 \
+            -in "$tls_dir/mock-server.csr" \
+            -CA "$tls_dir/root-ca.pem" -CAkey "$tls_dir/root-ca.key" -CAcreateserial \
+            -out "$tls_dir/mock-server.pem" -extfile "$tls_dir/mock-server.ext"
+          password="$(openssl rand -hex 24)"
+          echo "::add-mask::$password"
+          openssl pkcs12 -export -out "$tls_dir/mock-server.pfx" \
+            -inkey "$tls_dir/mock-server.key" -in "$tls_dir/mock-server.pem" \
+            -certfile "$tls_dir/root-ca.pem" -passout "pass:$password"
+          {
+            echo "E2E_CA_CERT=$tls_dir/root-ca.pem"
+            echo "Kestrel__Certificates__Default__Path=$tls_dir/mock-server.pfx"
+            echo "Kestrel__Certificates__Default__Password=$password"
+          } >> "$GITHUB_ENV"
       - name: Enable KVM access
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -99,11 +135,7 @@ jobs:
           target: google_apis
           arch: x86_64
           emulator-options: -writable-system -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: |
-            appium driver doctor uiautomator2
-            bash ImageGen/ImageGen.E2E.Common/ci/android-preflight.sh
-            mkdir -p reports/android/allure-results
-            APP_APK="$(find "$GITHUB_WORKSPACE/publish/android" -maxdepth 1 -type f -name '*-Signed.apk' -print -quit)" dotnet test --project ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj --report-trx --results-directory reports/android
+          script: bash ImageGen/ImageGen.E2E.Common/ci/android-mock-e2e.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -126,19 +158,73 @@ jobs:
         with:
           name: windows-app
           path: publish/win-x64
+      - name: Build E2E mock provider
+        run: dotnet build ImageGen/ImageGen.E2E.MockProvider/ImageGen.E2E.MockProvider.csproj -c Release
       - name: Install FFmpeg
         run: choco install ffmpeg -y --no-progress
       - name: Run Windows interactive preflight
         shell: pwsh
         run: .\ImageGen\ImageGen.E2E.Common\ci\windows-preflight.ps1
+      - name: Create and trust one-off HTTPS certificate
+        shell: pwsh
+        run: |
+          $tlsDirectory = Join-Path $env:RUNNER_TEMP 'e2e-mock-tls'
+          New-Item -ItemType Directory -Force -Path $tlsDirectory, 'reports/windows/mock-provider' | Out-Null
+          $certificate = New-SelfSignedCertificate `
+            -DnsName 'localhost' `
+            -CertStoreLocation 'Cert:\LocalMachine\My' `
+            -FriendlyName 'Omnilite E2E Mock' `
+            -NotAfter (Get-Date).AddDays(2) `
+            -KeyExportPolicy Exportable `
+            -KeyUsage DigitalSignature, KeyEncipherment `
+            -Type SSLServerAuthentication
+          $certificatePath = Join-Path $tlsDirectory 'mock-server.cer'
+          $certificateFile = Export-Certificate -Cert $certificate -FilePath $certificatePath
+          Import-Certificate -FilePath $certificateFile.FullName -CertStoreLocation 'Cert:\LocalMachine\Root' | Out-Null
+          $password = [guid]::NewGuid().ToString('N')
+          Write-Output "::add-mask::$password"
+          $securePassword = ConvertTo-SecureString -String $password -Force -AsPlainText
+          $pfxPath = Join-Path $tlsDirectory 'mock-server.pfx'
+          Export-PfxCertificate -Cert $certificate -FilePath $pfxPath -Password $securePassword | Out-Null
+          "Kestrel__Certificates__Default__Path=$pfxPath" >> $env:GITHUB_ENV
+          "Kestrel__Certificates__Default__Password=$password" >> $env:GITHUB_ENV
       - name: Run Windows UI tests
         shell: pwsh
         env:
           APP_EXE: ${{ github.workspace }}\publish\win-x64\ImageGen.Maui.exe
           E2E_REPORTS_DIR: ${{ github.workspace }}\reports\windows
+          E2E_PROVIDER_CONFIG: ${{ github.workspace }}\ImageGen\ImageGen.E2E.Common\e2e-providers.json
         run: |
           New-Item -ItemType Directory -Force -Path reports/windows/allure-results | Out-Null
-          dotnet test --project ImageGen/ImageGen.E2E.Windows/ImageGen.E2E.Windows.csproj --report-trx --results-directory reports/windows
+          $mockLog = Join-Path $env:GITHUB_WORKSPACE 'reports/windows/mock-provider/mock-provider.log'
+          $mockError = Join-Path $env:GITHUB_WORKSPACE 'reports/windows/mock-provider/mock-provider-error.log'
+          $mockDll = Join-Path $env:GITHUB_WORKSPACE 'ImageGen/ImageGen.E2E.MockProvider/bin/Release/net10.0/ImageGen.E2E.MockProvider.dll'
+          $mock = Start-Process dotnet -ArgumentList @($mockDll, '--urls', 'https://0.0.0.0:5443') -PassThru -RedirectStandardOutput $mockLog -RedirectStandardError $mockError
+          try {
+            $ready = $false
+            $lastHealthError = 'The mock process has not answered yet.'
+            for ($attempt = 0; $attempt -lt 120; $attempt++) {
+              if ($mock.HasExited) {
+                $lastHealthError = "The mock process exited with code $($mock.ExitCode)."
+                break
+              }
+              try {
+                $status = & curl.exe --silent --show-error --fail --max-time 5 --output NUL --write-out '%{http_code}' --header 'Authorization: Bearer e2e-mock-key' 'https://localhost:5443/v1/models'
+                if ($LASTEXITCODE -eq 0 -and $status -eq '200') { $ready = $true; break }
+                $lastHealthError = "curl exited with code $LASTEXITCODE and HTTP status '$status'."
+              }
+              catch { $lastHealthError = $_.Exception.Message }
+              Start-Sleep -Seconds 1
+            }
+            if (-not $ready) {
+              Get-Content $mockLog, $mockError -ErrorAction SilentlyContinue
+              throw "The HTTPS E2E mock provider did not become ready: $lastHealthError"
+            }
+            dotnet test --project ImageGen/ImageGen.E2E.Windows/ImageGen.E2E.Windows.csproj --report-trx --results-directory reports/windows
+          }
+          finally {
+            if (-not $mock.HasExited) { Stop-Process -Id $mock.Id -Force }
+          }
       - uses: actions/upload-artifact@v4
         if: always()
         with:

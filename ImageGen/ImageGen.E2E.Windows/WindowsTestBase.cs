@@ -50,6 +50,18 @@ public abstract class WindowsTestBase
             Directory.Delete(_dataDirectory, recursive: true);
         }
 
+        var providerConfig = Environment.GetEnvironmentVariable("E2E_PROVIDER_CONFIG");
+        if (!string.IsNullOrWhiteSpace(providerConfig))
+        {
+            if (!File.Exists(providerConfig))
+            {
+                throw new FileNotFoundException("E2E_PROVIDER_CONFIG must point to an existing providers.json.", providerConfig);
+            }
+
+            Directory.CreateDirectory(_dataDirectory);
+            File.Copy(providerConfig, Path.Combine(_dataDirectory, "providers.json"));
+        }
+
         var executable = Environment.GetEnvironmentVariable("APP_EXE");
         if (string.IsNullOrWhiteSpace(executable) || !File.Exists(executable))
         {
@@ -164,6 +176,35 @@ public abstract class WindowsTestBase
                 TimeSpan.FromMilliseconds(250))
             .Result;
         return element ?? throw new InvalidOperationException($"AutomationId '{id}' was not found within {timeout}.");
+    }
+
+    protected AutomationElement FindByName(string name, TimeSpan? timeout = null)
+    {
+        var automation = _automation ?? throw new InvalidOperationException("The UI automation session is not available.");
+        var element = Retry.WhileNull(
+                () =>
+                {
+                    foreach (var candidate in automation.GetDesktop().FindAllDescendants())
+                    {
+                        try
+                        {
+                            if (candidate.Name?.Contains(name, StringComparison.OrdinalIgnoreCase) == true)
+                            {
+                                return candidate;
+                            }
+                        }
+                        catch (FlaUI.Core.Exceptions.PropertyNotSupportedException)
+                        {
+                            // Desktop-wide searches also encounter UIA elements without a Name property.
+                        }
+                    }
+
+                    return null;
+                },
+                timeout ?? ElementTimeout,
+                TimeSpan.FromMilliseconds(250))
+            .Result;
+        return element ?? throw new InvalidOperationException($"Element '{name}' was not found on the desktop.");
     }
 
     protected AutomationElement WaitForText(string id, TimeSpan timeout)

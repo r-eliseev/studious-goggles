@@ -1,8 +1,8 @@
 ---
 id: 245
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-07T12:08:43Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -52,6 +52,10 @@ bash scripts/check.sh
 - В «Отчёте»: что изменено, команды и результаты, отличия от плана.
 
 ## Отчёт
+
+### 2026-11-10, codex-gpt6
+- Все четыре отдельные сборки и проверки упаковки успешно прошли в scheduled run [42794177774](https://github.com/r-eliseev/studious-goggles/actions/runs/42794177774): `build-maui-ios`, `build-maui-catalyst`, `build-avalonia-ios`, `build-avalonia-macos`; форматирование Avalonia iOS также прошло. Артефакты опубликованы.
+- Статус завершён по критериям задачи; итоговый статус workflow не используется вместо проверки отдельных jobs.
 
 ### 2026-11-07, codex-gpt6 (в работе)
 - Добавлен `apple-make-app.sh`: формирует `Omnilite.app/Contents/MacOS`, `Info.plist`, при наличии переносит `.icns`; подпись остаётся шагом CI на macOS.

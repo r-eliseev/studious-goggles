@@ -1,8 +1,8 @@
 ---
 id: 243
-status: approved
-assignee: codex-gpt6
-claimed: 2026-11-07T12:23:48Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -30,7 +30,7 @@ created: 2026-11-07
   - HTTPS (основной путь):
     1. В начале job создать одноразовый корневой сертификат и сертификат сервера через `openssl` во временной папке runner (`$RUNNER_TEMP`). У сертификата сервера в SAN — `DNS:localhost`. Срок — 2 дня. Закрытые ключи в репозиторий и артефакты не попадают.
     2. Мок слушает `https://0.0.0.0:5443` с этим сертификатом: `Kestrel:Certificates:Default:Path` / `KeyPath` из переменных окружения.
-    3. В эмуляторе: `adb root`, `adb remount` (если просит перезагрузку — `adb reboot`, дождаться `sys.boot_completed`, затем снова `adb root` и `adb remount`). Затем `adb push <ca>.pem /system/etc/security/cacerts/<hash>.0`, где `<hash>` = `openssl x509 -subject_hash_old -noout -in <ca>.pem`, `chmod 644`, перезагрузка.
+    3. В эмуляторе: `adb root`, `adb remount` (если просит перезагрузку — `adb reboot`, дождаться `sys.boot_completed`, затем снова `adb root` и `adb remount`). Затем `adb push <ca>.pem /system/etc/security/cacerts/<hash>.0`, где `<hash>` = `openssl x509 -subject_hash_old -noout -in <ca>.pem`, `chmod 644`, `restorecon`. Установка выполняется до старта приложения, повторную перезагрузку не делать; свежий процесс проверяет доверие к CA.
     4. `adb reverse tcp:5443 tcp:5443`, `baseAddress` = `https://localhost:5443/v1`.
     Проверка: `adb shell` + `curl` в эмуляторе недоступен, поэтому проверяет сам первый шаг сценария: ключ принят, ошибки сети нет. Если `remount` на API 33 не работает, записать вывод и попробовать вариант Б.
   - Вариант Б (запасной): HTTP на `http://localhost:5080`. `ProviderRegistry` пускает `http` только для `localhost`. Выяснить, пускает ли Release cleartext к `localhost`. Если нет — `network_security_config` только для `localhost` и только при свойстве сборки `ImageGenE2E=true`, чтобы обычный Release не менялся. Это правка сборки, поэтому сначала `blocked` и вопрос владельцу.
@@ -52,7 +52,7 @@ created: 2026-11-07
   3. в `chat.feed` в течение 60 с появляется карточка прогона, и в ней — готовая картинка (состояние «готово», не «ошибка»). Текстового ответа ассистента не ждать.
   Если для карточки нет id, добавить его отдельным шагом с константой в `TestIds` и проверкой в `AutomationIdsTests` (как в 239).
 - Workflow: мок запускается в job `test-android` до тестов (`dotnet run --project ImageGen/ImageGen.E2E.MockProvider -- --urls https://0.0.0.0:5443 &` с сертификатом из шага 1, ожидание готовности через `curl --cacert`), установка корневого сертификата в эмулятор, `adb reverse tcp:5443 tcp:5443`; эмулятор этого job — API 33 с `emulator-options: -writable-system -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim`; лог мока — в артефакт.
-- Windows — тот же сценарий в `ImageGen.E2E.Windows`, если 241 работает; иначе пропустить и записать.
+- Windows — тот же полноценный сценарий в `ImageGen.E2E.Windows`: доверить runner одноразовый HTTPS-сертификат, записать providers.json в AppData, пройти первый запуск, создать сессию и проверить готовую картинку от мока.
 
 ## Анализ
 Справочно: исходная спецификация владельца — `docs/specs/ui-e2e-original/` (docx и md); при расхождении действуют ADR 0029 и `docs/specs/ui-e2e.md`.
@@ -65,15 +65,15 @@ created: 2026-11-07
 2. Мок по TDD: маршрут за маршрутом.
 3. `e2e-providers.json` и тест валидации.
 4. Android-сценарий и workflow; прогон в CI.
-5. Windows-сценарий (если 241 зелёный).
+5. Windows-сценарий: использовать общую основу `WindowsTestBase.cs` и добавить в Windows CI шаги доверия сертификату и запуска HTTPS-мока; проверить первый запуск и генерацию изображения.
 
 Файлы:
-- проект мока: `ImageGen/ImageGen.E2E.MockProvider/` (новый) и `ImageGen/ImageGen.E2E.MockProvider.Tests/` (новый);
-- `ImageGen/ImageGen.E2E.Common/e2e-providers.json` (новый), `ImageGen/ImageGen.E2E.Common/TestIds.cs`;
-- тесты: `ImageGen/ImageGen.Core.Tests/Providers/E2eProvidersConfigTests.cs` (новый), `ImageGen/ImageGen.Presentation.Tests/E2E/AutomationIdsTests.cs`;
-- E2E: `ImageGen/ImageGen.E2E.Android/MockSessionTests.cs` (новый), `ImageGen/ImageGen.E2E.Windows/MockSessionTests.cs` (новый);
+- проект мока: `ImageGen/ImageGen.E2E.MockProvider/` (новый) и `ImageGen/ImageGen.E2E.MockProvider.Tests/` (новый), включая их `.csproj`, endpoint code, embedded PNG resource, and WebApplicationFactory tests;
+- `ImageGen/ImageGen.E2E.Common/e2e-providers.json` (новый), `ImageGen/ImageGen.E2E.Common/TestIds.cs`, `ImageGen/ImageGen.E2E.Common/ci/android-mock-e2e.sh` (новый), `ImageGen/ImageGen.E2E.Common/ci/android-preflight.sh`;
+- тесты: `ImageGen/ImageGen.Core.Tests/Providers/E2eProvidersConfigTests.cs` (новый), `ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj`, `ImageGen/ImageGen.Presentation.Tests/E2E/AutomationIdsTests.cs`;
+- E2E: `ImageGen/ImageGen.E2E.Android/MockSessionTests.cs` (новый), `ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj`, `ImageGen/ImageGen.E2E.Windows/MockSessionTests.cs` (новый), `ImageGen/ImageGen.E2E.Windows/WindowsTestBase.cs`;
 - при варианте с конфигом сети: `ImageGen/ImageGen.Maui/ImageGen.Maui.csproj`, `ImageGen/ImageGen.Maui/Platforms/Android/Resources/xml/e2e_network_security_config.xml` (новый);
-- `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml` (id карточки);
+- `ImageGen/ImageGen.Maui/Controls/SessionsListView.xaml` (test id for the list-pane new-session action), `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml` (id карточки);
 - общие: `ImageGen/Directory.Packages.props`, `ImageGen/ImageGen.slnx`, `.github/workflows/ui-e2e.yml`;
 - документация: `docs/knowledge/ui-e2e.md`, `docs/decisions/0029-ui-e2e-tests.md`.
 
@@ -98,6 +98,34 @@ bash scripts/check.sh
 
 ## Отчёт
 
+### 2026-11-10, codex-gpt6 (in progress)
+- Recorded the OpenAI-compatible request/response contract in `docs/knowledge/ui-e2e.md` and the HTTPS-only API 33 emulator choice in ADR 0029. Existing task 238 evidence confirms root/remount on that emulator; Android release trust and config delivery remain for integrated CI verification.
+- Added the minimal API mock with bearer-key validation, fixed chat/image model IDs, an echoed `generate_images` tool call, and an embedded 64×64 PNG. The four WebApplicationFactory tests failed first with 404 against the empty host, then passed after endpoint implementation.
+- Added and validated `e2e-providers.json` through `ProviderConfigLoader`; added `chat.run` and `chat.generation` automation IDs. The automation ID test failed first for the missing generation-card ID, then passed after the XAML change.
+- Added the Android first-run scenario and per-reset provider config installation. `dotnet build ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj --no-restore` and Android-target MAUI build succeeded (0 warnings/errors). The hosted emulator scenario has not run yet; this local environment has no emulator binary or connected device.
+- Added the Windows first-run/generation scenario, optional provider-config seeding in `WindowsTestBase`, and CI setup for a trusted localhost certificate and HTTPS mock process. Windows E2E project build succeeded (0 warnings/errors); the Windows UI scenario requires the hosted interactive runner.
+- `git diff --check` passed and the workflow YAML parses. The Windows E2E CI run is pending after this change.
+- The first hosted Android attempt failed before test discovery: `android-emulator-runner` executes each `script` line in a separate shell, so its multiline loops were split and Bash reported `expecting "done"`. Moved the Android sequence to `ci/android-mock-e2e.sh` and made the workflow invoke that script as one command; `bash -n`, YAML parsing, and `git diff --check` pass. Re-running CI.
+- The next hosted run confirmed Windows certificate trust and HTTPS startup, but the mock provider finished its first `dotnet run` compilation only after the 120-second readiness loop expired. CI now builds the mock before starting either UI runner and launches it with `--no-build`; this avoids compiling in the background readiness window. Re-running CI.
+- A repeat Windows run still exhausted the readiness loop even though the mock eventually answered once. Replaced `dotnet run` with direct execution of the built DLL and changed the Windows health probe to `curl.exe`, recording the last exit code/status and detecting an exited mock process. The next hosted run will confirm readiness and UI behavior.
+- The hosted Windows run then passed certificate setup, mock readiness, and server requests, but could not find the provider option because WinUI exposes the Picker popup outside the app window's UIA subtree. The screenshot shows the popup on screen. Added a desktop-level name lookup in `WindowsTestBase` so native popup entries can be selected; local Windows E2E project build passes (0 warnings/errors). Re-running CI.
+- The next Windows run selected the provider and assistant model and reached the Sessions page. FlaUI did not expose the `sessions.new` AutomationId even though the button is visible, so the scenario now selects the button by its accessible name (`New session`) through the desktop-level lookup. The next CI run will validate the rest of the flow.
+- The latest Android run installed the system CA, connected to the HTTPS mock, and passed the existing first-run tests; the new scenario failed because the native Picker row text is `E2E Mock (e2e-mock)`, not exactly `E2E Mock`. Changed the locator to match the visible prefix. Windows will use the same PR's updated button-name lookup.
+- The latest Windows run reached the session page but the desktop UI tree contains controls that do not expose the UIA Name property. The desktop lookup now skips those unsupported properties while scanning for the requested accessible name.
+- The following hosted Windows run showed `NullReferenceException` in the same lookup: some UIA elements return a null `Name` instead of throwing `PropertyNotSupportedException`. The screenshot confirms the `New session` button is visible. Updated the lookup to ignore null names too; awaiting the next hosted run.
+- The next Windows run passed the first-run provider/key/model selection and reached the session model picker. Its screenshot shows provider groups, with `e2e (1)` collapsed; the test incorrectly expected an `All models` option. Changed the scenario to expand the e2e provider group and select its image model.
+- The next Windows screenshot confirmed that the e2e group expanded and the image model was selected, but the test stayed on the model page because it did not press `Save`. Added the save action before looking for the chat input.
+- The Android run then failed at the `New session` locator. Its captured UI hierarchy exposes the visible button with `content-desc="New session"`, while XPath by visible text returned no element. Changed the Android test to locate it by Appium AccessibilityId.
+- The next Android run passed the `New session` step and reached session model selection. The model search element became stale during page refresh; the report screenshot shows the e2e provider group collapsed. Added a bounded retry using the search bar accessibility name and expanded the provider group before selecting the model.
+- On the following Android run, Appium still failed to locate `New session` by accessibility description although its captured UI tree includes the button. Added a dedicated `sessions.list.new` automation id for this pane action and changed the scenario to use it.
+- The next Android run reached the session model page with the search query applied, but its failure screenshot showed the `e2e (1)` image group still collapsed. The description selector may have matched a hidden group; restrict it to displayed elements and assert the expanded state before selecting the image model.
+- The next Windows run reached the chat with the prompt visible, but its send button remained disabled after FlaUI `Enter`. Changed prompt entry to real keyboard input and added a wait/assertion for the send command to become enabled.
+- The following CI run passed Windows but its Android emulator step remained `in_progress` for over 45 minutes without making the job logs available. Canceled that hung run; added per-command ADB deadlines, bounded Appium/preflight/test commands, and reduced the Android job timeout to 25 minutes so a repeat hang fails promptly with uploaded reports when possible. The exact stalled command is unknown until the bounded rerun reports it.
+- Passed targeted `dotnet test` for `E2eProvidersConfigTests` and `AutomationIdsTests`, all 4 mock endpoint tests, and `dotnet format --verify-no-changes` for the mock, mock tests, E2E Common, E2E Android, Core.Tests, Presentation.Tests and MAUI projects. CI is pending.
+- CI run [42966980208](https://github.com/r-eliseev/studious-goggles/actions/runs/42966980208): the Windows first-run and image-generation E2E passed. On Android, CA installation without a second reboot worked: first-run key validation reached the session model page and loaded `e2e/image`. The test then failed in the external `uiautomator dump`/XML parsing used to tap the provider group. The captured screenshot and UI hierarchy show that the group was already expanded and its model row visible, so removed that unnecessary dump/tap helper and retained an explicit wait for the expanded state. Android generation rerun pending. `dotnet format ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj --verify-no-changes --no-restore`, project build, and `scripts/check.sh` pass after the change.
+- CI run [42969061955](https://github.com/r-eliseev/studious-goggles/actions/runs/42969061955): Windows E2E passed again. Android reached the chat and the mock returned 200 for models, chat completion and image generation, but the test's prompt wait read `IWebElement.Text`; MAUI exposes the prompt through `contentDescription`. The new session also carries the unavailable default OpenRouter model, so this test run has a second generation that correctly errors for lack of an OpenRouter key alongside the mock generation. Updated the prompt wait to inspect the content description and the success assertion to scroll the feed while looking for the completed `e2e/image` card. The Android project build, formatter and harness pass; hosted rerun pending.
+- CI run [42974250705](https://github.com/r-eliseev/studious-goggles/actions/runs/42974250705): Android and Windows build, preflight and full UI E2E passed; the first run confirms Android system-CA trust and successful image generation from the HTTPS mock. The Windows run confirms its runner certificate setup, HTTPS mock and image-generation flow. Android's successful card was below the default OpenRouter error card; the scroll gesture direction was corrected based on the failure screenshot. Related build and harness workflows also passed (runs 42974250779, 42974250756 and 42974250767). `dotnet format ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj --verify-no-changes --no-restore`, Android E2E project build and `scripts/check.sh` pass.
+
 ## Комментарии
 
 ### 2026-11-07, claude-audit
@@ -111,3 +139,12 @@ bash scripts/check.sh
 
 ### 2026-11-07, claude-audit (ответ на вопрос codex-gpt6)
 Подтверждаю по коду: `AssistantService` после `generate_images` запускает прогон и завершает ход, результат инструмента обратно в модель не отправляется. Ошибка была в плане. Тестируем фактический поток: вызов инструмента → карточка прогона → готовая картинка. Второй вызов ассистента с текстом «Done» не нужен, это не фича. Критерии про мок и шаг 3 сценария исправлены. Статус возвращён в `approved`, занятость оставлена за codex-gpt6.
+
+### 2026-11-10, codex-gpt6
+Claim удалён при сверке статусов: подтверждённой ветки и текущей реализации задачи нет. Зависимости 240 и 241 уже закрыты, поэтому задача остаётся `approved` и свободна для взятия.
+
+### 2026-11-10, codex-gpt6
+Re-claimed after confirming tasks 240 and 241 are done in main. Source inspection confirms `GET /v1/models` key-check semantics, configured (not fetched) model catalogs, `POST /v1/chat/completions` tool-call fields, and `POST /v1/images/generations` base64 response. Selected the planned API 33 system-CA + HTTPS + `adb reverse` route; Release trust and app-data delivery still require the integrated CI check. The local executor has no Android emulator binary, so device behavior must be verified by GitHub Actions.
+
+### 2026-11-11, владелец
+Одобрено дополнить план полноценным Windows-сценарием, включая `WindowsTestBase.cs` и шаги Windows CI для сертификата и мока.

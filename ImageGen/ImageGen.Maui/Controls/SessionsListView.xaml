@@ -85,7 +85,8 @@
     </ContentView.Resources>
     <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
         <VerticalStackLayout Spacing="8">
-            <Button StyleClass="primary"
+            <Button AutomationId="sessions.list.new"
+                    StyleClass="primary"
                     Command="{Binding NewSessionCommand}"
                     Text="{x:Static strings:AppResources.NewSession}"
                     HorizontalOptions="Fill"

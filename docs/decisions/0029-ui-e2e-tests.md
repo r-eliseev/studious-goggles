@@ -41,6 +41,7 @@ Facts checked on 2026-11-07:
    - First smoke without keys: the first-launch screen, an invalid key and the error, element accessibility.
    - Then a local mock of an OpenAI-compatible provider over HTTPS with a one-off test root certificate, connected through `providers.json` (task 243; HTTPS is the owner's decision of 2026-11-07). This is the real code path without keys and without money.
    - Live OpenRouter is not used in CI.
+   - For task 243, the emulator gets `providers.json` in its app-private data after each app reset. The mock uses HTTPS with an ephemeral root CA installed in the API 33 emulator system trust store; `adb reverse` exposes the runner's localhost service. This keeps the normal Release app configuration unchanged and does not enable cleartext traffic.
 6. **Evidence for every test** in the `reports/<platform>/<test>/` folder:
    - always: a video;
    - on failure: a screenshot and the UI tree;

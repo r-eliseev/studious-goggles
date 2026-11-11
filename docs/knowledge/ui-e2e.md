@@ -1,5 +1,23 @@
 # Knowledge about MAUI UI E2E
 
+## OpenAI-compatible mock contract (task 243)
+
+The route and payload shapes below are confirmed from `OpenAiCompatibleClient` and `OpenAiChatWire`:
+
+- `GET /v1/models` with `Authorization: Bearer <key>` checks the key. HTTP 200 is valid; 401/403 are invalid; other statuses are network errors. The response body is not read. Configured chat and image models come from `providers.json`; no model-list response is needed.
+- `POST /v1/chat/completions` sends `model`, `messages`, and, when present, `tools` plus `tool_choice: "auto"`. The mock response needs `choices[0].message.tool_calls[]` with `function.name` and JSON `function.arguments`; the assistant call is `generate_images` with a `prompt`.
+- `POST /v1/images/generations` sends `model`, `prompt`, `n: 1` and optional image-format/seed fields. The supported response is `data[0].b64_json`; URL-only responses are not supported.
+
+The E2E provider config is delivered after each `mobile: clearApp`, because clearing the app removes its private data. The API 33 `google_apis` emulator is already used by `ui-e2e.yml`; task 238 verified that `adb root` and `adb remount` work there. Task 243 uses a one-off root CA and a `localhost` server certificate, installs the CA into the API 33 system trust store, and connects the emulator to the host mock with `adb reverse`. In run [42966980208](https://github.com/r-eliseev/studious-goggles/actions/runs/42966980208), the Release app accepted the mock key and loaded the configured E2E models without rebooting after CA installation; the image-generation scenario still needs a successful rerun.
+
+The Windows scenario uses a short-lived self-signed `localhost` certificate installed in the hosted runner's Local Machine Root store. The test base copies `e2e-providers.json` into the app data directory after clearing it and before launch. The mock process runs alongside the Windows UI tests and is stopped afterward; certificate files and mock logs stay in the runner's temporary/report directories.
+
+The Windows first-run and image-generation scenario passed in run [42966980208](https://github.com/r-eliseev/studious-goggles/actions/runs/42966980208), including Local Machine Root certificate trust and the HTTPS mock.
+
+The `reactivecircus/android-emulator-runner` action's `script` input executes each non-empty line as a separate shell command. Multi-line shell control structures therefore belong in a checked-in script invoked by one `script` command; otherwise a `for ... do` block can fail because its `done` is run in a different shell.
+
+Build the mock host before starting its background process in the hosted UI job. Launch the built Release DLL directly with `dotnet <path-to-mock.dll>` so `dotnet run` does not perform project discovery or build work in the readiness window. On Windows, use `curl.exe` for the HTTPS readiness check and retain its exit code, HTTP status and error output for diagnosis.
+
 ## Preflight 238
 
 The first two runs through `workflow_dispatch` on the branch `task/217-embedding-provider-model-name`, commit `fa3187de662ca9fa6a0e25a78466c746245fac79`: [run 42366477520](https://github.com/r-eliseev/studious-goggles/actions/runs/42366477520), [run 42366566469](https://github.com/r-eliseev/studious-goggles/actions/runs/42366566469). The Android APK and the unpackaged Windows app were built in both runs. The Windows preflight succeeded in both. The Android preflight of the second run installed Appium 3.9.0 and UiAutomator2 8.7.3, but doctor exited with code 1, because the emulator was not yet in PATH before emulator-runner. Fixed by running doctor after the emulator starts.
@@ -78,3 +96,7 @@ An agent cannot play a video, but it can see pictures. So a video is split into 
 Run [42808851378](https://github.com/r-eliseev/studious-goggles/actions/runs/42808851378) passed on both platforms. Android artifacts now include `screenshot.png` for every test. The final frames of `InvalidKey_ShowsError` show “OpenRouter rejected this key.”; `Rotate_KeepsKeyScreen` waits for the key field before rotating and its recording shows that screen in landscape. The Windows `InvalidKey_ShowsError` recording and screenshot also show the final provider error.
 
 The temporary paste check passed in run [42806400823](https://github.com/r-eliseev/studious-goggles/actions/runs/42806400823). A contact sheet from its video showed the pasted key masked in every sampled frame. The temporary test was removed after recording this observation in `docs/knowledge/maui.md`.
+
+### HTTPS mock provider UI E2E (task 243)
+
+Run [42974250705](https://github.com/r-eliseev/studious-goggles/actions/runs/42974250705) passed the full Android and Windows first-run and image-generation scenarios. On Android API 33, the workflow installs the mock root certificate into the emulator system certificate store and the Release app connects to the HTTPS mock. Windows trusts its one-off root certificate and runs the same mock over HTTPS. The Android failure screenshot also showed why the test must scroll upward through the chat feed: a new session retains an unavailable default OpenRouter model, whose error card appears before the successful mock image card.

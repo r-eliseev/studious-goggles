@@ -13,6 +13,8 @@ For pinned builds `xcode-select` must point directly to `/Applications/Xcode_26.
 
 ## Separate builds 245
 
+As of 2026-11-10, scheduled run [42794177774](https://github.com/r-eliseev/studious-goggles/actions/runs/42794177774) passed all four jobs: `build-maui-ios`, `build-maui-catalyst`, `build-avalonia-ios`, and `build-avalonia-macos`. Avalonia iOS formatting and artifact packaging/upload also passed.
+
 The first separate workflow [42371375200](https://github.com/r-eliseev/studious-goggles/actions/runs/42371375200) confirmed MAUI iOS Simulator (artifact `maui-ios-sim`, 12:12:29–12:15:25 UTC) and the Avalonia macOS `.app` (12:11:53–12:12:26 UTC). MAUI Mac Catalyst built without warnings, but the packaging step chose the wrong `Info.plist` (12:11:47–12:13:56 UTC); Avalonia iOS revealed C# and XAML errors, the fixes wait for a repeated check. The success of the whole workflow does not mean the success of each platform: look at the separate jobs.
 
 ### Avalonia iOS Simulator — ILLink
@@ -22,6 +24,16 @@ In run [42373330934](https://github.com/r-eliseev/studious-goggles/actions/runs/
 Run [42374038441](https://github.com/r-eliseev/studious-goggles/actions/runs/42374038441) confirmed `TrimMode=copy` removes the grouped dependency/SDK diagnostics and exposes only IL2026 on `AvaloniaAppearanceApplier.Apply`, which dynamically selects one of the bundled theme resource URIs. The iOS host now suppresses that one linker warning locally; this differs from the previous broad build failure and awaits another runner check.
 
 ## Simulator and macOS smoke failures after merge
+
+### Three latest scheduled smoke runs (2026-11-08 through 2026-11-10)
+
+| Run | MAUI iOS | Avalonia iOS | macOS GUI |
+|---|---|---|---|
+| [42465262394](https://github.com/r-eliseev/studious-goggles/actions/runs/42465262394) | success | success | success |
+| [42596262790](https://github.com/r-eliseev/studious-goggles/actions/runs/42596262790) | success | success | success |
+| [42794177774](https://github.com/r-eliseev/studious-goggles/actions/runs/42794177774) | success | **failed after launch** | success |
+
+The latest Avalonia artifact reports iOS 26.5 / iPhone 17 Pro, `launched=true`, `aliveAfter30s=false`, `crashReports=0`; inspect its `launch.log` to identify the exit cause. Thus the three-consecutive-success criterion is met for MAUI, but not Avalonia. All three macOS artifacts report `guiSession=true`, `accessibilityOk=true`, `nonUniformRatio` about 0.999, zero crash reports, and no app failures. This confirms the hosted environment meets the preflight threshold; a separate Mac2 UI-test task is proposed in `docs/status.md`.
 
 On `main` run [42381579325](https://github.com/r-eliseev/studious-goggles/actions/runs/42381579325), all Apple compile jobs succeeded and all three smoke jobs ran. The macOS preflight stopped while parsing `sips` output: the runner produced a 32-bit top-down BMP with `BI_BITFIELDS` compression and standard BGRA channel masks (`compression=3`). The pixel parser now accepts this uncompressed bitfield form; a saved runner screenshot measures a nonuniform ratio of `0.9991188`.
 

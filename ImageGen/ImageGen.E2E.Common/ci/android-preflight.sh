@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+adb_binary="$(command -v adb)"
+adb() {
+  timeout --foreground --kill-after=5s 60s "$adb_binary" "$@"
+}
+
 report_dir="reports/preflight-android"
 mkdir -p "$report_dir"
 apk="$(find publish/android -maxdepth 1 -type f -name '*-Signed.apk' -print -quit)"

@@ -1,0 +1,27 @@
+{
+  "providers": [
+    {
+      "id": "e2e-mock",
+      "kind": "openAiCompatible",
+      "displayName": "E2E Mock",
+      "baseAddress": "https://localhost:5443/v1/",
+      "timeoutSeconds": 60,
+      "imageModels": [
+        {
+          "id": "e2e/image",
+          "name": "E2E Image",
+          "supportsSeed": false,
+          "maxImagesPerRequest": 1
+        }
+      ],
+      "chatModels": [
+        {
+          "id": "e2e/assistant",
+          "name": "E2E Assistant",
+          "supportsImageInput": false,
+          "contextLength": 8192
+        }
+      ]
+    }
+  ]
+}
