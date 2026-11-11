@@ -1,8 +1,8 @@
 ---
 id: 255
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-10T17:52:38Z
+status: blocked
+assignee:
+claimed:
 created: 2026-11-09
 ---
 
@@ -56,11 +56,11 @@ bash scripts/check.sh
 
 ## Отчёт
 
-- Implemented and verified SES-01 (new empty session), SES-06 (default assistant model), and SES-09 (Today/Earlier grouping using `FakeTimeProvider`).
-- Not complete: SES-02 stalls while `ChatPageModel.SendCommand` is awaited from a Reqnroll headless step; the command does not return before timeout. SES-05 also stalls in the delete command path. A direct data-layer workaround would violate the approved plan.
-- SES-03/04 need configurable `IDialogService.PromptAsync` results for rename, but the approved task file list excludes `Support/FakePlatform.cs`, whose current prompt always returns `null`. SES-07/08/10 have not been implemented.
-- The task remains in-progress; no task 255 changes have been copied to PR #93. Needs a plan amendment for fake prompt support and diagnosis of the command stalls.
-- Verification: Acceptance suite 16 passed, 1 expected skip (`@ignore @bug-272`); formatting and `bash scripts/check.sh` passed.
+- Implemented: SES-01, SES-02, SES-03, SES-06 and SES-09. SES-04 empty-title case passes; its overlength case is `@ignore @bug-276` because the current code truncates instead of rejecting.
+- SES-05 confirmation decline, confirmed deletion, and absence after restart pass through the session row command.
+- Acceptance harness cleanup advances its `FakeTimeProvider` before stopping app services, so delayed semantic-index refreshes do not leave teardown waiting on frozen test time. AppWorld teardown is asynchronous.
+- Not implemented: SES-07, SES-08 and SES-10. SES-07 is blocked by the approved plan's file list: the fake chat model catalog is hard-coded empty, so Settings has no second assistant model to select. The required `Support/FakeOpenRouter.cs` change is not authorized by the current plan; see the latest comment.
+- Verification so far: category runs passed for SES-02, SES-03 and SES-05; SES-04 had one pass and one expected skip. The full acceptance suite has not completed successfully after these additions. Formatting and `scripts/check.sh` remain to be run after the plan mismatch is resolved.
 
 ## Комментарии
 
@@ -83,3 +83,6 @@ Until this plan update is approved, the implementation remains limited to SES-01
 
 ### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan) — plan amendment approved
 The requested amendment is approved: `Support/FakePlatform.cs` may queue a `PromptAsync` result for SES-03/04; the acceptance harness and steps may be investigated and fixed so that SES-02 and SES-05 run through the UI/page-model flow. The rule stays: no product changes to make a scenario pass; a confirmed product/specification discrepancy becomes `@ignore @bug-NNN` and a new task. SES-11 is not part of this task (task 273, after 255).
+
+### 2026-11-11, codex-gpt6
+Plan mismatch: SES-07 must change the default assistant model in Settings and verify that existing sessions keep their model while a new session receives the new default. `FakeOpenRouter` currently returns an empty `/api/v1/models` catalog, so Settings exposes only the currently selected model. Making a second model selectable requires adding configurable chat models to `ImageGen/ImageGen.Acceptance.Tests/Support/FakeOpenRouter.cs`, which is outside the approved `Files:` list and the prior amendment. Proposed plan change: add that file to the allowed files and permit a fake chat-model catalog response used by SES-07. Until the planner/owner approves this scope, this task is blocked; SES-08 and SES-10 are not being started under this plan.

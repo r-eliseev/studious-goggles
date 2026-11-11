@@ -20,10 +20,10 @@ public sealed class CommonSteps(ScenarioContext scenario)
     public async Task DisposeWorldAsync()
     {
         var world = World;
-        await HeadlessApp.RunAsync(_ =>
+        await HeadlessApp.RunAsync(async _ =>
         {
-            world.Dispose();
-            return Task.FromResult(true);
+            await world.DisposeAsync();
+            return true;
         }, CancellationToken.None).ConfigureAwait(false);
     }
 
