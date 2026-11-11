@@ -41,3 +41,24 @@ Feature: Runs and generations
       | vendor/beta |
     And the user sends the message "Draw orange poppies"
     Then model "vendor/beta" receives requests without a seed and the cards show seed not supported
+
+  @GEN-03 @S3.4 @S3.5
+  Scenario: One model failure does not change another model result
+    Given the OpenRouter image model catalog:
+      | id                                | name       | seed | price per MP |
+      | black-forest-labs/flux.2-klein-4b | Flux Klein | true | 0.014        |
+      | vendor/alpha                      | Alpha      | true | 0.02         |
+    And the user has a saved OpenRouter key
+    And the assistant answers with:
+      | response        | prompt                                         |
+      | generate_images | A red fox sleeping beneath a birch tree. |
+    And the provider answers generation for model "vendor/alpha" with:
+      | response | status | body                          |
+      | error    | 500    | {"error":{"message":"failure"}} |
+    When the user creates a new session
+    And the user selects these image models with two runs per model:
+      | model id                         |
+      | black-forest-labs/flux.2-klein-4b |
+      | vendor/alpha                     |
+    And the user sends the message "Draw a sleeping fox"
+    Then model "vendor/alpha" generations are failed and model "black-forest-labs/flux.2-klein-4b" generations are done

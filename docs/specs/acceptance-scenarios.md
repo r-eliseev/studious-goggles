@@ -81,7 +81,7 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 |---|---|---|---|
 | GEN-01 | Two models × two runs → four cards; the seeds are equal for both models and differ between runs | S3.1, S3.2 | done |
 | GEN-02 | A model without seed → the seed is not sent (request body), the card shows "seed not supported" | S3.3 | done |
-| GEN-03 | One generation fails (500), another is done → the first is "failed" with a short reason, the second "done" | S3.4, S3.5 | planned |
+| GEN-03 | One generation fails (500), another is done → the first is "failed" with a short reason, the second "done" | S3.4, S3.5 | done |
 | GEN-04 | The provider filtered → the state is "filtered", not "failed" | S3.5, F6.5, F9.2 | planned |
 | GEN-05 | While the provider has not answered → the card is "running"; after the answer — "done" with the picture (`@e2e` after 243) | S3.5 | planned |
 | GEN-06 | The picture is saved to a file and the DB before it is shown: the file exists; after a restart the card shows the same picture | S3.6, F7.2 | planned |
