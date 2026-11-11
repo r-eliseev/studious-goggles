@@ -42,17 +42,30 @@ public sealed class FakeOpenRouter
             var modelId = Uri.UnescapeDataString(path["/api/v1/images/models/".Length..^"/endpoints".Length]);
             var model = _imageModels.FirstOrDefault(candidate => candidate.Id == modelId);
             var endpoints = new JsonArray();
-            if (model?.PricePerMegapixel is { } price)
+            if (model is { PricePerMegapixel: not null } or { PricePerImageUsd: not null })
             {
-                endpoints.Add(new JsonObject
+                var pricing = new JsonArray();
+                if (model.PricePerMegapixel is { } megapixelPrice)
                 {
-                    ["pricing"] = new JsonArray(new JsonObject
+                    pricing.Add(new JsonObject
                     {
                         ["billable"] = "output_image",
                         ["unit"] = "megapixel",
-                        ["cost_usd"] = price,
-                    }),
-                });
+                        ["cost_usd"] = megapixelPrice,
+                    });
+                }
+
+                if (model.PricePerImageUsd is { } imagePrice)
+                {
+                    pricing.Add(new JsonObject
+                    {
+                        ["billable"] = "output_image",
+                        ["unit"] = "image",
+                        ["cost_usd"] = imagePrice,
+                    });
+                }
+
+                endpoints.Add(new JsonObject { ["pricing"] = pricing });
             }
 
             return Task.FromResult(JsonResponse(HttpStatusCode.OK, new JsonObject { ["endpoints"] = endpoints }.ToJsonString()));
@@ -301,5 +314,5 @@ public sealed class FakeOpenRouter
         public static GenerationReply Pending(FakeNetwork.HeldResponse response) => new(0, 0, 0, Held: response);
     }
 
-    public sealed record ImageModel(string Id, string Name, bool SupportsSeed, decimal? PricePerMegapixel);
+    public sealed record ImageModel(string Id, string Name, bool SupportsSeed, decimal? PricePerMegapixel, decimal? PricePerImageUsd = null);
 }

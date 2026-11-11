@@ -67,7 +67,10 @@ public sealed class CommonSteps(ScenarioContext scenario)
             row["id"],
             row["name"],
             bool.Parse(row["seed"]),
-            ParseNullableDecimal(row["price per MP"])));
+            ParseNullableDecimal(row["price per MP"]),
+            table.Header.Contains("price per image", StringComparer.OrdinalIgnoreCase)
+                ? ParseNullableDecimal(row["price per image"])
+                : null));
         World.OpenRouter.SetImageModels(models);
     }
 

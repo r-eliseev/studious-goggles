@@ -83,13 +83,13 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 | GEN-02 | A model without seed → the seed is not sent (request body), the card shows "seed not supported" | S3.3 | done |
 | GEN-03 | One generation fails (500), another is done → the first is "failed" with a short reason, the second "done" | S3.4, S3.5 | done |
 | GEN-04 | The provider filtered → the state is "filtered", not "failed" | S3.5, F6.5, F9.2 | done |
-| GEN-05 | While the provider has not answered → the card is "running"; after the answer — "done" with the picture (`@e2e` after 243) | S3.5 | planned |
-| GEN-06 | The picture is saved to a file and the DB before it is shown: the file exists; after a restart the card shows the same picture | S3.6, F7.2 | planned |
-| GEN-07 | The card shows the model, seed, price (`usage.cost`) and time | S3.7 | planned |
-| GEN-08 | The run summary: number of models, runs, finished ones and the sum of known prices; updated as generations finish | S3.9 | planned |
-| GEN-09 | Picture size on the card: `W×H px · ratio` | S3.10 | planned |
-| GEN-10 | Changing the session models during a run does not change the run already started | S3.1, S5.2 | planned |
-| GEN-11 | The next run estimate in the chat is the sum of the known prices of the selected models | F4.4 | planned |
+| GEN-05 | While the provider has not answered → the card is "running"; after the answer — "done" with the picture | S3.5 | done |
+| GEN-06 | The picture is saved to a file and the DB before it is shown: the file exists; after a restart the card shows the same picture | S3.6, F7.2 | done |
+| GEN-07 | The card shows the model, seed, price (`usage.cost`) and time | S3.7 | done |
+| GEN-08 | The run summary: number of models, runs, finished ones and the sum of known prices; updated as generations finish | S3.9 | done |
+| GEN-09 | Picture size on the card: `W×H px · ratio` | S3.10 | done |
+| GEN-10 | Changing the session models during a run does not change the run already started | S3.1, S5.2 | done |
+| GEN-11 | The next run estimate in the chat is the sum of the known prices of the selected models | F4.4 | done |
 
 ### Cancellation and recovery (`CancelAndRecovery.feature`, task 258)
 | id | Scenario | Requirements | Status |

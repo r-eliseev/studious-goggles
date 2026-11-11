@@ -1,8 +1,12 @@
+using System.Globalization;
 using System.Text.Json;
 using Avalonia.Controls;
 using ImageGen.Acceptance.Tests.Support;
+using ImageGen.Avalonia;
 using ImageGen.Avalonia.Services.Navigation;
 using ImageGen.Avalonia.Views;
+using ImageGen.Core.Storage;
+using ImageGen.Presentation;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Resources.Strings;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +21,55 @@ public sealed class RunsSteps(ScenarioContext scenario)
     private AppWorld World => scenario.Get<AppWorld>();
 
     private ChatPageModel Chat => Assert.IsType<ChatPageModel>(Assert.IsType<ChatView>(World.Window.PageArea.Content).DataContext);
+
+    [Given("the current culture is {string}")]
+    public void GivenCurrentCultureIs(string cultureName) => CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(cultureName);
+
+    [Then("the user opens the generated image session")]
+    public Task WhenTheUserOpensGeneratedImageSession() => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        var sessions = World.Provider.GetRequiredService<ImageGen.Presentation.PageModels.SessionsPageModel>();
+        await World.WaitUntilAsync(() => sessions.Sessions.Count > 0, "the generated session row to load", cancellationToken);
+        await sessions.Sessions[0].OpenCommand.ExecuteAsync(null);
+        var navigation = World.Provider.GetRequiredService<AvaloniaNavigationService>();
+        await World.WaitUntilAsync(() => navigation.CurrentRoute?.StartsWith(Routes.Chat + "?", StringComparison.Ordinal) == true,
+            "the generated image session chat to open", cancellationToken);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [Then("the generated image is saved before the card shows it")]
+    public Task ThenGeneratedImageIsSavedBeforeCardShowsIt() => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        bool HasSavedImage() => Chat.Items.OfType<RunItemViewModel>()
+            .SelectMany(run => run.Generations)
+            .Any(card => card.IsDone && card.HasImage && File.Exists(card.ImageFilePath));
+
+        await World.WaitUntilAsync(HasSavedImage, "the generated image file to exist before it is shown", cancellationToken);
+        var card = Assert.Single(Chat.Items.OfType<RunItemViewModel>().SelectMany(run => run.Generations));
+        Assert.True(File.Exists(card.ImageFilePath));
+        Assert.NotEmpty(await World.Provider.GetRequiredService<IImageFileStore>().ReadAsync(card.RelativeImagePath, cancellationToken));
+        scenario.Set(card.Id, "runs.saved-image-id");
+        scenario.Set(card.ImageFilePath, "runs.saved-image-path");
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [Then("the generated image card still shows the same saved file")]
+    public Task ThenGeneratedImageCardStillShowsSameSavedFile() => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        var imageId = scenario.Get<Guid>("runs.saved-image-id");
+        var filePath = scenario.Get<string>("runs.saved-image-path");
+        bool HasRestoredImage() => Chat.Items.OfType<RunItemViewModel>()
+            .SelectMany(run => run.Generations)
+            .Any(card => card.Id == imageId && card.IsDone && card.HasImage);
+
+        await World.WaitUntilAsync(HasRestoredImage, "the saved image card to be restored", cancellationToken);
+        var card = Assert.Single(Chat.Items.OfType<RunItemViewModel>().SelectMany(run => run.Generations), item => item.Id == imageId);
+        Assert.True(card.HasImage);
+        Assert.Equal(filePath, card.ImageFilePath);
+        Assert.True(File.Exists(filePath));
+        Assert.NotEmpty(await World.Provider.GetRequiredService<IImageFileStore>().ReadAsync(card.RelativeImagePath, cancellationToken));
+        return true;
+    }, TestContext.Current.CancellationToken);
 
     [When("the provider completes generation for model {string}")]
     public void WhenTheProviderCompletesGenerationForModel(string modelId) => World.OpenRouter.CompleteHeldGeneration(modelId);
@@ -45,6 +98,22 @@ public sealed class RunsSteps(ScenarioContext scenario)
         var card = Assert.Single(Chat.Items.OfType<RunItemViewModel>().SelectMany(run => run.Generations), generation => generation.ModelId == modelId);
         Assert.True(card.IsDone);
         Assert.True(card.HasImage);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [Then("the generation card shows model {string}, seed, and cost {string}")]
+    public Task ThenGenerationCardShowsModelSeedAndCost(string modelId, string costText) => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        bool HasExpectedCard() => Chat.Items.OfType<RunItemViewModel>()
+            .SelectMany(run => run.Generations)
+            .Any(card => card.ModelId == modelId && card.IsDone && card.HasImage && card.CostText == costText);
+
+        await World.WaitUntilAsync(HasExpectedCard, "the completed card to show provider cost with invariant formatting", cancellationToken);
+        var card = Assert.Single(Chat.Items.OfType<RunItemViewModel>().SelectMany(run => run.Generations));
+        Assert.Equal(modelId, card.ModelId);
+        Assert.StartsWith("seed ", card.SeedText, StringComparison.Ordinal);
+        Assert.Equal(costText, card.CostText);
+        Assert.Contains(costText, card.DetailsText, StringComparison.Ordinal);
         return true;
     }, TestContext.Current.CancellationToken);
 
@@ -88,6 +157,108 @@ public sealed class RunsSteps(ScenarioContext scenario)
             Assert.True(
                 World.Window.PageArea.Content is ChatView,
                 $"The models page did not close; route={World.Provider.GetRequiredService<AvaloniaNavigationService>().CurrentRoute}; alerts={string.Join(" | ", World.Platform.Alerts.Select(alert => alert.Message))}.");
+            return true;
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [When("the user selects image models for this run:")]
+    public Task WhenTheUserSelectsImageModelsForThisRun(DataTable table)
+    {
+        var modelIds = table.Rows.Select(row => row["model id"]).ToHashSet(StringComparer.Ordinal);
+        return SelectModelsAsync(modelIds, runsPerModel: 1);
+    }
+
+    [When("the next assistant response is:")]
+    public void WhenTheNextAssistantResponseIs(DataTable table)
+    {
+        var row = Assert.Single(table.Rows);
+        Assert.Equal("generate_images", row["response"]);
+        World.OpenRouter.QueueGenerateImages(row["prompt"]);
+    }
+
+    [Then("the run summary shows {string}")]
+    public Task ThenTheRunSummaryShows(string completionText) => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        bool HasExpectedSummary() => Chat.Items.OfType<RunItemViewModel>().Any(run => run.HeaderText.Contains(completionText, StringComparison.Ordinal));
+        await World.WaitUntilAsync(HasExpectedSummary, $"the run summary '{completionText}'", cancellationToken);
+        var run = Assert.Single(Chat.Items.OfType<RunItemViewModel>());
+        Assert.Contains(completionText, run.HeaderText, StringComparison.Ordinal);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [Then("the generation card shows image dimensions {string}")]
+    public Task ThenGenerationCardShowsImageDimensions(string dimensionsText) => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        bool HasDimensions() => Chat.Items.OfType<RunItemViewModel>()
+            .SelectMany(run => run.Generations)
+            .Any(card => card.IsDone && card.HasImage && card.ImageDimensionsText == dimensionsText);
+
+        await World.WaitUntilAsync(HasDimensions, $"the image card dimensions '{dimensionsText}'", cancellationToken);
+        var card = Assert.Single(Chat.Items.OfType<RunItemViewModel>().SelectMany(run => run.Generations));
+        Assert.Equal(dimensionsText, card.ImageDimensionsText);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [Then("the current run has two cards for models {string} and {string}")]
+    public Task ThenCurrentRunHasTwoCardsForModels(string firstModelId, string secondModelId) => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        await World.WaitUntilAsync(() => Chat.Items.OfType<RunItemViewModel>().Any(), "the current run to appear", cancellationToken);
+        var run = Assert.Single(Chat.Items.OfType<RunItemViewModel>());
+        Assert.Equal(2, run.Generations.Count);
+        Assert.Equal(new[] { firstModelId, secondModelId }.Order(StringComparer.Ordinal), run.Generations.Select(card => card.ModelId).Order(StringComparer.Ordinal));
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [Then("the next run has one done card for model {string}")]
+    public Task ThenNextRunHasOneDoneCardForModel(string modelId) => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        bool HasSecondRun() => Chat.Items.OfType<RunItemViewModel>().Count() == 2
+            && Chat.Items.OfType<RunItemViewModel>().Last().Generations is [{ IsDone: true, HasImage: true } card]
+            && card.ModelId == modelId;
+
+        await World.WaitUntilAsync(HasSecondRun, $"the second run to finish with only model '{modelId}'", cancellationToken);
+        var runs = Chat.Items.OfType<RunItemViewModel>().ToArray();
+        Assert.Equal(2, runs.Length);
+        Assert.Equal(2, runs[0].Generations.Count);
+        var second = Assert.Single(runs[1].Generations);
+        Assert.Equal(modelId, second.ModelId);
+        Assert.True(second.IsDone);
+        Assert.True(second.HasImage);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [Then("the next run estimate is {string}")]
+    public Task ThenNextRunEstimateIs(string amount) => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        await World.WaitUntilAsync(() => Chat.HasNextRunEstimate, "the next run estimate to load", cancellationToken);
+        Assert.Contains(amount, Chat.NextRunEstimateText, StringComparison.Ordinal);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    private Task SelectModelsAsync(HashSet<string> modelIds, int runsPerModel)
+    {
+        scenario.Set(modelIds, "runs.selected-models");
+        return HeadlessApp.RunAsync(async cancellationToken =>
+        {
+            var chat = Chat;
+            await chat.OpenModelsCommand.ExecuteAsync(null);
+            var page = chat.ModelsPane;
+            if (page is null)
+            {
+                await World.WaitUntilAsync(
+                    () => World.Window.PageArea.Content is SessionModelsView,
+                    "the session models page to open",
+                    cancellationToken);
+                page = Assert.IsType<SessionModelsPageModel>(Assert.IsType<SessionModelsView>(World.Window.PageArea.Content).DataContext);
+            }
+
+            await World.WaitUntilAsync(() => page.Models.Count > 0 && !page.IsBusy, "the image model rows to finish loading", cancellationToken);
+            Assert.Equal(modelIds.Count, page.Models.Count(model => modelIds.Contains(model.Id)));
+            foreach (var model in page.Models) model.IsSelected = modelIds.Contains(model.Id);
+            page.RunsPerModel = runsPerModel;
+            Assert.True(page.SaveCommand.CanExecute(null), $"The models page is still busy: {page.IsBusy}.");
+            await page.SaveCommand.ExecuteAsync(null);
+            Assert.True(World.Window.PageArea.Content is ChatView);
             return true;
         }, TestContext.Current.CancellationToken);
     }
