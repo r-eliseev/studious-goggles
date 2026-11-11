@@ -106,7 +106,7 @@ public sealed class MockSessionTests : AndroidTestBase
                 ["top"] = feed.Location.Y,
                 ["width"] = feed.Size.Width,
                 ["height"] = feed.Size.Height,
-                ["direction"] = "down",
+                ["direction"] = "up",
                 ["percent"] = 0.75,
             });
             return null;
