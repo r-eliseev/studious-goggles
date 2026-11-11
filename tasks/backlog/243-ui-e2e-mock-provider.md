@@ -1,8 +1,8 @@
 ---
 id: 243
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-10T20:08:52Z
+status: done
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -124,6 +124,7 @@ bash scripts/check.sh
 - Passed targeted `dotnet test` for `E2eProvidersConfigTests` and `AutomationIdsTests`, all 4 mock endpoint tests, and `dotnet format --verify-no-changes` for the mock, mock tests, E2E Common, E2E Android, Core.Tests, Presentation.Tests and MAUI projects. CI is pending.
 - CI run [42966980208](https://github.com/r-eliseev/studious-goggles/actions/runs/42966980208): the Windows first-run and image-generation E2E passed. On Android, CA installation without a second reboot worked: first-run key validation reached the session model page and loaded `e2e/image`. The test then failed in the external `uiautomator dump`/XML parsing used to tap the provider group. The captured screenshot and UI hierarchy show that the group was already expanded and its model row visible, so removed that unnecessary dump/tap helper and retained an explicit wait for the expanded state. Android generation rerun pending. `dotnet format ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj --verify-no-changes --no-restore`, project build, and `scripts/check.sh` pass after the change.
 - CI run [42969061955](https://github.com/r-eliseev/studious-goggles/actions/runs/42969061955): Windows E2E passed again. Android reached the chat and the mock returned 200 for models, chat completion and image generation, but the test's prompt wait read `IWebElement.Text`; MAUI exposes the prompt through `contentDescription`. The new session also carries the unavailable default OpenRouter model, so this test run has a second generation that correctly errors for lack of an OpenRouter key alongside the mock generation. Updated the prompt wait to inspect the content description and the success assertion to scroll the feed while looking for the completed `e2e/image` card. The Android project build, formatter and harness pass; hosted rerun pending.
+- CI run [42974250705](https://github.com/r-eliseev/studious-goggles/actions/runs/42974250705): Android and Windows build, preflight and full UI E2E passed; the first run confirms Android system-CA trust and successful image generation from the HTTPS mock. The Windows run confirms its runner certificate setup, HTTPS mock and image-generation flow. Android's successful card was below the default OpenRouter error card; the scroll gesture direction was corrected based on the failure screenshot. Related build and harness workflows also passed (runs 42974250779, 42974250756 and 42974250767). `dotnet format ImageGen/ImageGen.E2E.Android/ImageGen.E2E.Android.csproj --verify-no-changes --no-restore`, Android E2E project build and `scripts/check.sh` pass.
 
 ## Комментарии
 

@@ -96,3 +96,7 @@ An agent cannot play a video, but it can see pictures. So a video is split into 
 Run [42808851378](https://github.com/r-eliseev/studious-goggles/actions/runs/42808851378) passed on both platforms. Android artifacts now include `screenshot.png` for every test. The final frames of `InvalidKey_ShowsError` show “OpenRouter rejected this key.”; `Rotate_KeepsKeyScreen` waits for the key field before rotating and its recording shows that screen in landscape. The Windows `InvalidKey_ShowsError` recording and screenshot also show the final provider error.
 
 The temporary paste check passed in run [42806400823](https://github.com/r-eliseev/studious-goggles/actions/runs/42806400823). A contact sheet from its video showed the pasted key masked in every sampled frame. The temporary test was removed after recording this observation in `docs/knowledge/maui.md`.
+
+### HTTPS mock provider UI E2E (task 243)
+
+Run [42974250705](https://github.com/r-eliseev/studious-goggles/actions/runs/42974250705) passed the full Android and Windows first-run and image-generation scenarios. On Android API 33, the workflow installs the mock root certificate into the emulator system certificate store and the Release app connects to the HTTPS mock. Windows trusts its one-off root certificate and runs the same mock over HTTPS. The Android failure screenshot also showed why the test must scroll upward through the chat feed: a new session retains an unavailable default OpenRouter model, whose error card appears before the successful mock image card.
