@@ -7,10 +7,10 @@ A multi-provider client for image generation: keys of the built-in providers fal
 Everything in the repository is written in English: documentation, tasks, code, comments, test names, Gherkin scenarios, commit messages. `scripts/check.sh` rejects non-Latin letters in the checked paths (`docs/conventions.md`, "Language"). Files that are not translated yet are listed in task 268; until then their Russian section names stay valid for the scripts.
 
 ## Roles
-Every session works in one role, named by the user at the start (ADR 0032):
-- **Executor** — carries out one approved task exactly as planned. Read `docs/executor.md` (the complete rules), this file and the task; do nothing the plan does not say; on any mismatch stop, propose a plan change in the task's comments and set `blocked`; finish with `scripts/submit-task.sh` (status `review`).
+Every session works in one role (ADR 0032 and ADR 0034):
+- **Executor** — when the user asks to implement, continue, or finish approved repository tasks, use `.claude/skills/executor/SKILL.md` and `docs/executor.md`; carry out one task at a time. If the user has given a standing instruction to process a task pool, use that recorded scope across turns and sessions; do not ask for routine reconfirmation or stop after a progress update. A blocker stops that task, not unrelated tasks in the authorized pool.
 - **Planner** — everything else: specifications, ADRs, tasks, analysis and plans, approvals recorded from the owner, answers to blocked tasks, reviews (`scripts/review-task.sh`), archiving, audits. The planner does not write product code in `ImageGen/` (exception: a fix the owner explicitly asks for, ADR 0033). A planner session must use the `planner` skill (`.claude/skills/planner/SKILL.md`): load it at the start of the session, before the first answer; a tool without skills reads that file instead. It starts every session with a sync and the state review.
-- If the user did not name a role, you are the planner: use the `planner` skill, do not change `ImageGen/`; ask if code work is expected.
+- If intent is ambiguous, use Planner and ask whether implementation is expected. A clear request to take, continue, or finish repository tasks names the Executor role even if the user does not say “executor”.
 
 ## Commands
 - Avalonia data folder: `ImageGen` in local app data by default; the `IMAGEGEN_DATA_DIR` variable sets another one (tests use a temporary one, see task 048).
@@ -50,6 +50,7 @@ The root contains `ImageGen/` (source projects), `docs/` (specifications, decisi
 
 ## Tasks
 - Work only on the task the user named. Do not pick tasks yourself.
+- A recorded standing instruction may name a task pool (for example all approved and returned tasks); the executor may select the next eligible task only within that pool, following dependencies and queue order. See `docs/status.md` and `docs/executor.md`.
 - The rules for tasks are in `docs/tasks.md`. Read them before working on any task.
 - Do not write code without an approved plan, and only as the executor.
 - The task's "Plan" contains only concepts: contracts, pseudocode, state machines, test cases in words. Do not paste finished code into tasks; proof-of-concept code goes to separate files in `poc/`, and only to remove a real unknown (`docs/tasks.md`, "What to write in the Plan").

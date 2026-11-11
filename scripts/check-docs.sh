@@ -4,7 +4,7 @@ cd "$(dirname "$0")/.."
 fail=0
 
 # 1. Обязательные файлы
-for f in AGENTS.md docs/index.md docs/status.md docs/architecture.md docs/conventions.md docs/tasks.md docs/executor.md .claude/skills/planner/SKILL.md; do
+for f in AGENTS.md docs/index.md docs/status.md docs/architecture.md docs/conventions.md docs/tasks.md docs/executor.md .claude/skills/planner/SKILL.md .claude/skills/executor/SKILL.md; do
   [ -f "$f" ] || { echo "ОШИБКА: нет файла $f"; fail=1; }
 done
 
