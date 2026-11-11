@@ -52,3 +52,10 @@ Feature: Chat and assistant
       | 500    | Something went wrong.                       |
       | 429    | The provider is limiting requests. Try again later. |
       | 401    | The API key was rejected.                   |
+
+  @CHAT-05 @S2.1
+  Scenario: A whitespace-only message cannot be sent
+    Given the user has a saved OpenRouter key
+    When the user creates a new session
+    And the user enters "   " in the chat input
+    Then sending a chat message is unavailable

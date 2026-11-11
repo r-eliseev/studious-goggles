@@ -31,6 +31,16 @@ public sealed class ChatSteps(ScenarioContext scenario)
     public void ThenNoRunIsShownInTheChat() =>
         Assert.DoesNotContain(Chat.Items, item => item is RunItemViewModel);
 
+    [When("the user enters {string} in the chat input")]
+    public Task WhenTheUserEntersInTheChatInput(string text) => HeadlessApp.RunAsync(_ =>
+    {
+        Chat.InputText = text;
+        return Task.FromResult(true);
+    }, TestContext.Current.CancellationToken);
+
+    [Then("sending a chat message is unavailable")]
+    public void ThenSendingAChatMessageIsUnavailable() => Assert.False(Chat.SendCommand.CanExecute(null));
+
     [Then("the assistant tool prompt {string} is preserved in the run, card, and generation request")]
     public Task ThenTheAssistantToolPromptIsPreserved(string prompt) => HeadlessApp.RunAsync(async cancellationToken =>
     {
