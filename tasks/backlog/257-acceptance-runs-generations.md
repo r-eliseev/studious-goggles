@@ -61,6 +61,10 @@ bash scripts/check.sh
 
 ## Отчёт
 
+- GEN-01 is implemented. The scenario selects two image models and two runs per model through the session models page, configures seeds 11 and 22, then checks four cards and both request seeds per model.
+- The fake returns an empty video catalog so the session models screen completes loading, and a tool-capable default assistant model so its save command can preserve the session assistant setting.
+- Verification: `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait "Category=runs"` passed (1/1); `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` passed.
+
 ## Комментарии
 
 ### 2026-11-09, claude-bdd-plan

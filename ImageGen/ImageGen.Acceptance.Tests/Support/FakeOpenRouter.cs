@@ -28,7 +28,13 @@ public sealed class FakeOpenRouter
             return Task.FromResult(JsonResponse(_keyStatusCode, "{}"));
         });
         network.AddResponse(HttpMethod.Get, Host, "/api/v1/embeddings/models", HttpStatusCode.OK, "{\"data\":[]}");
-        network.AddResponse(HttpMethod.Get, Host, "/api/v1/models", HttpStatusCode.OK, "{\"data\":[]}");
+        network.AddResponse(
+            HttpMethod.Get,
+            Host,
+            "/api/v1/models",
+            HttpStatusCode.OK,
+            "{\"data\":[{\"id\":\"anthropic/claude-haiku-5.5\",\"name\":\"Claude Haiku 5.5\",\"supported_parameters\":[\"tools\"]}]}");
+        network.AddResponse(HttpMethod.Get, Host, "/api/v1/videos/models", HttpStatusCode.OK, "{\"data\":[]}");
         network.AddRoute(HttpMethod.Get, Host, "/api/v1/images/models", (_, _) => Task.FromResult(JsonResponse(HttpStatusCode.OK, ImageModelsJson())));
         network.AddRoute(HttpMethod.Get, Host, "/api/v1/images/models/*/endpoints", (request, _) =>
         {
