@@ -56,6 +56,9 @@ bash scripts/check.sh
 
 ## Отчёт
 
+- CHAT-01 is implemented in `Features/ChatAssistant.feature`; the step bindings assert the assistant text appears in the feed and no run item is present.
+- Verification: `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait "Category=chat"` passed (1/1); `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` passed.
+
 ## Комментарии
 
 ### 2026-11-09, claude-bdd-plan
