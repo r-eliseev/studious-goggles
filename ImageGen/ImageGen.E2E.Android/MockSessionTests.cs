@@ -80,17 +80,37 @@ public sealed class MockSessionTests : AndroidTestBase
 
         Find(TestIds.ChatInput).SendKeys("a red square");
         Find(TestIds.ChatSend).Click();
-        WaitForText(TestIds.ChatRun, TimeSpan.FromSeconds(30), text => text.Contains("a red square", StringComparison.Ordinal));
+        new WebDriverWait(Driver, TimeSpan.FromSeconds(30)).Until(driver =>
+            driver.FindElements(By.Id($"{AppPackage}:id/{TestIds.ChatRun}"))
+                .FirstOrDefault(run => run.GetAttribute("contentDescription")?.Contains("a red square", StringComparison.Ordinal) == true));
 
         var successfulImage = new WebDriverWait(Driver, TimeSpan.FromSeconds(60)).Until(driver =>
-            driver.FindElements(By.Id($"{AppPackage}:id/{TestIds.ChatGeneration}"))
-                .FirstOrDefault(card =>
+        {
+            var card = driver.FindElements(By.Id($"{AppPackage}:id/{TestIds.ChatGeneration}"))
+                .FirstOrDefault(generation =>
                 {
-                    var summary = string.Join(" ", card.Text, card.GetAttribute("contentDescription"));
+                    var summary = string.Join(" ", generation.Text, generation.GetAttribute("contentDescription"));
                     return summary.Contains("e2e/image", StringComparison.Ordinal)
                         && summary.Contains("Done", StringComparison.Ordinal)
                         && !summary.Contains("Error", StringComparison.Ordinal);
-                }));
+                });
+            if (card is not null)
+            {
+                return card;
+            }
+
+            var feed = driver.FindElement(By.Id($"{AppPackage}:id/{TestIds.ChatFeed}"));
+            Driver.ExecuteScript("mobile: scrollGesture", new Dictionary<string, object>
+            {
+                ["left"] = feed.Location.X,
+                ["top"] = feed.Location.Y,
+                ["width"] = feed.Size.Width,
+                ["height"] = feed.Size.Height,
+                ["direction"] = "down",
+                ["percent"] = 0.75,
+            });
+            return null;
+        });
 
         Assert.That(successfulImage, Is.Not.Null, "The E2E image generation should finish successfully.");
     }
