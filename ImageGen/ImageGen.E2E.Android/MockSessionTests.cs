@@ -61,39 +61,7 @@ public sealed class MockSessionTests : AndroidTestBase
         Find(TestIds.SessionsListNew).Click();
         Find(TestIds.ChatModels).Click();
         EnterModelSearch("e2e/image");
-        new WebDriverWait(Driver, TimeSpan.FromSeconds(15)).Until(driver =>
-        {
-            try
-            {
-                var collapsedGroup = driver.FindElements(MobileBy.AndroidUIAutomator(
-                        "new UiSelector().text(\"e2e (1) · 0 selected\").clickable(true)"))
-                    .FirstOrDefault(element => element.Displayed);
-                if (collapsedGroup is null)
-                {
-                    return false;
-                }
-
-                var bounds = collapsedGroup.GetAttribute("bounds") ?? string.Empty;
-                var coordinates = System.Text.RegularExpressions.Regex.Match(bounds, @"\[(\d+),(\d+)\]\[(\d+),(\d+)\]");
-                if (!coordinates.Success)
-                {
-                    return false;
-                }
-
-                var x = (int.Parse(coordinates.Groups[1].Value) + int.Parse(coordinates.Groups[3].Value)) / 2;
-                var y = (int.Parse(coordinates.Groups[2].Value) + int.Parse(coordinates.Groups[4].Value)) / 2;
-                Driver.ExecuteScript("mobile: clickGesture", new Dictionary<string, object> { ["x"] = x, ["y"] = y });
-                return true;
-            }
-            catch (NoSuchElementException)
-            {
-                return false;
-            }
-            catch (StaleElementReferenceException)
-            {
-                return false;
-            }
-        });
+        TapE2eModelGroup();
         new WebDriverWait(Driver, TimeSpan.FromSeconds(15)).Until(driver =>
         {
             try
@@ -128,6 +96,25 @@ public sealed class MockSessionTests : AndroidTestBase
         Assert.That(successfulImage, Is.Not.Null, "The E2E image generation should finish successfully.");
     }
 
+
+    private void TapE2eModelGroup()
+    {
+        var androidHome = Environment.GetEnvironmentVariable("ANDROID_HOME")
+            ?? Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT")
+            ?? throw new InvalidOperationException("ANDROID_HOME or ANDROID_SDK_ROOT must be set.");
+        var adb = Path.Combine(androidHome, "platform-tools", "adb");
+        var group = System.Text.RegularExpressions.Regex.Match(
+            Driver.PageSource,
+            "text=\"e2e \\(1\\) · 0 selected\"[^>]*bounds=\"\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]\"");
+        if (!group.Success)
+        {
+            throw new AssertionException("The e2e model group was not present in the Android UI hierarchy.");
+        }
+
+        var x = (int.Parse(group.Groups[1].Value) + int.Parse(group.Groups[3].Value)) / 2;
+        var y = (int.Parse(group.Groups[2].Value) + int.Parse(group.Groups[4].Value)) / 2;
+        RunAdb(adb, "shell", "input", "tap", x.ToString(), y.ToString());
+    }
 
     private void EnterModelSearch(string searchText)
     {
