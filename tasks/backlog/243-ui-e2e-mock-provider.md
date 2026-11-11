@@ -30,7 +30,7 @@ created: 2026-11-07
   - HTTPS (основной путь):
     1. В начале job создать одноразовый корневой сертификат и сертификат сервера через `openssl` во временной папке runner (`$RUNNER_TEMP`). У сертификата сервера в SAN — `DNS:localhost`. Срок — 2 дня. Закрытые ключи в репозиторий и артефакты не попадают.
     2. Мок слушает `https://0.0.0.0:5443` с этим сертификатом: `Kestrel:Certificates:Default:Path` / `KeyPath` из переменных окружения.
-    3. В эмуляторе: `adb root`, `adb remount` (если просит перезагрузку — `adb reboot`, дождаться `sys.boot_completed`, затем снова `adb root` и `adb remount`). Затем `adb push <ca>.pem /system/etc/security/cacerts/<hash>.0`, где `<hash>` = `openssl x509 -subject_hash_old -noout -in <ca>.pem`, `chmod 644`, перезагрузка.
+    3. В эмуляторе: `adb root`, `adb remount` (если просит перезагрузку — `adb reboot`, дождаться `sys.boot_completed`, затем снова `adb root` и `adb remount`). Затем `adb push <ca>.pem /system/etc/security/cacerts/<hash>.0`, где `<hash>` = `openssl x509 -subject_hash_old -noout -in <ca>.pem`, `chmod 644`, `restorecon`. Установка выполняется до старта приложения, повторную перезагрузку не делать; свежий процесс проверяет доверие к CA.
     4. `adb reverse tcp:5443 tcp:5443`, `baseAddress` = `https://localhost:5443/v1`.
     Проверка: `adb shell` + `curl` в эмуляторе недоступен, поэтому проверяет сам первый шаг сценария: ключ принят, ошибки сети нет. Если `remount` на API 33 не работает, записать вывод и попробовать вариант Б.
   - Вариант Б (запасной): HTTP на `http://localhost:5080`. `ProviderRegistry` пускает `http` только для `localhost`. Выяснить, пускает ли Release cleartext к `localhost`. Если нет — `network_security_config` только для `localhost` и только при свойстве сборки `ImageGenE2E=true`, чтобы обычный Release не менялся. Это правка сборки, поэтому сначала `blocked` и вопрос владельцу.
@@ -52,7 +52,7 @@ created: 2026-11-07
   3. в `chat.feed` в течение 60 с появляется карточка прогона, и в ней — готовая картинка (состояние «готово», не «ошибка»). Текстового ответа ассистента не ждать.
   Если для карточки нет id, добавить его отдельным шагом с константой в `TestIds` и проверкой в `AutomationIdsTests` (как в 239).
 - Workflow: мок запускается в job `test-android` до тестов (`dotnet run --project ImageGen/ImageGen.E2E.MockProvider -- --urls https://0.0.0.0:5443 &` с сертификатом из шага 1, ожидание готовности через `curl --cacert`), установка корневого сертификата в эмулятор, `adb reverse tcp:5443 tcp:5443`; эмулятор этого job — API 33 с `emulator-options: -writable-system -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim`; лог мока — в артефакт.
-- Windows — тот же сценарий в `ImageGen.E2E.Windows`, если 241 работает; иначе пропустить и записать.
+- Windows — тот же полноценный сценарий в `ImageGen.E2E.Windows`: доверить runner одноразовый HTTPS-сертификат, записать providers.json в AppData, пройти первый запуск, создать сессию и проверить готовую картинку от мока.
 
 ## Анализ
 Справочно: исходная спецификация владельца — `docs/specs/ui-e2e-original/` (docx и md); при расхождении действуют ADR 0029 и `docs/specs/ui-e2e.md`.
@@ -65,7 +65,7 @@ created: 2026-11-07
 2. Мок по TDD: маршрут за маршрутом.
 3. `e2e-providers.json` и тест валидации.
 4. Android-сценарий и workflow; прогон в CI.
-5. Windows-сценарий (если 241 зелёный).
+5. Windows-сценарий: использовать общую основу `WindowsTestBase.cs` и добавить в Windows CI шаги доверия сертификату и запуска HTTPS-мока; проверить первый запуск и генерацию изображения.
 
 Файлы:
 - проект мока: `ImageGen/ImageGen.E2E.MockProvider/` (новый) и `ImageGen/ImageGen.E2E.MockProvider.Tests/` (новый), включая их `.csproj`, endpoint code, embedded PNG resource, and WebApplicationFactory tests;
@@ -142,3 +142,6 @@ Claim удалён при сверке статусов: подтверждён�
 
 ### 2026-11-10, codex-gpt6
 Re-claimed after confirming tasks 240 and 241 are done in main. Source inspection confirms `GET /v1/models` key-check semantics, configured (not fetched) model catalogs, `POST /v1/chat/completions` tool-call fields, and `POST /v1/images/generations` base64 response. Selected the planned API 33 system-CA + HTTPS + `adb reverse` route; Release trust and app-data delivery still require the integrated CI check. The local executor has no Android emulator binary, so device behavior must be verified by GitHub Actions.
+
+### 2026-11-11, владелец
+Одобрено дополнить план полноценным Windows-сценарием, включая `WindowsTestBase.cs` и шаги Windows CI для сертификата и мока.

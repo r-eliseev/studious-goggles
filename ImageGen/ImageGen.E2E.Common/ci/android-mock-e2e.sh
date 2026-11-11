@@ -58,23 +58,9 @@ adb shell chown 0:0 "$cert_path"
 adb shell chmod 644 "$cert_path"
 adb shell restorecon "$cert_path"
 adb shell ls -lZ "$cert_path"
-adb reboot
-adb wait-for-device
-booted=false
-for attempt in $(seq 1 180); do
-  boot_state="$(adb shell getprop sys.boot_completed | tr -d '\r' || true)"
-  if [[ "$boot_state" == 1 ]]; then
-    booted=true
-    break
-  fi
-  sleep 1
-done
-if [[ "$booted" != true ]]; then
-  echo 'Android emulator did not finish booting after installing the test CA.' >&2
-  exit 1
-fi
-adb root
-adb wait-for-device
+# The app has not started yet. Android loads the system CA store into each new
+# app process, so the installed certificate is available without rebooting the
+# emulator (which can terminate the hosted emulator process after remount).
 adb reverse tcp:5443 tcp:5443
 
 timeout --foreground --kill-after=5s 120s appium driver doctor uiautomator2
