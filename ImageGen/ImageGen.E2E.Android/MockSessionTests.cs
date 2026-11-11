@@ -61,7 +61,6 @@ public sealed class MockSessionTests : AndroidTestBase
         Find(TestIds.SessionsListNew).Click();
         Find(TestIds.ChatModels).Click();
         EnterModelSearch("e2e/image");
-        TapE2eModelGroup();
         new WebDriverWait(Driver, TimeSpan.FromSeconds(15)).Until(driver =>
         {
             try
@@ -94,35 +93,6 @@ public sealed class MockSessionTests : AndroidTestBase
                 }));
 
         Assert.That(successfulImage, Is.Not.Null, "The E2E image generation should finish successfully.");
-    }
-
-
-    private void TapE2eModelGroup()
-    {
-        var androidHome = Environment.GetEnvironmentVariable("ANDROID_HOME")
-            ?? Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT")
-            ?? throw new InvalidOperationException("ANDROID_HOME or ANDROID_SDK_ROOT must be set.");
-        var adb = Path.Combine(androidHome, "platform-tools", "adb");
-        var remoteHierarchy = "/sdcard/e2e-models.xml";
-        RunAdbWithRetry(adb, "shell", "uiautomator", "dump", remoteHierarchy);
-        var hierarchy = RunAdb(adb, "shell", "cat", remoteHierarchy);
-        var group = System.Text.RegularExpressions.Regex.Match(
-            hierarchy,
-            "<[^>]*text=\"e2e[^\"]*0 selected\"[^>]*>");
-        if (!group.Success)
-        {
-            throw new AssertionException("The e2e model group was not present in the Android UI hierarchy.");
-        }
-
-        var bounds = System.Text.RegularExpressions.Regex.Match(group.Value, "bounds=\"\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]\"");
-        if (!bounds.Success)
-        {
-            throw new AssertionException("The e2e model group did not expose screen bounds.");
-        }
-
-        var x = (int.Parse(bounds.Groups[1].Value) + int.Parse(bounds.Groups[3].Value)) / 2;
-        var y = (int.Parse(bounds.Groups[2].Value) + int.Parse(bounds.Groups[4].Value)) / 2;
-        RunAdb(adb, "shell", "input", "tap", x.ToString(), y.ToString());
     }
 
     private void EnterModelSearch(string searchText)
@@ -179,22 +149,4 @@ public sealed class MockSessionTests : AndroidTestBase
         return output;
     }
 
-    private static string RunAdbWithRetry(string adb, params string[] arguments)
-    {
-        InvalidOperationException? lastFailure = null;
-        for (var attempt = 0; attempt < 10; attempt++)
-        {
-            try
-            {
-                return RunAdb(adb, arguments);
-            }
-            catch (InvalidOperationException exception)
-            {
-                lastFailure = exception;
-                Thread.Sleep(TimeSpan.FromSeconds(2));
-            }
-        }
-
-        throw new InvalidOperationException("The Android UI hierarchy could not be dumped after 10 attempts.", lastFailure);
-    }
 }
