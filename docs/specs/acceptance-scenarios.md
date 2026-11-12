@@ -37,8 +37,8 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 | id | Scenario: condition → expectation | Requirements | Status |
 |---|---|---|---|
 | KEY-01 | First launch without a key → the key screen opens, not the session list (`@e2e`, replaces `FirstRunTests.Launch_ShowsFirstRunKeyScreen`) | S1, F1.1 | done |
-| KEY-02 | A valid key of the default assistant provider (OpenRouter) → status "works", the session list opens without the model choice (corrected 2026-11-10, task 272) | F1.2, S1.3, S6.4 | planned (272) |
-| KEY-12 | On the key screen the user chooses another configured chat provider and saves its key → the model choice of that provider opens; the chosen model becomes the default for new sessions | S6.4 | planned (272) |
+| KEY-02 | A valid key of the default assistant provider (OpenRouter) → status "works", the session list opens without the model choice (corrected 2026-11-10, task 272) | F1.2, S1.3, S6.4 | done |
+| KEY-12 | On the key screen the user chooses another configured chat provider and saves its key → the model choice of that provider opens; the chosen model becomes the default for new sessions | S6.4 | done |
 | KEY-03 | An invalid key (401) → an "invalid key" message with the provider's name, we stay on the key screen, the key is not saved (`@e2e`, replaces `FirstRunTests.InvalidKey_ShowsError`; on a device the message may also be "no connection") | F1.2 | done |
 | KEY-04 | No connection → a "no connection" message, the key is not saved | F1.2 | done |
 | KEY-05 | The error text and the app log do not contain the entered key | F1.3, F10.3 | done |

@@ -39,6 +39,13 @@ public sealed class CommonSteps(ScenarioContext scenario)
         }, TestContext.Current.CancellationToken).ConfigureAwait(false);
     }
 
+    [Given("the app has a configured chat provider {string}")]
+    public async Task GivenTheAppHasAConfiguredChatProvider(string providerId)
+    {
+        Assert.Equal("e2e-mock", providerId);
+        await World.ConfigureChatProviderAsync(TestContext.Current.CancellationToken);
+    }
+
     [Given("the user has a saved OpenRouter key")]
     public async Task GivenTheUserHasASavedOpenRouterKey()
     {

@@ -1,8 +1,8 @@
 ---
 id: 272
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-12T21:43:49Z
+status: review
+assignee:
+claimed:
 created: 2026-11-10
 ---
 
@@ -45,6 +45,11 @@ bash scripts/check.sh
 - Write everything in English; in the "Report": scenarios, commands and results.
 
 ## Report
+
+- Corrected KEY-02 to verify that a valid OpenRouter key opens Sessions without the assistant model chooser and preserves the default model.
+- Added KEY-12 with a temporary OpenAI-compatible chat provider in the acceptance world's `providers.json`; selected it on first run, checked that its assistant model chooser appears, saved the model, and verified it in Settings.
+- Updated `docs/specs/acceptance-scenarios.md`; both KEY-02 and KEY-12 are marked `done`.
+- Verification: `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` passed (42 passed, 1 skipped); `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` and `bash scripts/check.sh` passed.
 
 ## Comments
 ### 2026-11-10, codex-gpt6

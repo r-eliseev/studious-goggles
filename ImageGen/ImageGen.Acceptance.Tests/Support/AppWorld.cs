@@ -60,6 +60,16 @@ public sealed class AppWorld : IDisposable
 
     public string DataDirectory => _paths.DataDirectory;
 
+    public async Task ConfigureChatProviderAsync(CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(DataDirectory);
+        await File.WriteAllTextAsync(
+            Path.Combine(DataDirectory, "providers.json"),
+            """{"providers":[{"id":"e2e-mock","kind":"openAiCompatible","displayName":"E2E Mock","baseAddress":"https://localhost:5443/v1/","chatModels":[{"id":"e2e/assistant","name":"E2E Assistant","supportsImageInput":false,"contextLength":8192}]}]}""",
+            cancellationToken);
+        Network.AddResponse(HttpMethod.Get, "localhost", "/v1/models", System.Net.HttpStatusCode.OK, "{}");
+    }
+
     public ServiceProvider Provider => _provider ?? throw new InvalidOperationException("The app world has not been started.");
 
     public MainWindow Window => _window ?? throw new InvalidOperationException("The app world has not been started.");
