@@ -65,6 +65,13 @@ public sealed class FakeOpenRouter
                     });
                 }
 
+                pricing.Add(new JsonObject
+                {
+                    ["billable"] = "input_image",
+                    ["unit"] = "megapixel",
+                    ["cost_usd"] = 9.99m,
+                });
+
                 endpoints.Add(new JsonObject { ["pricing"] = pricing });
             }
 
@@ -205,6 +212,11 @@ public sealed class FakeOpenRouter
                 supportedParameters["seed"] = true;
             }
 
+            AddEnumParameter(supportedParameters, "aspect_ratio", model.AspectRatios);
+            AddEnumParameter(supportedParameters, "resolution", model.Resolutions);
+            AddEnumParameter(supportedParameters, "output_format", model.Formats);
+            AddEnumParameter(supportedParameters, "quality", model.Qualities);
+
             models.Add(new JsonObject
             {
                 ["id"] = model.Id,
@@ -214,6 +226,16 @@ public sealed class FakeOpenRouter
         }
 
         return new JsonObject { ["data"] = models }.ToJsonString();
+    }
+
+    private static void AddEnumParameter(JsonObject parameters, string name, IReadOnlyList<string>? values)
+    {
+        if (values is not { Count: > 0 }) return;
+        parameters[name] = new JsonObject
+        {
+            ["type"] = "enum",
+            ["values"] = new JsonArray(values.Select(value => (JsonNode?)JsonValue.Create(value)).ToArray()),
+        };
     }
 
     private static HttpResponseMessage JsonResponse(HttpStatusCode statusCode, string body) =>
@@ -314,5 +336,14 @@ public sealed class FakeOpenRouter
         public static GenerationReply Pending(FakeNetwork.HeldResponse response) => new(0, 0, 0, Held: response);
     }
 
-    public sealed record ImageModel(string Id, string Name, bool SupportsSeed, decimal? PricePerMegapixel, decimal? PricePerImageUsd = null);
+    public sealed record ImageModel(
+        string Id,
+        string Name,
+        bool SupportsSeed,
+        decimal? PricePerMegapixel,
+        decimal? PricePerImageUsd = null,
+        IReadOnlyList<string>? AspectRatios = null,
+        IReadOnlyList<string>? Resolutions = null,
+        IReadOnlyList<string>? Formats = null,
+        IReadOnlyList<string>? Qualities = null);
 }

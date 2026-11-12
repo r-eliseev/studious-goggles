@@ -115,14 +115,14 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 ### Session models and parameters (`SessionModels.feature`, task 260)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| MOD-01 | Choosing two models and three runs → the next run is two models × 3 | S5.1, S5.2 | planned |
-| MOD-02 | The number of runs is limited to 1–10 | S5.1 | planned |
-| MOD-03 | Search in the model list narrows the list by name and id | S5.1 | planned |
-| MOD-04 | Models are grouped by vendor from the id prefix | S5.5 | planned |
-| MOD-05 | The price in a model row is only `output_image`; without a price — "price unknown" | S5.6 | planned |
-| MOD-06 | Refresh re-requests the catalog and prices; without Refresh reopening uses the cache (no requests) | S5.6 | planned |
-| MOD-07 | Cancel does not save the changes | S5.1 | planned |
-| MOD-08 | Session parameters (aspect ratio, resolution, format) go into the generation request body | F4.2 | planned |
+| MOD-01 | Choosing two models and three runs → the next run is two models × 3 | S5.1, S5.2 | done |
+| MOD-02 | The number of runs is limited to 1–10 | S5.1 | done |
+| MOD-03 | Search in the model list narrows the list by name and id | S5.1 | done |
+| MOD-04 | Models are grouped by vendor from the id prefix | S5.5 | done |
+| MOD-05 | The price in a model row is only `output_image`; without a price — "price unknown" | S5.6 | done |
+| MOD-06 | Refresh re-requests the catalog and prices; without Refresh reopening uses the cache (no requests) | S5.6 | done |
+| MOD-07 | Cancel does not save the changes | S5.1 | done |
+| MOD-08 | Session parameters (aspect ratio, resolution, format) go into the generation request body | F4.2 | done |
 | MOD-09 | A selected model vanished from the catalog → this is visible and it can be removed | — | after 236 |
 
 ### Settings and appearance (`Settings.feature`, task 261)

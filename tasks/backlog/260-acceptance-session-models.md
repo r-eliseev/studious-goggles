@@ -1,8 +1,8 @@
 ---
 id: 260
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-12T21:49:55Z
+status: review
+assignee:
+claimed:
 created: 2026-11-09
 ---
 
@@ -56,6 +56,12 @@ bash scripts/check.sh
 - В «Отчёте»: какие сценарии зелёные, какие `@ignore` и с какими задачами, команды и результаты, отличия от плана. Статусы сценариев в `docs/specs/acceptance-scenarios.md` обнови.
 
 ## Отчёт
+
+- Added MOD-01–MOD-08 in `Features/SessionModels.feature` with page-model steps for selection, search, vendor grouping, price rendering, catalog refresh/cache, cancellation and generation parameters.
+- Extended the OpenRouter fake with parameter catalogs and a non-output input-image price to verify only `output_image` is shown. The catalog response can be replaced between steps to check refresh behavior.
+- MOD-02 checks the page model's 1–10 bounds. The actual `NumericUpDown` is not present in the headless window's visual tree, so the step cannot drive its value; the view binds its `Minimum` and `Maximum` to those same bounds.
+- Updated `docs/specs/acceptance-scenarios.md`; MOD-01–MOD-08 are `done`. MOD-09 remains after task 236.
+- Verification: filtered model scenarios passed (8/8); the full acceptance suite passed (50 passed, 1 skipped); `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` and `bash scripts/check.sh` passed.
 
 ## Комментарии
 
