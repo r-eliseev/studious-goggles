@@ -1,8 +1,8 @@
 ---
 id: 274
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-11T19:51:53Z
+status: blocked
+assignee:
+claimed:
 created: 2026-11-11
 ---
 
@@ -64,3 +64,6 @@ bash scripts/check.sh
 ## Comments
 ### 2026-11-11, owner (in the chat, recorded by claude-planner)
 The smoke tests must always pass; continue the investigation instead of relaxing the criterion of 247. Plan approved ("create tasks for the fixes with plans"). The change of `.github/workflows/apple-ci.yml` is allowed for this task.
+
+### 2026-11-12, codex-gpt6
+The required `workflow_dispatch` run with 20 repetitions is still running. The Avalonia simulator build has passed, but its smoke job is queued on GitHub-hosted macOS capacity, so there are no repetition results to inspect yet. This task is blocked on runner availability; resume it when the smoke job runs and produces its artifacts. The plan and acceptance criterion remain unchanged.
