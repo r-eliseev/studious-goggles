@@ -1,6 +1,6 @@
 ---
 id: 274
-status: blocked
+status: approved
 assignee:
 claimed:
 created: 2026-11-11
@@ -67,3 +67,6 @@ The smoke tests must always pass; continue the investigation instead of relaxing
 
 ### 2026-11-12, codex-gpt6
 The required `workflow_dispatch` run with 20 repetitions is still running. The Avalonia simulator build has passed, but its smoke job is queued on GitHub-hosted macOS capacity, so there are no repetition results to inspect yet. This task is blocked on runner availability; resume it when the smoke job runs and produces its artifacts. The plan and acceptance criterion remain unchanged.
+
+### 2026-11-12, codex-gpt6
+Runner capacity became available and both iOS smoke jobs started in run [43296911876](https://github.com/r-eliseev/studious-goggles/actions/runs/43296911876). The task is eligible again; inspect its artifacts when the run completes.
