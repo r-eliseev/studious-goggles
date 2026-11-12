@@ -1,8 +1,8 @@
 ---
 id: 277
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-12T20:13:36Z
+status: review
+assignee:
+claimed:
 created: 2026-11-11
 ---
 
@@ -35,6 +35,15 @@ bash scripts/check.sh
 ```
 
 ## Отчёт
+Updated `ImageGen/ImageGen.Acceptance.Tests/Support/AppWorldTests.cs` to await `AppWorld.DisposeAsync()` in a `finally` block within the `HeadlessApp.RunAsync` callback. This avoids synchronous disposal on the Avalonia UI dispatcher and still cleans up when an assertion fails. No production code changed.
+
+Verification:
+- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --filter FullyQualifiedName~AppWorldTests.RestartAsync_ReusesDataFolderAndSecretStore` — passed (1/1).
+- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` — passed (40 passed, 2 skipped, 0 failed).
+- `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` — passed.
+- `bash scripts/check.sh` — passed.
+
+No differences from the approved plan.
 
 ## Review
 
