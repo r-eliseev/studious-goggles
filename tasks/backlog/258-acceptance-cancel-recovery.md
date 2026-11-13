@@ -1,8 +1,8 @@
 ---
 id: 258
-status: in-progress
-assignee: codex-20261113
-claimed: 2026-11-13T19:05:56Z
+status: blocked
+assignee:
+claimed:
 created: 2026-11-09
 ---
 
@@ -57,6 +57,11 @@ bash scripts/check.sh
 ## Report
 
 ## Comments
+
+### 2026-11-13, codex — blocker found during CAN-01
+The approved expectation says that cancelling a held OpenRouter image request produces a cancelled generation. Current code contradicts that expectation: `GenerationService.CancelGenerationCoreAsync` returns `CancelFailed` when the request has already been submitted but the provider supplied no remote job handle (`ImageGen/ImageGen.Core/Services/GenerationService.cs`, branch `remote is null` and `!requestedBeforeSubmit`); `ChatPageModel.CancelCardAsync` then shows `AppResources.CancelFailed` instead of changing the generation state (`ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs`). The specification S3.5.1 describes `Cancelled` and `NotFound` outcomes for provider cancellation but does not define user cancellation of a submitted request without a handle. This prevents CAN-01, CAN-02 and CAN-05 from using the planned OpenRouter fake response as written.
+
+Proposed plan change: first decide the intended cancellation semantics for an active OpenRouter request without a job handle. If the intended behavior is local stop-waiting with a terminal cancelled state, amend S3.5.1 and the approved task plan, then implement/cover it. If the intended behavior remains “Could not cancel; the generation may still finish”, amend CAN-01/CAN-02/CAN-05 expectations to verify the failed-cancellation status and use another provider with cancellable remote handles for confirmed-cancellation cases. CAN-03 and CAN-04 can proceed independently after a plan amendment explicitly marks the blocked scenarios and test ordering.
 
 ### 2026-11-09, claude-bdd-plan
 Created at the owner's request to plan application test scenarios for GPT Luna. Scenarios and expectations are in `docs/specs/acceptance-scenarios.md`. The plan awaits approval.
