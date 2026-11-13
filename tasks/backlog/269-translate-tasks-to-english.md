@@ -1,8 +1,8 @@
 ---
 id: 269
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-13T06:28:52Z
+status: blocked
+assignee:
+claimed:
 created: 2026-11-09
 ---
 
@@ -69,6 +69,12 @@ TASKS_BRANCH=main scripts/list-tasks.sh --main approved
 - Quoted Russian UI/status literals remain unchanged as required by the plan (for example, in task 016 and cards 046, 198, 243, 248, 258, 259, 262–265). This conflicts with the current `check-latin.sh` rule, which permits exceptions only for non-English test data. Resolve this before adding `tasks` to `LATIN_PATHS`; a plan/owner decision is needed on whether those quoted literals may be translated or whitelisted.
 
 ## Comments
+
+### 2026-11-13, codex-gpt6
+The approved plan has incompatible requirements for the Latin-only check. `Execution order` says to keep quoted UI text unchanged, and the translated task cards retain required Russian UI/status literals (for example `tasks/backlog/258-acceptance-cancel-recovery.md` uses `“отменено”` as an expected application status). The acceptance criteria also require adding all of `tasks/` to `LATIN_PATHS`, while `scripts/check-latin.sh` rejects every non-Latin letter and allows exceptions only for non-English test data. Therefore the check cannot pass without either changing the task content contrary to the approved translation rule or widening the checker exceptions contrary to its current documented purpose.
+
+Proposed plan change: explicitly permit exact quoted UI/status literals in task cards through a narrowly scoped allowlist for `tasks/` (separate from test-data exceptions), while keeping the rest of task files under `LATIN_PATHS`; alternatively, approve translating those literals and accepting that task examples no longer match the current UI. Please choose the intended rule and update the plan before implementation continues.
+
 
 ### 2026-11-09, claude-bdd-plan
 Part of 268. Changing `scripts/` is allowed by the owner's request to translate everything (2026-11-09). The plan waits for approval.
