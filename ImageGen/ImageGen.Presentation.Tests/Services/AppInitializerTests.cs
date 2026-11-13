@@ -79,6 +79,26 @@ public class AppInitializerTests : IDisposable
         await _runs.Received(1).MarkUnfinishedAsInterruptedAsync(Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task EnsureInitializedAsync_DoesNotWaitForModelCatalogRefresh()
+    {
+        var enteredRefresh = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseRefresh = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var refresh = Substitute.For<Func<CancellationToken, Task>>();
+        refresh(Arg.Any<CancellationToken>()).Returns(async _ =>
+        {
+            enteredRefresh.SetResult();
+            await releaseRefresh.Task;
+        });
+        var initializer = CreateInitializer(refreshModelCatalogs: refresh);
+
+        await initializer.EnsureInitializedAsync();
+        await enteredRefresh.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        _ = refresh.Received(1).Invoke(Arg.Any<CancellationToken>());
+        releaseRefresh.SetResult();
+    }
+
     public void Dispose()
     {
         SqliteConnection.ClearAllPools();
@@ -88,7 +108,7 @@ public class AppInitializerTests : IDisposable
         }
     }
 
-    private AppInitializer CreateInitializer(IImageFileStore? files = null)
+    private AppInitializer CreateInitializer(IImageFileStore? files = null, Func<CancellationToken, Task>? refreshModelCatalogs = null)
     {
         var catalog = new ModelCatalogService(ProviderDoubles.Router(), Substitute.For<IImageModelRepository>(), NullLogger<ModelCatalogService>.Instance);
         var generation = new GenerationService(
@@ -101,6 +121,7 @@ public class AppInitializerTests : IDisposable
             new AttachmentService(Substitute.For<IChatAttachmentRepository>(), Substitute.For<IImageFileStore>(), TimeProvider.System),
             TimeProvider.System,
             NullLogger<GenerationService>.Instance, new SessionChangeNotifier(NullLogger<SessionChangeNotifier>.Instance));
-        return new AppInitializer(_database, generation, ProviderDoubles.BuiltInRegistry(), files ?? Substitute.For<IImageFileStore>(), TimeProvider.System);
+        return new AppInitializer(_database, generation, ProviderDoubles.BuiltInRegistry(), files ?? Substitute.For<IImageFileStore>(), TimeProvider.System,
+            refreshModelCatalogs ?? (_ => Task.CompletedTask));
     }
 }

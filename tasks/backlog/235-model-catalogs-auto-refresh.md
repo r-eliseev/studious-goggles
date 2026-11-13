@@ -1,8 +1,8 @@
 ---
 id: 235
-status: in-progress
-assignee: codex-20261113
-claimed: 2026-11-13T13:55:20Z
+status: review
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -64,6 +64,12 @@ bash scripts/check.sh
 - Run `dotnet` commands one at a time. In the "Report": what changed, commands and results, differences from the plan.
 
 ## Report
+
+- Added `ModelCatalogRefreshService`, registered it in Core DI, and refreshes stale image, video, audio and embedding catalogs only for providers with configured keys. Empty and 24-hour-old catalogs are refreshed through existing catalog services; refresh failures are logged per catalog/provider and do not stop later catalogs.
+- Avalonia/MAUI startup launches catalog refresh after initialization using `FireAndForgetSafeAsync`; Web startup launches it after recovery and cancels/awaits it at host stop.
+- Added Core refresh tests and an initializer test proving startup completion does not wait for the background refresh.
+- Verification passed: Core tests (851), Presentation tests (546), Avalonia tests (187 passed, 2 platform skips), Web tests (21), Acceptance tests (50 passed, 1 skip); Core/Presentation/Web `dotnet format --verify-no-changes`; `bash scripts/check.sh`.
+- No plan deviations. Avalonia platform skips: Windows DPAPI and unavailable Linux Secret Service D-Bus.
 
 ## Comments
 
