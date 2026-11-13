@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Проверка файлов задач. Код возврата 1, если есть ошибки.
+# Task-file checks. Exit code 1 if any check fails.
 cd "$(dirname "$0")/.."
 . scripts/tasks-lib.sh
 fail=0
@@ -10,35 +10,35 @@ filled() { awk -v h="$2" '$0=="## " h {p=1; next} /^## /{p=0} p && NF {f=1} END{
 while IFS= read -r f; do
   id=$(task_field "$f" id); st=$(task_field "$f" status)
   as=$(task_field "$f" assignee); cl=$(task_field "$f" claimed); base=$(basename "$f")
-  [ -n "$id" ] || { echo "ОШИБКА: $f: нет поля id"; fail=1; }
-  [ -n "$st" ] || { echo "ОШИБКА: $f: нет поля status"; fail=1; }
+  [ -n "$id" ] || { echo "ERROR: $f: missing id field"; fail=1; }
+  [ -n "$st" ] || { echo "ERROR: $f: missing status field"; fail=1; }
   if [ -n "$id" ]; then
-    case "$base" in "$id"-*) ;; *) echo "ОШИБКА: $f: id '$id' не совпадает с именем файла"; fail=1 ;; esac
-    case "$ids" in *" $id "*) echo "ОШИБКА: $f: повторяющийся id $id"; fail=1 ;; esac
+    case "$base" in "$id"-*) ;; *) echo "ERROR: $f: id '$id' does not match the filename"; fail=1 ;; esac
+    case "$ids" in *" $id "*) echo "ERROR: $f: duplicate id $id"; fail=1 ;; esac
     ids="$ids$id "
   fi
   if [ -n "$st" ]; then
-    case "$allowed" in *" $st "*) ;; *) echo "ОШИБКА: $f: неизвестный статус '$st'"; fail=1 ;; esac
+    case "$allowed" in *" $st "*) ;; *) echo "ERROR: $f: unknown status '$st'"; fail=1 ;; esac
     case "$st" in planned|approved|in-progress|review|done)
-      { filled "$f" "План" || filled "$f" "Plan"; } || { echo "ОШИБКА: $f: статус '$st', но раздел 'План' пуст"; fail=1; } ;;
+      { filled "$f" "План" || filled "$f" "Plan"; } || { echo "ERROR: $f: status '$st', but the Plan section is empty"; fail=1; } ;;
     esac
     if [ "$st" = "done" ]; then
-      { filled "$f" "Отчёт" || filled "$f" "Report"; } || { echo "ОШИБКА: $f: статус 'done', но раздел 'Отчёт' пуст"; fail=1; }
+      { filled "$f" "Отчёт" || filled "$f" "Report"; } || { echo "ERROR: $f: status 'done', but the Report section is empty"; fail=1; }
     fi
     if [ "$st" = "in-progress" ] && [ -z "$as" ]; then
-      echo "ОШИБКА: $f: статус 'in-progress', но не указан assignee"; fail=1
+      echo "ERROR: $f: status 'in-progress', but assignee is missing"; fail=1
     fi
-    # Готовый код в незавершённых задачах запрещён: только концепции, пробный код — в poc/ (docs/tasks.md)
+    # Finished code is forbidden in unfinished tasks: plans contain concepts only; proof-of-concept code belongs in poc/ (docs/tasks.md)
     case "$st" in done|cancelled) ;; *)
       grep -qE '^[[:space:]]*```(csharp|cs|xml|xaml)[[:space:]]*$' "$f" \
-        && { echo "ОШИБКА: $f: в задаче блок кода C#/XAML; в плане только концепции, пробный код — в poc/"; fail=1; } ;;
+        && { echo "ERROR: $f: C#/XAML code block in task; plans contain concepts only, proof-of-concept code belongs in poc/"; fail=1; } ;;
     esac
     case "$st" in done|cancelled)
-      [ -z "$as" ] || { echo "ОШИБКА: $f: статус '$st', но задача всё ещё занята ($as): scripts/release-task.sh ${id:-N}"; fail=1; } ;;
+      [ -z "$as" ] || { echo "ERROR: $f: status '$st', but task is still claimed ($as): scripts/release-task.sh ${id:-N}"; fail=1; } ;;
     esac
   fi
   if [ -n "$as" ] && [ -z "$cl" ]; then
-    echo "ОШИБКА: $f: указан assignee, но нет claimed"; fail=1
+    echo "ERROR: $f: assignee is set but claimed is missing"; fail=1
   fi
 done < <(find tasks -type f -name '[0-9][0-9]*-*.md' | sort)
 
@@ -83,8 +83,8 @@ if git rev-parse --verify -q "$base^{commit}" >/dev/null 2>&1; then
   rm -f "$oldf"
 fi
 
-# Номер задачи не должен повторять номер из журнала завершённых (tasks/DONE.md)
+# Task numbers must not reuse numbers in the completed-task log (tasks/DONE.md)
 for d in $(task_done_ids .); do
-  case "$ids" in *" $d "*) echo "ОШИБКА: номер $d уже есть в tasks/DONE.md (завершённая задача): перенумеруй новую задачу"; fail=1 ;; esac
+  case "$ids" in *" $d "*) echo "ERROR: number $d is already in tasks/DONE.md (completed task); renumber the new task"; fail=1 ;; esac
 done
 exit $fail

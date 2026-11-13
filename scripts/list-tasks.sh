@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Список задач: статус, исполнитель, файл.
-# Использование: scripts/list-tasks.sh [--main] [статус] [релиз]
-# С --main список берётся из ветки origin, одноимённой текущей (TASKS_BRANCH=main — смердженное состояние), а не из рабочей копии.
+# List tasks: status, assignee, file.
+# Usage: scripts/list-tasks.sh [--main] [status] [release]
+# With --main, list tasks from the matching origin branch (TASKS_BRANCH=main means merged state), not the working copy.
 cd "$(dirname "$0")/.."
 . scripts/tasks-lib.sh
 if [ "${1:-}" = "--main" ]; then

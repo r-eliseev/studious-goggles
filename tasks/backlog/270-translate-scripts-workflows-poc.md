@@ -46,7 +46,20 @@ bash scripts/tests/check-latin.sh
 
 ## Report
 
+### 2026-11-13, codex-gpt6
+- Translated shell-script comments and user-facing messages, including task helpers, audit, documentation/task checks, archive, and release notes. Updated the affected regression assertions.
+- Preserved parser tokens in `scripts/check-tasks.sh` and `scripts/submit-task.sh`; these still recognize Russian section headings while task 269 is unresolved.
+- Verification passed: `bash scripts/check.sh`, `scripts/list-tasks.sh approved`, `bash scripts/audit.sh`, `bash scripts/tests/release-notes-empty-previous.sh`, `bash scripts/tests/check-latin.sh`, `bash scripts/check-latin.sh .github poc`, `bash -n scripts/*.sh scripts/tests/*.sh ImageGen/ImageGen.E2E.Common/ci/allure-summary.sh`, and `scripts/archive-tasks.sh --dry-run`.
+- The workflow, Allure summary, and POC README translation is in progress; Latin-path registration remains pending because parser literals in scripts are still non-Latin.
+
+
 ## Comments
+
+### 2026-11-13, codex-gpt6
+Adding the whole `scripts/` directory to `LATIN_PATHS` cannot pass yet without changing task-parser behavior or the Latin-check policy. Required Cyrillic parser literals remain in `scripts/check-tasks.sh` (section/approval parsing), `scripts/submit-task.sh` (Report section parsing), and `scripts/check-docs.sh` (legacy architecture-text scan). `scripts/tests/check-latin.sh` also intentionally contains non-Latin test inputs. The current checker permits exceptions only for test data, so only the latter is eligible for an exception.
+
+Proposed plan change: after task 269 completes the task-section migration, remove the Russian parser alternatives there and in `submit-task.sh`; either replace the remaining `check-docs.sh` literal patterns with behavior-equivalent escaped Unicode forms, or approve a narrowly scoped exception for that checker script. Add `scripts/tests/check-latin.sh` as a test-data exception. Then add `scripts/` to `LATIN_PATHS` and run the full check. Until this is approved, the script translations are committed in progress and the Latin-path step is not complete.
+
 
 ### 2026-11-09, claude-bdd-plan
 Part of 268. The plan waits for approval.

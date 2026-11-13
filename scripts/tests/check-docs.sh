@@ -23,7 +23,7 @@ if out=$(bash scripts/check-docs.sh 2>&1); then
   echo 'check-docs regression: missing executor skill must fail' >&2
   exit 1
 fi
-printf '%s\n' "$out" | grep -Fq 'ОШИБКА: нет файла .claude/skills/executor/SKILL.md' || {
+printf '%s\n' "$out" | grep -Fq 'ERROR: missing file .claude/skills/executor/SKILL.md' || {
   echo "check-docs regression: expected executor skill error, got: $out" >&2
   exit 1
 }
