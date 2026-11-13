@@ -1,6 +1,6 @@
 ---
 id: 271
-status: approved
+status: in-progress
 assignee:
 claimed:
 created: 2026-11-09
@@ -61,3 +61,8 @@ Part of 268. The plan waits for approval.
 
 ### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan)
 Plan approved ("approve all tasks with plans").
+
+### 2026-11-13, codex-gpt6
+The approved plan has conflicting requirements for localized accessibility tests. `ImageGen/ImageGen.Avalonia.Tests/Views/ViewsAccessibilityTests.cs` asserts Russian accessible names (`чат`, `модели`, `ключ`, `сессии`, `настройки`), while the execution order says to keep quoted UI text unchanged. The acceptance criteria require adding `ImageGen/` to `LATIN_PATHS`, but `scripts/check-latin.sh` permits exceptions only for test data that verifies non-English input. Translating these assertions would make the tests disagree with the Russian resource values; exempting the file does not match the stated exception policy.
+
+Proposed plan amendment: keep these localized accessible-name assertions unchanged and allow a narrowly documented `LATIN_EXCEPTIONS` entry for this test file with reason `assertions for Russian localized accessibility labels`; add `ImageGen/` to `LATIN_PATHS`, and keep only this file plus genuine non-English search input fixtures as exceptions. Alternatively, update the product localization and its plan in a separate approved task. No code or plan section was changed. Waiting for planner resolution.
