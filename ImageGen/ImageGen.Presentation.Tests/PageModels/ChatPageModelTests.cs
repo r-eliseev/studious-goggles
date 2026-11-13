@@ -1099,22 +1099,24 @@ public class ChatPageModelTests
     [Fact]
     public async Task GeneratingCard_UpdatesInPlaceWithoutReload()
     {
-        // Two cards mean two generator calls; wait for both, not only the first.
-        var allEntered = new TaskCompletionSource();
+        // Wait until both Running states have been persisted, not only until provider calls start.
+        var allRunning = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource<ImageGenerationResult>();
-        var entered = 0;
+        var running = 0;
         _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(_ =>
         {
-            if (Interlocked.Increment(ref entered) == 2)
-            {
-                allEntered.TrySetResult();
-            }
-
             return release.Task;
         });
+        _generationService.GenerationUpdated += (_, args) =>
+        {
+            if (args.Generation.Status == GenerationStatus.Running && Interlocked.Increment(ref running) == 2)
+            {
+                allRunning.TrySetResult();
+            }
+        };
         await _model.OnAppearingAsync();
         await _generationService.StartRunAsync(_session.Id, "red fox", TestContext.Current.CancellationToken);
-        await allEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await allRunning.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         await _model.ReloadAsync();
         var cards = Cards.ToList();
         Assert.Equal(2, cards.Count);
