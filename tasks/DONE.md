@@ -239,3 +239,12 @@ Tasks with status `done` or `cancelled` removed from `tasks/` by `scripts/archiv
 - 252 | backlog | done | 2026-11-10 | Acceptance scenarios: Reqnroll, the project and headless Avalonia | `tasks/backlog/252-acceptance-reqnroll-setup.md`
 - 253 | backlog | done | 2026-11-10 | Acceptance scenarios: app world — scripted network fake, time, seeds, restart | `tasks/backlog/253-acceptance-app-world.md`
 - 254 | backlog | done | 2026-11-10 | Acceptance scenarios: first run and provider keys | `tasks/backlog/254-acceptance-first-run-keys.md`
+- 243 | backlog | done | 2026-11-13 | UI tests: local provider mock and “session → generation” scenario | `tasks/backlog/243-ui-e2e-mock-provider.md`
+- 245 | backlog | done | 2026-11-13 | Apple CI: four unsigned builds with separate statuses | `tasks/backlog/245-apple-compile-jobs.md`
+- 246 | backlog | done | 2026-11-13 | Avalonia iOS: simulator application host | `tasks/backlog/246-avalonia-ios-host.md`
+- 249 | backlog | done | 2026-11-13 | macOS: runner GUI preflight, launch two .app files and, if possible, Mac2 UI tests | `tasks/backlog/249-macos-gui-preflight-smoke.md`
+- 260 | backlog | done | 2026-11-13 | Acceptance scenarios: session models and parameters | `tasks/backlog/260-acceptance-session-models.md`
+- 270 | backlog | done | 2026-11-13 | Translate the script messages, workflow comments and poc to English | `tasks/backlog/270-translate-scripts-workflows-poc.md`
+- 272 | backlog | done | 2026-11-13 | Acceptance first-run assistant model choice | `tasks/backlog/272-acceptance-key-assistant-choice.md`
+- 275 | backlog | done | 2026-11-13 | Avalonia iOS: run full screen instead of the letterboxed compatibility mode | `tasks/backlog/275-avalonia-ios-full-screen.md`
+- 277 | backlog | done | 2026-11-13 | Avoid blocking disposal in the acceptance AppWorld restart test | `tasks/backlog/277-acceptance-appworld-async-disposal.md`
