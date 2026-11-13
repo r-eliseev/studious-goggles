@@ -1,8 +1,8 @@
 ---
 id: 274
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-13T06:16:51Z
+status: blocked
+assignee:
+claimed:
 created: 2026-11-11
 ---
 
@@ -70,3 +70,14 @@ The required `workflow_dispatch` run with 20 repetitions is still running. The A
 
 ### 2026-11-12, codex-gpt6
 Runner capacity became available and both iOS smoke jobs started in run [43296911876](https://github.com/r-eliseev/studious-goggles/actions/runs/43296911876). The task is eligible again; inspect its artifacts when the run completes.
+
+### 2026-11-13, codex-gpt6
+The cancelled 20-repeat run [43296911876](https://github.com/r-eliseev/studious-goggles/actions/runs/43296911876) did upload partial artifacts for Avalonia runs 01–14 (14/20; the task report must not treat this as a complete failure rate). Evidence:
+- Runs 09 and 11 have `crashReports=1`, but the only copied reports are `UsageTrackingAgent-*.ips`; their `app_name` is `UsageTrackingAgent`, so these are host macOS crashes rather than Avalonia crashes.
+- Run 14 has `aliveAfter30s=false`, `crashReports=0`, and `exitedAtSeconds=5`. Its timeline says the process is absent through 45 seconds and present at 50 seconds. The app log says it starts at `2026-11-12 21:48:43.500`; simulator.log records the process receiving SIGTERM at `21:49:46.771`, at cleanup, with no app crash report. This suggests the smoke observed a delayed startup rather than a spontaneous app exit; the cause of the delay remains unknown.
+
+The approved plan has a reproducible timeout mismatch: the previous 20-repeat job was cancelled after 14 runs and more than 90 minutes, while both smoke jobs have `timeout-minutes: 90` in `.github/workflows/apple-ci.yml`. At the observed pace, 20 runs cannot complete within that limit. The current retry, [43377652976](https://github.com/r-eliseev/studious-goggles/actions/runs/43377652976), is running the same 20-repeat plan and currently has both smoke jobs in progress.
+
+Proposed plan amendment: allow increasing the smoke-job timeout to cover a 20-repeat run and emit per-repeat progress/partial evidence; change the diagnostic so a process not yet seen is distinct from one that exited, and count/report app-specific crash reports separately from unrelated macOS runner reports. Then complete the 20-repeat run and document whether the launch-delay pattern recurs. Until the planner resolves this plan mismatch, this task is blocked and its claim is released.
+
+The follow-up run [43377652976](https://github.com/r-eliseev/studious-goggles/actions/runs/43377652976) was cancelled after the timeout mismatch was confirmed; it had not yet produced final artifacts. Its build jobs passed, but it does not count as a 20-repeat result.
