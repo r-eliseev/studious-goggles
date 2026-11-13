@@ -1,8 +1,8 @@
 ---
 id: 274
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: codex-20261113
+claimed: 2026-11-13T14:08:03Z
 created: 2026-11-11
 ---
 
