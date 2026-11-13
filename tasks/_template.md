@@ -8,16 +8,16 @@ created: {{DATE}}
 
 # {{TITLE}}
 
-## Описание
+## Description
 
-## Критерии готовности
+## Acceptance criteria
 
-## Анализ
+## Analysis
 
-## План
+## Plan
 
-## Отчёт
+## Report
 
 ## Review
 
-## Комментарии
+## Comments

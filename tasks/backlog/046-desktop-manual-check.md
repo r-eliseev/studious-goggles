@@ -6,91 +6,91 @@ claimed:
 created: 2026-10-28
 ---
 
-# Ручная проверка Avalonia на Linux-рабочем столе и Windows
+# Manual Avalonia check on Linux desktop and Windows
 
-## Описание
-Пройти руками сценарий скелета в Avalonia-оболочке с настоящим ключом OpenRouter: на Linux с рабочим столом (gnome-keyring или KWallet) и на Windows. Сюда собраны ручные пункты, которые остались непроверенными после задач 038–042 (их «Отчёты»): реальный экран, диалоги, сохранённый ключ после перезапуска, реальный ответ OpenRouter, картинка на карточке. Проверку делает человек (ключ и клики); агент готовит сборку, читает логи и оформляет расхождения задачами. Код здесь не меняется.
+## Description
+Manually walk through the Avalonia shell's skeleton scenario with a real OpenRouter key: on Linux desktop (gnome-keyring or KWallet) and on Windows. This task collects manual checks that remained unverified after tasks 038–042 (their "Reports"): actual screens, dialogs, a key persisted across restarts, a real OpenRouter response, and an image on the card. A person performs the check (provides the key and clicks); the agent prepares the build, reads logs, and records discrepancies as tasks. No code changes are made here.
 
-Зависит от: — (можно параллельно с очередью; после 045 по логам разбирать проще).
-Среда: Linux-рабочий стол и Windows (человек у экрана). macOS — не проверяется (решение владельца).
+Depends on: — (can run in parallel with the queue; task 045 makes log analysis easier).
+Environment: Linux desktop and Windows (a person at the screen). Do not check macOS (owner decision).
 
-## Критерии готовности
-- Каждый пункт сценария отмечен в «Комментариях» для Linux и для Windows: прошёл или нет, с описанием расхождения.
-- На каждое расхождение — задача `scripts/new-task.sh --publish backlog <имя>` с шагами воспроизведения; номера в «Отчёте».
-- Неочевидные факты записаны в `docs/knowledge/avalonia.md`.
+## Acceptance criteria
+- Record each scenario in "Comments" for Linux and Windows as passed or failed, with a description of any discrepancy.
+- Create a task for each discrepancy with `scripts/new-task.sh --publish backlog <name>` and reproduction steps; list the task numbers in the "Report".
+- Record non-obvious facts in `docs/knowledge/avalonia.md`.
 
-## Анализ
-- Сценарий скелета — задача 016, «План», шаг 2 (пункты 1–10), он одинаков для обеих оболочек; отличие только в папке данных: у Avalonia — `~/.local/share/ImageGen` на Linux и `%LOCALAPPDATA%\ImageGen` на Windows.
-- Ключи (ADR 0008): Linux — Secret Service, коллекция `default` (login); Windows — DPAPI, файл `secrets/<имя>.bin`. Без Secret Service ключ живёт в памяти, и страница ключа это показывает.
-- Генерации платные: перед вызовом сверить текущую цену выбранной модели и согласовать с человеком. Историческая оценка <$0.40 не является гарантией; использовать существующие картинки для UI-сценариев.
+## Analysis
+- The skeleton scenario is task 016, "Plan", step 2 (items 1–10); it is the same for both shells. The only difference is the data folder: Avalonia uses `~/.local/share/ImageGen` on Linux and `%LOCALAPPDATA%\ImageGen` on Windows.
+- Keys (ADR 0008): Linux uses Secret Service, collection `default` (login); Windows uses DPAPI, file `secrets/<name>.bin`. Without Secret Service the key remains in memory, and the key page indicates this.
+- Generations cost money: check the selected model's current price and agree with the person before calling it. The historical estimate of <$0.40 is not a guarantee; use existing images for UI scenarios.
 
-## План
-После «Refresh» у моделей OpenRouter в строке видна цена («$0.014 / MP» у FLUX.2 Klein 4B), у моделей fal — «price unknown»; повторное открытие экрана берёт цены из кэша без задержки.
+## Plan
+After "Refresh", OpenRouter models show their price in the row ("$0.014 / MP" for FLUX.2 Klein 4B), and fal models show "price unknown"; reopening the screen reads prices from the cache without delay.
 
-После задачи 223 выбрать в Models несколько аудио-моделей из групп Music & sound и Speech, выполнить поиск по имени, сохранить выбор и проверить чип audio в заголовке чата. В параметрах сессии голос виден для речевой модели и сохраняется после повторного открытия. Готовая аудио-карточка показывает модель, статус и цену/price unknown; кнопки изображения и Play скрыты, Save file сохраняет аудио. Для проверки звука использовать собранную desktop-оболочку, когда аудиоплеер поддерживается.
+After task 223, select several audio models from the Music & sound and Speech groups in Models, search by name, save the selection, and check the audio chip in the chat header. In session settings, the voice is visible for a speech model and remains selected after reopening. A completed audio card shows the model, status and price/price unknown; image and Play buttons are hidden, and Save file saves the audio. Use the built desktop shell to check audio when the player is supported.
 
-В Avalonia сузить окно примерно до 400 dp: чипы шапки переносятся, длинное название обрезается многоточием; при 1100 dp короткий заголовок и все чипы остаются в одной строке.
+In Avalonia, narrow the window to about 400 dp: header chips wrap and a long title is truncated with an ellipsis; at 1100 dp, a short title and all chips fit on one line.
 
-Дополнительно проверить обновление списка сессий: новое сообщение сразу обновляет название строки и число прогонов; Repeat увеличивает число прогонов без перемещения строки; при активном поиске обновление сохраняет запрос, результаты, прокрутку и подсветку текущей сессии.
+Also check session list updates: a new message immediately updates the row title and run count; Repeat increases the run count without moving the row; while search is active, an update preserves the query, results, scroll position and highlight of the current session.
 
-После задачи 131 проверить image viewer: открыть готовую карточку, убедиться в модальности и вписывании без обрезки; перелистывать Left/Right и кнопками только внутри одного run; проверить Escape/Close и восстановление фокуса на карточке; клик по изображению не закрывает viewer, клик по фону закрывает; отсутствующий файл даёт локализованное сообщение без падения. После146 проверить ошибку при failed previous/next: прежние картинка, позиция и доступное имя остаются; повторный переход пробует тот же соседний элемент; быстрые переходы не применяют устаревший ответ. После задачи 137 проверить OS fullscreen только у Avalonia viewer: owner остаётся прежнего размера/состояния, Escape/Close восстанавливают оболочку и декорации.
+After task 131, check the image viewer: open a completed card and confirm it is modal and fits without cropping; use Left/Right and buttons to navigate only within one run; check Escape/Close and focus restoration to the card; clicking the image does not close the viewer, clicking the background does; a missing file shows a localized message without crashing. After task 146, check a failed previous/next operation: the previous image, position and accessible name remain; retrying navigation tries the same adjacent item; rapid navigation does not apply a stale response. After task 137, check OS fullscreen only for the Avalonia viewer: the owner window retains its previous size/state, and Escape/Close restore the shell and decorations.
 
-Для Haiku/Luna: код не менять. Это ручная проверка с человеком; агент без desktop не отмечает сценарии пройденными. Для каждого результата указать commit/version, ОС и провайдер. Если016 или эта задача уже архивированы, сценарии брать из tasks/DONE.md и git show истории, не создавать пустой файл по старому пути. После135 название экрана ключей provider-neutral; старые названия016 адаптировать к текущей версии. Recovery по провайдеру: fal с handle возобновляется, OpenRouter до102/129 без handle становится Interrupted; после102/129 неизвестный local handle тоже Interrupted без submit.
+For Haiku/Luna: do not change code. This is a manual check with a person; an agent without a desktop must not mark scenarios as passed. For each result, record the commit/version, OS and provider. If task 016 or this task has already been archived, use the scenarios in `tasks/DONE.md` and `git show` history; do not create an empty file at the old path. After task 135, the key screen is provider-neutral; adapt the old task 016 names to the current version. Recovery by provider: fal with a handle resumes; OpenRouter without a handle before tasks 102/129 becomes Interrupted; after 102/129, an unknown local handle also becomes Interrupted without submission.
 
-1. Агент: собрать `dotnet build ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj -c Release` на каждой машине и передать человеку путь к исполняемому файлу; на Linux проверить, что Secret Service отвечает (`busctl --user status org.freedesktop.secrets` или проверка сервиса без чтения значений секретов; не использовать secret-tool search/lookup и не публиковать содержимое secret files).
-2. Человек проходит пункты 1–10 из задачи 016 в Avalonia и дополнительно:
-   11. Сохранить ключ, закрыть приложение, открыть снова → страница ключа не появляется (ключ в хранилище).
-   12. Linux без Secret Service (или с остановленной службой) → на странице ключа предупреждение, что ключ не сохранится; после перезапуска ключ спрашивается снова.
-   13. Windows: в `%LOCALAPPDATA%\ImageGen\secrets\` файл ключа есть, ключа открытым текстом в нём нет (открыть блокнотом).
-   14. Диалоги: подтверждение удаления и окно Edit — открываются поверх главного окна, Esc закрывает, фокус возвращается.
-   15. Длинная лента (10+ прогонов) прокручивается, новые сообщения видны внизу; Ctrl+Enter отправляет, Enter переносит строку.
-   16. Тёмная тема ОС → приложение читаемо.
-   17. Журнал (задача 045): после пунктов 1–10 открыть `<папка данных>/logs/imagegen-<дата>.log`. Первая строка — запуск с версией и путём к логам; строк с ключом нет (поиск по первым символам ключа); есть метаданные переходов, HTTP status и статусов генерации. Точный текст зависит от текущего logger и уровня; response body/exception detail выше Debug запрещены после127, не требовать их ради прохождения сценария.
-   18. Сводка прогона (задача 096): отправить промпт на 2 модели × 2, проверить обновление счётчика и суммы цен по мере готовности карточек и совпадение сводки после перезапуска.
-   18. Параметры генерации (задача 020): на экране параметров сессии выбрать соотношение 3:2 и формат webp, сохранить; в чате запустить прогон; на карточке видна замена или «не отправлено», если модель не принимает значение. Одним платным запросом проверить форму тела `POST images` для `aspect_ratio`, `resolution`, `output_format`, `quality` (допущение, ADR 0011).
-   19. Вложения (задача 018): кнопка «Attach image» в чате, выбрать PNG, отправить с текстом и без текста; в ответе ассистента видна причина пропуска модели без референсов; на карточке — «Reference images: N». Одним платным запросом проверить форму `input_references` (допущение, ADR 0012).
-   20. Описание картинки (задача 019): на готовой карточке нажать «Describe» и «Prompt»; в диалоге видны текст, провайдер, модель и цена; без подтверждения поле ввода не меняется; «Insert into input» при пустом поле подставляет текст, при заполненном спрашивает «заменить или дописать». Одним платным запросом проверить ответ модели с картинкой (допущение, ADR 0013).
-   21. Экран моделей сессии (задачи 090 и 092): на странице и в панели моделей есть две вкладки «Image models» и «Assistant model», по умолчанию открыта первая; переключение не сбрасывает оба выбора; один Save сохраняет выбранные модели и ассистента. Модели сгруппированы по производителю, выбранная группа раскрыта; заголовок группы работает мышью и клавиатурой (Enter/пробел), поиск оставляет только совпавшие раскрытые группы и после очистки восстанавливает состояния до поиска, Refresh сохраняет состояние. Диктор озвучивает expanded/collapsed у заголовков и выбранное состояние вкладок. В группе ассистента выбирается только одна модель.
-   22. Лента Avalonia (задача 097): открыть длинную сессию — видна последняя строка; отправить сообщение — новая карточка остаётся видна; рост карточки удерживает конец, когда follow включён; после прокрутки вверх рост карточки и изменение размера окна не сдвигают viewport; добавление новой строки прокручивает вниз.
-   23. Повторно открыть чат и уйти сразу после изменения карточки — нет двойных прокруток и обращений к исчезнувшему view.
-   24. Значок Omnilite отображается в заголовке окна и в launcher/taskbar на Linux и Windows.
-   25. После задачи 228 в Settings выбрать другую embedding-модель, проверить оценку и подтверждение, дождаться завершения переиндексации; выполнить поиск по смыслу и убедиться, что результат находится по новой модели. Отказаться от подтверждения и проверить, что прежняя модель остаётся выбранной.
-3. Агент: по комментариям заполнить «Отчёт», завести задачи на расхождения, обновить `docs/knowledge/avalonia.md` и `docs/status.md`.
+1. Agent: build `dotnet build ImageGen/ImageGen.Avalonia/ImageGen.Avalonia.csproj -c Release` on each machine and give the person the executable path. On Linux, check that Secret Service responds (`busctl --user status org.freedesktop.secrets` or check the service without reading secret values; do not use `secret-tool search/lookup` or publish secret file contents).
+2. The person completes items 1–10 from task 016 in Avalonia, plus:
+   11. Save the key, close the app, and reopen it → the key page does not appear (the key is in secure storage).
+   12. Linux without Secret Service (or with the service stopped) → the key page warns that the key will not be saved; after restart the app asks for the key again.
+   13. Windows: the key file exists in `%LOCALAPPDATA%\ImageGen\secrets\`, and the key is not plaintext in that file (open it in Notepad).
+   14. Dialogs: delete confirmation and Edit window open above the main window; Esc closes them and focus returns.
+   15. A long feed (10+ runs) scrolls, and new messages are visible at the bottom; Ctrl+Enter sends and Enter inserts a newline.
+   16. With the OS dark theme, the app remains readable.
+   17. Logs (task 045): after items 1–10, open `<data folder>/logs/imagegen-<date>.log`. The first line shows startup, version and log path; no key appears (search for the key's first characters); navigation metadata, HTTP status and generation statuses are present. Exact text depends on the current logger and level; response body/exception detail above Debug is prohibited after task 127, so do not require it for this scenario.
+   18. Run summary (task 096): send a prompt to 2 models × 2; check that the counter and price total update as cards complete and that the summary matches after restart.
+   18. Generation parameters (task 020): on the session parameters screen, select aspect ratio 3:2 and webp format and save; start a run in chat; the card shows a replacement or "не отправлено" if the model rejects the value. Use one paid request to check the `POST images` request body for `aspect_ratio`, `resolution`, `output_format` and `quality` (assumption, ADR 0011).
+   19. Attachments (task 018): click "Attach image" in chat, choose a PNG, and send with and without text; the assistant response shows why a model without reference support was skipped; the card shows "Reference images: N". Use one paid request to check the `input_references` shape (assumption, ADR 0012).
+   20. Image description (task 019): on a completed card, click "Describe" and "Prompt"; the dialog shows the text, provider, model and price; without confirmation the input does not change; "Insert into input" fills an empty field and, if it is not empty, asks "заменить или дописать". Use one paid request to check a model response with an image (assumption, ADR 0013).
+   21. Session model screen (tasks 090 and 092): the page and model panel have two tabs, "Image models" and "Assistant model", with the first open by default; switching tabs preserves both selections; one Save stores the selected models and assistant. Models are grouped by provider, with the selected group expanded; group headers work with mouse and keyboard (Enter/Space); search shows only matching expanded groups and clearing search restores the prior expanded states; Refresh preserves the state. The screen reader announces expanded/collapsed for group headers and the selected tab. Only one model can be selected in the assistant group.
+   22. Avalonia feed (task 097): open a long session and see the last row; send a message and keep the new card visible; card growth keeps the end in view when follow is enabled; after scrolling up, card growth and window resizing do not move the viewport; adding a new row scrolls down.
+   23. Reopen chat and leave immediately after a card update; there are no duplicate scrolls or calls to a disappeared view.
+   24. The Omnilite icon appears in the window title and launcher/taskbar on Linux and Windows.
+   25. After task 228, select another embedding model in Settings, check the estimate and confirmation, and wait for reindexing to complete; run a semantic search and confirm results use the new model. Decline confirmation and verify the previous model remains selected.
+3. Agent: fill in the "Report" based on the comments, create tasks for discrepancies, and update `docs/knowledge/avalonia.md` and `docs/status.md`.
 
-Файлы: `tasks/backlog/046-desktop-manual-check.md`, `docs/knowledge/avalonia.md`, `docs/status.md` (только по результатам проверки)
+Files: `tasks/backlog/046-desktop-manual-check.md`, `docs/knowledge/avalonia.md`, `docs/status.md` (only based on check results)
 
-### Проверка
+### Verification
 ```
 scripts/check.sh
 ```
 
-Задача 156 (Avalonia): в «Assistant model» модели OpenRouter и настроенных chat-провайдеров показаны с подписью провайдера; модели одного имени различаются. Выбрать модель другого провайдера, сохранить и повторно открыть экран — сохранённые provider id и model id остаются выбранными. Image-only Together в список не попадает.
+Task 156 (Avalonia): in "Assistant model", OpenRouter and configured chat provider models have provider labels; models with the same name are distinguishable. Select a model from another provider, save, and reopen the screen — the saved provider id and model id remain selected. Image-only Together is not listed.
 
-### Сравнение изображений (задача 023)
-Открыть меню успешной карточки и Compare; список содержит только другие успешные картинки этой сессии, с моделью, seed и ценой (неизвестная цена не равна нулю). Выбрать вторую картинку: рядом сохранить пропорции, колесо масштабирует обе, перетаскивание двигает обе; Overlay показывает вторую поверх первой, слайдер и ←/→ меняют границу. Закрыть Escape и кнопкой; проверить missing file/session показывает сообщение и не оставляет окно. Проверить portrait/landscape и возврат в исходное окно.
+### Image comparison (task 023)
+Open the menu on a successful card and choose Compare; the list contains only other successful images from this session, with model, seed and price (an unknown price is not zero). Select a second image: side by side, preserve aspect ratios, zoom both with the wheel and pan both by dragging; Overlay shows the second image over the first, and the slider and ←/→ change the boundary. Close with Escape and the button; verify a missing file/session shows a message and does not leave a window behind. Check portrait/landscape and return to the original window.
 
-## Отчёт
+## Report
 
-## Комментарии
+## Comments
 
 ### 2026-10-30, codex-gpt6
-Задача 133: на Linux и Windows Avalonia проверить фактические размеры и сокращённое ratio под изображением во всех трёх стилях, скрытие строки у карточки без изображения, обновление/сброс при смене результата и доступность dimensions через скринридер.
+Task 133: on Linux and Windows Avalonia, check actual dimensions and the shortened ratio below the image in all three styles, hiding the row for a card without an image, updating/resetting when the result changes, and dimensions accessibility through a screen reader.
 
-### 2026-10-28, claude (задача 055, копирование текста — Avalonia)
-На Linux-рабочем столе и Windows: в сообщениях и строке промпта текст выделяется мышью, Ctrl+C (Cmd+C на macOS) копирует выделенное; у ответа ассистента и у промпта прогона есть кнопка «Copy», после нажатия на две секунды появляется «Copied».
+### 2026-10-28, claude (task 055, text copy — Avalonia)
+On Linux desktop and Windows: text in messages and the prompt row can be selected with the mouse; Ctrl+C (Cmd+C on macOS) copies the selection; assistant responses and run prompts have a "Copy" button, which shows "Copied" for two seconds after clicking.
 
 ### 2026-10-29, codex-review
-Ручная задача остаётся planned: нужен человек на Linux desktop/Windows. Уточнены актуальные recovery expectations, цена не обещается заранее, проверка Secret Service не выводит сохранённые секреты.
+The manual task remains planned: a person is needed on Linux desktop/Windows. Current recovery expectations are clarified, no price is promised in advance, and checking Secret Service does not reveal stored secrets.
 
-### 2026-10-30, codex-gpt6 (задача 135)
-После135/136 проверить provider-neutral keys в Avalonia Linux и Windows:
-1. Settings перечисляет providers в порядке конфигурации, показывает только маску последних четырёх символов или Not connected; Change ведёт на экран с display name выбранного provider.
-2. При наличии безопасных тестовых ключей проверить разные provider ids (OpenRouter, fal, Together после136): валидный ключ сохраняется для выбранного provider, invalid key не заменяет прежний.
-3. Remove необязательного ключа удаляет только выбранный ключ и не закрывает Settings. Remove OpenRouter просит подтверждение с предупреждением; после выхода в Sessions форма OpenRouter появляется снова.
-4. Вызов провайдера без его ключа показывает InvalidKey и не завершает приложение. Проверить обычный лог и debug trace: ключ и Authorization отсутствуют на всех уровнях; секреты/логи не прикладывать к отчёту.
-5. В экранах моделей карточки с одинаковым именем от разных providers имеют различимые provider display name/id и доступные подписи.
+### 2026-10-30, codex-gpt6 (task 135)
+After tasks 135/136, check provider-neutral keys in Avalonia on Linux and Windows:
+1. Settings lists providers in configuration order and shows only the last four characters masked or Not connected; Change opens a screen with the selected provider's display name.
+2. If safe test keys are available, check different provider ids (OpenRouter, fal, Together after 136): a valid key is saved for the selected provider; an invalid key does not replace the previous one.
+3. Remove on an optional key deletes only that key and does not close Settings. Remove on OpenRouter asks for confirmation with a warning; after leaving for Sessions, the OpenRouter form appears again.
+4. Calling a provider without its key shows InvalidKey and does not terminate the app. Check the regular log and debug trace: the key and Authorization are absent at every level; do not attach secrets/logs to the report.
+5. In model screens, cards with the same name from different providers have distinguishable provider display names/ids and accessible labels.
 
-- [ ] Очистка истории: подтвердить удаление всех сессий и медиа; расходы и ключи сохраняются; создать и открыть новую сессию. (229)
+- [ ] Clear history: confirm all sessions and media are deleted; spending and keys remain; create and open a new session. (229)
 - [ ] Avalonia desktop player (207): open a video and an audio card, verify playback starts, seek and volume controls work, Space pauses/resumes, Escape and the window close button stop playback; on Linux without `libvlc5`/`vlc-plugin-base`, Play is hidden.
 
 ### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan)
