@@ -58,9 +58,11 @@ TASKS_BRANCH=main scripts/list-tasks.sh --main approved
 - Translated the task template and cards 030, 046, 140, 168, 198, 230, 236, 237, and 245 in small batches. The 245 branch has no remote task branch or unmerged card edit.
 - Also translated cards 248 and 250; neither has a remote task branch.
 - Translated card 249 after confirming it has no remote task branch.
+- Translated cards 246 and 247 after confirming that neither has a remote task branch; retained 247's `blocked` status and existing reports.
 - Translated acceptance cards 258, 259, 262, 263, 264, and 265; these have no remote task branches.
 - After each committed batch, `bash scripts/check.sh` passed. The new-task template was rendered in a scratch copy and matched the English headings.
 - Cards 235 and 255 remain untouched because their remote task branches contain unmerged edits to those same cards. Card 243's remote branch has no card diff; it remains for the final translation pass as required by the plan.
+- Also left cards 256, 257, 260, 261, 266, 272, 274, 275, 276, and 277 untouched because their status differs from `origin/main` in this branch; the harness validates the fixed sections during these status transitions. The added historical task 276/277 cards also remain owned by the work that introduced them.
 - Quoted Russian UI/status literals remain unchanged as required by the plan (for example, in cards 046, 198, 248, 258, 259, 262–265). This conflicts with the current `check-latin.sh` rule, which permits exceptions only for non-English test data. Resolve this before adding `tasks` to `LATIN_PATHS`; a plan/owner decision is needed on whether those quoted literals may be translated or whitelisted.
 
 ## Comments

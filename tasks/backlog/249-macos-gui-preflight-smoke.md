@@ -59,7 +59,7 @@ bash scripts/check.sh
 - Three consecutive scheduled `smoke-macos` runs succeeded: [42465262394](https://github.com/r-eliseev/studious-goggles/actions/runs/42465262394), [42596262790](https://github.com/r-eliseev/studious-goggles/actions/runs/42596262790), [42794177774](https://github.com/r-eliseev/studious-goggles/actions/runs/42794177774). In each run the GUI session was available, `accessibilityOk=true`, `nonUniformRatio` was about 0.999, and there were no crash reports or app failures.
 - Mac2 conditions were met: a proposal for a separate Mac2 4.6.1 UI testing task was added to `docs/status.md`; the decision remains with the owner.
 
-### 2026-11-07, codex-gpt6 (в работе)
+### 2026-11-07, codex-gpt6 (in progress)
 - The first automatic smoke on `main`, run [42381579325](https://github.com/r-eliseev/studious-goggles/actions/runs/42381579325), stopped before checking GUI apps: `sips -s format bmp` produced a 32-bit BMP with `BI_BITFIELDS` (`compression=3`), while the parser accepted only `compression=0`.
 - Added support for uncompressed 32-bit BMP with BGRA RGB masks and checked it against a saved runner screenshot: `nonUniformRatio=0.9991188`; the standard 24-bit `solid.bmp` and `noisy.bmp` fixtures also pass.
 - Added ad-hoc signing and strict `.app` verification before `open` in `smoke_app`, because neighboring iOS smoke runs found the same unsigned simulator bundle signature issue. The next CI run should check the macOS GUI and both launched apps.
@@ -70,7 +70,7 @@ bash scripts/check.sh
 ### 2026-11-07, claude-audit
 Created from the Apple addendum: stage P5. Accessibility permissions on hosted macOS were unknown, so Mac2 UI tests were conditional on the preflight and a separate owner decision. Plan for Luna.
 
-### 2026-11-07, владелец (в чате, записал claude-audit)
+### 2026-11-07, owner (in chat, recorded by claude-audit)
 The owner's “MAUI + Avalonia — Apple CI/E2E” addendum (original: `docs/specs/ui-e2e-original/`). The plan was approved under the earlier instruction “approve all tasks with plans”. The owner explicitly requested the new `apple-ci.yml` workflow as part of this addendum (ADR 0030).
 
 ### 2026-11-07, codex-gpt6
