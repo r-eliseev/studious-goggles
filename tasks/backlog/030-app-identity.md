@@ -1,6 +1,6 @@
 ---
 id: 030
-status: approved
+status: review
 assignee:
 claimed:
 created: 2026-10-27
@@ -41,6 +41,10 @@ bash scripts/check.sh
 ```
 
 ## Report
+
+Completed task 030 in three stages: task 164 changed the Android `ApplicationId`; on 2026-11-02 the owner-requested Omnilite name, icon/splash assets, and shared MAUI application ids were applied; this change sets the Windows publisher metadata to the owner's values (`CN=Roman Eliseev` / `Roman Eliseev`). The Windows data and SecureStorage path after the id change remains task 230. The Windows manifest itself was not otherwise changed.
+
+Verification: `grep -n 'Publisher' ImageGen/ImageGen.Maui/Platforms/Windows/Package.appxmanifest` and `bash scripts/check.sh` passed. The required Windows MAUI `maui` job passed in [GitHub Actions run 43476442529](https://github.com/r-eliseev/studious-goggles/actions/runs/43476442529/job/132061373788).
 
 ### 2026-11-02 — partial branding implementation at the owner's direct request
 
