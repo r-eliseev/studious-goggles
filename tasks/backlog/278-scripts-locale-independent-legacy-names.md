@@ -1,8 +1,8 @@
 ---
 id: 278
-status: in-progress
-assignee: codex-20261113
-claimed: 2026-11-13T12:53:54Z
+status: review
+assignee:
+claimed:
 created: 2026-11-13
 ---
 
@@ -49,6 +49,23 @@ bash scripts/tests/check-docs.sh
 ```
 
 ## Report
+
+### Changes
+- Replaced locale-sensitive printf Unicode escapes with UTF-8 byte escapes in check-tasks.sh, submit-task.sh and check-docs.sh.
+- Rewrote the architecture scan's Cyrillic initial match as an alternation so it works with byte strings under the POSIX locale.
+- Added scripts/tests/locale-independent.sh and registered it in scripts/check.sh. Added a POSIX-locale architecture-scan case to scripts/tests/check-docs.sh.
+
+### Verification
+- Confirmed the new regression failed before the fix because check-tasks.sh treated the legacy Russian Plan as empty under LC_ALL=C.
+- env LC_ALL=C bash scripts/tests/locale-independent.sh — passed.
+- env LC_ALL=C bash scripts/tests/check-docs.sh — passed.
+- env LC_ALL=C bash scripts/check.sh — passed.
+- env LC_ALL=C.UTF-8 bash scripts/check.sh — passed.
+- bash scripts/tests/task-roles.sh — passed.
+- bash scripts/tests/check-docs.sh — passed.
+- bash scripts/check-latin.sh — passed.
+
+No differences from the approved plan.
 
 ## Review
 

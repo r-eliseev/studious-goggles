@@ -6,12 +6,12 @@ fail=0
 allowed=" todo planned approved in-progress review done blocked cancelled "
 ids=" "
 filled() { awk -v h="$2" '$0=="## " h {p=1; next} /^## /{p=0} p && NF {f=1} END{exit !f}' "$1"; }
-legacy_plan=$(printf '\u041f\u043b\u0430\u043d')
-legacy_report=$(printf '\u041e\u0442\u0447\u0451\u0442')
-legacy_approval=$(printf '\u043f\u043b\u0430\u043d \u043e\u0434\u043e\u0431\u0440\u0435\u043d')
-legacy_description=$(printf '\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435')
-legacy_acceptance=$(printf '\u041a\u0440\u0438\u0442\u0435\u0440\u0438\u0438 \u0433\u043e\u0442\u043e\u0432\u043d\u043e\u0441\u0442\u0438')
-legacy_analysis=$(printf '\u0410\u043d\u0430\u043b\u0438\u0437')
+legacy_plan=$(printf '\xD0\x9F\xD0\xBB\xD0\xB0\xD0\xBD')
+legacy_report=$(printf '\xD0\x9E\xD1\x82\xD1\x87\xD1\x91\xD1\x82')
+legacy_approval=$(printf '\xD0\xBF\xD0\xBB\xD0\xB0\xD0\xBD\x20\xD0\xBE\xD0\xB4\xD0\xBE\xD0\xB1\xD1\x80\xD0\xB5\xD0\xBD')
+legacy_description=$(printf '\xD0\x9E\xD0\xBF\xD0\xB8\xD1\x81\xD0\xB0\xD0\xBD\xD0\xB8\xD0\xB5')
+legacy_acceptance=$(printf '\xD0\x9A\xD1\x80\xD0\xB8\xD1\x82\xD0\xB5\xD1\x80\xD0\xB8\xD0\xB8\x20\xD0\xB3\xD0\xBE\xD1\x82\xD0\xBE\xD0\xB2\xD0\xBD\xD0\xBE\xD1\x81\xD1\x82\xD0\xB8')
+legacy_analysis=$(printf '\xD0\x90\xD0\xBD\xD0\xB0\xD0\xBB\xD0\xB8\xD0\xB7')
 
 while IFS= read -r f; do
   id=$(task_field "$f" id); st=$(task_field "$f" status)

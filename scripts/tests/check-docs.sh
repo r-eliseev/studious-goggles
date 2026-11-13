@@ -18,6 +18,17 @@ EOF
 printf 'executor skill\n' > .claude/skills/executor/SKILL.md
 
 bash scripts/check-docs.sh >/dev/null || { echo 'check-docs regression: valid executor skill should pass' >&2; exit 1; }
+task_word=$(printf '\xD0\x97\xD0\xB0\xD0\xB4\xD0\xB0\xD1\x87\xD0\xB0')
+printf '%s 123\n' "$task_word" > docs/architecture.md
+if out=$(env LC_ALL=C bash scripts/check-docs.sh 2>&1); then
+  echo 'check-docs regression: architecture task references must fail' >&2
+  exit 1
+fi
+printf '%s\n' "$out" | grep -Fq 'work progress (task number' || {
+  echo "check-docs regression: expected architecture progress error, got: $out" >&2
+  exit 1
+}
+: > docs/architecture.md
 rm .claude/skills/executor/SKILL.md
 if out=$(bash scripts/check-docs.sh 2>&1); then
   echo 'check-docs regression: missing executor skill must fail' >&2
