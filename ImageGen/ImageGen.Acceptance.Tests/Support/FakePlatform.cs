@@ -6,6 +6,7 @@ public sealed class FakePlatform : IClipboardService, IDialogService, IImageSave
 {
     private readonly Queue<bool> _confirmationAnswers = new();
     private readonly Queue<string?> _promptAnswers = new();
+    private readonly Queue<PickedImage> _pickedImages = new();
 
     public List<string> ClipboardWrites { get; } = [];
 
@@ -22,6 +23,8 @@ public sealed class FakePlatform : IClipboardService, IDialogService, IImageSave
     public void QueueConfirmation(bool answer) => _confirmationAnswers.Enqueue(answer);
 
     public void QueuePrompt(string? answer) => _promptAnswers.Enqueue(answer);
+
+    public void QueuePickedImage(PickedImage image) => _pickedImages.Enqueue(image);
 
     public Task SetTextAsync(string text)
     {
@@ -58,7 +61,8 @@ public sealed class FakePlatform : IClipboardService, IDialogService, IImageSave
 
     public Task<PickedImage?> PickImageAsync(CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         FilePickerRequests++;
-        return Task.FromResult<PickedImage?>(null);
+        return Task.FromResult(_pickedImages.TryDequeue(out var image) ? image : null);
     }
 }

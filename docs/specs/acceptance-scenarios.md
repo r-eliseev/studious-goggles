@@ -74,7 +74,7 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 | CHAT-05 | An empty message is not sent (the command is unavailable) | S2.1 | done |
 | CHAT-06 | Retry after an assistant error: the second answer is normal → the run starts | S2.5 | done |
 | CHAT-07 | The session's assistant model is visible in the chat | S1.3 | done |
-| CHAT-08 | A picture attachment goes into the generation as a reference if the model supports them | F4.5 | planned |
+| CHAT-08 | A picture attachment goes into the generation as a reference if the model supports them | F4.5 | done |
 
 ### Runs and generations (`Runs.feature`, task 257)
 | id | Scenario | Requirements | Status |

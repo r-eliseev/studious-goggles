@@ -212,6 +212,16 @@ public sealed class FakeOpenRouter
                 supportedParameters["seed"] = true;
             }
 
+            if (model.MaxInputReferences is { } maxReferences)
+            {
+                supportedParameters["input_references"] = new JsonObject
+                {
+                    ["type"] = "range",
+                    ["min"] = 1,
+                    ["max"] = maxReferences,
+                };
+            }
+
             AddEnumParameter(supportedParameters, "aspect_ratio", model.AspectRatios);
             AddEnumParameter(supportedParameters, "resolution", model.Resolutions);
             AddEnumParameter(supportedParameters, "output_format", model.Formats);
@@ -345,5 +355,6 @@ public sealed class FakeOpenRouter
         IReadOnlyList<string>? AspectRatios = null,
         IReadOnlyList<string>? Resolutions = null,
         IReadOnlyList<string>? Formats = null,
-        IReadOnlyList<string>? Qualities = null);
+        IReadOnlyList<string>? Qualities = null,
+        int? MaxInputReferences = null);
 }

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Text.Json;
 using ImageGen.Acceptance.Tests.Support;
 using ImageGen.Core.Domain.Keys;
 using Reqnroll;
@@ -67,6 +68,9 @@ public sealed class CommonSteps(ScenarioContext scenario)
     [When("the current time advances by {int} day")]
     public void WhenCurrentTimeAdvancesByDays(int days) => World.Time.Advance(TimeSpan.FromDays(days));
 
+    [Given("the user accepts the image consent")]
+    public void GivenTheUserAcceptsTheImageConsent() => World.Platform.QueueConfirmation(true);
+
     [Given("the OpenRouter image model catalog:")]
     public void GivenTheOpenRouterImageModelCatalog(DataTable table) => World.OpenRouter.SetImageModels(ParseImageModels(table));
 
@@ -84,7 +88,34 @@ public sealed class CommonSteps(ScenarioContext scenario)
             ParseList(table, row, "aspect ratios"),
             ParseList(table, row, "resolutions"),
             ParseList(table, row, "formats"),
-            ParseList(table, row, "qualities"))).ToArray();
+            ParseList(table, row, "qualities"),
+            table.Header.Contains("input references", StringComparer.OrdinalIgnoreCase)
+                ? ParseNullableInt(row["input references"])
+                : null)).ToArray();
+
+    [Then("the {string} request to OpenRouter has a value at JSON path {string}")]
+    public async Task ThenTheRequestToOpenRouterHasAValueAtJsonPath(string requestKind, string jsonPath)
+    {
+        var requestPath = requestKind switch
+        {
+            "image generation" => "/api/v1/images",
+            "chat completion" => "/api/v1/chat/completions",
+            _ => throw new ArgumentException($"Unknown OpenRouter request kind '{requestKind}'.", nameof(requestKind)),
+        };
+        await World.WaitUntilAsync(
+            () => World.Network.Requests.Any(item => item.Method == "POST" && new Uri(item.Address).AbsolutePath == requestPath),
+            $"the OpenRouter {requestKind} request to be recorded",
+            TestContext.Current.CancellationToken);
+        var request = Assert.Single(World.Network.Requests, item =>
+            item.Method == "POST" && new Uri(item.Address).AbsolutePath == requestPath);
+        using var document = JsonDocument.Parse(request.Body!);
+        Assert.True(TryGetJsonPath(document.RootElement, jsonPath, out var value), $"JSON path '{jsonPath}' was not found.");
+        Assert.NotEqual(JsonValueKind.Null, value.ValueKind);
+        if (scenario.TryGetValue("chat.reference-image-data-url", out string expectedReference))
+        {
+            Assert.Equal(expectedReference, value.GetString());
+        }
+    }
 
     [Given("the provider answers generation for model {string} with:")]
     public void GivenTheProviderAnswersGenerationForModelWith(string modelId, DataTable table)
@@ -177,6 +208,9 @@ public sealed class CommonSteps(ScenarioContext scenario)
             ? null
             : decimal.Parse(value, CultureInfo.InvariantCulture);
 
+    private static int? ParseNullableInt(string value) =>
+        string.IsNullOrWhiteSpace(value) ? null : int.Parse(value, CultureInfo.InvariantCulture);
+
     private static int ParseInteger(string value, int fallback) =>
         string.IsNullOrWhiteSpace(value) ? fallback : int.Parse(value, CultureInfo.InvariantCulture);
 
@@ -184,4 +218,43 @@ public sealed class CommonSteps(ScenarioContext scenario)
         table.Header.Contains(column, StringComparer.OrdinalIgnoreCase)
             ? row[column].Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             : null;
+
+    private static bool TryGetJsonPath(JsonElement root, string path, out JsonElement value)
+    {
+        value = root;
+        var position = path.StartsWith('$') ? 1 : 0;
+        while (position < path.Length)
+        {
+            if (path[position] == '.')
+            {
+                var start = ++position;
+                while (position < path.Length && path[position] is not '.' and not '[') position++;
+                if (position == start || value.ValueKind != JsonValueKind.Object
+                    || !value.TryGetProperty(path[start..position], out var propertyValue))
+                {
+                    return false;
+                }
+
+                value = propertyValue;
+            }
+            else if (path[position] == '[')
+            {
+                var end = path.IndexOf(']', position + 1);
+                if (end < 0 || !int.TryParse(path.AsSpan(position + 1, end - position - 1), out var index)
+                    || value.ValueKind != JsonValueKind.Array || index < 0 || index >= value.GetArrayLength())
+                {
+                    return false;
+                }
+
+                value = value[index];
+                position = end + 1;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
