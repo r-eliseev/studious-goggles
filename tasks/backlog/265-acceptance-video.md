@@ -6,60 +6,60 @@ claimed:
 created: 2026-11-09
 ---
 
-# Приёмочные сценарии: видео
+# Acceptance scenarios: video
 
-## Описание
-Автоматизировать раздел «Видео» каталога: VID-01 … VID-04. VID-05 (аудио) — после 221–223. Файл `Features/Video.feature`, тег `@video`.
+## Description
+Automate the “Видео” section of the catalog: VID-01 … VID-04. Add VID-05 (audio) after 221–223. File `Features/Video.feature`, tag `@video`.
 
-Зависит от: 253, 257. Если на момент claim задачи 218–220 (плеер и карточка видео MAUI) меняют `GenerationItemViewModel`, сверить члены с `main`.
-Среда: Linux или Windows (headless).
+Depends on: 253, 257. If tasks 218–220 (MAUI video player and card) change `GenerationItemViewModel` when this task is claimed, compare its members with `main`.
+Environment: Linux or Windows (headless).
 
-## Критерии готовности
-- Шаг 1: маршруты видео в `FakeOpenRouter` по коду `OpenRouterClient` (`GET videos/models`, `POST videos`, опрос задания, `GET videos/{id}/content`). Формы ответов — только из кода и `docs/knowledge/media-generation.md`; чего там нет — вопрос в «Комментарии».
-- VID-01 … VID-04 в `.feature`; каждый зелёный или `@ignore @bug-NNN` с задачей.
-- VID-01: без выбранных видео-моделей в теле chat completion нет инструмента `generate_video`; с выбранной — есть.
-- VID-02: вызов `generate_video` → карточка `IsVideo`, после опросов (время — `FakeTimeProvider`, ожидание — `IAsyncDelay`, как решено в 258) — «готово», видеофайл в папке данных.
-- VID-03: ошибка при скачивании содержимого → «ошибка», файла нет (S «Ошибка скачивания или сохранения …» в `media-generation.md`).
-- VID-04: отмена видео → «отменено» и предупреждение, что провайдер может продолжить (по ресурсам).
-- Плеер в headless не проверяется (`UnsupportedMediaPlayerService`).
-- Статусы VID-* в каталоге обновлены.
+## Acceptance criteria
+- Step 1: implement video routes in `FakeOpenRouter` based on `OpenRouterClient` (`GET videos/models`, `POST videos`, job polling, `GET videos/{id}/content`). Derive response shapes only from the code and `docs/knowledge/media-generation.md`; if information is missing, ask in “Comments”.
+- Add VID-01 … VID-04 to `.feature`; each scenario passes or has `@ignore @bug-NNN` and a tracking task.
+- VID-01: without selected video models, the chat completion body has no `generate_video` tool; with a selected model, it does.
+- VID-02: calling `generate_video` creates an `IsVideo` card; after polling (time via `FakeTimeProvider`, waiting via `IAsyncDelay`, as decided in 258), status becomes “готово” and the video file is in the data folder.
+- VID-03: a content download error results in “ошибка” and no file (S “Ошибка скачивания или сохранения …” in `media-generation.md`).
+- VID-04: cancelling a video results in “отменено” and a warning that the provider may continue (use resources).
+- Do not test the player in headless mode (`UnsupportedMediaPlayerService`).
+- Update the VID-* statuses in the catalog.
 
-## Анализ
-- `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs` (строки около 82, 161, 171), `ImageGen/ImageGen.Core/Services/VideoModelCatalogService.cs`, `VideoPriceCalculator.cs`; `SessionModelsPageModel.ShowVideoModels`, `VideoModels`; `GenerationItemViewModel.IsVideo`, `VideoFilePath`.
-- Спецификация: `docs/specs/media-generation.md`, «Требования»; ADR 0027.
+## Analysis
+- `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs` (around lines 82, 161, 171), `ImageGen/ImageGen.Core/Services/VideoModelCatalogService.cs`, `VideoPriceCalculator.cs`; `SessionModelsPageModel.ShowVideoModels`, `VideoModels`; `GenerationItemViewModel.IsVideo`, `VideoFilePath`.
+- Specification: `docs/specs/media-generation.md`, “Требования”; ADR 0027.
 
-## План
-1. Маршруты видео в фейке (самопроверки в `FakeNetworkTests` сначала).
-2. По одному сценарию VID-01 → VID-04.
+## Plan
+1. Add video routes to the fake (start with self-checks in `FakeNetworkTests`).
+2. Implement scenarios VID-01 → VID-04 one at a time.
 
-Файлы: `ImageGen/ImageGen.Acceptance.Tests/Features/Video.feature`, `Steps/VideoSteps.cs` (новый), `Steps/CommonSteps.cs`, `Support/FakeOpenRouter.cs`, `Support/FakeNetworkTests.cs`, `docs/specs/acceptance-scenarios.md`.
+Files: `ImageGen/ImageGen.Acceptance.Tests/Features/Video.feature`, `Steps/VideoSteps.cs` (new), `Steps/CommonSteps.cs`, `Support/FakeOpenRouter.cs`, `Support/FakeNetworkTests.cs`, `docs/specs/acceptance-scenarios.md`.
 
-### Проверка
+### Verification
 ```
 dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj
 dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait "Category=video"
 dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes
 bash scripts/check.sh
 ```
-(Фильтр по тегу — если Reqnroll передаёт теги как категории xUnit; как именно — записано в `docs/knowledge/acceptance-tests.md` задачей 252.)
+(The tag filter applies if Reqnroll passes tags as xUnit categories; task 252 records how this works in `docs/knowledge/acceptance-tests.md`.)
 
-### Порядок исполнения (для Luna)
-- Сначала прочитай только файлы из строки «Файлы», названные тесты и разделы `docs/specs/acceptance-scenarios.md`; сигнатуры сверяй с текущим `main`.
-- Шаги строго по порядку (ub-mode): сначала сценарий в `.feature`, запуск — он падает, потому что шаг не привязан или ожидание не выполнено; затем минимальная привязка; сценарий зелёный. Один сценарий — один коммит (id сценария в сообщении).
-- Ожидание сценария берётся из спецификации, не из кода. Если код ведёт себя иначе: не подгоняй сценарий и не чини код — тег `@ignore @bug-NNN`, новая задача `scripts/new-task.sh --publish backlog <имя>` с шагами воспроизведения, статус «расхождение (NNN)» в каталоге.
-- Шаги действуют как пользователь: команды моделей страниц, выбор пунктов, навигация. Не вызывай репозитории, сервисы ядра и SQL напрямую, кроме шагов «Дано», которые готовят мир, и проверок «файл существует».
-- Новый общий шаг — в `Steps/CommonSteps.cs`; сначала поищи, нет ли уже такого шага с другой формулировкой.
-- Не меняй файлы вне строки «Файлы», не переименовывай существующие члены сверх плана, не чини соседние находки — они в отдельных задачах.
-- Если код расходится с планом (нет такого метода, другая сигнатура), не импровизируй: остановись и запиши вопрос в «Комментарии».
-- Команды `dotnet` выполняй по одной, не параллельно. После каждого изменённого проекта — `dotnet format <проект> --verify-no-changes`.
-- В «Отчёте»: какие сценарии зелёные, какие `@ignore` и с какими задачами, команды и результаты, отличия от плана. Статусы сценариев в `docs/specs/acceptance-scenarios.md` обнови.
+### Execution order (for Luna)
+- First read only the files in the “Files” line, the named tests, and sections of `docs/specs/acceptance-scenarios.md`; compare signatures with current `main`.
+- Follow steps in order (ub-mode): add a scenario to `.feature`, run it and confirm it fails because the step is unbound or the expectation is unmet; add the minimal binding; get a passing scenario. One scenario per commit (include the scenario id in the commit message).
+- Derive scenario expectations from the specification, not the code. If the code behaves differently, do not weaken the scenario or fix code: add `@ignore @bug-NNN`, create a task with reproduction steps using `scripts/new-task.sh --publish backlog <name>`, and set the catalog status to “расхождение (NNN)”.
+- Steps act as a user: use page model commands, select items, and navigate. Do not call repositories, Core services, or SQL directly, except in “Given” steps that prepare the world and in “file exists” checks.
+- Add shared steps to `Steps/CommonSteps.cs`; first check whether a step already exists with different wording.
+- Do not change files outside the “Files” line, rename existing members beyond the plan, or fix neighboring findings; those belong to separate tasks.
+- If the code differs from the plan (missing method, different signature), do not improvise; stop and write a question in “Comments”.
+- Run `dotnet` commands one at a time, not in parallel. After each changed project, run `dotnet format <project> --verify-no-changes`.
+- In the “Report”, list passing scenarios, ignored scenarios and their tracking tasks, commands and results, and differences from the plan. Update scenario statuses in `docs/specs/acceptance-scenarios.md`.
 
-## Отчёт
+## Report
 
-## Комментарии
+## Comments
 
 ### 2026-11-09, claude-bdd-plan
-Создано по просьбе владельца распланировать тест-сценарии приложения для исполнения GPT Luna. Сценарии и ожидания — в `docs/specs/acceptance-scenarios.md`. План ждёт одобрения.
+Created at the owner's request to plan application test scenarios for GPT Luna. Scenarios and expectations are in `docs/specs/acceptance-scenarios.md`. The plan awaits approval.
 
 ### 2026-11-09, owner (in the chat, recorded by claude-bdd-plan)
 Plan approved, status `approved`. Changes of the same day apply: the Gherkin scenarios, step texts, bindings, comments and the "Report" are in English (`docs/conventions.md`, "Language"; ADR 0031 is accepted); a "Structure of a scenario" in this plan is a `Scenario Outline`. Scenario expectations and wording are in the English catalog `docs/specs/acceptance-scenarios.md`. The acceptance project runs in CI (task 252). The flow tests in `ImageGen.Avalonia.Tests/Flows` that a scenario of this task covers are deleted by task 267, not here.

@@ -1,6 +1,6 @@
 ---
 id: 255
-status: approved
+status: blocked
 assignee:
 claimed:
 created: 2026-11-09
@@ -56,6 +56,12 @@ bash scripts/check.sh
 
 ## Отчёт
 
+- Implemented: SES-01, SES-02, SES-03, SES-06 and SES-09. SES-04 empty-title case passes; its overlength case is `@ignore @bug-276` because the current code truncates instead of rejecting.
+- SES-05 confirmation decline, confirmed deletion, and absence after restart pass through the session row command.
+- Acceptance harness cleanup advances its `FakeTimeProvider` before stopping app services, so delayed semantic-index refreshes do not leave teardown waiting on frozen test time. AppWorld teardown is asynchronous.
+- Not implemented: SES-07, SES-08 and SES-10. SES-07 is blocked by the approved plan's file list: the fake chat model catalog is hard-coded empty, so Settings has no second assistant model to select. The required `Support/FakeOpenRouter.cs` change is not authorized by the current plan; see the latest comment.
+- Verification so far: category runs passed for SES-02, SES-03 and SES-05; SES-04 had one pass and one expected skip. The full acceptance suite has not completed successfully after these additions. Formatting and `scripts/check.sh` remain to be run after the plan mismatch is resolved.
+
 ## Комментарии
 
 ### 2026-11-09, claude-bdd-plan
@@ -63,3 +69,20 @@ bash scripts/check.sh
 
 ### 2026-11-09, owner (in the chat, recorded by claude-bdd-plan)
 Plan approved, status `approved`. Changes of the same day apply: the Gherkin scenarios, step texts, bindings, comments and the "Report" are in English (`docs/conventions.md`, "Language"; ADR 0031 is accepted); a "Structure of a scenario" in this plan is a `Scenario Outline`. Scenario expectations and wording are in the English catalog `docs/specs/acceptance-scenarios.md`. The acceptance project runs in CI (task 252). The flow tests in `ImageGen.Avalonia.Tests/Flows` that a scenario of this task covers are deleted by task 267, not here.
+
+### 2026-11-10, codex-gpt6
+The approved plan omits fake prompt result control needed by SES-03/04. Initial Reqnroll attempts at SES-02 send and SES-05 delete did not complete within the headless scenario timeout; no product code was changed. Request plan review before extending the file list or marking these product flows as defects.
+
+### 2026-11-10, codex-gpt6 — plan amendment requested
+Please amend the approved plan to:
+- allow `ImageGen/ImageGen.Acceptance.Tests/Support/FakePlatform.cs` to queue a `PromptAsync` result so SES-03/04 can exercise rename through the session row command;
+- allow investigation and fixes in the acceptance harness/steps needed to run SES-02 (first-message title) and SES-05 (delete confirmation) without bypassing the UI/page-model flow;
+- retain the current rule against changing product behavior to make an acceptance scenario pass. If investigation confirms a product/specification discrepancy, record it with `@ignore @bug-NNN` and a follow-up task.
+
+Until this plan update is approved, the implementation remains limited to SES-01, SES-06 and SES-09.
+
+### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan) — plan amendment approved
+The requested amendment is approved: `Support/FakePlatform.cs` may queue a `PromptAsync` result for SES-03/04; the acceptance harness and steps may be investigated and fixed so that SES-02 and SES-05 run through the UI/page-model flow. The rule stays: no product changes to make a scenario pass; a confirmed product/specification discrepancy becomes `@ignore @bug-NNN` and a new task. SES-11 is not part of this task (task 273, after 255).
+
+### 2026-11-11, codex-gpt6
+Plan mismatch: SES-07 must change the default assistant model in Settings and verify that existing sessions keep their model while a new session receives the new default. `FakeOpenRouter` currently returns an empty `/api/v1/models` catalog, so Settings exposes only the currently selected model. Making a second model selectable requires adding configurable chat models to `ImageGen/ImageGen.Acceptance.Tests/Support/FakeOpenRouter.cs`, which is outside the approved `Files:` list and the prior amendment. Proposed plan change: add that file to the allowed files and permit a fake chat-model catalog response used by SES-07. Until the planner/owner approves this scope, this task is blocked; SES-08 and SES-10 are not being started under this plan.

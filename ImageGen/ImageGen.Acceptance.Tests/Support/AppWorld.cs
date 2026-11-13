@@ -60,6 +60,16 @@ public sealed class AppWorld : IDisposable
 
     public string DataDirectory => _paths.DataDirectory;
 
+    public async Task ConfigureChatProviderAsync(CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(DataDirectory);
+        await File.WriteAllTextAsync(
+            Path.Combine(DataDirectory, "providers.json"),
+            """{"providers":[{"id":"e2e-mock","kind":"openAiCompatible","displayName":"E2E Mock","baseAddress":"https://localhost:5443/v1/","chatModels":[{"id":"e2e/assistant","name":"E2E Assistant","supportsImageInput":false,"contextLength":8192}]}]}""",
+            cancellationToken);
+        Network.AddResponse(HttpMethod.Get, "localhost", "/v1/models", System.Net.HttpStatusCode.OK, "{}");
+    }
+
     public ServiceProvider Provider => _provider ?? throw new InvalidOperationException("The app world has not been started.");
 
     public MainWindow Window => _window ?? throw new InvalidOperationException("The app world has not been started.");
@@ -88,7 +98,8 @@ public sealed class AppWorld : IDisposable
     public async Task RestartAsync(CancellationToken cancellationToken)
     {
         await DrainBackgroundWorkAsync(cancellationToken);
-        StopComposition();
+        await AdvanceTestTimeAndDrainAsync();
+        await StopCompositionAsync();
         await StartAsync(cancellationToken);
     }
 
@@ -96,11 +107,15 @@ public sealed class AppWorld : IDisposable
         WaitUntilCoreAsync(condition, description, cancellationToken);
 
     public void Dispose()
+        => DisposeAsync().GetAwaiter().GetResult();
+
+    public async Task DisposeAsync()
     {
         if (_provider is not null)
         {
-            DrainBackgroundWorkAsync(CancellationToken.None).GetAwaiter().GetResult();
-            StopComposition();
+            await DrainBackgroundWorkAsync(CancellationToken.None);
+            await AdvanceTestTimeAndDrainAsync();
+            await StopCompositionAsync();
         }
 
         Network.Dispose();
@@ -134,6 +149,12 @@ public sealed class AppWorld : IDisposable
         }
     }
 
+    private async Task AdvanceTestTimeAndDrainAsync()
+    {
+        Time.Advance(TimeSpan.FromDays(1));
+        await WaitForTaskAsync(Task.Delay(TimeSpan.FromMilliseconds(50)), "fake-time callbacks", CancellationToken.None);
+    }
+
     private static async Task WaitForTaskAsync(Task task, string description, CancellationToken cancellationToken)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -160,12 +181,17 @@ public sealed class AppWorld : IDisposable
         }
     }
 
-    private void StopComposition()
+    private async Task StopCompositionAsync()
     {
         _window?.Close();
-        _provider?.Dispose();
-        _window = null;
+        var provider = _provider;
         _provider = null;
+        if (provider is not null)
+        {
+            await WaitForTaskAsync(Task.Run(async () => await provider.DisposeAsync()), "application services to stop", CancellationToken.None);
+        }
+
+        _window = null;
         _generations = null;
         _imageFiles = null;
         Dispatcher.UIThread.RunJobs();

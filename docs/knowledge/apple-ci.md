@@ -1,5 +1,11 @@
 # Apple CI
 
+On the Avalonia iOS head, omitting `UILaunchScreen` leaves iOS in letterboxed compatibility mode; adding the key fills the simulator screen (confirmed by the full-screen screenshots in [run 43312788834](https://github.com/r-eliseev/studious-goggles/actions/runs/43312788834), compared with [run 42405774295](https://github.com/r-eliseev/studious-goggles/actions/runs/42405774295)).
+
+### Partial 20-repeat diagnosis (task 274)
+
+The cancelled [run 43296911876](https://github.com/r-eliseev/studious-goggles/actions/runs/43296911876) uploaded artifacts for 14 of 20 Avalonia repetitions. Runs 09 and 11 were marked failed because the newly collected host crash reports were `UsageTrackingAgent` reports, not reports for the Avalonia app. In run 14, `summary.json` says `aliveAfter30s=false`, `crashReports=0`, `exitedAtSeconds=5`; however, `process-timeline.txt` shows no process through the 45-second sample and a live process at 50 seconds, while the app log records startup at `2026-11-12 21:48:43.500`. The simulator log records the process receiving SIGTERM during cleanup at `21:49:46.771`; there is no app crash report. This points to delayed process startup and overly broad host crash-report counting as explanations for the smoke failure, but does not establish why startup was delayed. The 20-run result is incomplete and must not be treated as the final failure rate.
+
 ## Preflight 244
 
 [Successful run 42369719262](https://github.com/r-eliseev/studious-goggles/actions/runs/42369719262), the PR #85 branch, job `apple-preflight` — 5 min 9 s. Runner `macos-26`, architecture `arm64`, macOS 26.7.2 (build 25G332), Xcode 26.6 (17F113), .NET SDK 10.0.403. iOS Simulator runtimes 26.2, 26.4 and 26.5 are available.

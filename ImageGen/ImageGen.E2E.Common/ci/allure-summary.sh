@@ -51,7 +51,7 @@ for platform in android windows; do
 done
 
 if (( result_count == 0 )); then
-  printf '### Allure UI test summary\n\nНет результатов Allure.\n' >> "$summary_file"
+  printf '### Allure UI test summary\n\nNo Allure results.\n' >> "$summary_file"
   exit 0
 fi
 
@@ -62,6 +62,6 @@ fi
   printf '| Windows | %s | %s | %s |\n' "${counts[windows_passed]}" "${counts[windows_failed]}" "${counts[windows_skipped]}"
   if [[ -n "${GITHUB_RUN_ID:-}" ]]; then
     run_url="${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-}/actions/runs/$GITHUB_RUN_ID"
-    printf '\nОтчёт: [артефакт allure-report](%s)\n' "$run_url"
+    printf '\nReport: [allure-report artifact](%s)\n' "$run_url"
   fi
 } >> "$summary_file"

@@ -37,8 +37,8 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 | id | Scenario: condition → expectation | Requirements | Status |
 |---|---|---|---|
 | KEY-01 | First launch without a key → the key screen opens, not the session list (`@e2e`, replaces `FirstRunTests.Launch_ShowsFirstRunKeyScreen`) | S1, F1.1 | done |
-| KEY-02 | A valid key of the default assistant provider (OpenRouter) → status "works", the session list opens without the model choice (corrected 2026-11-10, task 272) | F1.2, S1.3, S6.4 | planned (272) |
-| KEY-12 | On the key screen the user chooses another configured chat provider and saves its key → the model choice of that provider opens; the chosen model becomes the default for new sessions | S6.4 | planned (272) |
+| KEY-02 | A valid key of the default assistant provider (OpenRouter) → status "works", the session list opens without the model choice (corrected 2026-11-10, task 272) | F1.2, S1.3, S6.4 | done |
+| KEY-12 | On the key screen the user chooses another configured chat provider and saves its key → the model choice of that provider opens; the chosen model becomes the default for new sessions | S6.4 | done |
 | KEY-03 | An invalid key (401) → an "invalid key" message with the provider's name, we stay on the key screen, the key is not saved (`@e2e`, replaces `FirstRunTests.InvalidKey_ShowsError`; on a device the message may also be "no connection") | F1.2 | done |
 | KEY-04 | No connection → a "no connection" message, the key is not saved | F1.2 | done |
 | KEY-05 | The error text and the app log do not contain the entered key | F1.3, F10.3 | done |
@@ -52,44 +52,44 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 ### Sessions (`Sessions.feature`, task 255)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| SES-01 | A new session → an empty chat; it is at the top of the session list | S1.1 | planned |
-| SES-02 | A first message longer than 40 characters → the session title is the first 40 characters | S1.2 | planned |
-| SES-03 | Renaming: the new title is visible in the list and the chat; the list order does not change | S1.2 | planned |
-| SES-04 | Renaming to an empty string or to more than 40 characters is not accepted | S1.2 | planned |
-| SES-05 | Deleting with confirmation → the session is not in the list, also after a restart; declining the confirmation → the session stays | S1.1 | planned |
-| SES-06 | A new session gets the default settings: one model `black-forest-labs/flux.2-klein-4b`, one run, the assistant model from Settings | S1.3 | planned |
+| SES-01 | A new session → an empty chat; it is at the top of the session list | S1.1 | done |
+| SES-02 | A first message longer than 40 characters → the session title is the first 40 characters | S1.2 | done |
+| SES-03 | Renaming: the new title is visible in the list and the chat; the list order does not change | S1.2 | done |
+| SES-04 | Renaming to an empty string or to more than 40 characters is not accepted | S1.2 | discrepancy (276) |
+| SES-05 | Deleting with confirmation → the session is not in the list, also after a restart; declining the confirmation → the session stays | S1.1 | done |
+| SES-06 | A new session gets the default settings: one model `black-forest-labs/flux.2-klein-4b`, one run, the assistant model from Settings | S1.3 | done |
 | SES-07 | Changing the default assistant model in Settings affects only new sessions | S1.3 | planned |
 | SES-08 | The list row shows the number of runs ("· 2 runs") after two runs | S1.2 | planned |
-| SES-09 | Sessions are grouped: today's in "Today", older ones in "Earlier" (time from `FakeTimeProvider`) | S1.1 | planned |
+| SES-09 | Sessions are grouped: today's in "Today", older ones in "Earlier" (time from `FakeTimeProvider`) | S1.1 | done |
 | SES-10 | An example from the empty list starts a new session with this text | S1.1 | planned |
 | SES-11 | Clearing the whole history from Settings: sessions and files deleted, keys and settings kept | S1.4 | planned (273) |
 
 ### Chat and assistant (`ChatAssistant.feature`, task 256)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| CHAT-01 | The assistant answers with text → an assistant message in the feed, no run | S2.2 | planned |
-| CHAT-02 | The assistant calls `generate_images` → a run block in the feed with the exact prompt of the tool, the card has the same prompt (`@e2e` after 243, replaces `MockSessionTests.FirstRunWithMock_GeneratesImage`) | S2.2, S2.3, F9.4 | planned |
-| CHAT-03 | The assistant receives the system prompt and the prompt of the last run (the fake checks the request body) | S2.1 | planned |
-| CHAT-04 | An assistant error (500, 429, 401) → a separate message with the reason; the user's message is not lost; it can be sent again | S2.5 | planned |
-| CHAT-05 | An empty message is not sent (the command is unavailable) | S2.1 | planned |
-| CHAT-06 | Retry after an assistant error: the second answer is normal → the run starts | S2.5 | planned |
-| CHAT-07 | The session's assistant model is visible in the chat | S1.3 | planned |
+| CHAT-01 | The assistant answers with text → an assistant message in the feed, no run | S2.2 | done |
+| CHAT-02 | The assistant calls `generate_images` → a run block in the feed with the exact prompt of the tool, the card has the same prompt (`@e2e` after 243, replaces `MockSessionTests.FirstRunWithMock_GeneratesImage`) | S2.2, S2.3, F9.4 | done |
+| CHAT-03 | The assistant receives the system prompt and the prompt of the last run (the fake checks the request body) | S2.1 | done |
+| CHAT-04 | An assistant error (500, 429, 401) → a separate message with the reason; the user's message is not lost; it can be sent again | S2.5 | done |
+| CHAT-05 | An empty message is not sent (the command is unavailable) | S2.1 | done |
+| CHAT-06 | Retry after an assistant error: the second answer is normal → the run starts | S2.5 | done |
+| CHAT-07 | The session's assistant model is visible in the chat | S1.3 | done |
 | CHAT-08 | A picture attachment goes into the generation as a reference if the model supports them | F4.5 | planned |
 
 ### Runs and generations (`Runs.feature`, task 257)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| GEN-01 | Two models × two runs → four cards; the seeds are equal for both models and differ between runs | S3.1, S3.2 | planned |
-| GEN-02 | A model without seed → the seed is not sent (request body), the card shows "seed not supported" | S3.3 | planned |
-| GEN-03 | One generation fails (500), another is done → the first is "failed" with a short reason, the second "done" | S3.4, S3.5 | planned |
-| GEN-04 | The provider filtered → the state is "filtered", not "failed" | S3.5, F6.5, F9.2 | planned |
-| GEN-05 | While the provider has not answered → the card is "running"; after the answer — "done" with the picture (`@e2e` after 243) | S3.5 | planned |
-| GEN-06 | The picture is saved to a file and the DB before it is shown: the file exists; after a restart the card shows the same picture | S3.6, F7.2 | planned |
-| GEN-07 | The card shows the model, seed, price (`usage.cost`) and time | S3.7 | planned |
-| GEN-08 | The run summary: number of models, runs, finished ones and the sum of known prices; updated as generations finish | S3.9 | planned |
-| GEN-09 | Picture size on the card: `W×H px · ratio` | S3.10 | planned |
-| GEN-10 | Changing the session models during a run does not change the run already started | S3.1, S5.2 | planned |
-| GEN-11 | The next run estimate in the chat is the sum of the known prices of the selected models | F4.4 | planned |
+| GEN-01 | Two models × two runs → four cards; the seeds are equal for both models and differ between runs | S3.1, S3.2 | done |
+| GEN-02 | A model without seed → the seed is not sent (request body), the card shows "seed not supported" | S3.3 | done |
+| GEN-03 | One generation fails (500), another is done → the first is "failed" with a short reason, the second "done" | S3.4, S3.5 | done |
+| GEN-04 | The provider filtered → the state is "filtered", not "failed" | S3.5, F6.5, F9.2 | done |
+| GEN-05 | While the provider has not answered → the card is "running"; after the answer — "done" with the picture | S3.5 | done |
+| GEN-06 | The picture is saved to a file and the DB before it is shown: the file exists; after a restart the card shows the same picture | S3.6, F7.2 | done |
+| GEN-07 | The card shows the model, seed, price (`usage.cost`) and time | S3.7 | done |
+| GEN-08 | The run summary: number of models, runs, finished ones and the sum of known prices; updated as generations finish | S3.9 | done |
+| GEN-09 | Picture size on the card: `W×H px · ratio` | S3.10 | done |
+| GEN-10 | Changing the session models during a run does not change the run already started | S3.1, S5.2 | done |
+| GEN-11 | The next run estimate in the chat is the sum of the known prices of the selected models | F4.4 | done |
 
 ### Cancellation and recovery (`CancelAndRecovery.feature`, task 258)
 | id | Scenario | Requirements | Status |
@@ -115,14 +115,14 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 ### Session models and parameters (`SessionModels.feature`, task 260)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| MOD-01 | Choosing two models and three runs → the next run is two models × 3 | S5.1, S5.2 | planned |
-| MOD-02 | The number of runs is limited to 1–10 | S5.1 | planned |
-| MOD-03 | Search in the model list narrows the list by name and id | S5.1 | planned |
-| MOD-04 | Models are grouped by vendor from the id prefix | S5.5 | planned |
-| MOD-05 | The price in a model row is only `output_image`; without a price — "price unknown" | S5.6 | planned |
-| MOD-06 | Refresh re-requests the catalog and prices; without Refresh reopening uses the cache (no requests) | S5.6 | planned |
-| MOD-07 | Cancel does not save the changes | S5.1 | planned |
-| MOD-08 | Session parameters (aspect ratio, resolution, format) go into the generation request body | F4.2 | planned |
+| MOD-01 | Choosing two models and three runs → the next run is two models × 3 | S5.1, S5.2 | done |
+| MOD-02 | The number of runs is limited to 1–10 | S5.1 | done |
+| MOD-03 | Search in the model list narrows the list by name and id | S5.1 | done |
+| MOD-04 | Models are grouped by vendor from the id prefix | S5.5 | done |
+| MOD-05 | The price in a model row is only `output_image`; without a price — "price unknown" | S5.6 | done |
+| MOD-06 | Refresh re-requests the catalog and prices; without Refresh reopening uses the cache (no requests) | S5.6 | done |
+| MOD-07 | Cancel does not save the changes | S5.1 | done |
+| MOD-08 | Session parameters (aspect ratio, resolution, format) go into the generation request body | F4.2 | done |
 | MOD-09 | A selected model vanished from the catalog → this is visible and it can be removed | — | after 236 |
 
 ### Settings and appearance (`Settings.feature`, task 261)

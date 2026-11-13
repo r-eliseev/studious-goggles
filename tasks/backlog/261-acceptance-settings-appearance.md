@@ -1,6 +1,6 @@
 ---
 id: 261
-status: approved
+status: blocked
 assignee:
 claimed:
 created: 2026-11-09
@@ -64,3 +64,8 @@ Plan approved, status `approved`. Changes of the same day apply: the Gherkin sce
 
 ### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan) — plan extended
 Task 232 is done, so SET-04 is added to this task: "Clear logs" (`SettingsPageModel.ClearLogsAsync`, confirmation through the dialog fake) deletes the log files of `<data folder>/logs`, and the app keeps writing the log afterwards (a new line appears after the next action). Files: the same as in the plan. Expectation from the catalog row SET-04 and task 232's "Report"; on a discrepancy — `@ignore @bug-NNN` and a task. Plan approved.
+
+### 2026-11-12, codex-gpt6
+The planned acceptance scenarios cannot verify the stated behavior with the current harness. `ImageGen/ImageGen.Acceptance.Tests/Support/AppWorld.cs` creates the composition without `configureLogging`, so the app does not write files under the data directory's `logs/`. It also does not start `AvaloniaAppearanceApplier`; only `ImageGen/ImageGen.Avalonia/App.axaml.cs` does that, and the plan forbids product/head startup changes. Therefore SET-02 cannot observe the live theme/style resources after the user's Settings command, and SET-04 cannot clear and then observe the active log file continuing to receive entries.
+
+Proposed plan amendment: add `Support/AppWorld.cs` to `Files:` and allow it to configure the real file logger for the acceptance composition and start the Avalonia appearance applier against `Application.Current` for each started world. Keep the Settings steps as user actions and verify the resulting Avalonia resources and log file after restart. No implementation was made pending planner/owner approval.

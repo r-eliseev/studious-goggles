@@ -5,6 +5,7 @@ namespace ImageGen.Acceptance.Tests.Support;
 public sealed class FakePlatform : IClipboardService, IDialogService, IImageSaver, IFilePickerService
 {
     private readonly Queue<bool> _confirmationAnswers = new();
+    private readonly Queue<string?> _promptAnswers = new();
 
     public List<string> ClipboardWrites { get; } = [];
 
@@ -19,6 +20,8 @@ public sealed class FakePlatform : IClipboardService, IDialogService, IImageSave
     public string ActionLabel => "Save file";
 
     public void QueueConfirmation(bool answer) => _confirmationAnswers.Enqueue(answer);
+
+    public void QueuePrompt(string? answer) => _promptAnswers.Enqueue(answer);
 
     public Task SetTextAsync(string text)
     {
@@ -42,7 +45,7 @@ public sealed class FakePlatform : IClipboardService, IDialogService, IImageSave
     }
 
     public Task<string?> PromptAsync(string title, string message, string accept, string cancel, string initialValue) =>
-        Task.FromResult<string?>(null);
+        Task.FromResult(_promptAnswers.TryDequeue(out var answer) ? answer : null);
 
     public Task<string?> ChooseAsync(string title, string cancel, IReadOnlyList<string> options) =>
         Task.FromResult<string?>(null);

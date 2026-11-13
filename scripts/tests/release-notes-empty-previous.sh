@@ -80,8 +80,8 @@ status: done
 TXT
 commit "no new completed work" v0.1.12
 no_new=$(run_notes v0.1.12)
-assert_contains "$no_new" "Новых завершённых задач после v0.1.11 нет."
-assert_contains "$(run_notes v0.1.9)" "Все завершённые задачи:"
+assert_contains "$no_new" "No new completed tasks since v0.1.11."
+assert_contains "$(run_notes v0.1.9)" "All completed tasks:"
 
 for invalid in HEAD v00.1.1 v0.1.10-rc.1; do
   if run_notes "$invalid" >/dev/null 2>&1; then fail "accepted invalid tag: $invalid"; fi

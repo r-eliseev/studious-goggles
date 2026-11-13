@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
-# Заметки о релизе: задачи, завершённые после предыдущего тега. Использование: scripts/release-notes.sh <тег> [<предыдущий тег>]
+# Release notes: tasks completed after the previous tag. Usage: scripts/release-notes.sh <tag> [<previous tag>]
 set -eu
 cd "$(dirname "$0")/.."
 . scripts/tasks-lib.sh
 
-[ $# -ge 1 ] && [ $# -le 2 ] || { echo "Использование: $0 <тег> [<предыдущий тег>]" >&2; exit 1; }
+[ $# -ge 1 ] && [ $# -le 2 ] || { echo "Usage: $0 <tag> [<previous tag>]" >&2; exit 1; }
 
-# Стабильный тег: три числа без ведущих нулей, без суффиксов.
+# Stable tag: three numbers without leading zeroes or suffixes.
 tag_re='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
 
 for name in "$@"; do
-  printf '%s' "$name" | grep -Eq "$tag_re" || { echo "Неверный формат тега $name" >&2; exit 1; }
+  printf '%s' "$name" | grep -Eq "$tag_re" || { echo "Invalid tag format: $name" >&2; exit 1; }
 done
 
-# Коммит тега. Только полное имя refs/tags/<имя>: сокращённое имя через ветку не разрешается.
+# Tag commit. Only the full refs/tags/<name> ref is accepted; a short branch name is not.
 TAG_SHA=""
 resolve_tag() {
   local name="$1" ref
   ref=$(git rev-parse --verify --quiet "refs/tags/$name^{commit}" 2>/dev/null) || ref=""
   if [ -z "$ref" ]; then
-    echo "Нет тега $name" >&2
+    echo "Tag not found: $name" >&2
     exit 1
   fi
   TAG_SHA="$ref"
@@ -39,14 +39,14 @@ fi
 
 if [ -n "$prev" ]; then
   if [ "$prev" = "$tag" ] || [ "$(printf '%s\n%s\n' "$prev" "$tag" | sort -V | head -1)" != "$prev" ]; then
-    echo "Предыдущий тег должен быть меньше целевого" >&2
+    echo "The previous tag must be older than the target" >&2
     exit 1
   fi
   resolve_tag "$prev"
   prev_sha="$TAG_SHA"
 fi
 
-# Новые завершённые задачи: то, чего не было завершено на предыдущем теге.
+# Newly completed tasks: tasks not completed at the previous tag.
 if [ -n "$prev_sha" ]; then
   ids=$(mktemp)
   task_done_at "$prev_sha" | cut -f1 | sort -u > "$ids"
@@ -58,22 +58,22 @@ fi
 
 printf '# ImageGen %s\n\n' "$tag"
 if [ -z "$prev_sha" ]; then
-  printf 'Все завершённые задачи:\n\n'
+  printf 'All completed tasks:\n\n'
   if [ -n "$new" ]; then
     printf '%s\n' "$new" | while IFS=$'\t' read -r id title; do
       printf -- '- %03d — %s\n' "$((10#$id))" "$title"
     done
   fi
 elif [ -z "$new" ]; then
-  printf 'Новых завершённых задач после %s нет.\n' "$prev"
+  printf 'No new completed tasks since %s.\n' "$prev"
 else
-  printf 'Задачи, завершённые после %s:\n\n' "$prev"
+  printf 'Tasks completed since %s:\n\n' "$prev"
   printf '%s\n' "$new" | while IFS=$'\t' read -r id title; do
     printf -- '- %03d — %s\n' "$((10#$id))" "$title"
   done
 fi
 
-# Ссылка на сравнение коммитов, если адрес репозитория известен.
+# Commit comparison link, when the repository URL is known.
 url=""
 if [ -n "${GITHUB_REPOSITORY:-}" ]; then
   url="${GITHUB_SERVER_URL:-https://github.com}/$GITHUB_REPOSITORY"
@@ -84,5 +84,5 @@ else
   esac
 fi
 if [ -n "$prev_sha" ] && [ -n "$url" ]; then
-  printf '\nВсе изменения: %s/compare/%s...%s\n' "$url" "$prev" "$tag"
+  printf '\nAll changes: %s/compare/%s...%s\n' "$url" "$prev" "$tag"
 fi

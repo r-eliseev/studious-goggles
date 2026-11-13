@@ -29,12 +29,26 @@ Feature: First launch and keys
     Then the API key status shows a connection error
     And the entered API key is not saved
 
-  @KEY-02 @F1.2 @S1.3 @ignore @bug-272
-  Scenario: A valid OpenRouter key opens assistant model selection
+  @KEY-02 @F1.2 @S1.3
+  Scenario: A valid OpenRouter key opens the session list without assistant model selection
     Given the app is launched for the first time
     When the user enters API key "e2e-mock-key"
     And the user checks the API key
-    Then the API key is accepted and the assistant model choice opens
+    Then the API key is accepted and the session list opens
+    When the user opens settings
+    Then the default assistant model is "openrouter/anthropic/claude-haiku-5.5"
+
+  @KEY-12 @S6.4
+  Scenario: Choosing another provider on first run opens assistant model selection
+    Given the app has a configured chat provider "e2e-mock"
+    And the app is launched for the first time
+    When the user selects chat provider "e2e-mock"
+    And the user enters API key "e2e-mock-key"
+    And the user checks the API key
+    Then the API key status shows the assistant model choice for "E2E Assistant"
+    When the user saves the selected assistant model
+    And the user opens settings
+    Then the default assistant model is "e2e-mock/e2e/assistant"
 
   @KEY-06 @F10.3
   Scenario: A saved key remains available after restart

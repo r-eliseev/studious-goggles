@@ -20,10 +20,10 @@ public sealed class CommonSteps(ScenarioContext scenario)
     public async Task DisposeWorldAsync()
     {
         var world = World;
-        await HeadlessApp.RunAsync(_ =>
+        await HeadlessApp.RunAsync(async _ =>
         {
-            world.Dispose();
-            return Task.FromResult(true);
+            await world.DisposeAsync();
+            return true;
         }, CancellationToken.None).ConfigureAwait(false);
     }
 
@@ -37,6 +37,13 @@ public sealed class CommonSteps(ScenarioContext scenario)
             await World.StartAsync(cancellationToken);
             return true;
         }, TestContext.Current.CancellationToken).ConfigureAwait(false);
+    }
+
+    [Given("the app has a configured chat provider {string}")]
+    public async Task GivenTheAppHasAConfiguredChatProvider(string providerId)
+    {
+        Assert.Equal("e2e-mock", providerId);
+        await World.ConfigureChatProviderAsync(TestContext.Current.CancellationToken);
     }
 
     [Given("the user has a saved OpenRouter key")]
@@ -57,16 +64,27 @@ public sealed class CommonSteps(ScenarioContext scenario)
     [Given("OpenRouter has no connection")]
     public void GivenOpenRouterHasNoConnection() => World.OpenRouter.SetKeyNetworkError();
 
+    [When("the current time advances by {int} day")]
+    public void WhenCurrentTimeAdvancesByDays(int days) => World.Time.Advance(TimeSpan.FromDays(days));
+
     [Given("the OpenRouter image model catalog:")]
-    public void GivenTheOpenRouterImageModelCatalog(DataTable table)
-    {
-        var models = table.Rows.Select(row => new FakeOpenRouter.ImageModel(
+    public void GivenTheOpenRouterImageModelCatalog(DataTable table) => World.OpenRouter.SetImageModels(ParseImageModels(table));
+
+    [When("the OpenRouter image model catalog changes to:")]
+    public void WhenTheOpenRouterImageModelCatalogChangesTo(DataTable table) => World.OpenRouter.SetImageModels(ParseImageModels(table));
+
+    private static IReadOnlyList<FakeOpenRouter.ImageModel> ParseImageModels(DataTable table) => table.Rows.Select(row => new FakeOpenRouter.ImageModel(
             row["id"],
             row["name"],
             bool.Parse(row["seed"]),
-            ParseNullableDecimal(row["price per MP"])));
-        World.OpenRouter.SetImageModels(models);
-    }
+            ParseNullableDecimal(row["price per MP"]),
+            table.Header.Contains("price per image", StringComparer.OrdinalIgnoreCase)
+                ? ParseNullableDecimal(row["price per image"])
+                : null,
+            ParseList(table, row, "aspect ratios"),
+            ParseList(table, row, "resolutions"),
+            ParseList(table, row, "formats"),
+            ParseList(table, row, "qualities"))).ToArray();
 
     [Given("the provider answers generation for model {string} with:")]
     public void GivenTheProviderAnswersGenerationForModelWith(string modelId, DataTable table)
@@ -161,4 +179,9 @@ public sealed class CommonSteps(ScenarioContext scenario)
 
     private static int ParseInteger(string value, int fallback) =>
         string.IsNullOrWhiteSpace(value) ? fallback : int.Parse(value, CultureInfo.InvariantCulture);
+
+    private static IReadOnlyList<string>? ParseList(DataTable table, DataTableRow row, string column) =>
+        table.Header.Contains(column, StringComparer.OrdinalIgnoreCase)
+            ? row[column].Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            : null;
 }

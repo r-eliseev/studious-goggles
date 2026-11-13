@@ -6,33 +6,33 @@ claimed:
 created: 2026-10-31
 ---
 
-# Генерация звуков и звуковых эффектов
+# Sound and sound effect generation
 
-## Описание
-Решение владельца 2026-10-31: генерация музыки, звуков и видео — задачи на следующие версии (раньше видео и аудио были вне объёма: `docs/product.md`, «Не входит»; `docs/specs/image-client.md`, «Вне объёма»).
+## Description
+Owner decision of 2026-10-31: music, sound and video generation are tasks for later releases (video and audio were previously out of scope: `docs/product.md`, "Out of scope"; `docs/specs/image-client.md`, "Out of scope").
 
-Короткие звуки и эффекты (шаги, дождь, интерфейсные звуки) по описанию: тот же поток, что для музыки (167), но с короткой длительностью и, при поддержке модели, зацикливанием.
+Short sounds and effects (footsteps, rain, interface sounds) follow the same flow as music (167), but with a short duration and, if supported by the model, looping.
 
-Зависит от: 166 (done); модель звуковых эффектов у OpenRouter.
-Среда: Linux или Windows; обе UI-оболочки.
+Depends on: 166 (done); an OpenRouter sound effects model.
+Environment: Linux or Windows; both UI shells.
 
-## Критерии готовности
-- Модели звуковых эффектов доступны в каталоге (по итогам 166), с ценой или «price unknown».
-- Параметры длительности (и зацикливания, если модель поддерживает); результат сохраняется сразу, карточка с плеером и действиями, как в 167.
-- Несколько вариантов одного запроса (модели × сиды) сравниваются прослушиванием подряд.
-- Обе оболочки; доступность плеера.
+## Acceptance criteria
+- Sound effects models are available in the catalog (following 166), with a price or "price unknown".
+- Duration parameters (and looping if supported by the model); save the result immediately and show a card with a player and actions, as in 167.
+- Compare several variants of one request (models × seeds) by listening to them in sequence.
+- Both shells; player accessibility.
 
-## Анализ
-Объём и модели уточняются после 166. Если модели музыки и звуков одни и те же, задачу можно объединить с 167 при планировании.
+## Analysis
+Scope and models will be clarified after 166. If music and sound use the same models, this task can be combined with 167 during planning.
 
-## План
+## Plan
 
-## Отчёт
+## Report
 
-## Комментарии
+## Comments
 
-### 2026-10-31, владелец (в чате, записал claude-audit)
-Добавить на следующие версии: генерация звуков.
+### 2026-10-31, owner (in chat, recorded by claude-audit)
+Add sound generation to a future release.
 
 ### 2026-11-06, claude-audit
-Заблокирована: владелец выбрал только OpenRouter (ADR 0027), а моделей звуковых эффектов там нет (каталог `/api/v1/models` на 2026-11-06: аудио дают только Lyria 3 и gpt-audio). Варианты для владельца: ждать модель на OpenRouter; генерировать звуки Lyria (короткие клипы — качество для эффектов неизвестно, проверить после 208); подключить fal (ElevenLabs Sound Effects v3, Stable Audio 2.5 и др., `docs/knowledge/media-generation.md`).
+Blocked: the owner selected OpenRouter only (ADR 0027), but it has no sound effects models (the `/api/v1/models` catalog on 2026-11-06 listed only Lyria 3 and gpt-audio for audio). Options for the owner: wait for a model on OpenRouter; generate sounds with Lyria (quality for short effects is unknown; check after 208); or add fal (ElevenLabs Sound Effects v3, Stable Audio 2.5, and others; `docs/knowledge/media-generation.md`).

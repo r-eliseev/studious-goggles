@@ -28,7 +28,13 @@ public sealed class FakeOpenRouter
             return Task.FromResult(JsonResponse(_keyStatusCode, "{}"));
         });
         network.AddResponse(HttpMethod.Get, Host, "/api/v1/embeddings/models", HttpStatusCode.OK, "{\"data\":[]}");
-        network.AddResponse(HttpMethod.Get, Host, "/api/v1/models", HttpStatusCode.OK, "{\"data\":[]}");
+        network.AddResponse(
+            HttpMethod.Get,
+            Host,
+            "/api/v1/models",
+            HttpStatusCode.OK,
+            "{\"data\":[{\"id\":\"anthropic/claude-haiku-5.5\",\"name\":\"Claude Haiku 5.5\",\"supported_parameters\":[\"tools\"]}]}");
+        network.AddResponse(HttpMethod.Get, Host, "/api/v1/videos/models", HttpStatusCode.OK, "{\"data\":[]}");
         network.AddRoute(HttpMethod.Get, Host, "/api/v1/images/models", (_, _) => Task.FromResult(JsonResponse(HttpStatusCode.OK, ImageModelsJson())));
         network.AddRoute(HttpMethod.Get, Host, "/api/v1/images/models/*/endpoints", (request, _) =>
         {
@@ -36,17 +42,37 @@ public sealed class FakeOpenRouter
             var modelId = Uri.UnescapeDataString(path["/api/v1/images/models/".Length..^"/endpoints".Length]);
             var model = _imageModels.FirstOrDefault(candidate => candidate.Id == modelId);
             var endpoints = new JsonArray();
-            if (model?.PricePerMegapixel is { } price)
+            if (model is { PricePerMegapixel: not null } or { PricePerImageUsd: not null })
             {
-                endpoints.Add(new JsonObject
+                var pricing = new JsonArray();
+                if (model.PricePerMegapixel is { } megapixelPrice)
                 {
-                    ["pricing"] = new JsonArray(new JsonObject
+                    pricing.Add(new JsonObject
                     {
                         ["billable"] = "output_image",
                         ["unit"] = "megapixel",
-                        ["cost_usd"] = price,
-                    }),
+                        ["cost_usd"] = megapixelPrice,
+                    });
+                }
+
+                if (model.PricePerImageUsd is { } imagePrice)
+                {
+                    pricing.Add(new JsonObject
+                    {
+                        ["billable"] = "output_image",
+                        ["unit"] = "image",
+                        ["cost_usd"] = imagePrice,
+                    });
+                }
+
+                pricing.Add(new JsonObject
+                {
+                    ["billable"] = "input_image",
+                    ["unit"] = "megapixel",
+                    ["cost_usd"] = 9.99m,
                 });
+
+                endpoints.Add(new JsonObject { ["pricing"] = pricing });
             }
 
             return Task.FromResult(JsonResponse(HttpStatusCode.OK, new JsonObject { ["endpoints"] = endpoints }.ToJsonString()));
@@ -91,6 +117,22 @@ public sealed class FakeOpenRouter
         var held = new FakeNetwork.HeldResponse();
         _generationReplies[modelId] = GenerationReply.Pending(held);
         return held;
+    }
+
+    public void CompleteHeldGeneration(string modelId, int width = 64, int height = 64, decimal cost = 0.01m)
+    {
+        if (!_generationReplies.TryGetValue(modelId, out var reply) || reply.Held is not { } held)
+        {
+            throw new InvalidOperationException($"No held generation exists for model '{modelId}'.");
+        }
+
+        var b64 = Convert.ToBase64String(CreatePng(width, height));
+        var responseBody = new JsonObject
+        {
+            ["data"] = new JsonArray(new JsonObject { ["b64_json"] = b64, ["media_type"] = "image/png" }),
+            ["usage"] = new JsonObject { ["cost"] = cost },
+        }.ToJsonString();
+        held.Release(HttpStatusCode.OK, responseBody);
     }
 
     private Task<HttpResponseMessage> HandleChatAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -164,15 +206,36 @@ public sealed class FakeOpenRouter
         var models = new JsonArray();
         foreach (var model in _imageModels)
         {
+            var supportedParameters = new JsonObject();
+            if (model.SupportsSeed)
+            {
+                supportedParameters["seed"] = true;
+            }
+
+            AddEnumParameter(supportedParameters, "aspect_ratio", model.AspectRatios);
+            AddEnumParameter(supportedParameters, "resolution", model.Resolutions);
+            AddEnumParameter(supportedParameters, "output_format", model.Formats);
+            AddEnumParameter(supportedParameters, "quality", model.Qualities);
+
             models.Add(new JsonObject
             {
                 ["id"] = model.Id,
                 ["name"] = model.Name,
-                ["supported_parameters"] = new JsonObject { ["seed"] = model.SupportsSeed },
+                ["supported_parameters"] = supportedParameters,
             });
         }
 
         return new JsonObject { ["data"] = models }.ToJsonString();
+    }
+
+    private static void AddEnumParameter(JsonObject parameters, string name, IReadOnlyList<string>? values)
+    {
+        if (values is not { Count: > 0 }) return;
+        parameters[name] = new JsonObject
+        {
+            ["type"] = "enum",
+            ["values"] = new JsonArray(values.Select(value => (JsonNode?)JsonValue.Create(value)).ToArray()),
+        };
     }
 
     private static HttpResponseMessage JsonResponse(HttpStatusCode statusCode, string body) =>
@@ -273,5 +336,14 @@ public sealed class FakeOpenRouter
         public static GenerationReply Pending(FakeNetwork.HeldResponse response) => new(0, 0, 0, Held: response);
     }
 
-    public sealed record ImageModel(string Id, string Name, bool SupportsSeed, decimal? PricePerMegapixel);
+    public sealed record ImageModel(
+        string Id,
+        string Name,
+        bool SupportsSeed,
+        decimal? PricePerMegapixel,
+        decimal? PricePerImageUsd = null,
+        IReadOnlyList<string>? AspectRatios = null,
+        IReadOnlyList<string>? Resolutions = null,
+        IReadOnlyList<string>? Formats = null,
+        IReadOnlyList<string>? Qualities = null);
 }

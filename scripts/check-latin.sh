@@ -7,11 +7,11 @@ cd "$(dirname "$0")/.."
 export LC_ALL=C.UTF-8
 
 # Checked paths. Task 268 and its subtasks add a path here once it is translated.
-LATIN_PATHS=(AGENTS.md CLAUDE.md README.md docs .claude)
+LATIN_PATHS=(AGENTS.md CLAUDE.md README.md docs .claude .github poc scripts)
 
 # Exceptions: a path (exact, relative to the repository root) and the reason. Only test data that
 # verifies non-English input may be listed here.
-LATIN_EXCEPTIONS=()
+LATIN_EXCEPTIONS=("scripts/tests/check-latin.sh intentional non-Latin test inputs")
 
 if [ $# -gt 0 ]; then paths=("$@"); else paths=("${LATIN_PATHS[@]}"); fi
 fail=0

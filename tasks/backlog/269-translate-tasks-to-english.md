@@ -1,6 +1,6 @@
 ---
 id: 269
-status: approved
+status: blocked
 assignee:
 claimed:
 created: 2026-11-09
@@ -54,7 +54,27 @@ TASKS_BRANCH=main scripts/list-tasks.sh --main approved
 
 ## Report
 
+### 2026-11-13, codex-gpt6
+- Translated the task template and cards 030, 046, 140, 168, 198, 230, 236, 237, and 245 in small batches. The 245 branch has no remote task branch or unmerged card edit.
+- Also translated cards 248 and 250; neither has a remote task branch.
+- Translated card 249 after confirming it has no remote task branch.
+- Translated cards 246 and 247 after confirming that neither has a remote task branch; retained 247's `blocked` status and existing reports.
+- Translated card 243 last; its remote branch had no unmerged edits to the task card.
+- Translated `tasks/v0.1/016-skeleton-manual-check.md`; retained its quoted Russian UI labels.
+- Translated every title and status label in `tasks/DONE.md`; preserved task ids, dates, statuses, and paths. `scripts/check.sh` passed.
+- Translated acceptance cards 258, 259, 262, 263, 264, and 265; these have no remote task branches.
+- After each committed batch, `bash scripts/check.sh` passed. The new-task template was rendered in a scratch copy and matched the English headings.
+- Cards 235 and 255 remain untouched because their remote task branches contain unmerged edits to those same cards. Card 243's remote branch has no card diff; it remains for the final translation pass as required by the plan.
+- Also left cards 256, 257, 260, 261, 266, 272, 274, 275, 276, and 277 untouched because their status differs from `origin/main` in this branch; the harness validates the fixed sections during these status transitions. The added historical task 276/277 cards also remain owned by the work that introduced them.
+- Quoted Russian UI/status literals remain unchanged as required by the plan (for example, in task 016 and cards 046, 198, 243, 248, 258, 259, 262–265). This conflicts with the current `check-latin.sh` rule, which permits exceptions only for non-English test data. Resolve this before adding `tasks` to `LATIN_PATHS`; a plan/owner decision is needed on whether those quoted literals may be translated or whitelisted.
+
 ## Comments
+
+### 2026-11-13, codex-gpt6
+The approved plan has incompatible requirements for the Latin-only check. `Execution order` says to keep quoted UI text unchanged, and the translated task cards retain required Russian UI/status literals (for example `tasks/backlog/258-acceptance-cancel-recovery.md` uses `“отменено”` as an expected application status). The acceptance criteria also require adding all of `tasks/` to `LATIN_PATHS`, while `scripts/check-latin.sh` rejects every non-Latin letter and allows exceptions only for non-English test data. Therefore the check cannot pass without either changing the task content contrary to the approved translation rule or widening the checker exceptions contrary to its current documented purpose.
+
+Proposed plan change: explicitly permit exact quoted UI/status literals in task cards through a narrowly scoped allowlist for `tasks/` (separate from test-data exceptions), while keeping the rest of task files under `LATIN_PATHS`; alternatively, approve translating those literals and accepting that task examples no longer match the current UI. Please choose the intended rule and update the plan before implementation continues.
+
 
 ### 2026-11-09, claude-bdd-plan
 Part of 268. Changing `scripts/` is allowed by the owner's request to translate everything (2026-11-09). The plan waits for approval.

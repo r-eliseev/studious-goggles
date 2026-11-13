@@ -1,241 +1,241 @@
-# Завершённые задачи
+# Completed tasks
 
-Задачи со статусом `done` или `cancelled`, убранные из `tasks/` скриптом `scripts/archive-tasks.sh`. Текст задачи — в истории git: `git log --all -- <путь>`, затем `git show <коммит>^:<путь>`. Номера отсюда не используются повторно.
+Tasks with status `done` or `cancelled` removed from `tasks/` by `scripts/archive-tasks.sh`. Task text is in git history: `git log --all -- <path>`, then `git show <commit>^:<path>`. These numbers are not reused.
 
-- 035 | backlog | done | 2026-10-28 | Миграции: брать скрипты из папки, а не из списка | `tasks/backlog/035-migrations-from-folder.md`
-- 037 | backlog | cancelled | 2026-10-28 | HttpClient OpenRouter в singleton-сервисах | `tasks/backlog/037-http-client-lifetime.md`
-- 038 | backlog | done | 2026-10-28 | Общий слой представления ImageGen.Presentation | `tasks/backlog/038-presentation-extract.md`
-- 039 | backlog | done | 2026-10-28 | Avalonia: пустое десктопное приложение, тесты и CI | `tasks/backlog/039-avalonia-scaffold.md`
-- 040 | backlog | done | 2026-10-28 | Avalonia: хранение ключей в системных хранилищах | `tasks/backlog/040-avalonia-secret-store.md`
-- 041 | backlog | done | 2026-10-28 | Avalonia: навигация, диалоги, страница ключа и список сессий | `tasks/backlog/041-avalonia-start-flow.md`
-- 042 | backlog | done | 2026-10-28 | Avalonia: чат сессии, карточки генераций и модели сессии | `tasks/backlog/042-avalonia-chat-and-models.md`
-- 001 | v0.1 | done | 2026-10-27 | Очистка репозитория и каркас решения | `tasks/v0.1/001-cleanup-and-scaffold.md`
-- 002 | v0.1 | done | 2026-10-27 | Ядро: доменная модель и интерфейсы | `tasks/v0.1/002-core-domain-and-contracts.md`
-- 003 | v0.1 | done | 2026-10-27 | Хранилище: проект ImageGen.Data, база и схема | `tasks/v0.1/003-data-sqlite-schema.md`
-- 004 | v0.1 | done | 2026-10-27 | Хранилище: репозитории сессий, сообщений, прогонов и моделей | `tasks/v0.1/004-data-repositories.md`
-- 005 | v0.1 | done | 2026-10-27 | Хранилище: файлы картинок и регистрация в DI | `tasks/v0.1/005-data-file-store-and-di.md`
-- 006 | v0.1 | done | 2026-10-27 | Ядро: HTTP-клиент OpenRouter | `tasks/v0.1/006-openrouter-client.md`
-- 007 | v0.1 | done | 2026-10-27 | Ядро: ключ OpenRouter и каталог моделей | `tasks/v0.1/007-api-key-and-catalog.md`
-- 008 | v0.1 | done | 2026-10-27 | Ядро: сервис сессий и порядок ленты чата | `tasks/v0.1/008-session-service.md`
-- 009 | v0.1 | done | 2026-10-27 | Ядро: прогоны и генерации | `tasks/v0.1/009-generation-service.md`
-- 010 | v0.1 | done | 2026-10-27 | Ядро: ассистент сессии | `tasks/v0.1/010-assistant-service.md`
-- 011 | v0.1 | done | 2026-10-27 | Ядро: регистрация сервисов в DI | `tasks/v0.1/011-core-di.md`
-- 012 | v0.1 | done | 2026-10-28 | MAUI: строки, платформенные сервисы и DI | `tasks/v0.1/012-maui-infrastructure.md`
-- 013 | v0.1 | done | 2026-10-28 | MAUI: запуск, ввод ключа и список сессий | `tasks/v0.1/013-maui-start-flow.md`
-- 014 | v0.1 | done | 2026-10-28 | MAUI: чат сессии и карточки генераций | `tasks/v0.1/014-maui-chat.md`
-- 015 | v0.1 | done | 2026-10-28 | MAUI: модели сессии | `tasks/v0.1/015-maui-session-models.md`
-- 034 | v0.1 | done | 2026-10-27 | Пустое MAUI-приложение и MAUI-сборка в CI | `tasks/v0.1/034-maui-scaffold.md`
-- 017 | backlog | done | 2026-10-28 | Ассистент видит картинки последнего прогона | `tasks/backlog/017-assistant-vision.md`
-- 018 | backlog | done | 2026-10-28 | Своя картинка в чате | `tasks/backlog/018-user-image-in-chat.md`
-- 019 | backlog | done | 2026-10-28 | Img2Text: описание по картинке | `tasks/backlog/019-img2text.md`
-- 020 | backlog | done | 2026-10-28 | Параметры генерации в настройках сессии | `tasks/backlog/020-generation-parameters.md`
-- 026 | backlog | cancelled | 2026-10-28 | Провайдер Replicate | `tasks/backlog/026-provider-replicate.md`
-- 036 | backlog | done | 2026-10-28 | Провайдер моделей: адрес и тип API в конфиге | `tasks/backlog/036-provider-config-compatible-api.md`
-- 045 | backlog | done | 2026-10-28 | Подробное логирование всего приложения | `tasks/backlog/045-detailed-logging.md`
-- 048 | backlog | done | 2026-10-28 | Headless-тесты Avalonia трогают настоящую папку данных пользователя | `tasks/backlog/048-test-isolation-data-dir.md`
-- 049 | backlog | done | 2026-10-28 | Модель ассистента: платная по умолчанию и выбор в настройках сессии | `tasks/backlog/049-assistant-model-picker.md`
-- 052 | backlog | done | 2026-10-28 | Журнал: не писать ответ проверки ключа целиком | `tasks/backlog/052-log-redaction-key-info.md`
-- 053 | backlog | done | 2026-10-28 | Тесты падают на Windows: культура цен и блокировка временной базы | `tasks/backlog/053-windows-test-failures.md`
-- 054 | backlog | done | 2026-10-28 | MAUI на Windows: картинка на карточке не показывается | `tasks/backlog/054-maui-image-not-shown.md`
-- 056 | backlog | done | 2026-10-28 | Отправка по Enter в MAUI под Windows | `tasks/backlog/056-enter-to-send-maui-windows.md`
-- 025 | backlog | done | 2026-10-28 | Провайдер fal.ai и контракт ADR 0003 | `tasks/backlog/025-provider-fal.md`
-- 027 | backlog | cancelled | 2026-10-28 | Модель ассистента и управление контекстом | `tasks/backlog/027-assistant-settings-and-context.md`
-- 029 | backlog | cancelled | 2026-10-28 | Сохранение в галерею Android | `tasks/backlog/029-android-gallery-save.md`
-- 043 | backlog | done | 2026-10-29 | Тексты ошибок формирует слой представления, а не ядро | `tasks/backlog/043-error-texts-in-presentation.md`
-- 044 | backlog | done | 2026-10-29 | Архитектурный тест Core: запрет ссылок на Avalonia | `tasks/backlog/044-core-arch-test-avalonia.md`
-- 047 | backlog | done | 2026-10-29 | Исследование провайдера вместо Replicate | `tasks/backlog/047-research-image-provider.md`
-- 050 | backlog | done | 2026-10-28 | Отправка сообщения по Enter | `tasks/backlog/050-enter-to-send.md`
-- 051 | backlog | done | 2026-10-28 | Дизайн: макеты экранов и дизайн-система на утверждение | `tasks/backlog/051-design-mockups.md`
-- 055 | backlog | done | 2026-10-28 | Копирование текста в чате | `tasks/backlog/055-chat-copy-text.md`
-- 057 | backlog | done | 2026-10-28 | Промпт прогона показывается в чате дважды | `tasks/backlog/057-prompt-shown-once.md`
-- 058 | backlog | done | 2026-10-29 | Подумать: общее хранилище ключей для оболочек | `tasks/backlog/058-shared-secret-storage.md`
-- 059 | backlog | done | 2026-10-28 | Настройки внешнего вида: стиль и тема | `tasks/backlog/059-appearance-settings.md`
-- 060 | backlog | done | 2026-10-28 | Ресурсы оформления: шрифты и значки в обеих оболочках | `tasks/backlog/060-design-assets.md`
-- 061 | backlog | done | 2026-10-28 | Тема Avalonia: словари трёх стилей и переключение на лету | `tasks/backlog/061-theme-avalonia.md`
-- 062 | backlog | done | 2026-10-28 | Тема MAUI: словари трёх стилей и переключение на лету | `tasks/backlog/062-theme-maui.md`
-- 063 | backlog | done | 2026-10-28 | Базовые стили элементов Avalonia | `tasks/backlog/063-base-styles-avalonia.md`
-- 064 | backlog | done | 2026-10-28 | Базовые стили элементов MAUI | `tasks/backlog/064-base-styles-maui.md`
-- 065 | backlog | done | 2026-10-28 | Экран настроек: ключ, стиль, тема | `tasks/backlog/065-settings-screen.md`
-- 066 | backlog | done | 2026-10-28 | Список сессий и экран ключа в новом стиле | `tasks/backlog/066-sessions-and-key-restyle.md`
-- 067 | backlog | done | 2026-10-28 | Широкое окно: список сессий рядом с чатом | `tasks/backlog/067-wide-sessions-sidebar.md`
-- 068 | backlog | done | 2026-10-28 | Чат: сообщения, прогон, карточки и поле ввода в новом стиле | `tasks/backlog/068-chat-restyle.md`
-- 069 | backlog | done | 2026-10-28 | Действия над генерацией: наведение, меню «…», нижнее меню на телефоне | `tasks/backlog/069-card-actions.md`
-- 070 | backlog | done | 2026-10-28 | Модели сессии и параметры в новом стиле | `tasks/backlog/070-models-params-restyle.md`
-- 071 | backlog | done | 2026-10-28 | Широкое окно: модели и параметры панелью справа от чата | `tasks/backlog/071-wide-side-pane.md`
-- 072 | backlog | done | 2026-10-28 | Диалоги Avalonia в новом стиле и порядок кнопок по ОС | `tasks/backlog/072-avalonia-dialogs-restyle.md`
-- 073 | backlog | done | 2026-10-29 | Десктоп: строка меню и сочетания клавиш | `tasks/backlog/073-desktop-menu-shortcuts.md`
-- 074 | backlog | done | 2026-10-28 | Новые функции с макетов | `tasks/backlog/074-design-extras.md`
-- 075 | backlog | done | 2026-10-29 | Список сессий: переименование и число прогонов | `tasks/backlog/075-sessions-search-rename.md`
-- 076 | backlog | done | 2026-10-28 | Карточка генерации: Details, Other model…, Copy prompt | `tasks/backlog/076-card-extra-actions.md`
-- 077 | backlog | done | 2026-10-29 | Повтор запроса после ошибки ассистента | `tasks/backlog/077-assistant-error-retry.md`
-- 078 | backlog | done | 2026-10-29 | Пустой чат: кликабельные примеры | `tasks/backlog/078-empty-chat-examples.md`
-- 079 | backlog | done | 2026-10-29 | Поиск по сессиям: нечёткий поиск по названиям, промптам и описаниям | `tasks/backlog/079-fuzzy-search.md`
-- 080 | backlog | done | 2026-10-29 | Сохранение картинки: файл на десктопе, галерея на телефонах | `tasks/backlog/080-save-image.md`
-- 081 | backlog | done | 2026-10-29 | Поиск по смыслу: исследование и ADR (тексты и картинки) | `tasks/backlog/081-semantic-search-research.md`
-- 082 | backlog | done | 2026-10-28 | Контекст ассистента: бюджет запроса и поправка по токенам | `tasks/backlog/082-context-budget.md`
-- 083 | backlog | done | 2026-10-29 | Контекст ассистента: сводка старой части истории | `tasks/backlog/083-conversation-summary.md`
-- 084 | backlog | done | 2026-10-29 | Контекст ассистента: пометка о сводке в ленте | `tasks/backlog/084-summary-mark-in-chat.md`
-- 085 | backlog | done | 2026-10-29 | Отладочный трейс: вводы пользователя и запросы к API моделей | `tasks/backlog/085-debug-api-trace.md`
-- 086 | backlog | done | 2026-10-29 | Поддержка видео: исследование | `tasks/backlog/086-video-support-research.md`
-- 087 | backlog | done | 2026-10-29 | Самоулучшение как в Hermes: исследование и перенос идеи | `tasks/backlog/087-hermes-self-improvement.md`
-- 090 | backlog | done | 2026-10-30 | Модели сессии: вкладки «Картинки» и «Ассистент» | `tasks/backlog/090-session-models-tabs.md`
-- 091 | backlog | cancelled | 2026-10-29 | Модели сессии: кнопки «Save» и «Cancel» всегда видны | `tasks/backlog/091-session-models-sticky-actions.md`
-- 092 | backlog | done | 2026-10-30 | Модели сессии: группы по производителю, раскрывающиеся | `tasks/backlog/092-session-models-by-vendor.md`
-- 093 | backlog | done | 2026-10-30 | Цена моделей картинок в списке моделей | `tasks/backlog/093-image-model-price.md`
-- 094 | backlog | done | 2026-10-30 | Avalonia на Android и iOS вместо MAUI: исследование | `tasks/backlog/094-avalonia-mobile-research.md`
-- 095 | backlog | done | 2026-10-30 | MAUI Android: клавиатура закрывает поле ввода чата | `tasks/backlog/095-maui-android-keyboard-inset.md`
-- 096 | backlog | done | 2026-10-30 | Сводка прогона не обновляется по ходу генерации | `tasks/backlog/096-run-header-live-status.md`
-- 097 | backlog | done | 2026-10-30 | MAUI: лента чата не прокручивается к новым сообщениям | `tasks/backlog/097-maui-chat-autoscroll.md`
-- 098 | backlog | done | 2026-10-30 | MAUI: на узком экране заголовок чата скрывает кнопки | `tasks/backlog/098-maui-chat-header-narrow.md`
-- 100 | backlog | done | 2026-10-30 | Релиз: проверить, что MAUI для Windows arm64 собран под arm64 | `tasks/backlog/100-release-maui-windows-arm64.md`
-- 101 | backlog | done | 2026-10-30 | Поиск сессий: опечатка в недописанном слове | `tasks/backlog/101-search-typo-in-prefix.md`
-- 102 | backlog | done | 2026-10-30 | Общий in-memory queued adapter для synchronous image transport | `tasks/backlog/102-openrouter-background-job.md`
-- 103 | backlog | done | 2026-10-30 | MAUI: у кнопки «New session» на пустом экране нет описания для экранного диктора | `tasks/backlog/103-maui-empty-state-button-semantics.md`
-- 104 | backlog | done | 2026-10-30 | Убрать неиспользуемый пакет Avalonia.Fonts.Inter | `tasks/backlog/104-remove-unused-avalonia-inter.md`
-- 106 | backlog | done | 2026-10-30 | Ошибка polling fal всегда завершает генерацию | `tasks/backlog/106-fal-poll-errors-terminal.md`
-- 107 | backlog | done | 2026-10-30 | Применить timeout провайдера ко всем запросам fal | `tasks/backlog/107-fal-request-timeouts.md`
-- 108 | backlog | done | 2026-10-30 | Координировать lifecycle generation jobs по сессии | `tasks/backlog/108-session-delete-active-jobs.md`
-- 109 | backlog | done | 2026-10-30 | Проверять URL и model endpoint, возвращённые fal | `tasks/backlog/109-fal-callback-url-validation.md`
-- 110 | backlog | done | 2026-10-30 | Выполнить C1.6: убирать картинки при нехватке контекста | `tasks/backlog/110-assistant-image-context-budget.md`
-- 111 | backlog | done | 2026-10-30 | Ограничить локально отслеживаемые jobs отдельно для каждого provider | `tasks/backlog/111-generation-provider-concurrency.md`
-- 113 | backlog | done | 2026-10-30 | Наблюдать сбой сохранения состояния generation | `tasks/backlog/113-generation-state-persistence.md`
-- 114 | backlog | done | 2026-10-30 | Атомарно принять user message и его attachments | `tasks/backlog/114-assistant-turn-failure-atomicity.md`
-- 115 | backlog | done | 2026-10-30 | Исключить приватные данные из Android backup и transfer | `tasks/backlog/115-android-backup-policy.md`
-- 116 | backlog | done | 2026-10-30 | Заменить Replicate в нормативной документации продукта | `tasks/backlog/116-sync-provider-documentation.md`
-- 117 | backlog | done | 2026-10-30 | Синхронизировать документацию контекста ассистента | `tasks/backlog/117-sync-runtime-documentation.md`
-- 118 | backlog | done | 2026-10-30 | Добавить корневой README без обещаний roadmap-функций | `tasks/backlog/118-root-readme.md`
-- 119 | backlog | cancelled | 2026-10-29 | Уточнить документацию восстановления generation | `tasks/backlog/119-sync-generation-recovery-docs.md`
-- 120 | backlog | cancelled | 2026-10-29 | Уточнить документацию concurrency generation | `tasks/backlog/120-sync-concurrency-docs.md`
-- 121 | backlog | done | 2026-10-30 | Отменять remote queued job при удалении сессии | `tasks/backlog/121-cancel-remote-job-on-session-delete.md`
-- 122 | backlog | done | 2026-10-30 | Удалять image file, если terminal state не сохранился | `tasks/backlog/122-compensate-generation-file-save.md`
-- 123 | backlog | done | 2026-10-30 | Сохранить terminal assistant error после принятого сообщения | `tasks/backlog/123-assistant-terminal-error-after-accept.md`
-- 124 | backlog | done | 2026-10-30 | Отключить automatic redirects для всех fal transport requests | `tasks/backlog/124-fal-disable-automatic-redirects.md`
-- 125 | backlog | done | 2026-10-30 | Повторять transient сбой сохранения generation state | `tasks/backlog/125-retry-transient-generation-state-save.md`
-- 126 | backlog | done | 2026-10-30 | Подключить generation coordinator к удалению сессии | `tasks/backlog/126-wire-session-deletion-coordinator.md`
-- 128 | backlog | done | 2026-10-30 | Подключить in-memory queued adapter в ProviderRouter | `tasks/backlog/128-integrate-in-memory-provider-router.md`
-- 129 | backlog | done | 2026-10-30 | Перевести GenerationService на единый queued path | `tasks/backlog/129-unify-generation-queued-path.md`
-- 130 | backlog | done | 2026-10-30 | Зафиксировать общий in-memory adapter вместо OpenRouter-specific runner | `tasks/backlog/130-supersede-openrouter-job-adr.md`
-- 132 | backlog | done | 2026-10-30 | Поддержать Together AI contract в OpenAI-compatible client | `tasks/backlog/132-together-ai-provider.md`
-- 133 | backlog | done | 2026-10-30 | Показывать фактические pixel dimensions и aspect ratio в карточке | `tasks/backlog/133-image-card-actual-dimensions.md`
-- 136 | backlog | done | 2026-10-30 | Включить Together AI как встроенный image provider | `tasks/backlog/136-enable-together-built-in.md`
-- 137 | backlog | done | 2026-10-30 | OS fullscreen viewer: Avalonia и MAUI Android | `tasks/backlog/137-image-viewer-os-fullscreen.md`
-- 138 | backlog | done | 2026-10-30 | Карточка MAUI: общие тесты команды и диагностика меню | `tasks/backlog/138-card-actions-command-diagnostics.md`
-- 142 | backlog | done | 2026-10-30 | Зафиксировать UTF-8 локаль в CI | `tasks/backlog/142-ci-locale-for-harness-grep.md`
-- 143 | backlog | done | 2026-10-30 | Заменить устаревший TextBox.Watermark в Avalonia-оболочке | `tasks/backlog/143-avalonia-placeholder-text-warning.md`
-- 089 | backlog | done | 2026-10-31 | Список сессий: название и число прогонов не обновляются | `tasks/backlog/089-sessions-list-refresh.md`
-- 099 | backlog | done | 2026-10-30 | Заметки о релизе: что изменилось с прошлого тега | `tasks/backlog/099-release-notes-since-tag.md`
-- 112 | backlog | done | 2026-10-31 | Добавить bounded reader для provider responses | `tasks/backlog/112-provider-response-size-limits.md`
-- 127 | backlog | done | 2026-10-31 | Ограничить HTTP logging buffer, сохранив Debug content | `tasks/backlog/127-bound-http-debug-logging.md`
-- 135 | backlog | done | 2026-10-31 | Сделать управление provider keys общим | `tasks/backlog/135-provider-neutral-key-ui.md`
-- 144 | backlog | done | 2026-10-30 | Ошибка сохранения картинки должна завершать задание | `tasks/backlog/144-generation-file-save-failure.md`
-- 145 | backlog | done | 2026-10-31 | Проверять референсы при запуске на другой модели | `tasks/backlog/145-other-model-reference-validation.md`
-- 146 | backlog | done | 2026-10-30 | Сохранять позицию viewer при неудачной навигации | `tasks/backlog/146-viewer-failed-navigation.md`
-- 147 | backlog | done | 2026-10-30 | Не терять release notes при пустом предыдущем наборе задач | `tasks/backlog/147-release-notes-empty-previous-set.md`
-- 149 | backlog | done | 2026-10-30 | Закрывать MAUI viewer по нажатию на фон | `tasks/backlog/149-maui-viewer-background-tap.md`
-- 150 | backlog | done | 2026-10-31 | Учитывать whitespace при ограничении base64 изображений | `tasks/backlog/150-base64-whitespace-image-limit.md`
-- 151 | backlog | done | 2026-10-31 | Уведомлять подписчиков после создания сессии | `tasks/backlog/151-notify-session-created.md`
-- 152 | backlog | done | 2026-10-31 | Дополнить обязательные тесты bounded HTTP pipeline | `tasks/backlog/152-http-logging-boundary-tests.md`
-- 153 | backlog | done | 2026-10-31 | Соблюдать Android touch target у кнопок ключей | `tasks/backlog/153-android-provider-key-touch-targets.md`
-- 154 | backlog | done | 2026-10-31 | Изолировать исключения подписчиков SessionChanged | `tasks/backlog/154-isolate-session-change-subscribers.md`
+- 035 | backlog | done | 2026-10-28 | Migrations: load scripts from the folder instead of a list | `tasks/backlog/035-migrations-from-folder.md`
+- 037 | backlog | cancelled | 2026-10-28 | OpenRouter HttpClient in singleton services | `tasks/backlog/037-http-client-lifetime.md`
+- 038 | backlog | done | 2026-10-28 | Shared ImageGen.Presentation layer | `tasks/backlog/038-presentation-extract.md`
+- 039 | backlog | done | 2026-10-28 | Avalonia: empty desktop app, tests, and CI | `tasks/backlog/039-avalonia-scaffold.md`
+- 040 | backlog | done | 2026-10-28 | Avalonia: store keys in system credential stores | `tasks/backlog/040-avalonia-secret-store.md`
+- 041 | backlog | done | 2026-10-28 | Avalonia: navigation, dialogs, key page, and sessions list | `tasks/backlog/041-avalonia-start-flow.md`
+- 042 | backlog | done | 2026-10-28 | Avalonia: session chat, generation cards, and session models | `tasks/backlog/042-avalonia-chat-and-models.md`
+- 001 | v0.1 | done | 2026-10-27 | Repository cleanup and solution scaffold | `tasks/v0.1/001-cleanup-and-scaffold.md`
+- 002 | v0.1 | done | 2026-10-27 | Core: domain model and interfaces | `tasks/v0.1/002-core-domain-and-contracts.md`
+- 003 | v0.1 | done | 2026-10-27 | Data: ImageGen.Data project, database, and schema | `tasks/v0.1/003-data-sqlite-schema.md`
+- 004 | v0.1 | done | 2026-10-27 | Data: repositories for sessions, messages, runs, and models | `tasks/v0.1/004-data-repositories.md`
+- 005 | v0.1 | done | 2026-10-27 | Data: image file storage and dependency injection | `tasks/v0.1/005-data-file-store-and-di.md`
+- 006 | v0.1 | done | 2026-10-27 | Core: OpenRouter HTTP client | `tasks/v0.1/006-openrouter-client.md`
+- 007 | v0.1 | done | 2026-10-27 | Core: OpenRouter key and model catalog | `tasks/v0.1/007-api-key-and-catalog.md`
+- 008 | v0.1 | done | 2026-10-27 | Core: session service and chat timeline order | `tasks/v0.1/008-session-service.md`
+- 009 | v0.1 | done | 2026-10-27 | Core: runs and generations | `tasks/v0.1/009-generation-service.md`
+- 010 | v0.1 | done | 2026-10-27 | Core: session assistant | `tasks/v0.1/010-assistant-service.md`
+- 011 | v0.1 | done | 2026-10-27 | Core: dependency injection registration | `tasks/v0.1/011-core-di.md`
+- 012 | v0.1 | done | 2026-10-28 | MAUI: strings, platform services, and dependency injection | `tasks/v0.1/012-maui-infrastructure.md`
+- 013 | v0.1 | done | 2026-10-28 | MAUI: startup, key entry, and sessions list | `tasks/v0.1/013-maui-start-flow.md`
+- 014 | v0.1 | done | 2026-10-28 | MAUI: session chat and generation cards | `tasks/v0.1/014-maui-chat.md`
+- 015 | v0.1 | done | 2026-10-28 | MAUI: session models | `tasks/v0.1/015-maui-session-models.md`
+- 034 | v0.1 | done | 2026-10-27 | Empty MAUI app and MAUI build in CI | `tasks/v0.1/034-maui-scaffold.md`
+- 017 | backlog | done | 2026-10-28 | Assistant sees images from the latest run | `tasks/backlog/017-assistant-vision.md`
+- 018 | backlog | done | 2026-10-28 | Attach an image in chat | `tasks/backlog/018-user-image-in-chat.md`
+- 019 | backlog | done | 2026-10-28 | Img2Text: describe an image | `tasks/backlog/019-img2text.md`
+- 020 | backlog | done | 2026-10-28 | Generation parameters in session settings | `tasks/backlog/020-generation-parameters.md`
+- 026 | backlog | cancelled | 2026-10-28 | Replicate provider | `tasks/backlog/026-provider-replicate.md`
+- 036 | backlog | done | 2026-10-28 | Model provider: API address and type in config | `tasks/backlog/036-provider-config-compatible-api.md`
+- 045 | backlog | done | 2026-10-28 | Detailed application logging | `tasks/backlog/045-detailed-logging.md`
+- 048 | backlog | done | 2026-10-28 | Avalonia headless tests touch the real user data folder | `tasks/backlog/048-test-isolation-data-dir.md`
+- 049 | backlog | done | 2026-10-28 | Paid default assistant model and model selection in session settings | `tasks/backlog/049-assistant-model-picker.md`
+- 052 | backlog | done | 2026-10-28 | Logging: do not write the full key-check response | `tasks/backlog/052-log-redaction-key-info.md`
+- 053 | backlog | done | 2026-10-28 | Windows tests fail: price culture and temporary database lock | `tasks/backlog/053-windows-test-failures.md`
+- 054 | backlog | done | 2026-10-28 | MAUI Windows: image is not shown on the card | `tasks/backlog/054-maui-image-not-shown.md`
+- 056 | backlog | done | 2026-10-28 | Send with Enter in MAUI on Windows | `tasks/backlog/056-enter-to-send-maui-windows.md`
+- 025 | backlog | done | 2026-10-28 | fal.ai provider and ADR 0003 contract | `tasks/backlog/025-provider-fal.md`
+- 027 | backlog | cancelled | 2026-10-28 | Assistant model and context management | `tasks/backlog/027-assistant-settings-and-context.md`
+- 029 | backlog | cancelled | 2026-10-28 | Save to Android gallery | `tasks/backlog/029-android-gallery-save.md`
+- 043 | backlog | done | 2026-10-29 | Presentation layer formats error text, not Core | `tasks/backlog/043-error-texts-in-presentation.md`
+- 044 | backlog | done | 2026-10-29 | Core architecture test: forbid Avalonia references | `tasks/backlog/044-core-arch-test-avalonia.md`
+- 047 | backlog | done | 2026-10-29 | Research a provider instead of Replicate | `tasks/backlog/047-research-image-provider.md`
+- 050 | backlog | done | 2026-10-28 | Send a message with Enter | `tasks/backlog/050-enter-to-send.md`
+- 051 | backlog | done | 2026-10-28 | Design: mockups and design system for approval | `tasks/backlog/051-design-mockups.md`
+- 055 | backlog | done | 2026-10-28 | Copy text in chat | `tasks/backlog/055-chat-copy-text.md`
+- 057 | backlog | done | 2026-10-28 | Run prompt appears twice in chat | `tasks/backlog/057-prompt-shown-once.md`
+- 058 | backlog | done | 2026-10-29 | Consider shared key storage for app shells | `tasks/backlog/058-shared-secret-storage.md`
+- 059 | backlog | done | 2026-10-28 | Appearance settings: style and theme | `tasks/backlog/059-appearance-settings.md`
+- 060 | backlog | done | 2026-10-28 | Design assets: fonts and icons in both shells | `tasks/backlog/060-design-assets.md`
+- 061 | backlog | done | 2026-10-28 | Avalonia themes: three style dictionaries and live switching | `tasks/backlog/061-theme-avalonia.md`
+- 062 | backlog | done | 2026-10-28 | MAUI themes: three style dictionaries and live switching | `tasks/backlog/062-theme-maui.md`
+- 063 | backlog | done | 2026-10-28 | Avalonia base control styles | `tasks/backlog/063-base-styles-avalonia.md`
+- 064 | backlog | done | 2026-10-28 | MAUI base control styles | `tasks/backlog/064-base-styles-maui.md`
+- 065 | backlog | done | 2026-10-28 | Settings screen: key, style, theme | `tasks/backlog/065-settings-screen.md`
+- 066 | backlog | done | 2026-10-28 | Sessions list and key screen in the new style | `tasks/backlog/066-sessions-and-key-restyle.md`
+- 067 | backlog | done | 2026-10-28 | Wide window: sessions list beside chat | `tasks/backlog/067-wide-sessions-sidebar.md`
+- 068 | backlog | done | 2026-10-28 | Chat: messages, run, cards, and input in the new style | `tasks/backlog/068-chat-restyle.md`
+- 069 | backlog | done | 2026-10-28 | Generation actions: hover, “…” menu, and phone action sheet | `tasks/backlog/069-card-actions.md`
+- 070 | backlog | done | 2026-10-28 | Session models and parameters in the new style | `tasks/backlog/070-models-params-restyle.md`
+- 071 | backlog | done | 2026-10-28 | Wide window: models and parameters in a side pane beside chat | `tasks/backlog/071-wide-side-pane.md`
+- 072 | backlog | done | 2026-10-28 | Avalonia dialogs in the new style and OS-specific button order | `tasks/backlog/072-avalonia-dialogs-restyle.md`
+- 073 | backlog | done | 2026-10-29 | Desktop: menu bar and keyboard shortcuts | `tasks/backlog/073-desktop-menu-shortcuts.md`
+- 074 | backlog | done | 2026-10-28 | New features from the mockups | `tasks/backlog/074-design-extras.md`
+- 075 | backlog | done | 2026-10-29 | Sessions list: rename and run count | `tasks/backlog/075-sessions-search-rename.md`
+- 076 | backlog | done | 2026-10-28 | Generation card: Details, Other model…, Copy prompt | `tasks/backlog/076-card-extra-actions.md`
+- 077 | backlog | done | 2026-10-29 | Retry after assistant error | `tasks/backlog/077-assistant-error-retry.md`
+- 078 | backlog | done | 2026-10-29 | Empty chat: clickable examples | `tasks/backlog/078-empty-chat-examples.md`
+- 079 | backlog | done | 2026-10-29 | Session search: fuzzy search over titles, prompts, and descriptions | `tasks/backlog/079-fuzzy-search.md`
+- 080 | backlog | done | 2026-10-29 | Save an image: file on desktop, gallery on phones | `tasks/backlog/080-save-image.md`
+- 081 | backlog | done | 2026-10-29 | Semantic search: research and ADR (text and images) | `tasks/backlog/081-semantic-search-research.md`
+- 082 | backlog | done | 2026-10-28 | Assistant context: request budget and token adjustment | `tasks/backlog/082-context-budget.md`
+- 083 | backlog | done | 2026-10-29 | Assistant context: summarize older history | `tasks/backlog/083-conversation-summary.md`
+- 084 | backlog | done | 2026-10-29 | Assistant context: show a summary marker in the timeline | `tasks/backlog/084-summary-mark-in-chat.md`
+- 085 | backlog | done | 2026-10-29 | Debug trace: user inputs and model API requests | `tasks/backlog/085-debug-api-trace.md`
+- 086 | backlog | done | 2026-10-29 | Video support: research | `tasks/backlog/086-video-support-research.md`
+- 087 | backlog | done | 2026-10-29 | Self-improvement like Hermes: research and adapt the idea | `tasks/backlog/087-hermes-self-improvement.md`
+- 090 | backlog | done | 2026-10-30 | Session models: “Images” and “Assistant” tabs | `tasks/backlog/090-session-models-tabs.md`
+- 091 | backlog | cancelled | 2026-10-29 | Session models: keep Save and Cancel buttons visible | `tasks/backlog/091-session-models-sticky-actions.md`
+- 092 | backlog | done | 2026-10-30 | Session models: collapsible vendor groups | `tasks/backlog/092-session-models-by-vendor.md`
+- 093 | backlog | done | 2026-10-30 | Image model prices in the model list | `tasks/backlog/093-image-model-price.md`
+- 094 | backlog | done | 2026-10-30 | Avalonia on Android and iOS instead of MAUI: research | `tasks/backlog/094-avalonia-mobile-research.md`
+- 095 | backlog | done | 2026-10-30 | MAUI Android: keyboard covers chat input | `tasks/backlog/095-maui-android-keyboard-inset.md`
+- 096 | backlog | done | 2026-10-30 | Run summary does not update during generation | `tasks/backlog/096-run-header-live-status.md`
+- 097 | backlog | done | 2026-10-30 | MAUI: chat timeline does not scroll to new messages | `tasks/backlog/097-maui-chat-autoscroll.md`
+- 098 | backlog | done | 2026-10-30 | MAUI: chat header hides buttons on narrow screens | `tasks/backlog/098-maui-chat-header-narrow.md`
+- 100 | backlog | done | 2026-10-30 | Release: verify MAUI for Windows arm64 is built for arm64 | `tasks/backlog/100-release-maui-windows-arm64.md`
+- 101 | backlog | done | 2026-10-30 | Session search: typo in an incomplete word | `tasks/backlog/101-search-typo-in-prefix.md`
+- 102 | backlog | done | 2026-10-30 | Shared in-memory queued adapter for synchronous image transport | `tasks/backlog/102-openrouter-background-job.md`
+- 103 | backlog | done | 2026-10-30 | MAUI: screen reader description missing from “New session” on the empty screen | `tasks/backlog/103-maui-empty-state-button-semantics.md`
+- 104 | backlog | done | 2026-10-30 | Remove unused Avalonia.Fonts.Inter package | `tasks/backlog/104-remove-unused-avalonia-inter.md`
+- 106 | backlog | done | 2026-10-30 | fal polling errors always terminate generation | `tasks/backlog/106-fal-poll-errors-terminal.md`
+- 107 | backlog | done | 2026-10-30 | Apply provider timeout to all fal requests | `tasks/backlog/107-fal-request-timeouts.md`
+- 108 | backlog | done | 2026-10-30 | Coordinate generation job lifecycle per session | `tasks/backlog/108-session-delete-active-jobs.md`
+- 109 | backlog | done | 2026-10-30 | Validate URLs and model endpoints returned by fal | `tasks/backlog/109-fal-callback-url-validation.md`
+- 110 | backlog | done | 2026-10-30 | Implement C1.6: remove images when context budget is exceeded | `tasks/backlog/110-assistant-image-context-budget.md`
+- 111 | backlog | done | 2026-10-30 | Limit locally tracked jobs per provider | `tasks/backlog/111-generation-provider-concurrency.md`
+- 113 | backlog | done | 2026-10-30 | Observe failures when saving generation state | `tasks/backlog/113-generation-state-persistence.md`
+- 114 | backlog | done | 2026-10-30 | Atomically accept user message and attachments | `tasks/backlog/114-assistant-turn-failure-atomicity.md`
+- 115 | backlog | done | 2026-10-30 | Exclude private data from Android backup and transfer | `tasks/backlog/115-android-backup-policy.md`
+- 116 | backlog | done | 2026-10-30 | Replace Replicate in normative product documentation | `tasks/backlog/116-sync-provider-documentation.md`
+- 117 | backlog | done | 2026-10-30 | Synchronize assistant context documentation | `tasks/backlog/117-sync-runtime-documentation.md`
+- 118 | backlog | done | 2026-10-30 | Add a root README without roadmap promises | `tasks/backlog/118-root-readme.md`
+- 119 | backlog | cancelled | 2026-10-29 | Clarify generation recovery documentation | `tasks/backlog/119-sync-generation-recovery-docs.md`
+- 120 | backlog | cancelled | 2026-10-29 | Clarify generation concurrency documentation | `tasks/backlog/120-sync-concurrency-docs.md`
+- 121 | backlog | done | 2026-10-30 | Cancel remote queued job when deleting a session | `tasks/backlog/121-cancel-remote-job-on-session-delete.md`
+- 122 | backlog | done | 2026-10-30 | Delete image file when terminal state was not persisted | `tasks/backlog/122-compensate-generation-file-save.md`
+- 123 | backlog | done | 2026-10-30 | Preserve terminal assistant error after accepting a message | `tasks/backlog/123-assistant-terminal-error-after-accept.md`
+- 124 | backlog | done | 2026-10-30 | Disable automatic redirects for all fal transport requests | `tasks/backlog/124-fal-disable-automatic-redirects.md`
+- 125 | backlog | done | 2026-10-30 | Retry transient generation state save failures | `tasks/backlog/125-retry-transient-generation-state-save.md`
+- 126 | backlog | done | 2026-10-30 | Connect generation coordinator to session deletion | `tasks/backlog/126-wire-session-deletion-coordinator.md`
+- 128 | backlog | done | 2026-10-30 | Connect in-memory queued adapter to ProviderRouter | `tasks/backlog/128-integrate-in-memory-provider-router.md`
+- 129 | backlog | done | 2026-10-30 | Move GenerationService to a unified queued path | `tasks/backlog/129-unify-generation-queued-path.md`
+- 130 | backlog | done | 2026-10-30 | Record shared in-memory adapter instead of OpenRouter-specific runner | `tasks/backlog/130-supersede-openrouter-job-adr.md`
+- 132 | backlog | done | 2026-10-30 | Support Together AI contract in OpenAI-compatible client | `tasks/backlog/132-together-ai-provider.md`
+- 133 | backlog | done | 2026-10-30 | Show actual pixel dimensions and aspect ratio on the card | `tasks/backlog/133-image-card-actual-dimensions.md`
+- 136 | backlog | done | 2026-10-30 | Enable Together AI as a built-in image provider | `tasks/backlog/136-enable-together-built-in.md`
+- 137 | backlog | done | 2026-10-30 | OS full-screen viewer: Avalonia and MAUI Android | `tasks/backlog/137-image-viewer-os-fullscreen.md`
+- 138 | backlog | done | 2026-10-30 | MAUI card: shared command tests and menu diagnostics | `tasks/backlog/138-card-actions-command-diagnostics.md`
+- 142 | backlog | done | 2026-10-30 | Set UTF-8 locale in CI | `tasks/backlog/142-ci-locale-for-harness-grep.md`
+- 143 | backlog | done | 2026-10-30 | Replace obsolete TextBox.Watermark in Avalonia shell | `tasks/backlog/143-avalonia-placeholder-text-warning.md`
+- 089 | backlog | done | 2026-10-31 | Sessions list: title and run count do not update | `tasks/backlog/089-sessions-list-refresh.md`
+- 099 | backlog | done | 2026-10-30 | Release notes: changes since the previous tag | `tasks/backlog/099-release-notes-since-tag.md`
+- 112 | backlog | done | 2026-10-31 | Add bounded reader for provider responses | `tasks/backlog/112-provider-response-size-limits.md`
+- 127 | backlog | done | 2026-10-31 | Bound HTTP logging buffer while preserving Debug content | `tasks/backlog/127-bound-http-debug-logging.md`
+- 135 | backlog | done | 2026-10-31 | Make provider key management provider-neutral | `tasks/backlog/135-provider-neutral-key-ui.md`
+- 144 | backlog | done | 2026-10-30 | Image save failure must fail the job | `tasks/backlog/144-generation-file-save-failure.md`
+- 145 | backlog | done | 2026-10-31 | Validate references when starting on another model | `tasks/backlog/145-other-model-reference-validation.md`
+- 146 | backlog | done | 2026-10-30 | Preserve viewer position after failed navigation | `tasks/backlog/146-viewer-failed-navigation.md`
+- 147 | backlog | done | 2026-10-30 | Keep release notes when the previous task set is empty | `tasks/backlog/147-release-notes-empty-previous-set.md`
+- 149 | backlog | done | 2026-10-30 | Close MAUI viewer when tapping the background | `tasks/backlog/149-maui-viewer-background-tap.md`
+- 150 | backlog | done | 2026-10-31 | Account for whitespace in base64 image limits | `tasks/backlog/150-base64-whitespace-image-limit.md`
+- 151 | backlog | done | 2026-10-31 | Notify subscribers after session creation | `tasks/backlog/151-notify-session-created.md`
+- 152 | backlog | done | 2026-10-31 | Add required bounded HTTP pipeline tests | `tasks/backlog/152-http-logging-boundary-tests.md`
+- 153 | backlog | done | 2026-10-31 | Meet Android touch target size for key controls | `tasks/backlog/153-android-provider-key-touch-targets.md`
+- 154 | backlog | done | 2026-10-31 | Isolate SessionChanged subscriber exceptions | `tasks/backlog/154-isolate-session-change-subscribers.md`
 - 155 | backlog | cancelled | 2026-10-31 | other-model-reference-validation | `tasks/backlog/155-other-model-reference-validation.md`
-- 134 | backlog | done | 2026-10-31 | MAUI Android: Backspace должен сразу перерисовывать Editor | `tasks/backlog/134-maui-android-backspace-rendering.md`
-- 156 | backlog | done | 2026-10-31 | Выбор модели ассистента только из OpenRouter | `tasks/backlog/156-assistant-models-from-configured-providers.md`
-- 157 | backlog | done | 2026-10-31 | Не показывать текст исключений в диалогах ошибок | `tasks/backlog/157-localized-ui-error-messages.md`
-- 158 | backlog | done | 2026-10-31 | Сверить документацию с кодом по итогам аудита 2026-10-31 | `tasks/backlog/158-docs-sync-audit-2026-10-31.md`
-- 159 | backlog | done | 2026-10-31 | MAUI Android: лента чата не прокручивается вниз внутри прогона | `tasks/backlog/159-maui-android-transcript-scroll.md`
-- 160 | backlog | done | 2026-10-31 | MAUI Android: поле ввода закрыто клавиатурой | `tasks/backlog/160-maui-android-keyboard-resize.md`
-- 161 | backlog | cancelled | 2026-10-31 | Старая история не видна после первой генерации | `tasks/backlog/161-history-hidden-after-first-generation.md`
-- 162 | backlog | done | 2026-10-31 | MAUI Android: нажатие на сессию в списке открывает кнопки вместо сессии | `tasks/backlog/162-maui-android-session-row-tap.md`
-- 164 | backlog | done | 2026-10-31 | Идентификатор Android-приложения com.eliseev.imagegen | `tasks/backlog/164-android-application-id.md`
-- 028 | backlog | cancelled | 2026-10-31 | Русский язык интерфейса | `tasks/backlog/028-localization-and-themes.md`
-- 021 | backlog | done | 2026-11-02 | Оценка цены и учёт расходов | `tasks/backlog/021-spending.md`
-- 022 | backlog | done | 2026-11-02 | Галерея всех генераций | `tasks/backlog/022-gallery.md`
-- 023 | backlog | done | 2026-11-02 | Сравнение результатов | `tasks/backlog/023-compare.md`
-- 024 | backlog | done | 2026-11-02 | Отмена генерации и прогона | `tasks/backlog/024-cancel-generation.md`
-- 031 | backlog | done | 2026-11-01 | Web-оболочка: хост, вход, API | `tasks/backlog/031-web-host-and-api.md`
-- 032 | backlog | done | 2026-11-02 | Vue-фронт | `tasks/backlog/032-vue-frontend.md`
-- 033 | backlog | done | 2026-11-02 | Docker-образ Web-оболочки | `tasks/backlog/033-docker.md`
-- 088 | backlog | done | 2026-11-01 | MAUI Windows: кнопка «…» открывает действия карточки | `tasks/backlog/088-maui-card-more-button.md`
-- 105 | backlog | done | 2026-11-02 | Семантический поиск только через OpenRouter | `tasks/backlog/105-semantic-text-search.md`
-- 131 | backlog | done | 2026-11-01 | Добавить modal image viewer и перелистывание | `tasks/backlog/131-fullscreen-image-viewer.md`
-- 139 | backlog | done | 2026-11-01 | MAUI Windows: настоящий fullscreen окна viewer | `tasks/backlog/139-maui-windows-viewer-fullscreen.md`
-- 141 | backlog | done | 2026-10-31 | Атомарно сохранять картинки и вложения | `tasks/backlog/141-atomic-image-file-writes.md`
-- 148 | backlog | done | 2026-11-01 | MAUI Windows viewer: навигация стрелками клавиатуры | `tasks/backlog/148-maui-viewer-windows-arrow-keys.md`
-- 163 | backlog | done | 2026-11-01 | Постоянный ключ подписи Android APK | `tasks/backlog/163-android-release-signing-key.md`
-- 165 | backlog | done | 2026-11-01 | Добавить секреты подписи Android в GitHub | `tasks/backlog/165-android-signing-secrets.md`
-- 171 | backlog | done | 2026-10-31 | ErrorAlert — обязательная зависимость моделей страниц | `tasks/backlog/171-error-alert-required.md`
-- 172 | backlog | done | 2026-10-31 | Первый запуск: ключ провайдера выбранного ассистента; обновление списка чат-моделей | `tasks/backlog/172-first-run-assistant-provider.md`
-- 173 | backlog | done | 2026-10-31 | Avalonia-тесты на Windows: гонка удаления папки с фоновым чтением размеров картинки | `tasks/backlog/173-avalonia-tests-dimension-read-race.md`
-- 174 | backlog | done | 2026-10-31 | Убрать устаревшие документы и пробный код | `tasks/backlog/174-docs-and-poc-cleanup.md`
-- 176 | backlog | done | 2026-11-01 | Сборка и тесты LiveCheck в CI | `tasks/backlog/176-livecheck-tests-in-ci.md`
-- 179 | backlog | done | 2026-11-02 | Web: поток событий перестаёт работать после первого heartbeat | `tasks/backlog/179-web-events-heartbeat.md`
-- 180 | backlog | done | 2026-11-02 | Отмена: ответ «уже завершено» не должен выбрасывать готовую картинку | `tasks/backlog/180-cancel-already-completed-keeps-result.md`
-- 181 | backlog | done | 2026-11-02 | Web: при переполнении очереди сразу отправлять resync | `tasks/backlog/181-web-events-resync-on-overflow.md`
-- 182 | backlog | done | 2026-11-02 | Экран расходов: итог в долларах, а не в валюте системы | `tasks/backlog/182-spending-total-usd-format.md`
-- 183 | backlog | done | 2026-11-02 | Расходы: «неизвестная цена» без неудачных и отменённых операций | `tasks/backlog/183-spending-unknown-count-statuses.md`
-- 184 | backlog | done | 2026-11-02 | Семантический индекс: записывать расход до проверки ответа эмбеддингов | `tasks/backlog/184-embedding-expense-before-validation.md`
-- 185 | backlog | done | 2026-11-03 | Семантический индекс: не перечитывать все источники на каждую пачку | `tasks/backlog/185-semantic-index-batch-source-lookup.md`
-- 186 | backlog | done | 2026-11-02 | Одно подтверждение расходов для чата и выбора модели | `tasks/backlog/186-shared-spending-confirmation.md`
-- 166 | backlog | done | 2026-11-06 | Генерация не только картинок: общая основа для аудио и видео | `tasks/backlog/166-media-generation-foundation.md`
-- 169 | backlog | cancelled | 2026-11-06 | Генерация видео | `tasks/backlog/169-video-generation.md`
-- 175 | backlog | done | 2026-11-05 | Модель ассистента по умолчанию: проверять провайдера из defaults.json | `tasks/backlog/175-default-assistant-model-validation.md`
-- 177 | backlog | done | 2026-11-05 | Атомарная запись: явная обработка сбоя очистки и осиротевшие .tmp | `tasks/backlog/177-atomic-writer-cleanup.md`
-- 178 | backlog | done | 2026-11-05 | Регрессионный тест на клавиши MAUI-просмотрщика под Windows | `tasks/backlog/178-maui-viewer-arrow-keys-test.md`
-- 187 | backlog | done | 2026-11-05 | Логи: поделиться файлами (Android) и очистить | `tasks/backlog/187-share-and-clear-logs.md`
-- 188 | backlog | done | 2026-11-05 | Settings: оформление не ждёт сеть; модель по умолчанию всегда в списке | `tasks/backlog/188-settings-page-load-and-default-option.md`
-- 189 | backlog | done | 2026-11-05 | Первый запуск: выбор модели ассистента на экране ключа | `tasks/backlog/189-apikey-first-run-model-choice.md`
-- 190 | backlog | done | 2026-11-05 | Удалять осиротевшие временные файлы при запуске | `tasks/backlog/190-orphaned-temp-files-cleanup.md`
-- 191 | backlog | done | 2026-11-06 | Avalonia: общая сборка контейнера и службы на `TopLevel` | `tasks/backlog/191-avalonia-shared-composition.md`
-- 192 | backlog | done | 2026-11-06 | Avalonia: диалоги поверх страницы (для Android) | `tasks/backlog/192-avalonia-overlay-dialogs.md`
-- 193 | backlog | done | 2026-11-06 | Avalonia: просмотр картинки поверх страницы (для Android) | `tasks/backlog/193-avalonia-overlay-image-viewer.md`
-- 194 | backlog | done | 2026-11-06 | Avalonia: сравнение картинок поверх страницы (для Android) | `tasks/backlog/194-avalonia-overlay-comparison.md`
-- 195 | backlog | done | 2026-11-06 | Android-голова Avalonia: проект, запуск, ключи | `tasks/backlog/195-avalonia-android-head.md`
-- 196 | backlog | done | 2026-11-06 | Android-голова Avalonia: «Share logs» | `tasks/backlog/196-avalonia-android-log-sharing.md`
-- 197 | backlog | done | 2026-11-06 | Android-голова Avalonia: сборка в CI и APK в релизе | `tasks/backlog/197-avalonia-android-ci-release.md`
-- 170 | backlog | done | 2026-11-06 | Проверка живых API провайдеров с ключами владельца | `tasks/backlog/170-live-api-verification.md`
-- 199 | backlog | done | 2026-11-06 | Вид результата генерации и потоковое сохранение видео/аудио | `tasks/backlog/199-media-kind-and-file-storage.md`
-- 200 | backlog | done | 2026-11-06 | OpenRouter: каталог видео-моделей и цена до запуска | `tasks/backlog/200-openrouter-video-catalog.md`
-- 201 | backlog | done | 2026-11-06 | OpenRouter: задания генерации видео (отправка, опрос, скачивание) | `tasks/backlog/201-openrouter-video-jobs.md`
-- 202 | backlog | done | 2026-11-06 | GenerationService: запуск, ожидание и сохранение видео | `tasks/backlog/202-generation-service-video.md`
-- 203 | backlog | done | 2026-11-06 | Видео в сессии: модели, параметры, инструмент ассистента, оценка цены | `tasks/backlog/203-video-session-settings-and-tool.md`
-- 204 | backlog | done | 2026-11-06 | Видео в интерфейсе: выбор моделей, параметры, карточка без плеера | `tasks/backlog/204-video-presentation.md`
-- 205 | backlog | done | 2026-11-06 | MAUI: воспроизведение видео и аудио в карточке (MediaElement) | `tasks/backlog/205-maui-media-player.md`
-- 206 | backlog | done | 2026-11-06 | Пробник: LibVLCSharp на Avalonia 12 (desktop и Android) | `tasks/backlog/206-libvlc-avalonia12-poc.md`
-- 208 | backlog | done | 2026-11-06 | Музыка: живая проверка Lyria 3 через OpenRouter | `tasks/backlog/208-lyria-live-check.md`
-- 209 | backlog | done | 2026-11-06 | Видео: отмена, Repeat, New seed, Edit | `tasks/backlog/209-video-cancel-and-card-actions.md`
-- 210 | backlog | done | 2026-11-06 | Avalonia Android: пересоздание активности и сохранение в галерею | `tasks/backlog/210-avalonia-android-activity-recreation.md`
-- 211 | backlog | done | 2026-11-07 | MAUI: кнопки и долгое нажатие карточки не работают на Android (TouchBehavior) | `tasks/backlog/211-maui-card-children-tappable.md`
-- 212 | backlog | done | 2026-11-07 | MAUI: компактная шапка чата на телефоне | `tasks/backlog/212-maui-chat-header-compact.md`
-- 213 | backlog | done | 2026-11-07 | Картинка в карточке — в исходных пропорциях, без обрезки | `tasks/backlog/213-card-image-aspect-ratio.md`
-- 214 | backlog | done | 2026-11-07 | MAUI: нажатие на сессию открывает её, а не кнопки Rename/Delete | `tasks/backlog/214-maui-session-row-tap.md`
-- 215 | backlog | done | 2026-11-07 | Семантический индекс: понятная причина сбоя и проверка эмбеддингов вживую | `tasks/backlog/215-semantic-index-failure-diagnostics.md`
-- 216 | backlog | done | 2026-11-07 | MAUI: ресурсы оформления не того типа (предупреждения в журнале) | `tasks/backlog/216-maui-resource-type-warnings.md`
-- 167 | backlog | cancelled | 2026-11-07 | Генерация музыки | `tasks/backlog/167-music-generation.md`
-- 207 | backlog | done | 2026-11-10 | Avalonia desktop: плеер видео и аудио в отдельном окне (LibVLC) | `tasks/backlog/207-avalonia-media-player.md`
-- 217 | backlog | done | 2026-11-07 | Семантический индекс: OpenRouter отвечает именем провайдера модели | `tasks/backlog/217-embedding-provider-model-name.md`
-- 218 | backlog | done | 2026-11-07 | MAUI: плеер только у карточек видео и аудио | `tasks/backlog/218-maui-media-player-only-for-media.md`
-- 219 | backlog | done | 2026-11-07 | MAUI: видео в ленте — Play открывает полноэкранный плеер | `tasks/backlog/219-maui-video-card-fullscreen-player.md`
-- 220 | backlog | done | 2026-11-07 | Видео-карточка: кадр-обложка и пропорции | `tasks/backlog/220-maui-video-poster-frame.md`
-- 221 | backlog | done | 2026-11-10 | OpenRouter: генерация аудио — все модели с аудио- и речевым выходом | `tasks/backlog/221-openrouter-lyria-audio-client.md`
-- 222 | backlog | done | 2026-11-10 | Генерация аудио: запуск, сохранение, настройки сессии, инструмент ассистента | `tasks/backlog/222-music-generation-pipeline.md`
-- 223 | backlog | done | 2026-11-10 | Аудио в интерфейсе: выбор моделей, карточка с плеером | `tasks/backlog/223-music-presentation.md`
-- 224 | backlog | done | 2026-11-10 | Avalonia Android: встроенный плеер Android (Media3) для видео и аудио | `tasks/backlog/224-avalonia-android-media3-player.md`
-- 225 | backlog | done | 2026-11-10 | MAUI: карточки прогона на телефоне — одна колонка по центру | `tasks/backlog/225-maui-run-cards-phone-column.md`
-- 226 | backlog | done | 2026-11-10 | Семантический индекс: статус не застревает (повторное включение, возврат ключа) | `tasks/backlog/226-semantic-index-status-fixes.md`
-- 227 | backlog | done | 2026-11-10 | Семантический поиск: выбор модели эмбеддингов и переиндексация (ядро) | `tasks/backlog/227-embedding-model-choice-core.md`
-- 228 | backlog | done | 2026-11-10 | Семантический поиск: выбор модели эмбеддингов в настройках | `tasks/backlog/228-embedding-model-choice-ui.md`
-- 229 | backlog | done | 2026-11-07 | Полная очистка истории | `tasks/backlog/229-clear-history.md`
-- 231 | backlog | done | 2026-11-07 | Поиск: выборка источников пачки по индексам таблиц | `tasks/backlog/231-search-source-lookup-by-table.md`
-- 232 | backlog | done | 2026-11-10 | Clear logs: культура сообщения и неудавшиеся удаления | `tasks/backlog/232-logs-clear-nits.md`
-- 233 | backlog | done | 2026-11-10 | Avalonia Android: сохранение картинки на Android 6–9 | `tasks/backlog/233-avalonia-android-legacy-gallery-save.md`
-- 234 | backlog | done | 2026-11-10 | Avalonia: значок Omnilite (Android и desktop) | `tasks/backlog/234-avalonia-app-icon.md`
-- 238 | backlog | done | 2026-11-07 | UI-тесты: проверка инфраструктуры CI (preflight) Android и Windows | `tasks/backlog/238-ui-e2e-ci-preflight.md`
-- 239 | backlog | done | 2026-11-07 | MAUI: постоянные AutomationId для UI-тестов | `tasks/backlog/239-maui-automation-ids.md`
-- 240 | backlog | done | 2026-11-07 | UI-тесты Android: проект, фикстура с видео и smoke-сценарии | `tasks/backlog/240-ui-e2e-android-smoke.md`
-- 241 | backlog | done | 2026-11-07 | UI-тесты Windows (экспериментально): FlaUI, видео FFmpeg, smoke-сценарии | `tasks/backlog/241-ui-e2e-windows-smoke.md`
-- 242 | backlog | done | 2026-11-07 | UI-тесты: общий отчёт Allure HTML и статусы в PR | `tasks/backlog/242-ui-e2e-allure-report.md`
-- 244 | backlog | done | 2026-11-07 | Apple CI: проверка инструментов (preflight) и таблица совместимости Xcode/.NET | `tasks/backlog/244-apple-ci-preflight.md`
-- 251 | backlog | done | 2026-11-10 | UI-тесты: конечное состояние на записи, поворот на экране ключа, маскировка ключа на Windows | `tasks/backlog/251-ui-e2e-final-state-evidence.md`
+- 134 | backlog | done | 2026-10-31 | MAUI Android: Backspace should immediately redraw the Editor | `tasks/backlog/134-maui-android-backspace-rendering.md`
+- 156 | backlog | done | 2026-10-31 | Restrict assistant model selection to OpenRouter | `tasks/backlog/156-assistant-models-from-configured-providers.md`
+- 157 | backlog | done | 2026-10-31 | Do not show exception text in error dialogs | `tasks/backlog/157-localized-ui-error-messages.md`
+- 158 | backlog | done | 2026-10-31 | Sync documentation with code after the 2026-10-31 audit | `tasks/backlog/158-docs-sync-audit-2026-10-31.md`
+- 159 | backlog | done | 2026-10-31 | MAUI Android: chat timeline does not scroll to the bottom within a run | `tasks/backlog/159-maui-android-transcript-scroll.md`
+- 160 | backlog | done | 2026-10-31 | MAUI Android: keyboard covers the input field | `tasks/backlog/160-maui-android-keyboard-resize.md`
+- 161 | backlog | cancelled | 2026-10-31 | Old history is hidden after the first generation | `tasks/backlog/161-history-hidden-after-first-generation.md`
+- 162 | backlog | done | 2026-10-31 | MAUI Android: tapping a session row shows buttons instead of opening the session | `tasks/backlog/162-maui-android-session-row-tap.md`
+- 164 | backlog | done | 2026-10-31 | Android application id com.eliseev.imagegen | `tasks/backlog/164-android-application-id.md`
+- 028 | backlog | cancelled | 2026-10-31 | Russian UI language | `tasks/backlog/028-localization-and-themes.md`
+- 021 | backlog | done | 2026-11-02 | Price estimation and spending tracking | `tasks/backlog/021-spending.md`
+- 022 | backlog | done | 2026-11-02 | Gallery of all generations | `tasks/backlog/022-gallery.md`
+- 023 | backlog | done | 2026-11-02 | Compare results | `tasks/backlog/023-compare.md`
+- 024 | backlog | done | 2026-11-02 | Cancel generation and run | `tasks/backlog/024-cancel-generation.md`
+- 031 | backlog | done | 2026-11-01 | Web shell: host, sign-in, API | `tasks/backlog/031-web-host-and-api.md`
+- 032 | backlog | done | 2026-11-02 | Vue frontend | `tasks/backlog/032-vue-frontend.md`
+- 033 | backlog | done | 2026-11-02 | Web shell Docker image | `tasks/backlog/033-docker.md`
+- 088 | backlog | done | 2026-11-01 | MAUI Windows: the “…” button opens card actions | `tasks/backlog/088-maui-card-more-button.md`
+- 105 | backlog | done | 2026-11-02 | Semantic search through OpenRouter only | `tasks/backlog/105-semantic-text-search.md`
+- 131 | backlog | done | 2026-11-01 | Add a modal image viewer and navigation | `tasks/backlog/131-fullscreen-image-viewer.md`
+- 139 | backlog | done | 2026-11-01 | MAUI Windows: true fullscreen for the viewer window | `tasks/backlog/139-maui-windows-viewer-fullscreen.md`
+- 141 | backlog | done | 2026-10-31 | Save images and attachments atomically | `tasks/backlog/141-atomic-image-file-writes.md`
+- 148 | backlog | done | 2026-11-01 | MAUI Windows viewer: keyboard arrow navigation | `tasks/backlog/148-maui-viewer-windows-arrow-keys.md`
+- 163 | backlog | done | 2026-11-01 | Persistent Android APK signing key | `tasks/backlog/163-android-release-signing-key.md`
+- 165 | backlog | done | 2026-11-01 | Add Android signing secrets to GitHub | `tasks/backlog/165-android-signing-secrets.md`
+- 171 | backlog | done | 2026-10-31 | ErrorAlert is a required dependency of page models | `tasks/backlog/171-error-alert-required.md`
+- 172 | backlog | done | 2026-10-31 | First run: key for the selected assistant provider; refresh the chat model list | `tasks/backlog/172-first-run-assistant-provider.md`
+- 173 | backlog | done | 2026-10-31 | Avalonia tests on Windows: folder deletion races with background image dimension reads | `tasks/backlog/173-avalonia-tests-dimension-read-race.md`
+- 174 | backlog | done | 2026-10-31 | Remove obsolete documents and proof-of-concept code | `tasks/backlog/174-docs-and-poc-cleanup.md`
+- 176 | backlog | done | 2026-11-01 | Build and test LiveCheck in CI | `tasks/backlog/176-livecheck-tests-in-ci.md`
+- 179 | backlog | done | 2026-11-02 | Web: event stream stops working after the first heartbeat | `tasks/backlog/179-web-events-heartbeat.md`
+- 180 | backlog | done | 2026-11-02 | Cancellation: “already completed” response must not discard a generated image | `tasks/backlog/180-cancel-already-completed-keeps-result.md`
+- 181 | backlog | done | 2026-11-02 | Web: send resync immediately when the queue overflows | `tasks/backlog/181-web-events-resync-on-overflow.md`
+- 182 | backlog | done | 2026-11-02 | Spending screen: show the total in dollars, not the system currency | `tasks/backlog/182-spending-total-usd-format.md`
+- 183 | backlog | done | 2026-11-02 | Spending: exclude failed and cancelled operations from “unknown price” | `tasks/backlog/183-spending-unknown-count-statuses.md`
+- 184 | backlog | done | 2026-11-02 | Semantic index: record spending before validating the embeddings response | `tasks/backlog/184-embedding-expense-before-validation.md`
+- 185 | backlog | done | 2026-11-03 | Semantic index: do not reread all sources for every batch | `tasks/backlog/185-semantic-index-batch-source-lookup.md`
+- 186 | backlog | done | 2026-11-02 | One spending confirmation for chat and model selection | `tasks/backlog/186-shared-spending-confirmation.md`
+- 166 | backlog | done | 2026-11-06 | Generate more than images: shared foundation for audio and video | `tasks/backlog/166-media-generation-foundation.md`
+- 169 | backlog | cancelled | 2026-11-06 | Video generation | `tasks/backlog/169-video-generation.md`
+- 175 | backlog | done | 2026-11-05 | Default assistant model: validate the provider from defaults.json | `tasks/backlog/175-default-assistant-model-validation.md`
+- 177 | backlog | done | 2026-11-05 | Atomic writes: handle cleanup failures explicitly and remove orphaned .tmp files | `tasks/backlog/177-atomic-writer-cleanup.md`
+- 178 | backlog | done | 2026-11-05 | Regression test for MAUI viewer keyboard keys on Windows | `tasks/backlog/178-maui-viewer-arrow-keys-test.md`
+- 187 | backlog | done | 2026-11-05 | Logs: share files (Android) and clear them | `tasks/backlog/187-share-and-clear-logs.md`
+- 188 | backlog | done | 2026-11-05 | Settings: load appearance without waiting for network; always list the default model | `tasks/backlog/188-settings-page-load-and-default-option.md`
+- 189 | backlog | done | 2026-11-05 | First run: choose the assistant model on the key screen | `tasks/backlog/189-apikey-first-run-model-choice.md`
+- 190 | backlog | done | 2026-11-05 | Delete orphaned temporary files on startup | `tasks/backlog/190-orphaned-temp-files-cleanup.md`
+- 191 | backlog | done | 2026-11-06 | Avalonia: shared container and service composition on `TopLevel` | `tasks/backlog/191-avalonia-shared-composition.md`
+- 192 | backlog | done | 2026-11-06 | Avalonia: dialogs over the page (for Android) | `tasks/backlog/192-avalonia-overlay-dialogs.md`
+- 193 | backlog | done | 2026-11-06 | Avalonia: image viewer over the page (for Android) | `tasks/backlog/193-avalonia-overlay-image-viewer.md`
+- 194 | backlog | done | 2026-11-06 | Avalonia: image comparison over the page (for Android) | `tasks/backlog/194-avalonia-overlay-comparison.md`
+- 195 | backlog | done | 2026-11-06 | Avalonia Android shell: project, startup, keys | `tasks/backlog/195-avalonia-android-head.md`
+- 196 | backlog | done | 2026-11-06 | Avalonia Android shell: “Share logs” | `tasks/backlog/196-avalonia-android-log-sharing.md`
+- 197 | backlog | done | 2026-11-06 | Avalonia Android shell: CI build and APK in the release | `tasks/backlog/197-avalonia-android-ci-release.md`
+- 170 | backlog | done | 2026-11-06 | Live provider API checks with the owner’s keys | `tasks/backlog/170-live-api-verification.md`
+- 199 | backlog | done | 2026-11-06 | Generation result type and streaming video/audio storage | `tasks/backlog/199-media-kind-and-file-storage.md`
+- 200 | backlog | done | 2026-11-06 | OpenRouter: video model catalog and pre-generation pricing | `tasks/backlog/200-openrouter-video-catalog.md`
+- 201 | backlog | done | 2026-11-06 | OpenRouter: video generation jobs (submit, poll, download) | `tasks/backlog/201-openrouter-video-jobs.md`
+- 202 | backlog | done | 2026-11-06 | GenerationService: start, wait for, and save video | `tasks/backlog/202-generation-service-video.md`
+- 203 | backlog | done | 2026-11-06 | Video in sessions: models, parameters, assistant tool, price estimation | `tasks/backlog/203-video-session-settings-and-tool.md`
+- 204 | backlog | done | 2026-11-06 | Video UI: model selection, parameters, card without a player | `tasks/backlog/204-video-presentation.md`
+- 205 | backlog | done | 2026-11-06 | MAUI: play video and audio in the card (MediaElement) | `tasks/backlog/205-maui-media-player.md`
+- 206 | backlog | done | 2026-11-06 | Proof of concept: LibVLCSharp on Avalonia 12 (desktop and Android) | `tasks/backlog/206-libvlc-avalonia12-poc.md`
+- 208 | backlog | done | 2026-11-06 | Music: live check of Lyria 3 through OpenRouter | `tasks/backlog/208-lyria-live-check.md`
+- 209 | backlog | done | 2026-11-06 | Video: cancel, Repeat, New seed, Edit | `tasks/backlog/209-video-cancel-and-card-actions.md`
+- 210 | backlog | done | 2026-11-06 | Avalonia Android: activity recreation and saving to gallery | `tasks/backlog/210-avalonia-android-activity-recreation.md`
+- 211 | backlog | done | 2026-11-07 | MAUI: card buttons and long press do not work on Android (TouchBehavior) | `tasks/backlog/211-maui-card-children-tappable.md`
+- 212 | backlog | done | 2026-11-07 | MAUI: compact chat header on phones | `tasks/backlog/212-maui-chat-header-compact.md`
+- 213 | backlog | done | 2026-11-07 | Card image: preserve the original aspect ratio without cropping | `tasks/backlog/213-card-image-aspect-ratio.md`
+- 214 | backlog | done | 2026-11-07 | MAUI: tapping a session opens it instead of the Rename/Delete buttons | `tasks/backlog/214-maui-session-row-tap.md`
+- 215 | backlog | done | 2026-11-07 | Semantic index: clear failure reason and live embeddings check | `tasks/backlog/215-semantic-index-failure-diagnostics.md`
+- 216 | backlog | done | 2026-11-07 | MAUI: appearance resources have the wrong type (log warnings) | `tasks/backlog/216-maui-resource-type-warnings.md`
+- 167 | backlog | cancelled | 2026-11-07 | Music generation | `tasks/backlog/167-music-generation.md`
+- 207 | backlog | done | 2026-11-10 | Avalonia desktop: video and audio player in a separate window (LibVLC) | `tasks/backlog/207-avalonia-media-player.md`
+- 217 | backlog | done | 2026-11-07 | Semantic index: OpenRouter returns the model provider name | `tasks/backlog/217-embedding-provider-model-name.md`
+- 218 | backlog | done | 2026-11-07 | MAUI: show the player only on video and audio cards | `tasks/backlog/218-maui-media-player-only-for-media.md`
+- 219 | backlog | done | 2026-11-07 | MAUI: Play on a video in the feed opens the fullscreen player | `tasks/backlog/219-maui-video-card-fullscreen-player.md`
+- 220 | backlog | done | 2026-11-07 | Video card: poster frame and aspect ratio | `tasks/backlog/220-maui-video-poster-frame.md`
+- 221 | backlog | done | 2026-11-10 | OpenRouter: audio generation — all models with audio and speech output | `tasks/backlog/221-openrouter-lyria-audio-client.md`
+- 222 | backlog | done | 2026-11-10 | Audio generation: start, storage, session settings, assistant tool | `tasks/backlog/222-music-generation-pipeline.md`
+- 223 | backlog | done | 2026-11-10 | Audio UI: model selection and card with a player | `tasks/backlog/223-music-presentation.md`
+- 224 | backlog | done | 2026-11-10 | Avalonia Android: built-in Android player (Media3) for video and audio | `tasks/backlog/224-avalonia-android-media3-player.md`
+- 225 | backlog | done | 2026-11-10 | MAUI: run cards on phones use one centered column | `tasks/backlog/225-maui-run-cards-phone-column.md`
+- 226 | backlog | done | 2026-11-10 | Semantic index: status does not get stuck (re-enable and key restoration) | `tasks/backlog/226-semantic-index-status-fixes.md`
+- 227 | backlog | done | 2026-11-10 | Semantic search: embedding model selection and reindexing (core) | `tasks/backlog/227-embedding-model-choice-core.md`
+- 228 | backlog | done | 2026-11-10 | Semantic search: embedding model selection in settings | `tasks/backlog/228-embedding-model-choice-ui.md`
+- 229 | backlog | done | 2026-11-07 | Clear all history | `tasks/backlog/229-clear-history.md`
+- 231 | backlog | done | 2026-11-07 | Search: batch source lookup using table indexes | `tasks/backlog/231-search-source-lookup-by-table.md`
+- 232 | backlog | done | 2026-11-10 | Clear logs: message culture and failed deletions | `tasks/backlog/232-logs-clear-nits.md`
+- 233 | backlog | done | 2026-11-10 | Avalonia Android: save images on Android 6–9 | `tasks/backlog/233-avalonia-android-legacy-gallery-save.md`
+- 234 | backlog | done | 2026-11-10 | Avalonia: Omnilite icon (Android and desktop) | `tasks/backlog/234-avalonia-app-icon.md`
+- 238 | backlog | done | 2026-11-07 | UI tests: Android and Windows CI infrastructure preflight | `tasks/backlog/238-ui-e2e-ci-preflight.md`
+- 239 | backlog | done | 2026-11-07 | MAUI: stable AutomationIds for UI tests | `tasks/backlog/239-maui-automation-ids.md`
+- 240 | backlog | done | 2026-11-07 | Android UI tests: project, video fixture, and smoke scenarios | `tasks/backlog/240-ui-e2e-android-smoke.md`
+- 241 | backlog | done | 2026-11-07 | Windows UI tests (experimental): FlaUI, FFmpeg video, smoke scenarios | `tasks/backlog/241-ui-e2e-windows-smoke.md`
+- 242 | backlog | done | 2026-11-07 | UI tests: shared Allure HTML report and PR statuses | `tasks/backlog/242-ui-e2e-allure-report.md`
+- 244 | backlog | done | 2026-11-07 | Apple CI: tool preflight and Xcode/.NET compatibility table | `tasks/backlog/244-apple-ci-preflight.md`
+- 251 | backlog | done | 2026-11-10 | UI tests: final state in recordings, rotation on the key screen, and key masking on Windows | `tasks/backlog/251-ui-e2e-final-state-evidence.md`
 - 252 | backlog | done | 2026-11-10 | Acceptance scenarios: Reqnroll, the project and headless Avalonia | `tasks/backlog/252-acceptance-reqnroll-setup.md`
-- 253 | backlog | done | 2026-11-10 | Приёмочные сценарии: мир приложения — сценарный фейк сети, время, сиды, перезапуск | `tasks/backlog/253-acceptance-app-world.md`
-- 254 | backlog | done | 2026-11-10 | Приёмочные сценарии: первый запуск и ключи провайдеров | `tasks/backlog/254-acceptance-first-run-keys.md`
+- 253 | backlog | done | 2026-11-10 | Acceptance scenarios: app world — scripted network fake, time, seeds, restart | `tasks/backlog/253-acceptance-app-world.md`
+- 254 | backlog | done | 2026-11-10 | Acceptance scenarios: first run and provider keys | `tasks/backlog/254-acceptance-first-run-keys.md`

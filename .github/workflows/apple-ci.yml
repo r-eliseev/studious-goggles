@@ -7,6 +7,11 @@ on:
         description: iOS Simulator runtime version for diagnosis; empty selects the latest available
         required: false
         type: string
+      ios_smoke_repeats:
+        description: Number of fresh-install iOS simulator smoke runs (1–20)
+        required: false
+        default: 1
+        type: number
       ios_toolchain:
         description: iOS build toolchain for diagnosis
         required: false
@@ -215,7 +220,7 @@ jobs:
     needs: build-maui-ios
     if: always() && github.event_name != 'pull_request'
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 90
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -228,11 +233,25 @@ jobs:
       - name: Run MAUI iOS simulator smoke
         env:
           APPLE_SIM_RUNTIME_VERSION: ${{ inputs.ios_runtime_version }}
+          IOS_SMOKE_REPEATS: ${{ inputs.ios_smoke_repeats || 1 }}
         run: |
-          mkdir -p reports/ios-smoke/maui
+          repeats="$IOS_SMOKE_REPEATS"
+          if ! [[ "$repeats" =~ ^[0-9]+$ ]] || [ "$repeats" -lt 1 ] || [ "$repeats" -gt 20 ]; then
+            echo "ios_smoke_repeats must be between 1 and 20 (got: $repeats)" >&2
+            exit 2
+          fi
           if [ -f artifacts/maui-ios-sim.tar.gz ]; then
-            bash ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh artifacts/maui-ios-sim.tar.gz com.eliseev.imagegen reports/ios-smoke/maui
+            failed=0
+            for run_number in $(seq 1 "$repeats"); do
+              run_dir=$(printf 'reports/ios-smoke/maui/run-%02d' "$run_number")
+              mkdir -p "$run_dir"
+              if ! bash ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh artifacts/maui-ios-sim.tar.gz com.eliseev.imagegen "$run_dir"; then
+                failed=1
+              fi
+            done
+            exit "$failed"
           else
+            mkdir -p reports/ios-smoke/maui
             printf '{"runtime":"blocked","deviceType":"unknown","launched":false,"aliveAfter30s":false,"crashReports":0}\n' > reports/ios-smoke/maui/summary.json
             echo 'No MAUI simulator app artifact was produced by its build job.' > reports/ios-smoke/maui/errors.txt
             exit 1
@@ -249,7 +268,7 @@ jobs:
     needs: build-avalonia-ios
     if: always() && github.event_name != 'pull_request'
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 90
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -262,11 +281,25 @@ jobs:
       - name: Run Avalonia iOS simulator smoke
         env:
           APPLE_SIM_RUNTIME_VERSION: ${{ inputs.ios_runtime_version }}
+          IOS_SMOKE_REPEATS: ${{ inputs.ios_smoke_repeats || 1 }}
         run: |
-          mkdir -p reports/ios-smoke/avalonia
+          repeats="$IOS_SMOKE_REPEATS"
+          if ! [[ "$repeats" =~ ^[0-9]+$ ]] || [ "$repeats" -lt 1 ] || [ "$repeats" -gt 20 ]; then
+            echo "ios_smoke_repeats must be between 1 and 20 (got: $repeats)" >&2
+            exit 2
+          fi
           if [ -f artifacts/avalonia-ios-sim.tar.gz ]; then
-            bash ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh artifacts/avalonia-ios-sim.tar.gz com.eliseev.imagegen.avalonia reports/ios-smoke/avalonia
+            failed=0
+            for run_number in $(seq 1 "$repeats"); do
+              run_dir=$(printf 'reports/ios-smoke/avalonia/run-%02d' "$run_number")
+              mkdir -p "$run_dir"
+              if ! bash ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh artifacts/avalonia-ios-sim.tar.gz com.eliseev.imagegen.avalonia "$run_dir"; then
+                failed=1
+              fi
+            done
+            exit "$failed"
           else
+            mkdir -p reports/ios-smoke/avalonia
             printf '{"runtime":"blocked","deviceType":"unknown","launched":false,"aliveAfter30s":false,"crashReports":0}\n' > reports/ios-smoke/avalonia/summary.json
             echo 'No Avalonia simulator app artifact was produced by its build job.' > reports/ios-smoke/avalonia/errors.txt
             exit 1

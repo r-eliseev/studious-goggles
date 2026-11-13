@@ -6,53 +6,53 @@ claimed:
 created: 2026-11-07
 ---
 
-# Apple CI: отчёт Allure по Apple-платформам
+# Apple CI: Allure report for Apple platforms
 
-## Описание
-Дополнение Apple (ADR 0030 п. 8, `docs/specs/apple-ci-e2e.md`): job `apple-report` в `apple-ci.yml` собирает `allure-results` iOS-тестов (и macOS, если появятся) в один HTML-отчёт, не смешивая метки платформ и приложений, со сводкой прогона. Подход и скрипт — из задачи 242.
+## Description
+Apple addendum (ADR 0030, section 8, `docs/specs/apple-ci-e2e.md`): the `apple-report` job in `apple-ci.yml` collects `allure-results` from iOS tests (and macOS tests if added) into one HTML report, keeps platform and app labels separate, and includes a run summary. The approach and script come from task 242.
 
-Зависит от: 242 (`allure-summary.sh`, генерация), 248.
-Среда: GitHub Actions; локально — `scripts/check.sh` и проверка скрипта на образцах.
+Depends on: 242 (`allure-summary.sh`, generation), 248.
+Environment: GitHub Actions; locally, run `scripts/check.sh` and verify the script with samples.
 
-## Критерии готовности
-- Job `apple-report` (`ubuntu-latest`, `needs` всех Apple test/smoke-jobs, `if: always()`): скачать доступные артефакты (`continue-on-error` на каждое скачивание), слить `allure-results` в `reports/apple-allure-results`, сгенерировать `allure-commandline@2.46.1` (Temurin 21) → артефакт `apple-allure-html` (14 дней).
-- Метки: каждый результат несёт `parentSuite` = `ios-maui` / `ios-avalonia` / `macos-<shell>` (ставят фикстуры 248 через `AllureApi`); проверить в сгенерированном отчёте, что группы не смешаны.
-- Сводка `$GITHUB_STEP_SUMMARY`: таблица по `parentSuite` — прошло / упало / пропущено (`allure-summary.sh` из 242, расширить группировкой по `parentSuite` с обратной совместимостью), строки «blocked» для сборок iOS/Catalyst из итогов 245 (job-выходы `outputs.blocked`), ссылка на прогон.
-- Нет результатов — сводка «нет результатов», выход 0.
-- `docs/specs/apple-ci-e2e.md`: статус «реализовано», если 244–250 закрыты и критерии выполнены; иначе перечислить невыполненное в «Отчёте».
+## Acceptance criteria
+- Job `apple-report` (`ubuntu-latest`, `needs` all Apple test/smoke jobs, `if: always()`): download available artifacts (`continue-on-error` for each download), merge `allure-results` into `reports/apple-allure-results`, generate the report with `allure-commandline@2.46.1` (Temurin 21), and upload the `apple-allure-html` artifact (14 days).
+- Labels: each result has `parentSuite` = `ios-maui` / `ios-avalonia` / `macos-<shell>` (set by task 248 fixtures through `AllureApi`); verify that groups are separate in the generated report.
+- `$GITHUB_STEP_SUMMARY`: a table grouped by `parentSuite` with passed / failed / skipped counts (`allure-summary.sh` from 242, extended with backward-compatible grouping by `parentSuite`), `blocked` rows for iOS/Catalyst builds based on task 245 results (job outputs `outputs.blocked`), and a link to the run.
+- If there are no results, show a “no results” summary and exit 0.
+- In `docs/specs/apple-ci-e2e.md`, set the status to “implemented” if tasks 244–250 are complete and the criteria are met; otherwise list the outstanding items in the “Report”.
 
-## Анализ
-Справочно: дополнение владельца — `docs/specs/ui-e2e-original/MAUI_Avalonia_Apple_CI_E2E_Addendum.md`; при расхождении действуют ADR 0030 и `docs/specs/apple-ci-e2e.md`.
-Задача 242 (`allure-summary.sh`, job `report`), `.github/workflows/apple-ci.yml` (после 245–249).
+## Analysis
+Reference: the owner's addendum is `docs/specs/ui-e2e-original/MAUI_Avalonia_Apple_CI_E2E_Addendum.md`; ADR 0030 and `docs/specs/apple-ci-e2e.md` take precedence if they differ.
+Task 242 (`allure-summary.sh`, `report` job), `.github/workflows/apple-ci.yml` (after 245–249).
 
-## План
-1. Группировка по `parentSuite` в `allure-summary.sh` по TDD на образцах в `tmp/` (два `*-result.json` с разными `parentSuite`).
-2. Outputs `blocked` в jobs сборки; job `apple-report`; прогон.
-3. Документация.
+## Plan
+1. Add grouping by `parentSuite` to `allure-summary.sh` with TDD using samples in `tmp/` (two `*-result.json` files with different `parentSuite` values).
+2. Add `blocked` outputs to the build jobs; add the `apple-report` job; run it.
+3. Update the documentation.
 
-Файлы: `ImageGen/ImageGen.E2E.Common/ci/allure-summary.sh`, `.github/workflows/apple-ci.yml`, `ImageGen/ImageGen.E2E.iOS/IosTestBase.cs` (метка, если 248 её не поставил), `docs/specs/apple-ci-e2e.md`, `docs/knowledge/apple-ci.md`.
+Files: `ImageGen/ImageGen.E2E.Common/ci/allure-summary.sh`, `.github/workflows/apple-ci.yml`, `ImageGen/ImageGen.E2E.iOS/IosTestBase.cs` (label, if task 248 did not add it), `docs/specs/apple-ci-e2e.md`, `docs/knowledge/apple-ci.md`.
 
-### Проверка
+### Verification
 ```
 bash ImageGen/ImageGen.E2E.Common/ci/allure-summary.sh tmp/allure-apple-sample
 bash scripts/check.sh
-# в GitHub Actions: apple-report, артефакт apple-allure-html, сводка
+# GitHub Actions: apple-report, apple-allure-html artifact, summary
 ```
 
-### Порядок исполнения (для Luna)
-- Сначала прочитай только файлы из строки «Файлы» и названные тесты; сигнатуры сверяй с текущим `main`.
-- Шаги строго по порядку (ub-mode): падающий тест → запуск, убедиться, что он падает именно по описанной причине → минимальный фикс → тест зелёный.
-- Не меняй файлы вне строки «Файлы», не переименовывай существующие члены сверх плана, не чини соседние находки — они в отдельных задачах.
-- Если код расходится с планом (нет такого метода, другая сигнатура, тест уже есть), не импровизируй: остановись и запиши вопрос в «Комментарии».
-- Команды `dotnet` выполняй по одной, не параллельно. После каждого изменённого проекта — `dotnet format <проект> --verify-no-changes`.
-- В «Отчёте»: что изменено, команды и результаты, отличия от плана.
+### Execution order (for Luna)
+- First read only the files in the “Files” line and the named tests; compare signatures with current `main`.
+- Follow the steps in order (ub-mode): failing test → run it and confirm it fails for the described reason → minimal fix → green test.
+- Do not change files outside the “Files” line, rename existing members beyond the plan, or fix neighboring findings; those belong to separate tasks.
+- If the code differs from the plan (missing method, different signature, test already exists), do not improvise; stop and write a question in “Comments”.
+- Run `dotnet` commands one at a time, not in parallel. After each changed project, run `dotnet format <project> --verify-no-changes`.
+- In the “Report”, record what changed, commands and results, and differences from the plan.
 
-## Отчёт
+## Report
 
-## Комментарии
+## Comments
 
 ### 2026-11-07, claude-audit
-Создано по дополнению Apple (A8). План для Luna.
+Created from the Apple addendum (A8). Plan for Luna.
 
-### 2026-11-07, владелец (в чате, записал claude-audit)
-Дополнение владельца «MAUI + Avalonia — Apple CI/E2E» (оригинал — `docs/specs/ui-e2e-original/`). План одобрен ранее данным поручением «заапрувь все таски которые будут». Новый workflow `apple-ci.yml` по этому дополнению владелец попросил явно (ADR 0030).
+### 2026-11-07, owner (in chat, recorded by claude-audit)
+The owner's “MAUI + Avalonia — Apple CI/E2E” addendum (original: `docs/specs/ui-e2e-original/`). The plan was approved under the earlier instruction “approve all tasks with plans”. The owner explicitly requested the new `apple-ci.yml` workflow as part of this addendum (ADR 0030).

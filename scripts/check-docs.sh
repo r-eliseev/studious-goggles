@@ -1,47 +1,50 @@
 #!/usr/bin/env bash
-# Проверка документации. Код возврата 1, если есть ошибки.
+# Documentation checks. Exit code 1 if any check fails.
 cd "$(dirname "$0")/.."
 fail=0
 
-# 1. Обязательные файлы
+# 1. Required files
 for f in AGENTS.md docs/index.md docs/status.md docs/architecture.md docs/conventions.md docs/tasks.md docs/executor.md .claude/skills/planner/SKILL.md .claude/skills/executor/SKILL.md; do
-  [ -f "$f" ] || { echo "ОШИБКА: нет файла $f"; fail=1; }
+  [ -f "$f" ] || { echo "ERROR: missing file $f"; fail=1; }
 done
 
-# 2. Каждый файл docs/ упомянут в index.md: файлы верхнего уровня по имени, вложенные по имени каталога.
-#    Не проверяются: index.md, записи журнала log/ и шаблоны _*.md.
+# 2. Every file in docs/ is listed in index.md: top-level files by name, nested files by directory name.
+#    Excluded: index.md, log/ entries, and _*.md templates.
 if [ -f docs/index.md ]; then
   while IFS= read -r f; do
     rel="${f#docs/}"; base="$(basename "$rel")"
     case "$rel" in index.md|log/*) continue ;; esac
     case "$base" in _*) continue ;; esac
     if [ "$rel" = "$base" ]; then key="$base"; else key="${rel%%/*}/"; fi
-    grep -qF "$key" docs/index.md || { echo "ОШИБКА: $rel не упомянут в docs/index.md"; fail=1; }
+    grep -qF "$key" docs/index.md || { echo "ERROR: $rel is not listed in docs/index.md"; fail=1; }
   done < <(find docs -type f -name '*.md' | sort)
 fi
 
-# 3. У каждого ADR есть строка «Статус:» с допустимым значением
+# 3. Every ADR has a “Status:” line with an allowed value
 for f in docs/decisions/*.md; do
   [ -e "$f" ] || continue
   case "$(basename "$f")" in _*) continue ;; esac
   grep -qE '^Status: (proposed|accepted|superseded|rejected)' "$f" \
-    || { echo "ОШИБКА: у $f нет строки 'Status:' с допустимым значением"; fail=1; }
+    || { echo "ERROR: $f has no 'Status:' line with an allowed value"; fail=1; }
 done
 
-# 4. Битые относительные ссылки на .md-файлы
+# 4. Broken relative links to .md files
 while IFS= read -r f; do
   dir="$(dirname "$f")"
   while IFS= read -r link; do
     [ -n "$link" ] || continue
     case "$link" in http*|mailto:*) continue ;; esac
-    [ -e "$dir/$link" ] || { echo "ОШИБКА: битая ссылка в $f -> $link"; fail=1; }
+    [ -e "$dir/$link" ] || { echo "ERROR: broken link in $f -> $link"; fail=1; }
   done < <(grep -oE '\]\([^)#[:space:]]+\.md(#[^)]*)?\)' "$f" | sed -E 's/^\]\(([^)#]+).*/\1/')
 done < <(find . -name '*.md' -not -path './.git/*' -not -path './node_modules/*' -not -path './tmp/*' | sort)
 
-# 5. architecture.md описывает устройство, а не ход работ: без номеров задач, путей tasks/ и раздела о состоянии
+# 5. architecture.md describes architecture, not work progress: no task numbers, tasks/ paths, or status section
 if [ -f docs/architecture.md ]; then
-  grep -nE '[Зз]адач[^ ]* +[0-9]{3}|[Tt]asks? +[0-9]{3}|tasks/|^#+ +(Состояние|Status|State)' docs/architecture.md | while IFS= read -r line; do
-    echo "ОШИБКА: docs/architecture.md:${line%%:*}: ход работ (номер задачи, tasks/ или раздел «Состояние») — ему место в «Отчёте» задачи"
+  task_initials=$(printf '\u0417\u0437')
+  task_suffix=$(printf '\u0430\u0434\u0430\u0447')
+  state_heading=$(printf '\u0421\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0435')
+  grep -nE "[$task_initials]${task_suffix}[^ ]* +[0-9]{3}|[Tt]asks? +[0-9]{3}|tasks/|^#+ +($state_heading|Status|State)" docs/architecture.md | while IFS= read -r line; do
+    echo "ERROR: docs/architecture.md:${line%%:*}: work progress (task number, tasks/ path, or status section) belongs in a task report"
   done | grep . && fail=1
 fi
 
@@ -49,12 +52,12 @@ fi
 #    The checked paths and the exceptions are in scripts/check-latin.sh.
 bash scripts/check-latin.sh || fail=1
 
-# 6. Предупреждение: изменён код, а docs/ и tasks/ нет (для CI на pull request)
+# 6. Warning: code changed without docs/ or tasks/ changes (for pull-request CI)
 base="${BASE_REF:-origin/main}"
 if git rev-parse --verify -q "$base" >/dev/null 2>&1; then
   changed="$(git diff --name-only "$base"...HEAD 2>/dev/null)"
   if echo "$changed" | grep -qE '^ImageGen/' && ! echo "$changed" | grep -qE '^(docs|tasks)/'; then
-    echo "ПРЕДУПРЕЖДЕНИЕ: изменён код в ImageGen/, но docs/ и tasks/ не затронуты"
+    echo "WARNING: ImageGen/ code changed, but neither docs/ nor tasks/ were updated"
   fi
 fi
 

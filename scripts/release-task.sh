@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# Снимает занятость задачи (очищает assignee и claimed).
-# Использование: scripts/release-task.sh <номер> [--publish]
-#   без --publish правится файл в вашей рабочей копии (так делают при завершении задачи);
-#   с --publish занятость снимается сразу в ветке origin, одноимённой текущей (TASKS_BRANCH переопределяет; так человек снимает «зависшую» занятость).
+# Releases a task claim (clears assignee and claimed).
+# Usage: scripts/release-task.sh <number> [--publish]
+#   without --publish, edits the file in the working copy (used when completing a task);
+#   with --publish, releases the claim directly on the matching origin branch (TASKS_BRANCH overrides it; useful for clearing a stale claim).
 set -u
 cd "$(dirname "$0")/.."
 . scripts/tasks-lib.sh
-[ $# -ge 1 ] || { echo "Использование: $0 <номер> [--publish]" >&2; exit 1; }
-case "$1" in ''|*[!0-9]*) echo "Номер задачи — число" >&2; exit 1 ;; esac
+[ $# -ge 1 ] || { echo "Usage: $0 <number> [--publish]" >&2; exit 1; }
+case "$1" in ''|*[!0-9]*) echo "Task number must be numeric" >&2; exit 1 ;; esac
 ID=$(task_norm_id "$1")
 
-release() {  # <корень>
+release() {  # <root>
   local f cur
   f=$(task_file "$1" "$ID")
-  [ -n "$f" ] || { echo "Задача $ID не найдена" >&2; return 3; }
+  [ -n "$f" ] || { echo "Task $ID not found" >&2; return 3; }
   cur=$(task_field "$f" assignee)
   [ -n "$cur" ] || return 100
   REL_WAS="$cur"
@@ -22,12 +22,12 @@ release() {  # <корень>
 }
 
 if [ "${2:-}" = "--publish" ]; then
-  task_on_main release "task $ID: занятость снята"; rc=$?
+  task_on_main release "task $ID: claim released"; rc=$?
 else
   release .; rc=$?
 fi
 case $rc in
-  0)   echo "Занятость снята (была: $REL_WAS)" ;;
-  100) echo "Задача $ID не была занята" ;;
+  0)   echo "Claim released (was: $REL_WAS)" ;;
+  100) echo "Task $ID was not claimed" ;;
   *)   exit $rc ;;
 esac

@@ -20,10 +20,12 @@ udid=''
 extract_dir=''
 runtime_name=unknown
 device_name=unknown
+executable=unknown
 launched=false
 alive=false
 crash_count=0
 launch_pid=''
+exited_at_seconds=null
 result=1
 
 copy_crash_reports() {
@@ -39,8 +41,23 @@ copy_crash_reports() {
   crash_count=$(find "$out_dir/crash" -type f | wc -l | tr -d ' ')
 }
 
+copy_app_logs() {
+  local data_container log_file
+  data_container=$(xcrun simctl get_app_container "$udid" "$bundle_id" data 2>/dev/null) || {
+    echo "Could not locate the app data container for $bundle_id" >"$out_dir/app-logs.txt"
+    return 0
+  }
+  mkdir -p "$out_dir/app-logs"
+  while IFS= read -r -d '' log_file; do
+    cp "$log_file" "$out_dir/app-logs/"
+  done < <(find "$data_container" -type f -name 'imagegen-*.log' -print0 2>/dev/null || true)
+  if [ -z "$(find "$out_dir/app-logs" -type f -print -quit 2>/dev/null)" ]; then
+    echo "No imagegen-*.log files found under the app data container: $data_container" >"$out_dir/app-logs.txt"
+  fi
+}
+
 write_summary() {
-  python3 - "$out_dir/summary.json" "$runtime_name" "$device_name" "$launched" "$alive" "$crash_count" <<'PY'
+  python3 - "$out_dir/summary.json" "$runtime_name" "$device_name" "$launched" "$alive" "$crash_count" "$exited_at_seconds" <<'PY'
 import json
 import sys
 
@@ -50,6 +67,7 @@ summary = dict(zip(keys, values))
 summary["launched"] = summary["launched"] == "true"
 summary["aliveAfter30s"] = summary["aliveAfter30s"] == "true"
 summary["crashReports"] = int(summary["crashReports"])
+summary["exitedAtSeconds"] = None if sys.argv[7] == "null" else int(sys.argv[7])
 with open(sys.argv[1], "w", encoding="utf-8") as output:
     json.dump(summary, output, indent=2)
     output.write("\n")
@@ -58,16 +76,22 @@ PY
 
 cleanup() {
   local exit_code=$?
+  local simulator_predicate
   set +e
   if [ -n "$launch_pid" ]; then
     kill "$launch_pid" >/dev/null 2>&1
     wait "$launch_pid" >/dev/null 2>&1
   fi
   if [ -n "$udid" ]; then
+    copy_app_logs
+    simulator_predicate="process == \"$executable\" OR process == \"runningboardd\" OR process == \"SpringBoard\" OR process == \"FrontBoard\""
     if command -v gtimeout >/dev/null 2>&1; then
-      gtimeout 60 xcrun simctl spawn "$udid" log show --last 5m --predicate 'process CONTAINS "ImageGen" OR process CONTAINS "Omnilite"' >"$out_dir/simulator.log" 2>&1 || echo "simulator log collection timed out or failed" >>"$out_dir/simulator.log"
+      gtimeout 60 xcrun simctl spawn "$udid" log show --last 10m --predicate "$simulator_predicate" --style compact >"$out_dir/simulator.log" 2>&1 || echo "simulator log collection timed out or failed" >>"$out_dir/simulator.log"
     else
-      xcrun simctl spawn "$udid" log show --last 5m --predicate 'process CONTAINS "ImageGen" OR process CONTAINS "Omnilite"' >"$out_dir/simulator.log" 2>&1 || echo "simulator log collection failed" >>"$out_dir/simulator.log"
+      xcrun simctl spawn "$udid" log show --last 10m --predicate "$simulator_predicate" --style compact >"$out_dir/simulator.log" 2>&1 || echo "simulator log collection failed" >>"$out_dir/simulator.log"
+    fi
+    if [ ! -s "$out_dir/simulator.log" ]; then
+      printf 'No simulator log entries were returned for predicate: %s\n' "$simulator_predicate" >"$out_dir/simulator.log"
     fi
     copy_crash_reports
     xcrun simctl shutdown "$udid" >/dev/null 2>&1
@@ -145,21 +169,35 @@ is_running() {
   services=$(xcrun simctl spawn "$udid" launchctl list) || return 1
   grep -Fq "$bundle_id" <<<"$services"
 }
-# The process check that decides the result runs at 30 s: on a slow start (still on the splash screen) the 15 s
-# check missed a live app, and an unhandled managed exception (SIGABRT) leaves no crash report, so "seen once" is
-# not enough either.
-sleep 15
-if is_running; then
-  echo "process is running at 15 s" >&2
-else
-  echo "process not found at 15 s; checking again at 30 s" >&2
-fi
-xcrun simctl io "$udid" screenshot "$out_dir/screenshot.png"
-sleep 15
-if is_running; then
-  alive=true
-fi
-xcrun simctl io "$udid" screenshot "$out_dir/screenshot-30s.png"
+printf 'elapsedSeconds\ttimestampUtc\trunning\tlaunchctlEntry\n' >"$out_dir/process-timeline.txt"
+# Keep the established decision point at 30 s; continue sampling to 60 s for exit diagnostics only.
+for elapsed_seconds in $(seq 5 5 60); do
+  sleep 5
+  services=$(xcrun simctl spawn "$udid" launchctl list 2>&1 || true)
+  launchctl_entry=$(grep -F "$bundle_id" <<<"$services" || true)
+  if [ -n "$launchctl_entry" ]; then
+    running=yes
+  else
+    running=no
+    if [ "$exited_at_seconds" = null ]; then
+      exited_at_seconds=$elapsed_seconds
+    fi
+  fi
+  timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  printf '%s\t%s\t%s\t%s\n' "$elapsed_seconds" "$timestamp" "$running" "$launchctl_entry" >>"$out_dir/process-timeline.txt"
+
+  if [ "$elapsed_seconds" -eq 15 ]; then
+    if [ "$running" = yes ]; then
+      echo "process is running at 15 s" >&2
+    else
+      echo "process not found at 15 s; checking again at 30 s" >&2
+    fi
+    xcrun simctl io "$udid" screenshot "$out_dir/screenshot.png"
+  elif [ "$elapsed_seconds" -eq 30 ]; then
+    [ "$running" != yes ] || alive=true
+    xcrun simctl io "$udid" screenshot "$out_dir/screenshot-30s.png"
+  fi
+done
 copy_crash_reports
 if [ "$alive" = true ] && [ "$crash_count" -eq 0 ]; then
   result=0

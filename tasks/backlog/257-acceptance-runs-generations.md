@@ -1,6 +1,6 @@
 ---
 id: 257
-status: approved
+status: blocked
 assignee:
 claimed:
 created: 2026-11-09
@@ -61,6 +61,21 @@ bash scripts/check.sh
 
 ## Отчёт
 
+- GEN-01 is implemented. The scenario selects two image models and two runs per model through the session models page, configures seeds 11 and 22, then checks four cards and both request seeds per model.
+- The fake returns an empty video catalog so the session models screen completes loading, and a tool-capable default assistant model so its save command can preserve the session assistant setting.
+- Verification: `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait "Category=runs"` passed (1/1); `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` passed.
+- GEN-02 is implemented with a fake model whose catalog omits `seed`; two requests are checked for no `seed` property and both cards show `seed not supported`. The filtered runs acceptance test passed (2/2); formatting passed.
+- GEN-03 is implemented; both failed cards for one model show the failed state/reason while both cards for the other model succeed with images. The filtered runs acceptance test passed (3/3); formatting passed.
+- GEN-04 is implemented; filtered generations keep `Filtered`/`IsFiltered` and never set `IsFailed`, while the second model succeeds. The filtered runs acceptance test passed (4/4); formatting passed.
+- GEN-05 is implemented; a held fake provider response keeps the model card active, and releasing it completes the card with an image. The filtered runs acceptance test passed (5/5); formatting passed.
+- GEN-06 is implemented; the scenario verifies the image file exists and is readable from storage before restart, then reopens the session and verifies the same card and file path are restored. The filtered runs acceptance test passed (6/6).
+- GEN-07 is implemented; a `usage.cost` response is displayed as `$0.125` while the current culture is `fr-FR`. The filtered runs acceptance test passed (7/7).
+- GEN-08 is implemented; with one completed and one held generation the run header shows `1 of 2 done`, then `2 of 2 done` after releasing the held response. The filtered runs acceptance test passed (8/8).
+- GEN-09 is implemented; the generated 120×80 PNG displays `120×80 px · 3:2`. The filtered runs acceptance test passed (9/9).
+- GEN-10 is implemented; changing selected models during a held run leaves its original two cards intact, and the next run uses only the newly selected model. The filtered runs acceptance test passed (10/10).
+- GEN-11 is implemented; image catalog per-image prices are summed in the next run estimate. The filtered runs acceptance test passed (11/11).
+- Full verification is incomplete: `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` hangs at the existing `Support/AppWorldTests.RestartAsync_ReusesDataFolderAndSecretStore`, including when run alone. The filtered `Category=runs` acceptance test passes (11/11), formatting passes, but the plan requires the full acceptance suite and the executor is not authorized to change `Support/AppWorldTests.cs`.
+
 ## Комментарии
 
 ### 2026-11-09, claude-bdd-plan
@@ -68,3 +83,6 @@ bash scripts/check.sh
 
 ### 2026-11-09, owner (in the chat, recorded by claude-bdd-plan)
 Plan approved, status `approved`. Changes of the same day apply: the Gherkin scenarios, step texts, bindings, comments and the "Report" are in English (`docs/conventions.md`, "Language"; ADR 0031 is accepted); a "Structure of a scenario" in this plan is a `Scenario Outline`. Scenario expectations and wording are in the English catalog `docs/specs/acceptance-scenarios.md`. The acceptance project runs in CI (task 252). The flow tests in `ImageGen.Avalonia.Tests/Flows` that a scenario of this task covers are deleted by task 267, not here.
+
+### 2026-11-11, codex-gpt6
+GEN-01–GEN-11 are implemented and pass the filtered runs suite (11/11), and formatting passes. The full acceptance command hangs at `Support/AppWorldTests.RestartAsync_ReusesDataFolderAndSecretStore` (line 11), including when that test is run in isolation; the test synchronously disposes `AppWorld` inside the Avalonia UI dispatch callback (`using var world`), while `AppWorld.Dispose()` blocks on `DisposeAsync()`. The accepted `Files:` list does not include `Support/AppWorldTests.cs`, and the task requires the full acceptance suite to pass. Proposed plan change: add `ImageGen/ImageGen.Acceptance.Tests/Support/AppWorldTests.cs` to `Files:` and make its async test disposal nonblocking (`await using`/await `DisposeAsync`), then rerun the full acceptance suite, formatting and `scripts/check.sh`. Task 257 is blocked pending approval of this scope change.

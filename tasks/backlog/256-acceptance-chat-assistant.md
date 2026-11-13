@@ -1,6 +1,6 @@
 ---
 id: 256
-status: approved
+status: blocked
 assignee:
 claimed:
 created: 2026-11-09
@@ -56,6 +56,16 @@ bash scripts/check.sh
 
 ## Отчёт
 
+- CHAT-01 is implemented in `Features/ChatAssistant.feature`; the step bindings assert the assistant text appears in the feed and no run item is present.
+- Verification: `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait "Category=chat"` passed (1/1); `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` passed.
+- CHAT-02 is implemented; the scenario checks exact prompt equality in the run, generation card, and `/api/v1/images` request, and checks that the request model matches the card model. The filtered chat acceptance run passed (2/2); formatting passed.
+- CHAT-03 is implemented; the second chat request is checked for both `AssistantPrompts.System` and the latest run's `CurrentPrompt` system message. The filtered chat acceptance run passed (3/3); formatting passed.
+- CHAT-04 is implemented as an outline for HTTP 500, 429, and 401. Each example verifies the user message remains and an error message matches its `ErrorKindText`. The filtered chat acceptance run passed (6/6); formatting passed.
+- CHAT-05 is implemented; whitespace-only input disables `SendCommand`. The filtered chat acceptance run passed (7/7); formatting passed.
+- CHAT-06 is implemented; after an assistant error, retrying its message consumes the queued tool response and starts a run with the exact prompt. The filtered chat acceptance run passed (8/8); formatting passed.
+- CHAT-07 is implemented and reuses the existing model-label assertion also used by SES-06. The filtered chat acceptance run passed (9/9); formatting passed.
+- CHAT-08 is not implemented: the approved plan limits `FakeOpenRouter.cs` changes to new assistant responses, but a reference-capable model is needed to exercise this criterion.
+
 ## Комментарии
 
 ### 2026-11-09, claude-bdd-plan
@@ -63,3 +73,6 @@ bash scripts/check.sh
 
 ### 2026-11-09, owner (in the chat, recorded by claude-bdd-plan)
 Plan approved, status `approved`. Changes of the same day apply: the Gherkin scenarios, step texts, bindings, comments and the "Report" are in English (`docs/conventions.md`, "Language"; ADR 0031 is accepted); a "Structure of a scenario" in this plan is a `Scenario Outline`. Scenario expectations and wording are in the English catalog `docs/specs/acceptance-scenarios.md`. The acceptance project runs in CI (task 252). The flow tests in `ImageGen.Avalonia.Tests/Flows` that a scenario of this task covers are deleted by task 267, not here.
+
+### 2026-11-11, codex-gpt6
+Plan mismatch for CHAT-08: `ReferenceImageLimit.Of` only permits a generation to send references when the selected catalog model declares an `input_references` range. `ImageGen/ImageGen.Acceptance.Tests/Support/FakeOpenRouter.cs` currently serializes only `seed` in fake image model parameters, so the configured models cannot take references. The approved plan permits changes to this fake only for additional assistant responses. Proposed plan change: allow a configurable `input_references` maximum in the fake image-model catalog response, and configure a reference-capable model in CHAT-08 before attaching an image. Keep product code unchanged. The task is blocked until this file-scope change is approved.

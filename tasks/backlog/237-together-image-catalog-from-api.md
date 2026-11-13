@@ -1,6 +1,6 @@
 ---
 id: 237
-status: approved
+status: blocked
 assignee:
 claimed:
 created: 2026-11-07
@@ -50,6 +50,12 @@ bash scripts/check.sh
 ## Отчёт
 
 ## Комментарии
+
+### 2026-11-13, codex-gpt6
+The required live API check cannot proceed because this environment has no Together AI credential (checked environment variable names; no Together key is configured). The plan explicitly requires a live authenticated request as step 1 and says to stop without a key. No request was sent.
+
+Unblock when the owner provides/configures a Together AI key for this session; then perform the documented free model-list request and continue from step 1.
+
 
 ### 2026-11-07, claude-audit
 Создано по вопросу владельца о захардкоженных списках (проверено: Together — 5 FLUX в builtin-providers.json). Формат ответа API Together не найден в документации — нужен живой запрос с ключом. План для Luna.

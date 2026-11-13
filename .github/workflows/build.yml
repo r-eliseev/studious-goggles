@@ -13,9 +13,9 @@ jobs:
 
   core:
     runs-on: ubuntu-latest
-    # Единая UTF-8 локаль для всех Linux-задач: под C.UTF-8 инструменты, работающие
-    # с кириллицей (grep -E по диапазонам, сортировка), ведут себя иначе, чем в
-    # en_US.UTF-8, и результат может зависеть от образа runner.
+    # Use one UTF-8 locale for all Linux jobs: under C.UTF-8, tools that process
+    # Cyrillic (grep -E ranges, sorting) behave differently than under en_US.UTF-8,
+    # so results can depend on the runner image.
     env:
       LC_ALL: en_US.UTF-8
       LANG: en_US.UTF-8
@@ -70,7 +70,7 @@ jobs:
       - run: dotnet format ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj --verify-no-changes
       - run: dotnet build ImageGen/ImageGen.Avalonia.Android/ImageGen.Avalonia.Android.csproj -c Release
 
-  # Те же тесты на Windows: там другие правила для файлов (открытый файл нельзя удалить) и пути.
+  # Run the same tests on Windows: file handling (open files cannot be deleted) and paths differ.
   windows-tests:
     runs-on: windows-latest
     steps:
@@ -89,7 +89,7 @@ jobs:
       - run: dotnet build ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -c Release
       - run: dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -c Release --no-build
 
-  # Android собирается на Windows: установка maui-android на ubuntu-latest падала с «Disk quota exceeded».
+  # Build Android on Windows: installing maui-android on ubuntu-latest failed with “Disk quota exceeded”.
   maui:
     runs-on: windows-latest
     steps:

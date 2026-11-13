@@ -6,37 +6,37 @@ claimed:
 created: 2026-11-07
 ---
 
-# MAUI Windows: данные и ключи после смены ApplicationId
+# MAUI Windows: data and keys after changing ApplicationId
 
-## Описание
-Находка ревью 2026-11-04 (коммит `4b9e0b3`, задача 030): у Windows-цели MAUI `ApplicationId` сменён с `com.companyname.imagegen.maui` на `com.eliseev.imagegen` без переноса данных. Прежний комментарий в `ImageGen.Maui.csproj` предупреждал, что на Windows id определяет папки данных и секретов. Для unpackaged-приложения `FileSystem.Current.AppDataDirectory` (папка данных, `MauiAppPaths`) и хранилище `SecureStorage` (ключи, `MauiSecretStore`), по всей видимости, зависят от id — после обновления сессии, картинки и ключи могут «пропасть» (старая папка остаётся на диске). Фактические пути на Windows не измерены (`docs/status.md`, задача 030).
+## Description
+Review finding from 2026-11-04 (commit `4b9e0b3`, task 030): the MAUI Windows target changed `ApplicationId` from `com.companyname.imagegen.maui` to `com.eliseev.imagegen` without migrating data. A previous comment in `ImageGen.Maui.csproj` warned that on Windows the id determines the data and secret folders. For an unpackaged app, `FileSystem.Current.AppDataDirectory` (data folder, `MauiAppPaths`) and `SecureStorage` (keys, `MauiSecretStore`) appear to depend on the id; after an update, sessions, images and keys may seem to "disappear" (the old folder remains on disk). Actual Windows paths have not been measured (`docs/status.md`, task 030).
 
-Допущение (владелец может выбрать иначе — вернуть прежний id до миграции): данные переносятся автоматически при первом запуске новой версии.
+Assumption (the owner may choose otherwise and restore the old id before migration): data is migrated automatically on the first launch of the new version.
 
-Зависит от: —
-Среда: **только Windows** (измерение путей, сборка и ручная проверка); логика переноса — общая, тестируется на Linux.
+Depends on: —
+Environment: **Windows only** (path measurement, build and manual check); migration logic is shared and tested on Linux.
 
-## Критерии готовности
-- Измерено и записано в `docs/knowledge/dev-environment.md` («Логи»/«Пакеты»): папка данных MAUI Windows для старого id (релиз ≤ v0.1.10; первая строка журнала `ImageGen … Data: …`) и для нового; где `SecureStorage` unpackaged-приложения хранит значения (файл в папке данных, реестр или др.) и зависит ли от id.
-- `LegacyDataMigration.TryMigrate(string legacyDirectory, string currentDirectory, ILogger)` в `ImageGen.Presentation` (без платформенных типов): если в `currentDirectory` нет `imagegen.db` (имя файла базы — `SqliteDatabase.FileName`), а в `legacyDirectory` есть — копирует всё содержимое `legacyDirectory` во временную папку рядом с `currentDirectory`, затем переименовывает в `currentDirectory` (если `currentDirectory` существует и пуст, кроме `logs/`, — переносит содержимое поверх); старая папка не удаляется; одна Information-запись (сколько файлов, откуда/куда, без содержимого). Любая ошибка — Warning, приложение стартует с пустыми данными (как сейчас), повторная попытка — при следующем запуске.
-- Вызов в `MauiProgram` под `#if WINDOWS` **до** создания логгера и открытия базы: путь старой папки вычисляется по измеренному правилу (шаг 1), а не вписывается строкой из чужой машины.
-- Ключи: если `SecureStorage` переносим (например, файл в папке данных) — он копируется вместе с данными; если нет — после переноса данных первый запуск откроет экран ключа (уже так при отсутствии ключа) и покажет один раз сообщение «Provider keys could not be moved after the update; enter them again.» (ресурс).
-- Тесты (Linux, временные папки): перенос при пустой новой папке; ничего не делать, если в новой есть база; ничего, если в старой нет базы; ошибка копирования оставляет новую папку без частичных данных; логи в новой папке не мешают переносу.
-- Ручная проверка на Windows в 016: установить релиз со старым id, создать сессию и ключ, поставить новую версию — сессия на месте; ключ на месте или показано сообщение.
+## Acceptance criteria
+- Measure and record in `docs/knowledge/dev-environment.md` ("Logs"/"Packages"): the MAUI Windows data folder for the old id (release ≤ v0.1.10; first log line `ImageGen … Data: …`) and the new id; where unpackaged-app `SecureStorage` stores values (data-folder file, registry, etc.) and whether it depends on the id.
+- `LegacyDataMigration.TryMigrate(string legacyDirectory, string currentDirectory, ILogger)` in `ImageGen.Presentation` (no platform types): if `currentDirectory` has no `imagegen.db` (database filename is `SqliteDatabase.FileName`) and `legacyDirectory` does, copy all contents of `legacyDirectory` into a temporary folder beside `currentDirectory`, then rename it to `currentDirectory` (if `currentDirectory` exists and is empty except for `logs/`, merge the contents); do not delete the old folder; write one Information log (file count, source and destination, no contents). Any error is a Warning; the app starts with empty data (as it does now), and retries on the next launch.
+- Call it in `MauiProgram` under `#if WINDOWS` **before** creating the logger and opening the database; compute the old folder path using the measured rule (step 1), not a path copied from another machine.
+- Keys: if `SecureStorage` is portable (for example, a file in the data folder), copy it with the data. Otherwise, after data migration, the first launch opens the key screen (as it already does when there is no key) and shows the message "Provider keys could not be moved after the update; enter them again." once (resource).
+- Tests (Linux, temporary folders): migrate when the new folder is empty; do nothing when the new folder has a database; do nothing when the old folder has no database; a copy error leaves the new folder without partial data; logs in the new folder do not prevent migration.
+- Manual check on Windows in task 016: install a release with the old id, create a session and key, install the new version — the session remains; the key remains or the message is shown.
 
-## Анализ
-`ImageGen/ImageGen.Maui/ImageGen.Maui.csproj` (`ApplicationId`), `ImageGen/ImageGen.Maui/Services/MauiAppPaths.cs` (`FileSystem.Current.AppDataDirectory`), `ImageGen/ImageGen.Maui/Services/MauiSecretStore.cs` (`SecureStorage.Default`), `ImageGen/ImageGen.Maui/MauiProgram.cs` (≈строка 62: `paths`, `logDirectory`, логирование), `ImageGen/ImageGen.Data/SqliteDatabase.cs` (имя файла базы), задача 030 (`tasks/backlog/030-app-identity.md`, комментарии). Шаг измерения нельзя сделать на Linux: если исполнитель без Windows — выполнить только общую часть с тестами и оставить в «Комментарии» точные шаги измерения для владельца.
+## Analysis
+`ImageGen/ImageGen.Maui/ImageGen.Maui.csproj` (`ApplicationId`), `ImageGen/ImageGen.Maui/Services/MauiAppPaths.cs` (`FileSystem.Current.AppDataDirectory`), `ImageGen/ImageGen.Maui/Services/MauiSecretStore.cs` (`SecureStorage.Default`), `ImageGen/ImageGen.Maui/MauiProgram.cs` (around line 62: `paths`, `logDirectory`, logging), `ImageGen/ImageGen.Data/SqliteDatabase.cs` (database filename), task 030 (`tasks/backlog/030-app-identity.md`, comments). The measurement step cannot be done on Linux: if the executor has no Windows machine, do only the shared part and tests, and leave exact measurement steps for the owner in "Comments".
 
-## План
-1. На Windows: измерить пути и место `SecureStorage` (см. «Критерии»), записать.
-2. Падающие тесты `LegacyDataMigrationTests` (Presentation.Tests).
-3. `LegacyDataMigration`, ресурс сообщения.
-4. Вызов в `MauiProgram` под `#if WINDOWS` с вычислением старого пути; сборка Windows-цели (CI).
-5. Пункт 016; запись в knowledge; в 030 — комментарий о том, что миграция данных выделена сюда.
+## Plan
+1. On Windows, measure the paths and `SecureStorage` location (see "Acceptance criteria") and record them.
+2. Write failing `LegacyDataMigrationTests` (Presentation.Tests).
+3. Implement `LegacyDataMigration` and the message resource.
+4. Call it from `MauiProgram` under `#if WINDOWS`, computing the old path; build the Windows target (CI).
+5. Update item 016 and the knowledge file; add a comment to 030 noting that data migration was moved here.
 
-Файлы: `ImageGen/ImageGen.Presentation/Services/LegacyDataMigration.cs` (новый), `ImageGen/ImageGen.Presentation.Tests/Services/LegacyDataMigrationTests.cs` (новый), `ImageGen/ImageGen.Maui/MauiProgram.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `docs/knowledge/dev-environment.md`, `tasks/v0.1/016-skeleton-manual-check.md`, `tasks/backlog/030-app-identity.md`.
+Files: `ImageGen/ImageGen.Presentation/Services/LegacyDataMigration.cs` (new), `ImageGen/ImageGen.Presentation.Tests/Services/LegacyDataMigrationTests.cs` (new), `ImageGen/ImageGen.Maui/MauiProgram.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `docs/knowledge/dev-environment.md`, `tasks/v0.1/016-skeleton-manual-check.md`, `tasks/backlog/030-app-identity.md`.
 
-### Проверка
+### Verification
 ```
 dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj
 dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0
@@ -46,20 +46,20 @@ dotnet format ImageGen/ImageGen.Maui/ImageGen.Maui.csproj --verify-no-changes
 bash scripts/check.sh
 ```
 
-### Порядок исполнения (для Luna)
-- Сначала прочитай только файлы из строки «Файлы» и названные тесты; сигнатуры сверяй с текущим `main`.
-- Шаги строго по порядку (ub-mode): падающий тест → запуск, убедиться, что он падает именно по описанной причине → минимальный фикс → тест зелёный.
-- Не меняй файлы вне строки «Файлы», не переименовывай существующие члены сверх плана, не чини соседние находки — они в отдельных задачах.
-- Если код расходится с планом (нет такого метода, другая сигнатура, тест уже есть), не импровизируй: остановись и запиши вопрос в «Комментарии».
-- Команды `dotnet` выполняй по одной, не параллельно. После каждого изменённого проекта — `dotnet format <проект> --verify-no-changes`.
-- В «Отчёте»: что изменено, команды и результаты, отличия от плана.
+### Execution order (for Luna)
+- First read only the files in the "Files" line and the named tests; compare signatures with current `main`.
+- Follow the steps in order (ub-mode): failing test → run it and confirm it fails for the described reason → minimal fix → green test.
+- Do not change files outside the "Files" line, rename existing members beyond the plan, or fix neighboring findings; those belong to separate tasks.
+- If the code differs from the plan (missing method, different signature, test already exists), do not improvise; stop and write a question in "Comments".
+- Run `dotnet` commands one at a time, not in parallel. After each changed project, run `dotnet format <project> --verify-no-changes`.
+- In the "Report", record what changed, commands and results, and differences from the plan.
 
-## Отчёт
+## Report
 
-## Комментарии
+## Comments
 
 ### 2026-11-07, claude-audit
-Создано по находке ревью 2026-11-04 (030, смена Windows ApplicationId без переноса). Допущение: переносить, а не откатывать id. План для Luna.
+Created from the 2026-11-04 review finding (030, Windows ApplicationId changed without migration). Assumption: migrate the data rather than revert the id. Plan for Luna.
 
-### 2026-11-07, владелец (в чате, записал claude-audit)
-Поручение «на те проблемы, для которых нет задач, создай задачи»; план одобрен ранее данным поручением «заапрувь все таски которые будут».
+### 2026-11-07, owner (in chat, recorded by claude-audit)
+Instruction: "create tasks for problems that do not have tasks"; the plan was approved under the earlier instruction "approve all tasks that come up".
