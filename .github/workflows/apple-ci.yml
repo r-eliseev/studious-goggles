@@ -220,7 +220,7 @@ jobs:
     needs: build-maui-ios
     if: always() && github.event_name != 'pull_request'
     runs-on: macos-26
-    timeout-minutes: 90
+    timeout-minutes: ${{ inputs.ios_smoke_repeats > 1 && 240 || 90 }}
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -245,7 +245,7 @@ jobs:
             for run_number in $(seq 1 "$repeats"); do
               run_dir=$(printf 'reports/ios-smoke/maui/run-%02d' "$run_number")
               mkdir -p "$run_dir"
-              if ! bash ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh artifacts/maui-ios-sim.tar.gz com.eliseev.imagegen "$run_dir"; then
+              if ! IOS_SMOKE_RUN_NUMBER=$(printf '%02d' "$run_number") bash ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh artifacts/maui-ios-sim.tar.gz com.eliseev.imagegen "$run_dir"; then
                 failed=1
               fi
             done
@@ -268,7 +268,7 @@ jobs:
     needs: build-avalonia-ios
     if: always() && github.event_name != 'pull_request'
     runs-on: macos-26
-    timeout-minutes: 90
+    timeout-minutes: ${{ inputs.ios_smoke_repeats > 1 && 240 || 90 }}
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -293,7 +293,7 @@ jobs:
             for run_number in $(seq 1 "$repeats"); do
               run_dir=$(printf 'reports/ios-smoke/avalonia/run-%02d' "$run_number")
               mkdir -p "$run_dir"
-              if ! bash ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh artifacts/avalonia-ios-sim.tar.gz com.eliseev.imagegen.avalonia "$run_dir"; then
+              if ! IOS_SMOKE_RUN_NUMBER=$(printf '%02d' "$run_number") bash ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh artifacts/avalonia-ios-sim.tar.gz com.eliseev.imagegen.avalonia "$run_dir"; then
                 failed=1
               fi
             done
