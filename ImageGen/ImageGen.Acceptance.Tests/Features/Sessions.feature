@@ -111,4 +111,11 @@ Feature: Sessions
     And the user returns to the session list
     Then one session is in Today and one session is in Earlier
 
-
+  @SES-10 @S1.1
+  Scenario: Choosing an example from the empty session list sends it in a new session
+    Given the user has a saved OpenRouter key
+    And the assistant answers with:
+      | response | text                    |
+      | text     | Let's start with this. |
+    When the user chooses the first example from the empty session list
+    Then the selected example is sent once

@@ -44,6 +44,25 @@ public sealed class SessionsSteps(ScenarioContext scenario)
         return true;
     }, TestContext.Current.CancellationToken);
 
+    [When("the user chooses the first example from the empty session list")]
+    public async Task WhenTheUserChoosesTheFirstExampleFromTheEmptySessionList()
+    {
+        var text = await HeadlessApp.RunAsync(async _ =>
+        {
+            var exampleText = Sessions.Examples[0];
+            Assert.True(Sessions.HasNoSessions);
+            await Sessions.StartExampleCommand.ExecuteAsync(exampleText);
+            scenario.Set(exampleText, "sessions.example");
+            return exampleText;
+        }, TestContext.Current.CancellationToken);
+
+        await World.WaitUntilAsync(() => World.Window.PageArea.Content is ChatView, "the example chat to open", TestContext.Current.CancellationToken);
+        await World.WaitUntilAsync(
+            () => Chat.Items.OfType<MessageItemViewModel>().Any(message => message.IsUser && message.Text == text),
+            "the selected example to be sent",
+            TestContext.Current.CancellationToken);
+    }
+
     [When("the user sends the message {string}")]
     public async Task WhenTheUserSendsTheMessage(string message)
     {
@@ -156,6 +175,19 @@ public sealed class SessionsSteps(ScenarioContext scenario)
             $"the first session row to show '{text}'",
             TestContext.Current.CancellationToken);
         Assert.EndsWith(text, Sessions.Sessions[0].DetailsText, StringComparison.Ordinal);
+    }
+
+    [Then("the selected example is sent once")]
+    public async Task ThenTheSelectedExampleIsSentOnce()
+    {
+        var text = scenario.Get<string>("sessions.example");
+        await World.WaitUntilAsync(
+            () => Chat.Items.OfType<MessageItemViewModel>().Any(message => message.IsUser && message.Text == text),
+            "the selected example message to appear",
+            TestContext.Current.CancellationToken);
+        var userMessages = Chat.Items.OfType<MessageItemViewModel>().Where(message => message.IsUser).ToArray();
+        Assert.Equal(text, Assert.Single(userMessages).Text);
+        Assert.Equal(text[..Math.Min(40, text.Length)], Chat.Title);
     }
 
     [Then("the app shows a rename error")]

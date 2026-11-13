@@ -61,7 +61,7 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 | SES-07 | Changing the default assistant model in Settings affects only new sessions | S1.3 | done |
 | SES-08 | The list row shows the number of runs ("· 2 runs") after two runs | S1.2 | done |
 | SES-09 | Sessions are grouped: today's in "Today", older ones in "Earlier" (time from `FakeTimeProvider`) | S1.1 | done |
-| SES-10 | An example from the empty list starts a new session with this text | S1.1 | planned |
+| SES-10 | An example from the empty list starts a new session with this text | S1.1 | done |
 | SES-11 | Clearing the whole history from Settings: sessions and files deleted, keys and settings kept | S1.4 | planned (273) |
 
 ### Chat and assistant (`ChatAssistant.feature`, task 256)
