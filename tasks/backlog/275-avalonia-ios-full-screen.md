@@ -1,8 +1,8 @@
 ---
 id: 275
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-12T20:19:06Z
+status: review
+assignee:
+claimed:
 created: 2026-11-11
 ---
 
@@ -42,6 +42,10 @@ bash scripts/check.sh
 ```
 
 ## Report
+
+Added the empty `UILaunchScreen` dictionary to `ImageGen/ImageGen.Avalonia.iOS/Info.plist`. `apple-ci.yml` workflow-dispatch run [43312788834](https://github.com/r-eliseev/studious-goggles/actions/runs/43312788834) passed `build-avalonia-ios` and `smoke-ios-avalonia`. The artifact's `screenshot.png` and `screenshot-30s.png` both show the Connect OpenRouter page filling the simulator display; compared with the letterboxed screenshot in [run 42405774295](https://github.com/r-eliseev/studious-goggles/actions/runs/42405774295), the black bars are gone. The page content remains inset from the status bar and home indicator. The before/after screenshots are in the linked runs' `ios-smoke-avalonia` artifacts.
+
+Verified with `bash scripts/check.sh`.
 
 ## Review
 

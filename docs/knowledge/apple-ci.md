@@ -1,5 +1,7 @@
 # Apple CI
 
+On the Avalonia iOS head, omitting `UILaunchScreen` leaves iOS in letterboxed compatibility mode; adding the key fills the simulator screen (confirmed by the full-screen screenshots in [run 43312788834](https://github.com/r-eliseev/studious-goggles/actions/runs/43312788834), compared with [run 42405774295](https://github.com/r-eliseev/studious-goggles/actions/runs/42405774295)).
+
 ## Preflight 244
 
 [Successful run 42369719262](https://github.com/r-eliseev/studious-goggles/actions/runs/42369719262), the PR #85 branch, job `apple-preflight` — 5 min 9 s. Runner `macos-26`, architecture `arm64`, macOS 26.7.2 (build 25G332), Xcode 26.6 (17F113), .NET SDK 10.0.403. iOS Simulator runtimes 26.2, 26.4 and 26.5 are available.
