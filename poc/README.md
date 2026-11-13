@@ -1,8 +1,8 @@
-# Пробный код (proof of concept)
+# Proof-of-concept code
 
-Здесь лежит код, написанный, чтобы снять неизвестность до реализации: соберётся ли зависимость под нужную платформу, что на самом деле отвечает API, как рендерится компонент. Это не источник правды и не часть решения: проекты в `ImageGen/` этот код не компилируют.
+This directory contains code written to resolve uncertainty before implementation: whether a dependency builds for a target platform, what an API actually returns, or how a component renders. It is not authoritative and is not part of the solution: projects in `ImageGen/` do not compile this code.
 
-- Раскладка: `poc/<релиз>/<NNN-имя задачи>/<путь в репозитории>`. Файл лежит по тому пути, по которому он появился бы в `ImageGen/`.
-- Задача может сослаться на папку `poc/` как на подсказку. Источник правды — описание и план задачи, `docs/architecture.md` и спецификации. Если пробный код с ними расходится, прав план.
-- Пробный код не поддерживается в актуальном состоянии: после переименований и рефакторинга он может не собираться. Копировать его дословно нельзя: сверяйся с текущим кодом.
-- Новый пробный код пишется только ради настоящей неизвестности, а не ради переименований, перехода на новую версию языка и тому подобных мелких правок.
+- Layout: `poc/<release>/<NNN-task-name>/<repository-path>`. A file is stored at the path where it would appear under `ImageGen/`.
+- A task may link to a `poc/` directory as a reference. The source of truth is the task description and plan, `docs/architecture.md`, and the specifications. If proof-of-concept code differs, update the plan.
+- Proof-of-concept code is not kept up to date: it may stop building after renames or refactoring. Do not copy it verbatim; compare it with the current code.
+- Write new proof-of-concept code only to resolve real uncertainty, not for renames, language-version changes, or similar small edits.
