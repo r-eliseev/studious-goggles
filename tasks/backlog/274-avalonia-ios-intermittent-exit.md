@@ -1,8 +1,8 @@
 ---
 id: 274
-status: in-progress
-assignee: codex-20261113
-claimed: 2026-11-13T14:08:03Z
+status: blocked
+assignee:
+claimed:
 created: 2026-11-11
 ---
 
@@ -62,6 +62,11 @@ bash scripts/check.sh
 ## Review
 
 ## Comments
+### 2026-11-13, codex-20261113
+Finding from the first dispatch run [43440159572](https://github.com/r-eliseev/studious-goggles/actions/runs/43440159572): both simulator jobs completed, but their pass/fail checkpoint is not trustworthy. In Avalonia run 15, `process-timeline.txt` reports the 30-second sample at `15:49:10Z`, while `app-logs/imagegen-20261113.log` records app startup at `15:48:57.991Z`; the first timeline sample is at `15:48:12Z`. Samples nominally 5 seconds apart can be separated by 25–87 wall-clock seconds (30→35 is 87 s). The script increments `elapsedSeconds` by the loop index, so `firstSeenAtSeconds=30` and `aliveAfter30s=true` can actually describe a process first observed about 58 seconds after launch. This invalidates both 20-repeat series as verification of the owner’s 30-second rule; those results must not be reported as 20/20 valid passes. The second dispatch [43464158467](https://github.com/r-eliseev/studious-goggles/actions/runs/43464158467) also had `build-avalonia-ios` cancelled and no app artifact; it is cancelled while its MAUI smoke was still running.
+
+Proposed plan amendment: measure elapsed time from the actual launch timestamp using a monotonic clock, record real elapsed seconds and each probe’s timestamp/duration in `process-timeline.txt`, and set `firstSeenAtSeconds`/`exitedAtSeconds` from observed elapsed time rather than the loop counter. Preserve the rule that the app must be observed alive by 30 real seconds; a late first observation is a smoke failure. Add a regression check for delayed probes (a probe that returns after 30 seconds cannot make `aliveAfter30s=true`). Then rerun the full 20 repetitions for both apps twice and report the accurate result and logs. Keep the same files and do not edit app code. Needs planner review/approval before resuming.
+
 ### 2026-11-11, owner (in the chat, recorded by claude-planner)
 The smoke tests must always pass; continue the investigation instead of relaxing the criterion of 247. Plan approved ("create tasks for the fixes with plans"). The change of `.github/workflows/apple-ci.yml` is allowed for this task.
 
