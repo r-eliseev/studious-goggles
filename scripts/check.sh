@@ -7,5 +7,6 @@ bash scripts/check-tasks.sh || rc=1
 bash scripts/tests/check-latin.sh >/dev/null || rc=1
 bash scripts/tests/task-roles.sh >/dev/null || rc=1
 bash scripts/tests/check-docs.sh >/dev/null || rc=1
+bash scripts/tests/locale-independent.sh >/dev/null || rc=1
 if [ $rc -eq 0 ]; then echo "Harness: all checks passed"; fi
 exit $rc
