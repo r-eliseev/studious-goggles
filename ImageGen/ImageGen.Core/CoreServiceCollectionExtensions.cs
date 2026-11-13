@@ -55,6 +55,7 @@ public static class CoreServiceCollectionExtensions
         services.AddSingleton<VideoModelCatalogService>();
         services.AddSingleton<EmbeddingModelCatalogService>();
         services.AddSingleton<AudioModelCatalogService>();
+        services.AddSingleton<ModelCatalogRefreshService>();
         services.AddSingleton<CostEstimator>();
         services.AddSingleton<SessionService>();
         services.AddSingleton<HistoryService>();
