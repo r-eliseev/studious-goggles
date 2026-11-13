@@ -50,7 +50,7 @@ bash scripts/tests/check-latin.sh
 - Translated shell-script comments and user-facing messages, including task helpers, audit, documentation/task checks, archive, and release notes. Updated the affected regression assertions.
 - Preserved parser tokens in `scripts/check-tasks.sh` and `scripts/submit-task.sh`; these still recognize Russian section headings while task 269 is unresolved.
 - Verification passed: `bash scripts/check.sh`, `scripts/list-tasks.sh approved`, `bash scripts/audit.sh`, `bash scripts/tests/release-notes-empty-previous.sh`, `bash scripts/tests/check-latin.sh`, `bash scripts/check-latin.sh .github poc`, `bash -n scripts/*.sh scripts/tests/*.sh ImageGen/ImageGen.E2E.Common/ci/allure-summary.sh`, and `scripts/archive-tasks.sh --dry-run`.
-- The workflow, Allure summary, and POC README translation is in progress; Latin-path registration remains pending because parser literals in scripts are still non-Latin.
+- Translated the three workflow comment sets, the Allure summary, and the POC README. Added `.github` and `poc` to `LATIN_PATHS`; the Latin check passes for both. Confirmed `LC_ALL=C.UTF-8 bash scripts/check.sh`, `LC_ALL=C.UTF-8 bash scripts/audit.sh`, and `LC_ALL=en_US.UTF-8 bash scripts/check.sh` all pass; removed the now-unneeded en_US.UTF-8 environment from the two harness workflows. Registration of `scripts/` remains pending because parser literals there are still non-Latin.
 
 
 ## Comments
