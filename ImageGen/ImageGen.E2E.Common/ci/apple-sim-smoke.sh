@@ -24,21 +24,49 @@ executable=unknown
 launched=false
 alive=false
 crash_count=0
+other_crash_count=0
 launch_pid=''
 exited_at_seconds=null
+first_seen_at_seconds=null
 result=1
 
 copy_crash_reports() {
-  mkdir -p "$out_dir/crash"
+  mkdir -p "$out_dir/crash-reports/app" "$out_dir/crash-reports/other"
   local sources=("$HOME/Library/Logs/DiagnosticReports" "$HOME/Library/Developer/CoreSimulator/Devices/$udid/data/Library/Logs/CrashReporter")
-  local source
+  local source report destination
   for source in "${sources[@]}"; do
     [ -d "$source" ] || continue
     while IFS= read -r -d '' report; do
-      cp "$report" "$out_dir/crash/"
+      if python3 - "$report" "$executable" <<'PY'
+import json
+import pathlib
+import re
+import sys
+
+path = pathlib.Path(sys.argv[1])
+expected = sys.argv[2]
+try:
+    text = path.read_text(encoding="utf-8", errors="replace")
+except OSError:
+    text = ""
+matched = False
+try:
+    data = json.loads(text)
+    matched = any(data.get(key) == expected for key in ("procName", "app_name", "name", "process"))
+except (json.JSONDecodeError, AttributeError):
+    matched = bool(re.search(r"^Process:\s+" + re.escape(expected) + r"(?:\s|$)", text, re.MULTILINE))
+sys.exit(0 if matched else 1)
+PY
+      then
+        destination="$out_dir/crash-reports/app"
+      else
+        destination="$out_dir/crash-reports/other"
+      fi
+      cp "$report" "$destination/"
     done < <(find "$source" -type f \( -name '*.crash' -o -name '*.ips' \) -newer "$out_dir/run-start.marker" -print0 2>/dev/null || true)
   done
-  crash_count=$(find "$out_dir/crash" -type f | wc -l | tr -d ' ')
+  crash_count=$(find "$out_dir/crash-reports/app" -type f | wc -l | tr -d ' ')
+  other_crash_count=$(find "$out_dir/crash-reports/other" -type f | wc -l | tr -d ' ')
 }
 
 copy_app_logs() {
@@ -57,7 +85,7 @@ copy_app_logs() {
 }
 
 write_summary() {
-  python3 - "$out_dir/summary.json" "$runtime_name" "$device_name" "$launched" "$alive" "$crash_count" "$exited_at_seconds" <<'PY'
+  python3 - "$out_dir/summary.json" "$runtime_name" "$device_name" "$launched" "$alive" "$crash_count" "$other_crash_count" "$first_seen_at_seconds" "$exited_at_seconds" <<'PY'
 import json
 import sys
 
@@ -67,7 +95,9 @@ summary = dict(zip(keys, values))
 summary["launched"] = summary["launched"] == "true"
 summary["aliveAfter30s"] = summary["aliveAfter30s"] == "true"
 summary["crashReports"] = int(summary["crashReports"])
-summary["exitedAtSeconds"] = None if sys.argv[7] == "null" else int(sys.argv[7])
+summary["otherCrashReports"] = int(sys.argv[7])
+summary["firstSeenAtSeconds"] = None if sys.argv[8] == "null" else int(sys.argv[8])
+summary["exitedAtSeconds"] = None if sys.argv[9] == "null" else int(sys.argv[9])
 with open(sys.argv[1], "w", encoding="utf-8") as output:
     json.dump(summary, output, indent=2)
     output.write("\n")
@@ -177,9 +207,12 @@ for elapsed_seconds in $(seq 5 5 60); do
   launchctl_entry=$(grep -F "$bundle_id" <<<"$services" || true)
   if [ -n "$launchctl_entry" ]; then
     running=yes
+    if [ "$first_seen_at_seconds" = null ]; then
+      first_seen_at_seconds=$elapsed_seconds
+    fi
   else
     running=no
-    if [ "$exited_at_seconds" = null ]; then
+    if [ "$first_seen_at_seconds" != null ] && [ "$exited_at_seconds" = null ]; then
       exited_at_seconds=$elapsed_seconds
     fi
   fi
@@ -199,6 +232,8 @@ for elapsed_seconds in $(seq 5 5 60); do
   fi
 done
 copy_crash_reports
+printf 'run %s: alive30=%s firstSeen=%s exited=%s appCrashReports=%s otherCrashReports=%s\n' \
+  "${IOS_SMOKE_RUN_NUMBER:-01}" "$alive" "$first_seen_at_seconds" "$exited_at_seconds" "$crash_count" "$other_crash_count"
 if [ "$alive" = true ] && [ "$crash_count" -eq 0 ]; then
   result=0
 else
