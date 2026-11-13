@@ -6,112 +6,111 @@ claimed:
 created: 2026-10-29
 ---
 
-# Ручная проверка MAUI на Android
+# Manual MAUI check on Android
 
-## Описание
-Собрать в одном месте Android-пункты, которые раньше добавляли в Windows-задачу016. Проверяет человек с устройством/эмулятором; агент готовит APK, читает обезличенные логи и оформляет дефекты. Это проверка уже доступного поведения, не реализация всех перечисленных backlog задач.
+## Description
+Collect in one place the Android checks that were previously added to Windows task 016. A person with a device/emulator performs the check; the agent prepares the APK, reads anonymized logs, and records bugs. This checks existing behavior; it does not implement all listed backlog tasks.
 
-Зависит от: —
-Среда: Android-устройство или эмулятор и человек у экрана.
+Depends on: —
+Environment: Android device or emulator and a person at the screen.
 
-## Критерии готовности
-- Для каждого доступного сценария указаны версия APK/commit, Android/API, устройство, результат и воспроизведение дефекта.
-- Не реализованный сценарий отмечается «ждёт NNN», а не считается пройденным или дефектом.
-- На реальные расхождения заведены отдельные задачи; приватные ключи/запросы не публикуются.
+## Acceptance criteria
+- For each available scenario, record the APK version/commit, Android/API version, device, result and bug reproduction steps.
+- Mark an unimplemented scenario as "waiting for NNN"; do not count it as passed or as a bug.
+- Create separate tasks for actual discrepancies; do not publish private keys/requests.
 
-## Анализ
-016 сохраняет Windows-сценарий и исторические комментарии,046 — Avalonia. Android-проверка не является зависимостью для закрытия обычной кодовой задачи; нет устройства — оставить её ручной пункт здесь. После завершения140 новые ручные пункты оформляются новой ручной задачей с актуальным номером, а не поиском архивированного файла.
+## Analysis
+Task 016 retains the Windows scenario and historical comments; task 046 covers Avalonia. The Android check is not a dependency for closing a regular code task; if no device is available, leave it as a manual item here. After task 140 is completed, record new manual items in a new manual task with a current number instead of searching for an archived file.
 
-## План
-1. Агент собирает dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android -c Release и сообщает путь APK; человек устанавливает. Зафиксировать версию/commit/device/API и состояние данных. Не сбрасывать данные без согласия владельца.
-2. Пройти основной чат-сценарий016 пп1–10 с учётом текущего поведения recovery (in-memory OpenRouter после restart получает Interrupted; fal с persisted resumable handle уже сейчас возобновляется без submit,102/129 для этого не нужны); результаты разделять по провайдеру. Реальные вызовы платные, использовать минимум генераций и уже сохранённые изображения.
-3. Ввод: soft keyboard Send, пустой ввод, аппаратный Enter/Shift+Enter (050); клавиатура не закрывает ввод/Send, Back скрывает клавиатуру (095); Backspace, длинный/кириллический текст, переносы и позиции курсора после134. Не считать095/134 реализованными до их merge.
-4. Лента/карточки: prompt один раз, живой статус/цена096, прокрутка при новых строках097, узкая шапка212 (одна горизонтальная строка с прокруткой, длинный id ассистента обрезан; длинное название скрыто в шапке и показывается в навигации; индикатор не перекрывает шапку), копирование055, свайп удаления066, кнопка«…» и long press. После211: тап по картинке открывает viewer, «…» открывает действия, long press по подписи карточки открывает действия. После213 проверить квадратную, горизонтальную и вертикальную картинки без обрезки. После216 проверить logcat при нескольких отрисовках карточек: нет предупреждений `Cannot convert Microsoft.Maui.Thickness to type 'System.Double'` и `Cannot convert Microsoft.Maui.Controls.SolidColorBrush to type 'Microsoft.Maui.Graphics.Color'`, границы и цвет текста промпта соответствуют теме. После218 открыть чат с готовыми картинками: в logcat нет `ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED`; проверить, что видео- и аудио-плееры получают только медиа соответствующего типа. После133 проверить реальные размеры/ориентацию картинок; после131 — viewer, Back/Close, previous/next; после137 — системные полосы, поворот, background/foreground и восстановление.
-5. Параметры/модели: выбор2×2, сохранение/Cancel, search typos101, sticky actions090, выбор провайдера после135/136. Кнопки Change и Remove в строке ключа провайдера в Settings (задача 153): на Android высота не меньше 48 dp, кнопки не обрезаны при длинном имени провайдера, TalkBack читает обе кнопки. Вложения018 и Describe/Prompt019 — согласие/результат/цена, без публикации ключей. Поиск (101) на экранной клавиатуре с подсказками: набрать «watte», не нажимая пробел и не выбирая подсказку, → через четверть секунды должна быть видна сессия со словом «water». Если результат появляется только после пробела или выбора подсказки — записать в «Комментарии» этой задачи: это отдельная задача про набираемый текст.
-6. Save to gallery: Android10+ Pictures/ImageGen. После сохранения Saved. Проверить ключ после перезапуска и отсутствие ключа в обычных логах; секретные файлы не выводить.
-7. MAUI MediaElement (задача205; Android API26+): в готовой видео-карточке проверить локальное воспроизведение, pause/resume, перемотку, звук и системные playback controls; у аудио-карточки проверить controls и звук. Перейти в список сессий во время воспроизведения и вернуться — воспроизведение остановилось и не возобновилось само. Файлы генерируются платно; использовать уже сохранённые видео/аудио, если доступны.
-   После задачи 223: выбрать аудио-модель и голос в настройках сессии, проверить аудио-счётчик в шапке; готовая аудио-карточка показывает модель, цену/price unknown и сохранение файла. MAUI player появляется только для готового аудио и воспроизводит локальный файл; у Avalonia проверить отсутствие Play до задачи 224 и сохранение через Save file.
-   После задачи 225: в узком окне проверить, что карточки картинки, видео и аудио идут одной колонкой по центру, рамка и левый край видны полностью, а кнопка Copy над прогоном не обрезана.
-8. Записать результаты в комментарии; агент оформляет отчёт/новые задачи, обновляет docs/knowledge/maui.md только подтверждёнными фактами; bash scripts/check.sh. Не выставлять done при неполученных человеческих результатах обязательных доступных сценариев.
-9. После задачи 228: в Settings выбрать другую embedding-модель, проверить оценку и подтверждение, дождаться завершения переиндексации; выполнить поиск по смыслу и убедиться, что результат находится по новой модели. Отказаться от подтверждения и проверить, что прежняя модель остаётся выбранной.
+## Plan
+1. Agent: run `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android -c Release` and provide the APK path; the person installs it. Record version/commit/device/API and data state. Do not reset data without the owner's consent.
+2. Walk through the main chat scenario in task 016, items 1–10, accounting for current recovery behavior (in-memory OpenRouter becomes Interrupted after restart; fal with a persisted resumable handle already resumes without submission, so tasks 102/129 are not required for this); separate results by provider. Real calls cost money; use as few generations as possible and already-saved images.
+3. Input: soft keyboard Send, empty input, hardware Enter/Shift+Enter (050); the keyboard does not cover input/Send and Back hides the keyboard (095); Backspace, long/Cyrillic text, line breaks and cursor positions after 134. Do not count 095/134 as implemented before they are merged.
+4. Feed/cards: prompt appears once; live status/price (096); scroll on new rows (097); narrow header (212: one horizontal scrolling row, long assistant id is truncated; long title is hidden in the header and shown in navigation; indicator does not overlap the header); copy (055); swipe to delete (066); "…" button and long press. After 211: tapping an image opens the viewer, "…" opens actions, and long-pressing a card caption opens actions. After 213, check square, landscape and portrait images without cropping. After 216, inspect logcat across multiple card renders: no `Cannot convert Microsoft.Maui.Thickness to type 'System.Double'` or `Cannot convert Microsoft.Maui.Controls.SolidColorBrush to type 'Microsoft.Maui.Graphics.Color'` warnings; borders and prompt text color match the theme. After 218, open a chat with completed images: logcat has no `ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED`; verify video and audio players receive only media of the matching type. After 133, check actual image dimensions/orientation; after 131, check viewer, Back/Close and previous/next; after 137, check system bars, rotation, background/foreground and restoration.
+5. Parameters/models: select 2×2, save/Cancel, search typos (101), sticky actions (090), provider selection after 135/136. On Android, check the Change and Remove buttons in a provider key row in Settings (task 153): at least 48 dp high, not clipped for a long provider name, and both announced by TalkBack. Attachments (018) and Describe/Prompt (019): check consent/result/price without publishing keys. For search (101), use the on-screen keyboard with suggestions: type "watte" without pressing Space or selecting a suggestion; after a quarter second, a session containing "water" should be visible. If results appear only after Space or selecting a suggestion, record in this task's "Comments" that this is a separate issue with text as it is typed.
+6. Save to gallery: Android 10+ `Pictures/ImageGen`. After saving, show Saved. Check the key after restart and confirm it is absent from regular logs; do not print secret files.
+7. MAUI MediaElement (task 205; Android API 26+): on a completed video card, check local playback, pause/resume, seeking, sound and system playback controls; on an audio card, check controls and sound. Navigate to the session list during playback and back; playback must stop and not resume automatically. Media generation costs money; use previously saved video/audio if available.
+   After task 223: select an audio model and voice in session settings and check the audio counter in the header; a completed audio card shows the model, price/price unknown and file saving. The MAUI player appears only for completed audio and plays the local file; for Avalonia, verify Play is absent before task 224 and that Save file works.
+   After task 225: in a narrow window, check image, video and audio cards appear in one centered column, the border and left edge are fully visible, and the Copy button above the run is not clipped.
+8. Record results in comments; the agent writes the report/creates tasks and updates `docs/knowledge/maui.md` with confirmed facts only; run `bash scripts/check.sh`. Do not mark done before the required available human checks have results.
+9. After task 228: select another embedding model in Settings, check the estimate and confirmation, and wait for reindexing to finish; run a semantic search and confirm results use the new model. Decline confirmation and verify the previous model remains selected.
 
-### Avalonia Android probe (задача 094, не проверено)
+### Avalonia Android probe (task 094, not checked)
 
-Проверить на том же устройстве, что и MAUI, приложение `com.eliseev.imagegen.avaloniaprobe` из `poc/backlog/094-avalonia-mobile-research/ImageGen/ImageGen.Avalonia.Android/`. Перед запуском зафиксировать commit, Android/API и модель устройства. Установить APK Release `android-arm64`, собранный командой из отчёта 094. Для установки/запуска использовать `adb install -r <apk>` и `adb shell monkey -p com.eliseev.imagegen.avaloniaprobe 1`; cold start — три раза через `am force-stop` и `am start -W`.
+Check the `com.eliseev.imagegen.avaloniaprobe` app from `poc/backlog/094-avalonia-mobile-research/ImageGen/ImageGen.Avalonia.Android/` on the same device as MAUI. Record the commit, Android/API and device model before launch. Install the Release `android-arm64` APK built by the command in report 094. Use `adb install -r <apk>` and `adb shell monkey -p com.eliseev.imagegen.avaloniaprobe 1` to install/launch; measure cold start three times using `am force-stop` and `am start -W`.
 
-1. Запустить приложение и открыть список сессий и чат; создать сессию, вернуться системной кнопкой Back, проверить, что Back на списке сворачивает приложение.
-2. Через диагностические extras Activity сохранить фиктивный маркер в Android KeyStore: `adb shell am start -n <package>/<activity> --ez probe-secret-write true`; затем выполнить `adb shell am force-stop <package>` и `adb shell am start -n <package>/<activity> --ez probe-secret-read true`. В обезличенном logcat проверить `persisted=true` и `file-exists=true`; не печатать содержимое файла. Настоящий ключ вводит только владелец.
-3. В чате проверить клавишу экранной клавиатуры Send, отправку и то, что поле и кнопка остаются видны над клавиатурой. Проверить Back при открытой клавиатуре и при overlay-диалоге.
-4. Проверить копирование текста сообщения, системный выбор изображения, сохранение готовой картинки в `Pictures/ImageGen`, удаление с подтверждением и узкую раскладку.
-5. Пройти список, поле ввода, Send и карточку изображения с TalkBack; прокрутить ленту с 10 и более картинками и оценить плавность.
-6. После открытия чата записать `dumpsys meminfo` и холодный старт; повторить измерения MAUI в сопоставимых условиях. Указать размер APK: отчёт 094 фиксирует 29 152 195 байт Avalonia против 22 183 516 байт MAUI для arm64.
-7. Клавиатура и safe area (задача 095, ожидает проверки): проверить Android 15+ и Android 14 или ниже, жестовую и трёхкнопочную навигацию. В чате при фокусе поля целиком видны поле, подсказка, скрепка и Send; лента сжимается; длинный ввод остаётся видимым; закрытие клавиатуры и поворот восстанавливают раскладку без лишней полосы/отступа. Проверить также API key, поиск моделей, параметры и настройки. Зафиксировать Android/API, тип навигации и поведение каждого сценария.
-   8. Сводка прогона (задача 096): отправить промпт на 2 модели × 2, проверить обновление счётчика и суммы цен по мере готовности карточек и совпадение сводки после перезапуска.
-   9. Лента (задача 097): открыть длинную сессию — видна последняя строка; отправить сообщение — видны сообщение, ответ ассистента и карточка, она не спрятана полем ввода.
-   10. Во время генерации обновляется статус и загружается картинка — нижний край последней карточки остаётся видим, пока follow включён.
-   11. Во время генерации прокрутить вверх — обновления не двигают ленту; вернуться к концу — следование возобновляется.
-   12. В конце ленты открыть клавиатуру — последняя строка остаётся видимой; закрыть клавиатуру — лента не получает лишний отступ.
-   13. Когда последняя карточка выше viewport, прокрутить вверх внутри неё: обновление не должно вернуть viewport вниз только потому, что последний индекс всё ещё виден; прокрутить к концу — follow снова включён.
-   14. Открыть и закрыть чат несколько раз, уйти сразу после отправки — нет двойной прокрутки или ошибок от исчезнувшей страницы.
-   15. Повторить пункты ленты с 10+ длинными прогонами; записать модель устройства, Android/API и наблюдаемую плавность.
-   16. Image viewer (задача 131): открыть картинку, убедиться в AspectFit без обрезки; переключаться кнопками только по успешным картинкам одного run, проверить отсутствие wrap, Close и системный Back; клик по bitmap не закрывает viewer, клик по свободному фону закрывает; проверить портретное и альбомное изображения, letterbox-поля, padding и toolbar; проверить локализованное сообщение для отсутствующего/повреждённого файла и TalkBack для кнопок/позиции. После146 проверить failed previous/next: прежние картинка и позиция остаются, повторный переход обращается к тому же соседу, быстрые переходы не применяют устаревшую загрузку.
-   17. Fullscreen viewer (задача 137): проверить исходное видимое состояние status/navigation bars, их скрытие в viewer и временный показ системным свайпом; Close и Back восстанавливают исходное состояние, включая bars, которые были скрыты до viewer. Свернуть/вернуть приложение и проверить восстановление; повернуть экран и проверить работу после смены handler/activity.
+1. Launch the app and open the session list and chat; create a session, return with the system Back button, and verify Back on the session list minimizes the app.
+2. Use diagnostic Activity extras to store a dummy marker in Android KeyStore: `adb shell am start -n <package>/<activity> --ez probe-secret-write true`; then run `adb shell am force-stop <package>` and `adb shell am start -n <package>/<activity> --ez probe-secret-read true`. In anonymized logcat, check `persisted=true` and `file-exists=true`; do not print file contents. Only the owner enters a real key.
+3. In chat, check the on-screen keyboard's Send key, sending, and that the input and button remain visible above the keyboard. Check Back with the keyboard open and with an overlay dialog open.
+4. Check copying message text, the system image picker, saving a completed image to `Pictures/ImageGen`, deletion with confirmation, and a narrow layout.
+5. Use TalkBack on the list, input field, Send and image card; scroll a feed with 10 or more images and assess smoothness.
+6. After opening chat, record `dumpsys meminfo` and cold start; repeat MAUI measurements under comparable conditions. Record APK size: report 094 gives 29,152,195 bytes for Avalonia versus 22,183,516 bytes for MAUI on arm64.
+7. Keyboard and safe area (task 095, awaiting verification): check Android 15+ and Android 14 or lower with gesture and three-button navigation. In chat, when the field is focused, the entire field, hint, attachment and Send remain visible; the feed shrinks; long input stays visible; closing the keyboard and rotating restore the layout without an extra bar/gap. Also check the API key, model search, parameters and settings. Record Android/API, navigation type and behavior for each scenario.
+   8. Run summary (task 096): send a prompt to 2 models × 2; check that the counter and price total update as cards complete and that the summary matches after restart.
+   9. Feed (task 097): open a long session and see the last row; send a message and see the message, assistant response and card, with the card not hidden by the input.
+   10. During generation, status updates and the image loads; the bottom edge of the last card remains visible while follow is enabled.
+   11. During generation, scroll up; updates do not move the feed. Return to the end; following resumes.
+   12. At the end of the feed, open the keyboard; the last row remains visible. Close the keyboard; the feed does not get an extra gap.
+   13. When the last card is taller than the viewport, scroll up inside it: an update must not pull the viewport down just because the last index is still visible. Scroll to the end; follow is enabled again.
+   14. Open and close chat several times, then leave immediately after sending; there is no duplicate scrolling or error from a disappeared page.
+   15. Repeat the feed checks with 10+ long runs; record device model, Android/API and observed smoothness.
+   16. Image viewer (task 131): open an image and confirm AspectFit without cropping; navigate only through successful images from one run; check there is no wrap, and check Close and system Back. Tapping the bitmap does not close the viewer; tapping the empty background does. Check portrait and landscape images, letterbox areas, padding and toolbar; check the localized message for a missing/corrupt file and TalkBack announcements for buttons/position. After task 146, check failed previous/next: the previous image and position remain, retrying navigation targets the same neighbor, and rapid navigation does not apply a stale load.
+   17. Fullscreen viewer (task 137): check the initial visibility of status/navigation bars, their hiding in the viewer and temporary reveal with a system swipe; Close and Back restore the original state, including bars that were hidden before opening the viewer. Minimize/restore the app and check restoration; rotate the screen and verify behavior after handler/activity recreation.
 
+Files: `tasks/backlog/140-android-manual-check.md`, `docs/knowledge/maui.md`, `docs/status.md` (confirmed new questions only), and new tasks for discovered bugs.
 
-Файлы: `tasks/backlog/140-android-manual-check.md`, `docs/knowledge/maui.md`, `docs/status.md` (только подтверждённые новые вопросы), новые задачи на найденные дефекты.
+### Image comparison (task 023)
+Open the menu on a successful card → Compare, then select a second image from this session. Check side-by-side and Overlay, visible model/seed/cost labels and the slider boundary; pinch zooms both images in sync, pan moves both in sync, and portrait/landscape images are not stretched. Back/Close returns to chat. Check the message for a deleted file and close comparison without leaving a stuck modal page.
 
-### Сравнение изображений (задача 023)
-Открыть меню успешной карточки → Compare, выбрать вторую картинку этой сессии. Проверить side-by-side и Overlay, видимые подписи model/seed/cost, границу слайдера; pinch синхронно масштабирует обе, pan синхронно сдвигает, portrait/landscape не растягиваются. Back/Close возвращает в чат. Проверить сообщение при удалённом файле, закрыть comparison без зависшей модальной страницы.
+### Video player (task 219)
+A completed video card shows a thumbnail/icon, duration and Play; there is no embedded video player in the feed. Play opens full-screen playback and the video is visible; system Back closes the page and stops the sound. The embedded audio player in the feed continues to work. An Android device or emulator is required.
 
-### Видео-плеер (задача 219)
-На готовой видео-карточке видна обложка/значок, длительность и Play; встроенного видеоплеера в ленте нет. Play открывает полноэкранное воспроизведение, видео видно; системный Back закрывает страницу и останавливает звук. Встроенный плеер аудио в ленте продолжает работать. Требуются Android-устройство или эмулятор.
+### Video thumbnail (task 220)
+Check that completed videos show a frame from the beginning, variants from one run are distinguishable, the frame aspect ratio is preserved and the card does not crop the image. While generation is in progress, the card uses the selected video aspect ratio. Also check a video with no extractable frame: the icon remains and the app does not report an error.
 
-### Кадр-обложка (задача 220)
-Проверить, что готовые видео показывают кадр из начала ролика, варианты одного прогона различимы, пропорции кадра сохранены и карточка не обрезает изображение. Пока генерация идёт, карточка использует выбранные пропорции видео. Проверить также ролик без извлекаемого кадра: остаётся значок без ошибки приложения.
+### Logs (task 187)
+In Settings, tap Share logs: the system Share sheet opens, the shared file is available in Telegram/"Downloads" and can be read; verify the current log is included. Tap Clear logs and confirm deletion: old files are deleted, the current file remains and new lines continue to be written to it. Separately decline confirmation and verify the files are unchanged.
 
-### Логи (задача 187)
-В Settings нажать Share logs: системное окно «Поделиться» открывается, передаваемый файл доступен в Telegram/«Загрузки» и читается; проверить, что в набор попал текущий журнал. Нажать Clear logs, подтвердить удаление: старые файлы удалены, текущий файл остался и новые строки продолжают в него записываться. Отдельно отказаться от подтверждения и убедиться, что файлы не изменились.
+## Report
 
-## Отчёт
-
-## Комментарии
+## Comments
 
 ### 2026-10-30, codex-gpt6
-Задача 133: на Android проверить фактические размеры и сокращённое ratio под изображением для успешной генерации, скрытие строки при отсутствии файла, обновление новой генерации и чтение dimensions TalkBack.
+Task 133: on Android, check actual dimensions and the shortened ratio below a successfully generated image, hiding the row when the file is missing, updating it for a new generation, and reading dimensions with TalkBack.
 
 ### 2026-10-29, codex-review
-Выделено при ревью PR #42 по поручению владельца. Это план работы, не отчёт об исполнении. Одобрение исходной задачи сохраняется для перенесённого объёма; код в этом PR не реализуется.
+Split out during review of PR #42 at the owner's request. This is a work plan, not an execution report. Approval of the original task remains valid for the transferred scope; this PR does not implement code.
 
-### 2026-10-30, codex-gpt6 (задача 135)
-После135/136 проверить provider-neutral keys на Android:
-1. Settings показывает все настроенные provider rows с display name, masked key/not configured, Change и Remove; список не дублируется при повторном появлении.
-2. Ввести ключи двух providers (Together после136, плюс OpenRouter или fal), проверить, что экраны/статусы относятся к выбранному provider и секреты не смешиваются. Неверная проверка не стирает сохранённый ключ.
-3. Remove необязательного ключа оставляет Settings открытым и обновляет только эту строку. Remove OpenRouter показывает предупреждение; после возврата к Sessions снова открывается форма OpenRouter.
-4. Для провайдера без ключа обычный запрос показывает InvalidKey без падения приложения. Обычные логи и доступный logcat не содержат ключ/Authorization; значения секретов не записывать.
-5. Если имена моделей совпадают у двух providers, экран показывает provider display name/id; TalkBack читает различимую подпись.
-
-### 2026-10-31, claude-audit
-Отчёт владельца на релизе v0.1.5 (скриншоты в чате): (1) лента чата не прокручивается вниз внутри высокого прогона, картинки не посмотреть — задача 159; (2) поле ввода закрыто клавиатурой, страница панорамируется — задача 160; (3) Backspace не стирает — задача 134. После исправлений повторить эти пункты здесь.
+### 2026-10-30, codex-gpt6 (task 135)
+After tasks 135/136, check provider-neutral keys on Android:
+1. Settings shows all configured provider rows with display name, masked key/not configured, Change and Remove; the list is not duplicated when revisiting.
+2. Enter keys for two providers (Together after 136, plus OpenRouter or fal) and verify screens/statuses refer to the selected provider and secrets are not mixed. An invalid check does not erase the saved key.
+3. Remove on an optional key leaves Settings open and updates only that row. Remove on OpenRouter shows a warning; after returning to Sessions, the OpenRouter form appears again.
+4. For a provider without a key, a regular request shows InvalidKey without crashing the app. Regular logs and available logcat do not contain the key/Authorization; do not record secret values.
+5. If two providers have models with the same name, the screen shows provider display name/id; TalkBack announces a distinguishable label.
 
 ### 2026-10-31, claude-audit
-Ещё два наблюдения владельца на v0.1.5: старая история не видна после первой генерации (задача 161, ждёт уточнения) и нажатие на сессию в списке раскрывает Rename/Delete вместо открытия (задача 162).
+Owner report on release v0.1.5 (screenshots in chat): (1) the chat feed cannot scroll down inside a tall run, so images cannot be viewed — task 159; (2) the keyboard covers the input and the page pans — task 160; (3) Backspace does not delete — task 134. Repeat these checks here after fixes.
 
-### 2026-10-31, claude-audit — проверка исправлений 134, 159, 160, 162 (Galaxy S25, Android 17)
-1. Чат, Gboard: Backspace стирает по одному символу и при удержании; выделение и Backspace; эмодзи; стирание до пустого и отправка; Enter на клавиатуре отправляет один раз (134).
-2. Сессия с прогоном 7 × 1: свайп вниз до последней карточки во время генерации и после; при открытии сессии видна нижняя часть последнего прогона; свайп вверх — обновления карточек не дёргают ленту; возврат вниз — лента снова следует за новыми строками; поворот экрана (159).
-3. Фокус в поле чата: поле целиком и кнопки прикрепления/отправки над клавиатурой, шапка не уходит под строку состояния; длинный текст; скрытие клавиатуры; поле ключа API и поиск в списке сессий (160).
-4. Список сессий: на телефоне короткое нажатие в «Today» и «Earlier» открывает сессию; долгое — лист действий Rename/Delete; отмена ничего не меняет; TalkBack читает название и подсказку долгого нажатия (214). На десктопе проверить короткое нажатие, свайп и контекстное меню.
-Установка: APK этой сборки подписан другим ключом, чем релиз; установка поверх невозможна без удаления приложения (задача 163).
+### 2026-10-31, claude-audit
+Two more owner observations on v0.1.5: old history is not visible after the first generation (task 161, awaiting clarification), and tapping a session in the list reveals Rename/Delete instead of opening it (task 162).
 
-### 2026-11-01, claude-audit (задача 088)
-Долгое нажатие на готовую карточку чата открывает лист действий, кнопка «…» тоже; у карточек Running/Queued — нет. В 088 `TouchBehavior` выключен только на Windows, Android не должен измениться.
+### 2026-10-31, claude-audit — verification of fixes 134, 159, 160, 162 (Galaxy S25, Android 17)
+1. Chat, Gboard: Backspace deletes one character at a time and while held; selection and Backspace; emoji; delete to empty and send; Enter on the keyboard sends once (134).
+2. Session with a 7 × 1 run: swipe down to the last card during and after generation; when opening the session, the bottom of the last run is visible; swipe up and card updates do not jerk the feed; return to the bottom and the feed follows new rows again; rotate the screen (159).
+3. Chat input focus: the whole field and attachment/send buttons stay above the keyboard; the header does not go under the status bar; check long text, hiding the keyboard, the API key field and session list search (160).
+4. Session list: on the phone, a short tap in "Today" and "Earlier" opens a session; a long press opens Rename/Delete actions; cancel changes nothing; TalkBack reads the title and long-press hint (214). On desktop, check a short tap, swipe and context menu.
+Installation: this build's APK is signed with a different key from the release; installing over the existing app requires uninstalling it first (task 163).
 
-### 2026-11-01, claude-audit (задачи 163, 165 — постоянный ключ подписи)
-1. Следующий релиз или ручной запуск release workflow: `apksigner verify --print-certs <apk>` даёт `CN=ImageGen, O=eliseev`, SHA-256 `6711f8badc39c087512e78a04ab4d7a8313d9d00b33081bf139867fc55b10277` — тот же, что у запуска `41339041274`.
-   **Выполнено 2026-11-01 (claude-audit):** запуск release `41343960926` (коммит `fa116cb`, APK `ImageGen-Maui-dev-15-android.apk`) — сертификат `META-INF/IMAGEGEN.RSA`: `O=eliseev, CN=ImageGen`, SHA-256 `6711f8ba…10277`, совпадает. Проверено `openssl pkcs7`/`x509` по подписи v1; `apksigner` (v2/v3) в этой среде не было.
-2. Удалить старое приложение (v0.1.5 и раньше подписаны отладочными ключами), поставить APK с постоянным ключом, создать сессию и ввести ключ; затем поставить следующий APK поверх: установка проходит без удаления, сессии и ключи на месте.
+### 2026-11-01, claude-audit (task 088)
+Long-pressing a completed chat card opens the action sheet, as does the "…" button; Running/Queued cards do not. In 088, `TouchBehavior` is disabled only on Windows, so Android should not change.
 
-- [ ] Очистка истории: подтвердить удаление всех сессий и медиа; расходы и ключи сохраняются; создать и открыть новую сессию. (229)
+### 2026-11-01, claude-audit (tasks 163, 165 — permanent signing key)
+1. On the next release or a manual release workflow run, `apksigner verify --print-certs <apk>` should show `CN=ImageGen, O=eliseev`, SHA-256 `6711f8badc39c087512e78a04ab4d7a8313d9d00b33081bf139867fc55b10277` — the same as run `41339041274`.
+   **Completed 2026-11-01 (claude-audit):** release run `41343960926` (commit `fa116cb`, APK `ImageGen-Maui-dev-15-android.apk`) — certificate `META-INF/IMAGEGEN.RSA`: `O=eliseev, CN=ImageGen`, SHA-256 `6711f8ba…10277`, matching. Verified with `openssl pkcs7`/`x509` for the v1 signature; `apksigner` (v2/v3) was not available in this environment.
+2. Uninstall the old app (v0.1.5 and earlier used debug signing keys), install the APK with the permanent key, create a session and enter a key; then install the next APK over it. Installation should work without uninstalling, and sessions and keys should remain.
+
+- [ ] Clear history: confirm all sessions and media are deleted; spending and keys remain; create and open a new session. (229)
 
 ### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan)
 Plan approved ("approve all tasks with plans").

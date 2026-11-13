@@ -6,44 +6,44 @@ claimed:
 created: 2026-11-06
 ---
 
-# Ручная проверка Android-головы Avalonia
+# Manual check of the Avalonia Android head
 
-## Описание
-ADR 0026: решение о замене MAUI на Android принимается после ручной проверки обеих сборок на устройстве. Выполняет человек с телефоном (владелец), не агент. APK — из релиза после 197 (`ImageGen-Avalonia-<версия>-android.apk`).
+## Description
+ADR 0026: decide whether to replace MAUI on Android after manually checking both builds on a device. A person with a phone (the owner), not an agent, performs the check. Use the APK from the release after 197 (`ImageGen-Avalonia-<version>-android.apk`).
 
-Зависит от: 195, 197 (196 — для пункта логов).
-Среда: Android-телефон владельца; MAUI-приложение `com.eliseev.imagegen` можно оставить установленным.
+Depends on: 195, 197 (196 for the logs item).
+Environment: the owner's Android phone; the MAUI app `com.eliseev.imagegen` may remain installed.
 
-## Критерии готовности
-Каждый пункт: результат (работает / не работает / не проверено), модель телефона и версия Android, версия APK. Найденные ошибки — отдельные задачи.
+## Acceptance criteria
+For each item, record the result (works / does not work / not checked), phone model and Android version, and APK version. File any bugs as separate tasks.
 
-## Анализ
-Пункты повторяют 140 (MAUI), чтобы сравнить оболочки, и неизвестные из ADR 0019/0026.
+## Analysis
+The items repeat task 140 (MAUI) to compare the shells and cover unknowns from ADRs 0019/0026.
 
-## План
-1. Установка: APK ставится рядом с MAUI-приложением, на рабочем столе «Omnilite Avalonia» с круглым значком Omnilite; следующий релиз ставится поверх без удаления.
-2. Первый запуск: экран ключа OpenRouter; ключ сохраняется; после полного закрытия и запуска ключ на месте (Android KeyStore).
-3. Сессии: создать, открыть, переименовать, удалить; прокрутка списка пальцем.
-4. Чат: ввод с клавиатуры, поле не закрыто клавиатурой, Send/Enter отправляет, Backspace стирает; ответ ассистента и генерация картинки; прокрутка ленты внутри высокого прогона.
-5. Карточка: нажатие на картинку открывает просмотр на весь экран; Previous/Next; Back закрывает просмотр; «…» и долгое нажатие открывают действия; Repeat, New seed, Edit, Save, Copy prompt, Compare (оба изображения, сдвиг пальцем), Cancel во время генерации. Save на Android 10+ помещает картинку в галерею; на Android 9 открывает системный диалог сохранения файла и записывает картинку в выбранное место.
-6. Диалоги: подтверждение удаления, ввод текста (Edit prompt), выбор варианта; Back закрывает диалог как «Отмена».
-7. Системный Back на каждом экране возвращает на предыдущий; на списке сессий сворачивает приложение.
-8. Settings: тема и стиль; ключи провайдеров; модель ассистента по умолчанию; Share logs (196) — убедиться в startup log, что временная папка лежит в CacheDir, затем отправить файл в Telegram/«Загрузки»; Clear logs.
-9. Смысловой поиск: включение, индексирование (статус), поиск в режиме Meaning.
-10. Вложение картинки в сообщение (выбор файла).
-11. TalkBack: кнопки карточки и диалогов озвучиваются.
-12. Сравнение с MAUI на том же телефоне: холодный старт (секунды), плавность ленты, размер установки (Настройки → Приложения).
-13. Пересоздание Activity (задача 210): открыть экран поверх списка сессий, повернуть устройство, включить/выключить разделение экрана и поменять системный размер шрифта; текущий экран остаётся видимым, Back возвращает на предыдущую страницу, открытый overlay закрывается без зависания.
-14. После задачи 224: готовую видео-карточку открыть через Play — полноэкранный AndroidX Media3 player показывает видео со звуком, работают пауза и seek; Back останавливает звук и возвращает в чат. Для аудио проверить контролы плеера. Повернуть устройство во время воспроизведения — позиция не сбрасывается. Проверить закрытие player при отмене токена.
+## Plan
+1. Installation: install the APK alongside the MAUI app; the home screen shows "Omnilite Avalonia" with the round Omnilite icon. Install the next release over it without uninstalling.
+2. First launch: the OpenRouter key screen appears; the key is saved and remains after fully closing and reopening the app (Android Keystore).
+3. Sessions: create, open, rename and delete sessions; scroll the list with a finger.
+4. Chat: type with the keyboard; the keyboard does not cover the input; Send/Enter sends and Backspace deletes; receive an assistant response and generate an image; scroll the feed inside a tall run.
+5. Card: tapping an image opens the full-screen viewer; Previous/Next work; Back closes the viewer; "…" and a long press open the actions; try Repeat, New seed, Edit, Save, Copy prompt, Compare (both images, drag with a finger), and Cancel during generation. On Android 10+, Save puts the image in the gallery; on Android 9, it opens the system file save dialog and writes the image to the selected location.
+6. Dialogs: confirm deletion, enter text (Edit prompt), choose an option; Back closes the dialog as "Отмена".
+7. System Back on each screen returns to the previous screen; on the session list it minimizes the app.
+8. Settings: theme and style; provider keys; default assistant model; Share logs (196) — confirm the startup log says the temporary directory is under CacheDir, then share the file with Telegram/"Downloads"; Clear logs.
+9. Semantic search: enable it, check indexing status, and search in Meaning mode.
+10. Attach an image to a message (file picker).
+11. TalkBack: card and dialog buttons are announced.
+12. Compare with MAUI on the same phone: cold start time (seconds), feed smoothness, installation size (Settings → Apps).
+13. Activity recreation (task 210): open a screen over the session list, rotate the device, enable/disable split screen, and change the system font size; the current screen stays visible, Back returns to the previous page, and an open overlay closes without hanging.
+14. After task 224: open a finished video card with Play; the full-screen AndroidX Media3 player shows video with sound, and pause and seek work; Back stops the sound and returns to the chat. Check the audio player controls. Rotate the device during playback; the position must not reset. Verify the player closes when its token is cancelled.
 
-Файлы: — (результаты — в «Отчёт» этой задачи).
+Files: — (record results in this task's "Report").
 
-## Отчёт
+## Report
 
-## Комментарии
+## Comments
 
 ### 2026-11-06, claude-audit
-Создано по поручению владельца вместе с 191–197. Ручная задача: выполняет владелец на телефоне.
+Created at the owner's request together with 191–197. This is a manual task for the owner to perform on a phone.
 
 ### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan)
 Plan approved ("approve all tasks with plans").
