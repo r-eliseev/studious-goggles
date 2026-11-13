@@ -1,8 +1,8 @@
 ---
 id: 030
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: codex-20261113
+claimed: 2026-11-13T17:47:48Z
 created: 2026-10-27
 ---
 
