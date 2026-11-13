@@ -59,6 +59,7 @@ TASKS_BRANCH=main scripts/list-tasks.sh --main approved
 - Also translated cards 248 and 250; neither has a remote task branch.
 - Translated card 249 after confirming it has no remote task branch.
 - Translated cards 246 and 247 after confirming that neither has a remote task branch; retained 247's `blocked` status and existing reports.
+- Translated card 243 last; its remote branch had no unmerged edits to the task card.
 - Translated acceptance cards 258, 259, 262, 263, 264, and 265; these have no remote task branches.
 - After each committed batch, `bash scripts/check.sh` passed. The new-task template was rendered in a scratch copy and matched the English headings.
 - Cards 235 and 255 remain untouched because their remote task branches contain unmerged edits to those same cards. Card 243's remote branch has no card diff; it remains for the final translation pass as required by the plan.
