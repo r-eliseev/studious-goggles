@@ -145,11 +145,12 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 ### Search (`Search.feature`, task 263)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| SRCH-01 | Words: searching by a session title and by a generation prompt finds the session | S1.4 | planned |
-| SRCH-02 | Words: nothing found → the "no results" state; clearing the search returns the list | S1.4 | planned |
-| SRCH-03 | Meaning is off by default; turning it on in Settings indexes the history (embeddings from the fake) | S1.4 | planned |
-| SRCH-04 | Meaning: results are not mixed with Words | S1.4 | planned |
-| SRCH-05 | The index status and the choice of the embedding model | — | planned (263) |
+| SRCH-01 | Words: searching by a session title and by a generation prompt finds the session | S1.4 | done |
+| SRCH-02 | Words: nothing found → the "no results" state; clearing the search returns the list | S1.4 | done |
+| SRCH-03 | Meaning is off by default; turning it on in Settings indexes the history (embeddings from the fake) | S1.4 | done |
+| SRCH-04 | Meaning: results are not mixed with Words | S1.4 | done |
+| SRCH-05 | The index status and the choice of the embedding model | — | done |
+| SRCH-06 | Settings show when the configured embedding model is unavailable | — | done |
 
 ### Gallery, viewer and comparison (`Gallery.feature`, task 264)
 | id | Scenario | Requirements | Status |
