@@ -15,6 +15,7 @@ public sealed class FakeOpenRouter
     private readonly ConcurrentQueue<AssistantReply> _assistantReplies = new();
     private readonly ConcurrentDictionary<string, GenerationReply> _generationReplies = new(StringComparer.Ordinal);
     private IReadOnlyList<ImageModel> _imageModels = [];
+    private IReadOnlyList<AssistantModel> _assistantModels = [new("anthropic/claude-haiku-5.5", "Claude Haiku 5.5")];
     private HttpStatusCode _keyStatusCode = HttpStatusCode.OK;
     private bool _keyNetworkError;
 
@@ -28,12 +29,8 @@ public sealed class FakeOpenRouter
             return Task.FromResult(JsonResponse(_keyStatusCode, "{}"));
         });
         network.AddResponse(HttpMethod.Get, Host, "/api/v1/embeddings/models", HttpStatusCode.OK, "{\"data\":[]}");
-        network.AddResponse(
-            HttpMethod.Get,
-            Host,
-            "/api/v1/models",
-            HttpStatusCode.OK,
-            "{\"data\":[{\"id\":\"anthropic/claude-haiku-5.5\",\"name\":\"Claude Haiku 5.5\",\"supported_parameters\":[\"tools\"]}]}");
+        network.AddRoute(HttpMethod.Get, Host, "/api/v1/models",
+            (_, _) => Task.FromResult(JsonResponse(HttpStatusCode.OK, AssistantModelsJson())));
         network.AddResponse(HttpMethod.Get, Host, "/api/v1/videos/models", HttpStatusCode.OK, "{\"data\":[]}");
         network.AddRoute(HttpMethod.Get, Host, "/api/v1/images/models", (_, _) => Task.FromResult(JsonResponse(HttpStatusCode.OK, ImageModelsJson())));
         network.AddRoute(HttpMethod.Get, Host, "/api/v1/images/models/*/endpoints", (request, _) =>
@@ -85,6 +82,12 @@ public sealed class FakeOpenRouter
     {
         ArgumentNullException.ThrowIfNull(models);
         _imageModels = models.ToArray();
+    }
+
+    public void SetAssistantModels(IEnumerable<AssistantModel> models)
+    {
+        ArgumentNullException.ThrowIfNull(models);
+        _assistantModels = models.ToArray();
     }
 
     public void SetKeyResponse(HttpStatusCode statusCode)
@@ -238,6 +241,22 @@ public sealed class FakeOpenRouter
         return new JsonObject { ["data"] = models }.ToJsonString();
     }
 
+    private string AssistantModelsJson()
+    {
+        var models = new JsonArray();
+        foreach (var model in _assistantModels)
+        {
+            models.Add(new JsonObject
+            {
+                ["id"] = model.Id,
+                ["name"] = model.Name,
+                ["supported_parameters"] = new JsonArray("tools"),
+            });
+        }
+
+        return new JsonObject { ["data"] = models }.ToJsonString();
+    }
+
     private static void AddEnumParameter(JsonObject parameters, string name, IReadOnlyList<string>? values)
     {
         if (values is not { Count: > 0 }) return;
@@ -357,4 +376,6 @@ public sealed class FakeOpenRouter
         IReadOnlyList<string>? Formats = null,
         IReadOnlyList<string>? Qualities = null,
         int? MaxInputReferences = null);
+
+    public sealed record AssistantModel(string Id, string Name);
 }

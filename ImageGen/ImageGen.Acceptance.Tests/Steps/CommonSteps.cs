@@ -77,6 +77,10 @@ public sealed class CommonSteps(ScenarioContext scenario)
     [When("the OpenRouter image model catalog changes to:")]
     public void WhenTheOpenRouterImageModelCatalogChangesTo(DataTable table) => World.OpenRouter.SetImageModels(ParseImageModels(table));
 
+    [Given("the OpenRouter assistant model catalog:")]
+    public void GivenTheOpenRouterAssistantModelCatalog(DataTable table) => World.OpenRouter.SetAssistantModels(
+        table.Rows.Select(row => new FakeOpenRouter.AssistantModel(row["id"], row["name"])).ToArray());
+
     private static IReadOnlyList<FakeOpenRouter.ImageModel> ParseImageModels(DataTable table) => table.Rows.Select(row => new FakeOpenRouter.ImageModel(
             row["id"],
             row["name"],

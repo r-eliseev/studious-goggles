@@ -68,6 +68,25 @@ Feature: Sessions
     When the user creates a new session
     Then the chat shows the default assistant model
 
+  @SES-07 @S1.3
+  Scenario: Changing the default assistant model affects only new sessions
+    Given the OpenRouter assistant model catalog:
+      | id                             | name             |
+      | anthropic/claude-haiku-5.5     | Claude Haiku 5.5 |
+      | anthropic/claude-sonnet-4      | Claude Sonnet 4  |
+    And the user has a saved OpenRouter key
+    When the user creates a new session
+    And the user returns to the session list
+    And the user opens settings
+    And the user selects assistant model "anthropic/claude-sonnet-4" as the default
+    And the user saves the default assistant model
+    And the user returns to the session list
+    And the user opens the first session
+    Then the chat shows assistant model "anthropic/claude-haiku-5.5"
+    When the user returns to the session list
+    And the user creates a new session
+    Then the chat shows assistant model "anthropic/claude-sonnet-4"
+
   @SES-09 @S1.1
   Scenario: Sessions are grouped by the fake local date
     Given the user has a saved OpenRouter key

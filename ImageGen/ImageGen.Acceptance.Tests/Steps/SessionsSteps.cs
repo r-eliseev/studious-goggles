@@ -31,6 +31,8 @@ public sealed class SessionsSteps(ScenarioContext scenario)
 
     private ChatPageModel Chat => Assert.IsType<ChatPageModel>(Assert.IsType<ChatView>(World.Window.PageArea.Content).DataContext);
 
+    private SettingsPageModel Settings => Assert.IsType<SettingsPageModel>(Assert.IsType<SettingsView>(World.Window.PageArea.Content).DataContext);
+
     [When("the user creates a new session")]
     public Task WhenTheUserCreatesANewSession() => HeadlessApp.RunAsync(async cancellationToken =>
     {
@@ -90,6 +92,25 @@ public sealed class SessionsSteps(ScenarioContext scenario)
         var navigation = World.Provider.GetRequiredService<AvaloniaNavigationService>();
         await World.WaitUntilAsync(() => navigation.CurrentRoute?.StartsWith(Routes.Chat + "?", StringComparison.Ordinal) == true,
             "the selected session chat to open", cancellationToken);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [When("the user selects assistant model {string} as the default")]
+    public Task WhenTheUserSelectsAssistantModelAsTheDefault(string modelId) => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        var settings = Settings;
+        await World.WaitUntilAsync(
+            () => settings.AssistantModels.Any(option => option.Reference.ModelId == modelId),
+            $"assistant model '{modelId}' to load in Settings",
+            cancellationToken);
+        settings.SelectedAssistantModel = Assert.Single(settings.AssistantModels, option => option.Reference.ModelId == modelId);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [When("the user saves the default assistant model")]
+    public Task WhenTheUserSavesTheDefaultAssistantModel() => HeadlessApp.RunAsync(async _ =>
+    {
+        await Settings.SaveDefaultAssistantModelCommand.ExecuteAsync(null);
         return true;
     }, TestContext.Current.CancellationToken);
 
@@ -159,6 +180,16 @@ public sealed class SessionsSteps(ScenarioContext scenario)
         await World.WaitUntilAsync(() => Chat.AssistantText.Length > 0, "the assistant model label to load", TestContext.Current.CancellationToken);
         Assert.Contains(SessionSettings.DefaultAssistantModelId, Chat.AssistantText, StringComparison.Ordinal);
         Assert.Contains("1", Chat.ModelsButtonText, StringComparison.Ordinal);
+    }
+
+    [Then("the chat shows assistant model {string}")]
+    public async Task ThenTheChatShowsAssistantModel(string modelId)
+    {
+        await World.WaitUntilAsync(
+            () => Chat.AssistantText.Contains(modelId, StringComparison.Ordinal),
+            $"assistant model '{modelId}' to appear in the chat",
+            TestContext.Current.CancellationToken);
+        Assert.Contains(modelId, Chat.AssistantText, StringComparison.Ordinal);
     }
 
     [Then("one session is in Today and one session is in Earlier")]
