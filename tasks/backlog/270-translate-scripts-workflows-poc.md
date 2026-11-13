@@ -1,8 +1,8 @@
 ---
 id: 270
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-13T07:39:34Z
+status: review
+assignee:
+claimed:
 created: 2026-11-09
 ---
 
