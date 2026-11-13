@@ -13,7 +13,7 @@ Owner decision of 2026-10-31: music, sound and video generation are tasks for la
 
 Short sounds and effects (footsteps, rain, interface sounds) follow the same flow as music (167), but with a short duration and, if supported by the model, looping.
 
-Depends on: 166 (done); an OpenRouter sound effects model.
+Depends on: 166 (done), 279 (fal sound-effect facts); the provider is fal (ADR 0035).
 Environment: Linux or Windows; both UI shells.
 
 ## Acceptance criteria
@@ -36,3 +36,6 @@ Add sound generation to a future release.
 
 ### 2026-11-06, claude-audit
 Blocked: the owner selected OpenRouter only (ADR 0027), but it has no sound effects models (the `/api/v1/models` catalog on 2026-11-06 listed only Lyria 3 and gpt-audio for audio). Options for the owner: wait for a model on OpenRouter; generate sounds with Lyria (quality for short effects is unknown; check after 208); or add fal (ElevenLabs Sound Effects v3, Stable Audio 2.5, and others; `docs/knowledge/media-generation.md`).
+
+### 2026-11-13, owner (in the chat, recorded by claude-planner)
+Asked how to unblock sound effects (wait for OpenRouter, try Lyria, or add fal): "Add fal for sound". Recorded as ADR 0035. The models, request/result shapes and the integration are unknown, so the fact-finding task 279 goes first; this task stays `blocked` until 279 is done, then the planner writes its plan from the findings.

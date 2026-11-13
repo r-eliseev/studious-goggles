@@ -1,6 +1,6 @@
 ---
 id: 266
-status: blocked
+status: approved
 assignee:
 claimed:
 created: 2026-11-09
@@ -48,7 +48,9 @@ Environment: Linux (building the E2E projects), GitHub Actions (the run).
 4. After 243: CHAT-02, GEN-05 on both platforms.
 5. Documentation.
 
-Files: `ImageGen/ImageGen.E2E.Android/` (`ImageGen.E2E.Android.csproj`, `Steps/` new, `Hooks.cs` new, `FirstRunTests.cs` deleted, `AndroidTestBase.cs`, `TestArtifacts.cs`), `ImageGen/ImageGen.E2E.Windows/` (`ImageGen.E2E.Windows.csproj`, `Steps/` new, `Hooks.cs` new, `FirstRunTests.cs` deleted, `WindowsTestBase.cs`), `ImageGen/ImageGen.Acceptance.Tests/Features/FirstRunAndKeys.feature` (tags only), `ImageGen/Directory.Packages.props`, `.github/workflows/ui-e2e.yml`, `docs/specs/ui-e2e.md`, `docs/decisions/0029-ui-e2e-tests.md`, `docs/knowledge/ui-e2e.md`, `docs/specs/acceptance-scenarios.md`.
+Amendment of 2026-11-13: before step 2, the linked-feature check (comment of 2026-11-13, item 4); the `@e2e` selection in `ui-e2e.yml` and the headless skip hook are part of step 2.
+
+Files: `ImageGen/ImageGen.E2E.Android/` (`ImageGen.E2E.Android.csproj`, `Steps/` new, `Hooks.cs` new, `FirstRunTests.cs` deleted, `AndroidTestBase.cs`, `TestArtifacts.cs`), `ImageGen/ImageGen.E2E.Windows/` (`ImageGen.E2E.Windows.csproj`, `Steps/` new, `Hooks.cs` new, `FirstRunTests.cs` deleted, `WindowsTestBase.cs`), `ImageGen/ImageGen.Acceptance.Tests/Features/FirstRunAndKeys.feature` (tags only), `ImageGen/Directory.Packages.props`, `.github/workflows/ui-e2e.yml`, `docs/specs/ui-e2e.md`, `docs/decisions/0029-ui-e2e-tests.md`, `docs/knowledge/ui-e2e.md`, `docs/specs/acceptance-scenarios.md`, `ImageGen/ImageGen.Acceptance.Tests/Features/ChatAssistant.feature` and `Features/Runs.feature` (tags only), `ImageGen/ImageGen.Acceptance.Tests/Support/E2eOnlyHooks.cs` (new).
 
 ### Verification
 ```
@@ -83,3 +85,11 @@ Plan approved ("approve all tasks with plans").
 Step 1 POC: `dotnet test poc/backlog/266-e2e-gherkin-scenarios/ReqnrollAllurePoc.csproj` passes both tagged scenarios with Reqnroll.NUnit 3.3.4, NUnit 4.6.1, Allure.NUnit 2.15.0 and Allure.Reqnroll 2.15.0; both are discovered (including `@e2e-only`) and produce Allure result files. `@e2e-only` therefore does not automatically skip a scenario in the headless run. A linked `ReqnrollFeatureFiles` item is processed to intermediate `.ndjson`, but the POC did not confirm generated test code for that linked shared feature.
 
 The approved plan cannot be implemented as written: `FirstRunAndKeys.feature` is the only shared feature permitted in Files, but the migrated CHAT-02 and GEN-05 scenarios live in `ChatAssistant.feature` and `Runs.feature`; neither is listed. The plan also requires the headless run to skip KEY-11 (`@e2e-only`), while its permitted files do not include the acceptance test project or its configuration, where the POC proves a skip must be implemented. Proposed plan change: permit tag-only edits to `ChatAssistant.feature` and `Runs.feature` to tag CHAT-02/GEN-05 `@e2e`; permit the minimal acceptance-project configuration/binding change that excludes `@e2e-only` only in headless runs; and clarify the MSBuild feature inclusion item/output expected for linked shared features. Blocked and claim released pending planner response.
+
+### 2026-11-13, claude-planner — plan amendment
+Answers the blockers of 2026-11-12 (POC in `poc/backlog/266-e2e-gherkin-scenarios/`):
+1. Tags: CHAT-02 and GEN-05 live in `ChatAssistant.feature` and `Runs.feature`; tag-only edits (`@e2e`) of those files are allowed.
+2. Selection: an E2E project links whole feature files, so it generates tests for every scenario in them. The E2E runs select only `@e2e` scenarios with a category filter in `.github/workflows/ui-e2e.yml` (Reqnroll.NUnit turns tags into NUnit categories: `--filter "Category=e2e"` or the NUnit `--where "cat == e2e"` form, whichever the project's runner accepts — record which in `docs/knowledge/ui-e2e.md`).
+3. Headless skip: a new binding class `Support/E2eOnlyHooks.cs` in the acceptance project with `[BeforeScenario("e2e-only")]` that ignores the scenario through Reqnroll's `IUnitTestRuntimeProvider.TestIgnore` (the headless run reports it as skipped, not failed). No csproj change of the acceptance project.
+4. Linked features: before step 2, extend the POC with a feature file outside the project directory linked through the item type the POC used and confirm with `dotnet test --list-tests` that its scenarios are generated. If they are not, `blocked` with the output.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").

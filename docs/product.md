@@ -63,7 +63,7 @@ The first version per the specification: generation from text, editing from refe
 ## Boundaries: what we do not do
 Video and audio in the first versions, LoRA training, synchronization between devices, local models (ComfyUI), a canvas editor with masks, multi-user mode, bypassing provider moderation, hidden substitution of the prompt or model (F9.4).
 
-Revised 2026-10-31: generation of music, sounds and video is planned for later versions (tasks 166–169); the first versions are images only. 2026-11-06: video and music go through OpenRouter, the player in Avalonia is LibVLC (ADR 0027, tasks 199–209); sound effects wait for models at OpenRouter (168).
+Revised 2026-10-31: generation of music, sounds and video is planned for later versions (tasks 166–169); the first versions are images only. 2026-11-06: video and music go through OpenRouter, the player in Avalonia is LibVLC (ADR 0027, tasks 199–209); sound effects wait for models at OpenRouter (168). 2026-11-13: sound effects go through fal (ADR 0035; fact-finding 279, then 168).
 
 ## Terms
 - **Provider**: fal.ai, OpenRouter, the built-in Together AI for images, or an OpenAI-compatible provider from the config (ADR 0017).

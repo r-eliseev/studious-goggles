@@ -62,3 +62,6 @@ Unblock when the owner provides/configures a Together AI key for this session; t
 
 ### 2026-11-07, владелец (в чате, записал claude-audit)
 Предложение одобрено («Да»); план одобрен ранее данным поручением «заапрувь все таски которые будут».
+
+### 2026-11-13, owner (in the chat, recorded by claude-planner)
+Asked whether to add a Together key, postpone or cancel: "Postpone". The task stays `blocked` until the owner provides a Together key; the plan is unchanged.

@@ -106,3 +106,6 @@ In the same run, `smoke-ios-maui` failed falsely: at 15 seconds the app was stil
 
 ### 2026-11-11, owner (in the chat, recorded by claude-planner)
 The criterion stays: three consecutive green runs per app, the smoke must always pass. The investigation continues in task 274 (diagnostics: the app's own log, the system termination reasons, an exit timeline, 20 repeated runs). 247 stays `blocked` until 274 gives the cause and its fix is merged; then the planner returns it to `approved`. The claim is released (ADR 0032: a blocked task does not keep a claim). The letterboxed layout seen on the screenshots is task 275.
+
+### 2026-11-13, claude-planner
+Still `blocked` on 274, whose plan was amended today (timeouts for 20 repeats, app-only crash reports, launch delay distinct from an exit) and set back to `approved`. Task 275 (full screen) is done.

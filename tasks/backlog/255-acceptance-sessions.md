@@ -1,6 +1,6 @@
 ---
 id: 255
-status: blocked
+status: approved
 assignee:
 claimed:
 created: 2026-11-09
@@ -32,7 +32,7 @@ created: 2026-11-09
 ## План
 По одному сценарию SES-01 → SES-10, TDD-цикл из «Порядка исполнения». Число прогонов (SES-08) получить настоящими прогонами через ассистента (`Дано ассистент отвечает вызовом generate_images …`), а не записью в БД.
 
-Файлы: `ImageGen/ImageGen.Acceptance.Tests/Features/Sessions.feature`, `Steps/SessionsSteps.cs` (новый), `Steps/CommonSteps.cs`, `docs/specs/acceptance-scenarios.md`.
+Файлы: `ImageGen/ImageGen.Acceptance.Tests/Features/Sessions.feature`, `Steps/SessionsSteps.cs` (новый), `Steps/CommonSteps.cs`, `docs/specs/acceptance-scenarios.md`, `Support/FakePlatform.cs` (a queued `PromptAsync` result, approved 2026-11-10), `Support/FakeOpenRouter.cs` and `Support/AppWorld.cs` (additive test-harness changes only: new configurable fake responses, catalog fields, world helpers; no change of existing behavior used by other features, no product code).
 
 ### Проверка
 ```
@@ -86,3 +86,7 @@ The requested amendment is approved: `Support/FakePlatform.cs` may queue a `Prom
 
 ### 2026-11-11, codex-gpt6
 Plan mismatch: SES-07 must change the default assistant model in Settings and verify that existing sessions keep their model while a new session receives the new default. `FakeOpenRouter` currently returns an empty `/api/v1/models` catalog, so Settings exposes only the currently selected model. Making a second model selectable requires adding configurable chat models to `ImageGen/ImageGen.Acceptance.Tests/Support/FakeOpenRouter.cs`, which is outside the approved `Files:` list and the prior amendment. Proposed plan change: add that file to the allowed files and permit a fake chat-model catalog response used by SES-07. Until the planner/owner approves this scope, this task is blocked; SES-08 and SES-10 are not being started under this plan.
+
+### 2026-11-13, claude-planner — plan amendment
+Answers the SES-07 mismatch of 2026-11-11. Verified: `Support/FakeOpenRouter.cs` returns an empty chat catalog for `/api/v1/models`, so Settings offers only the current assistant model. The `Files:` line now allows additive harness changes in `Support/FakeOpenRouter.cs` (a configurable chat-model catalog for SES-07) and `Support/AppWorld.cs`; the same allowance is given to every open acceptance task so that a missing fake response no longer blocks a task. Product code stays untouched; a product/specification discrepancy is still `@ignore @bug-NNN` plus a new task. Continue with SES-07, SES-08 and SES-10 from `main` (SES-01–06 and SES-09 are merged by PR #101). SES-04's long-title case stays `@ignore @bug-276`.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").

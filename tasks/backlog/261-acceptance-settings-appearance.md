@@ -1,6 +1,6 @@
 ---
 id: 261
-status: blocked
+status: approved
 assignee:
 claimed:
 created: 2026-11-09
@@ -30,7 +30,7 @@ created: 2026-11-09
 ## План
 По одному сценарию SET-01 → SET-03.
 
-Файлы: `ImageGen/ImageGen.Acceptance.Tests/Features/Settings.feature`, `Steps/SettingsSteps.cs`, `Steps/CommonSteps.cs`, `docs/specs/acceptance-scenarios.md`.
+Файлы: `ImageGen/ImageGen.Acceptance.Tests/Features/Settings.feature`, `Steps/SettingsSteps.cs`, `Steps/CommonSteps.cs`, `docs/specs/acceptance-scenarios.md`, `Support/FakeOpenRouter.cs` and `Support/AppWorld.cs` (additive test-harness changes only: new configurable fake responses, catalog fields, world helpers; no change of existing behavior used by other features, no product code); for this task `Support/AppWorld.cs` may also pass the real file logger (`configureLogging: logging => logging.AddImageGenFileLogging(<world data folder>/logs, ...)`, as `ImageGen/ImageGen.Avalonia/App.axaml.cs` line 58 does) and start `AvaloniaAppearanceApplier` against `Application.Current` for each started world (as `App.axaml.cs` line 78), disposing or stopping it with the world.
 
 ### Проверка
 ```
@@ -69,3 +69,7 @@ Task 232 is done, so SET-04 is added to this task: "Clear logs" (`SettingsPageMo
 The planned acceptance scenarios cannot verify the stated behavior with the current harness. `ImageGen/ImageGen.Acceptance.Tests/Support/AppWorld.cs` creates the composition without `configureLogging`, so the app does not write files under the data directory's `logs/`. It also does not start `AvaloniaAppearanceApplier`; only `ImageGen/ImageGen.Avalonia/App.axaml.cs` does that, and the plan forbids product/head startup changes. Therefore SET-02 cannot observe the live theme/style resources after the user's Settings command, and SET-04 cannot clear and then observe the active log file continuing to receive entries.
 
 Proposed plan amendment: add `Support/AppWorld.cs` to `Files:` and allow it to configure the real file logger for the acceptance composition and start the Avalonia appearance applier against `Application.Current` for each started world. Keep the Settings steps as user actions and verify the resulting Avalonia resources and log file after restart. No implementation was made pending planner/owner approval.
+
+### 2026-11-13, claude-planner — plan amendment
+Answers the mismatch of 2026-11-12. Verified: `AppWorld` calls `AppServices.Create` without `configureLogging`, and only `App.axaml.cs` starts `AvaloniaAppearanceApplier`. The amendment lets `Support/AppWorld.cs` mirror those two startup steps of the real app (harness only, no head or product change), so SET-02 observes the applied theme resources and SET-04 observes the log files being cleared and written again. If starting the applier for every world leaks resources between scenarios (theme of one scenario visible in the next), reset it in the world's disposal; if that is impossible, `blocked` with the evidence.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").

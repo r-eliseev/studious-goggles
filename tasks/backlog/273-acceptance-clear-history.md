@@ -29,7 +29,7 @@ Environment: Linux or Windows (headless).
 ## Plan
 1. The declining case first (shorter), then the full case; each: the scenario fails for the described reason → bindings → green.
 
-Files: `ImageGen/ImageGen.Acceptance.Tests/Features/Sessions.feature`, `ImageGen/ImageGen.Acceptance.Tests/Steps/SessionsSteps.cs`, `ImageGen/ImageGen.Acceptance.Tests/Steps/CommonSteps.cs`, `docs/specs/acceptance-scenarios.md`.
+Files: `ImageGen/ImageGen.Acceptance.Tests/Features/Sessions.feature`, `ImageGen/ImageGen.Acceptance.Tests/Steps/SessionsSteps.cs`, `ImageGen/ImageGen.Acceptance.Tests/Steps/CommonSteps.cs`, `docs/specs/acceptance-scenarios.md`, `Support/FakeOpenRouter.cs`, `Support/FakePlatform.cs` and `Support/AppWorld.cs` (additive test-harness changes only, amendment of 2026-11-13).
 
 ### Verification
 ```
@@ -48,3 +48,7 @@ bash scripts/check.sh
 ## Comments
 ### 2026-11-10, claude-bdd-plan
 Created at the owner's request to turn the scenarios unblocked by finished tasks into work. Approved by the owner's instruction "approve all tasks with plans" (2026-11-10).
+
+### 2026-11-13, claude-planner — plan amendment
+Preventive amendment for all open acceptance tasks: tasks 255, 256 and 261 were blocked only because a needed fake response or world helper was outside their `Files:` line. Additive changes in `Support/FakeOpenRouter.cs`, `Support/FakePlatform.cs` and `Support/AppWorld.cs` are now allowed (new configurable responses, catalog fields, world helpers; no change of behavior other features rely on; no product code). Product/specification discrepancies are still `@ignore @bug-NNN` plus a new task. If two open tasks need the same harness change, the second one reuses it from `main`.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").
