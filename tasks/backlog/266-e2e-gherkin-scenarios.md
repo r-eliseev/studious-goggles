@@ -1,8 +1,8 @@
 ---
 id: 266
 status: in-progress
-assignee: codex-20261113
-claimed: 2026-11-13T13:47:34Z
+assignee:
+claimed:
 created: 2026-11-09
 ---
 
@@ -74,6 +74,13 @@ bash scripts/check.sh
 ## Report
 
 ## Comments
+
+### 2026-11-13, codex-20261113
+Step 1 linked-feature check passed: the POC's `ReqnrollFeatureFiles` item discovers 12 tests, including all 10 scenarios from the shared feature outside the project directory (`dotnet test poc/backlog/266-e2e-gherkin-scenarios/ReqnrollAllurePoc.csproj --list-tests`).
+
+Implementation is blocked by the current fixture/hook shape. The planned bindings must exercise `AndroidTestBase`/`WindowsTestBase` element helpers and existing recording/evidence lifecycle. Those fixtures expose the helpers as `protected`, while their setup methods are `[SetUp]` methods on abstract bases. A Reqnroll binding class cannot inherit from an abstract fixture and the existing `FirstRunTests` classes are to be deleted; a separate hook class cannot access the protected driver/helper methods. Reqnroll hooks also need the scenario ID before platform setup to place artifacts under `reports/<platform>/<scenario-id>/`, while current setup derives artifact names from NUnit class/test names. The rotation scenario needs Android-only behavior while remaining skipped by the headless runner.
+
+Proposed plan amendment: allow `AndroidTestBase.cs` and `WindowsTestBase.cs` to expose a small scenario-fixture adapter API (setup, teardown, element access, scenario ID and test outcome) to Reqnroll hooks; add platform-specific binding classes which compose those adapters and reuse the existing `MockSessionTests` setup for provider config; add the minimal planned headless `E2eOnlyHooks` binding. Bindings must implement each shared scenario as real UI actions/assertions (no empty stubs), and test artifacts must use the permanent scenario ID. The E2E project builds and linked feature discovery passed on Linux; device/window runs remain in `ui-e2e.yml`. No product code was changed. Claim released pending planner review of the scope amendment.
 
 ### 2026-11-09, claude-bdd-plan
 Rewritten after the owner's decision "migrate the current e2e tests to the new framework". The plan waits for approval.
