@@ -1,8 +1,8 @@
 ---
 id: 030
-status: in-progress
-assignee: codex-20261113
-claimed: 2026-11-13T17:47:48Z
+status: review
+assignee:
+claimed:
 created: 2026-10-27
 ---
 
@@ -41,6 +41,10 @@ bash scripts/check.sh
 ```
 
 ## Report
+
+Completed task 030 in three stages: task 164 changed the Android `ApplicationId`; on 2026-11-02 the owner-requested Omnilite name, icon/splash assets, and shared MAUI application ids were applied; this change sets the Windows publisher metadata to the owner's values (`CN=Roman Eliseev` / `Roman Eliseev`). The Windows data and SecureStorage path after the id change remains task 230. The Windows manifest itself was not otherwise changed.
+
+Verification: `grep -n 'Publisher' ImageGen/ImageGen.Maui/Platforms/Windows/Package.appxmanifest` and `bash scripts/check.sh` passed. Windows MAUI build result is pending in CI.
 
 ### 2026-11-02 — partial branding implementation at the owner's direct request
 
