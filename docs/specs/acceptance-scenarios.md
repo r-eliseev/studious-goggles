@@ -136,11 +136,11 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 ### Spending (`Spending.feature`, task 262)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| SPD-01 | Two finished generations with a price → the total for the day is their sum, grouped by provider and model | F8.3 | planned |
-| SPD-02 | A generation without a price → counted in "operations with unknown price", not in the sum | F8.3 | planned |
-| SPD-03 | The week is ISO, from Monday; a generation of last Sunday is not in the current week | F8.3 | planned |
-| SPD-04 | The "expensive run" threshold is off by default; with a threshold below the estimate the assistant warns before sending | F8.4 | planned |
-| SPD-05 | The monthly limit is kept after a restart | F8.4 | planned |
+| SPD-01 | Two finished generations with a price → the total for the day is their sum, grouped by provider and model | F8.3 | done |
+| SPD-02 | A generation without a price → counted in "operations with unknown price", not in the sum | F8.3 | done |
+| SPD-03 | The week is ISO, from Monday; a generation of last Sunday is not in the current week | F8.3 | done |
+| SPD-04 | The "expensive run" threshold is off by default; with a threshold below the estimate the assistant warns before sending | F8.4 | discrepancy (280) |
+| SPD-05 | The monthly limit is kept after a restart | F8.4 | done |
 
 ### Search (`Search.feature`, task 263)
 | id | Scenario | Requirements | Status |

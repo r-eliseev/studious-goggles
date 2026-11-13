@@ -109,6 +109,9 @@ public sealed class FakeOpenRouter
     public void SetImage(string modelId, int width = 64, int height = 64, decimal cost = 0.01m) =>
         _generationReplies[modelId] = GenerationReply.Image(width, height, cost);
 
+    public void SetImageWithoutCost(string modelId, int width = 64, int height = 64) =>
+        _generationReplies[modelId] = GenerationReply.Image(width, height, cost: null);
+
     public void SetGenerationError(string modelId, HttpStatusCode statusCode, string body) =>
         _generationReplies[modelId] = GenerationReply.Error(statusCode, body);
 
@@ -199,7 +202,7 @@ public sealed class FakeOpenRouter
         var responseBody = new JsonObject
         {
             ["data"] = new JsonArray(new JsonObject { ["b64_json"] = b64, ["media_type"] = "image/png" }),
-            ["usage"] = new JsonObject { ["cost"] = reply.Cost },
+            ["usage"] = reply.Cost is { } cost ? new JsonObject { ["cost"] = cost } : null,
         }.ToJsonString();
         return JsonResponse(HttpStatusCode.OK, responseBody);
     }
@@ -350,13 +353,15 @@ public sealed class FakeOpenRouter
     private sealed record GenerationReply(
         int Width,
         int Height,
-        decimal Cost,
+        decimal? Cost,
         HttpStatusCode? ErrorStatus = null,
         string? ErrorBody = null,
         bool IsFiltered = false,
         FakeNetwork.HeldResponse? Held = null)
     {
         public static GenerationReply Image(int width, int height, decimal cost) => new(width, height, cost);
+
+        public static GenerationReply Image(int width, int height, decimal? cost) => new(width, height, cost);
 
         public static GenerationReply Error(HttpStatusCode statusCode, string body) => new(0, 0, 0, statusCode, body);
 

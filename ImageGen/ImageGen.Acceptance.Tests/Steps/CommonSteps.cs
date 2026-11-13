@@ -134,6 +134,9 @@ public sealed class CommonSteps(ScenarioContext scenario)
                     ParseInteger(row["height"], 64),
                     ParseNullableDecimal(row["cost"]) ?? 0.01m);
                 break;
+            case "unknown cost":
+                World.OpenRouter.SetImageWithoutCost(modelId, ParseInteger(row["width"], 64), ParseInteger(row["height"], 64));
+                break;
             case "filtering":
                 World.OpenRouter.SetFiltered(modelId);
                 break;
