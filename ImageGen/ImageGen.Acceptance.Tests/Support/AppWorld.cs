@@ -1,6 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using ImageGen.Avalonia.Composition;
+using ImageGen.Avalonia.Services;
 using ImageGen.Avalonia.Services.Navigation;
 using ImageGen.Avalonia.Services.Secrets;
 using ImageGen.Avalonia.Views;
@@ -11,10 +13,13 @@ using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
 using ImageGen.Presentation;
+using ImageGen.Presentation.Appearance;
+using ImageGen.Presentation.Logging;
 using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 
 namespace ImageGen.Acceptance.Tests.Support;
@@ -27,6 +32,7 @@ public sealed class AppWorld : IDisposable
     private MainWindow? _window;
     private GenerationService? _generations;
     private IImageFileStore? _imageFiles;
+    private AvaloniaAppearanceApplier? _appearanceApplier;
 
     public AppWorld()
     {
@@ -81,8 +87,13 @@ public sealed class AppWorld : IDisposable
             _paths,
             Secrets,
             Secrets,
+            configureLogging: logging => logging.AddImageGenFileLogging(Path.Combine(DataDirectory, "logs"), LogLevel.Debug),
             dialogs: Platform,
             configureTestServices: ConfigureTestServices);
+        _appearanceApplier = new AvaloniaAppearanceApplier(
+            _provider.GetRequiredService<AppearanceService>(),
+            Application.Current!);
+        _appearanceApplier.Start();
         _window = new MainWindow();
         var navigation = _provider.GetRequiredService<AvaloniaNavigationService>();
         navigation.AttachHost(_window.PageArea);
@@ -192,6 +203,7 @@ public sealed class AppWorld : IDisposable
         }
 
         _window = null;
+        _appearanceApplier = null;
         _generations = null;
         _imageFiles = null;
         Dispatcher.UIThread.RunJobs();
