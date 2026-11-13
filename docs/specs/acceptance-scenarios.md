@@ -94,23 +94,23 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 ### Cancellation and recovery (`CancelAndRecovery.feature`, task 258)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| CAN-01 | Cancelling one active generation → "cancelled", the others continue | S3.5.1, F5.4 | planned |
-| CAN-02 | Cancelling the whole run → all active ones "cancelled", finished ones do not change | S3.5.1, S3.5.2 | planned |
-| CAN-03 | The result arrived before the cancellation → the card stays "done" | S3.5.2 | planned |
-| CAN-04 | A generation did not finish, the app was restarted → "Interrupted" (failed) | S3.8 | planned |
-| CAN-05 | The time of the cancellation request is stored and visible after a restart | S3.5.3 | planned |
+| CAN-01 | Cancelling one active generation → "cancelled", the others continue | S3.5.1, F5.4 | blocked (258) |
+| CAN-02 | Cancelling the whole run → all active ones "cancelled", finished ones do not change | S3.5.1, S3.5.2 | blocked (258) |
+| CAN-03 | The result arrived before the cancellation → the card stays "done" | S3.5.2 | blocked (258) |
+| CAN-04 | A generation did not finish, the app was restarted → "Interrupted" (failed) | S3.8 | blocked (258) |
+| CAN-05 | The time of the cancellation request is stored and visible after a restart | S3.5.3 | blocked (258) |
 
 ### Card actions (`CardActions.feature`, task 259)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| ACT-01 | Repeat → a new run of one generation: the same prompt, model and seed | S4.1, S4.4 | planned |
-| ACT-02 | New seed → the same prompt and model, another seed | S4.2 | planned |
-| ACT-03 | Edit → the prompt opens for editing; after confirmation — a run with the edited prompt without the assistant | S4.3 | planned |
-| ACT-04 | Other model… on an error → the model picker; "Used in this session" on top; the choice starts a run on the chosen model | S4.5 | planned |
-| ACT-05 | Copy prompt → the clipboard holds the exact prompt | S4.6 | planned |
-| ACT-06 | Details on an error → the original error text; the card shows a short reason | S4.7, F9.1 | planned |
-| ACT-07 | Save image → a save dialog with the name `imagegen-<8 characters of id>.<extension>` | S4.8 | planned |
-| ACT-08 | Actions are unavailable where the specification does not give them (Details on a done card, Save on an error) | S4.5–S4.8 | planned |
+| ACT-01 | Repeat → a new run of one generation: the same prompt, model and seed | S4.1, S4.4 | done |
+| ACT-02 | New seed → the same prompt and model, another seed | S4.2 | done |
+| ACT-03 | Edit → the prompt opens for editing; after confirmation — a run with the edited prompt without the assistant | S4.3 | done |
+| ACT-04 | Other model… on an error → the model picker; "Used in this session" on top; the choice starts a run on the chosen model | S4.5 | done |
+| ACT-05 | Copy prompt → the clipboard holds the exact prompt | S4.6 | done |
+| ACT-06 | Details on an error → the original error text; the card shows a short reason | S4.7, F9.1 | done |
+| ACT-07 | Save image → a save dialog with the name `imagegen-<8 characters of id>.<extension>` | S4.8 | done |
+| ACT-08 | Actions are unavailable where the specification does not give them (Details on a done card, Save on an error) | S4.5–S4.8 | done |
 
 ### Session models and parameters (`SessionModels.feature`, task 260)
 | id | Scenario | Requirements | Status |

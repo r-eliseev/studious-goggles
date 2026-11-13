@@ -1,8 +1,8 @@
 ---
 id: 259
-status: in-progress
-assignee: codex-20261113
-claimed: 2026-11-13T19:23:20Z
+status: review
+assignee:
+claimed:
 created: 2026-11-09
 ---
 
@@ -57,6 +57,15 @@ bash scripts/check.sh
 - In the “Report”, list passing scenarios, ignored scenarios and their tracking tasks, commands and results, and differences from the plan. Update scenario statuses in `docs/specs/acceptance-scenarios.md`.
 
 ## Report
+
+- Added `CardActions.feature` for ACT-01–ACT-08 and `CardActionsSteps.cs` bindings. ACT-01/02 verify repeat/new-seed preserve or change the expected request values; ACT-03 verifies edited prompt generation without a second assistant call; ACT-04 verifies this session's other model is first and picking a model keeps the prompt; ACT-05/06/07 verify clipboard text, provider error details, and the suggested image filename; ACT-08 checks the action menu for done, failed, filtered, and cancelled cards.
+- Extended `FakePlatform` to record the choices shown by the generation action menu. ACT-08 creates terminal card states as scenario setup and checks the user-visible menu; product code is unchanged.
+- Updated the acceptance catalog: ACT-01–ACT-08 are `done`. CAN-01–CAN-05 are marked `blocked (258)` while task 258 awaits a decision about cancelling an already-submitted OpenRouter request without a provider job handle.
+- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait Category=actions` — 11 passed.
+- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` — 69 passed, 1 skipped (SES-04, `@bug-276`).
+- `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` — passed.
+- `bash scripts/check.sh` — passed (`Harness: all checks passed`).
+- No scenarios were ignored. The separate task 258 is blocked by the cancellation-semantics discrepancy recorded in its Comments section.
 
 ## Comments
 
