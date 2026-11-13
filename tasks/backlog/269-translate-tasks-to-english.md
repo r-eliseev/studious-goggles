@@ -56,6 +56,7 @@ TASKS_BRANCH=main scripts/list-tasks.sh --main approved
 
 ### 2026-11-13, codex-gpt6
 - Translated the task template and cards 030, 046, 140, 168, 198, 230, 236, 237, and 245 in small batches. The 245 branch has no remote task branch or unmerged card edit.
+- Also translated cards 248 and 250; neither has a remote task branch.
 - After each committed batch, `bash scripts/check.sh` passed. The new-task template was rendered in a scratch copy and matched the English headings.
 - Cards 235 and 255 remain untouched because their remote task branches contain unmerged edits to those same cards. Card 243's remote branch has no card diff; it remains for the final translation pass as required by the plan.
 - The exact quoted Russian UI labels in cards 046 and 198 remain unchanged as required by the plan. This conflicts with the current `check-latin.sh` rule, which permits exceptions only for non-English test data. Resolve this before adding `tasks` to `LATIN_PATHS`; a plan/owner decision is needed on whether those quoted UI labels may be translated or whitelisted.
