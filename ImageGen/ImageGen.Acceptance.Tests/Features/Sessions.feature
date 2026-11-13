@@ -87,6 +87,21 @@ Feature: Sessions
     And the user creates a new session
     Then the chat shows assistant model "anthropic/claude-sonnet-4"
 
+  @SES-08 @S1.2
+  Scenario: The session row shows the number of runs
+    Given the user has a saved OpenRouter key
+    And the assistant answers with:
+      | response        | prompt                         |
+      | generate_images | A lighthouse by the ocean.    |
+    And the assistant answers with:
+      | response        | prompt                         |
+      | generate_images | A red bicycle by a brick wall. |
+    When the user creates a new session
+    And the user sends the message "Paint a lighthouse"
+    And the user sends the message "Draw a red bicycle"
+    And the user returns to the session list
+    Then the first session row shows "· 2 runs"
+
   @SES-09 @S1.1
   Scenario: Sessions are grouped by the fake local date
     Given the user has a saved OpenRouter key

@@ -148,6 +148,16 @@ public sealed class SessionsSteps(ScenarioContext scenario)
     public void ThenTheFirstSessionRetainsItsOriginalTitle() =>
         Assert.Equal(Session.NewSessionTitle, Sessions.Sessions[0].Title);
 
+    [Then("the first session row shows {string}")]
+    public async Task ThenTheFirstSessionRowShows(string text)
+    {
+        await World.WaitUntilAsync(
+            () => Sessions.Sessions.Count > 0 && Sessions.Sessions[0].DetailsText.EndsWith(text, StringComparison.Ordinal),
+            $"the first session row to show '{text}'",
+            TestContext.Current.CancellationToken);
+        Assert.EndsWith(text, Sessions.Sessions[0].DetailsText, StringComparison.Ordinal);
+    }
+
     [Then("the app shows a rename error")]
     public void ThenTheAppShowsARenameError() => Assert.NotEmpty(World.Platform.Alerts);
 
