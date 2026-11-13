@@ -1,6 +1,6 @@
 ---
 id: 269
-status: blocked
+status: approved
 assignee:
 claimed:
 created: 2026-11-09
@@ -81,3 +81,8 @@ Part of 268. Changing `scripts/` is allowed by the owner's request to translate 
 
 ### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan)
 Plan approved ("approve all tasks with plans").
+
+### 2026-11-13, claude-planner — plan amendment
+Answers the Latin-check conflict of 2026-11-13. Verified: the app UI is English — `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx` is the only resource file (`StatusCancelled` = "Cancelled", `StatusFailed` = "Error", `StatusFiltered` = "Filtered by the provider"). The quoted Russian literals in task cards ("отменено", "готово", "ошибка", "отфильтровано" and the labels in 016, 046, 198, 243, 248, 258, 259, 262–265) are leftovers of the old Russian UI, not current UI text. Rule: replace each such literal with the current English UI text from `AppResources.resx` (search by meaning; if no resource matches, translate it and add "(UI text not found)" after it). No Latin exception for `tasks/`.
+Also: 235 and 255 no longer block the translation — 255's branch is merged, and the planner rewrote 235's card in English on 2026-11-13 (its stale branch holds only superseded card edits). Cards changed by the planner in this sync may already be English; translate what remains. Task 278 changes `scripts/check-tasks.sh` first; start from a `main` that contains 278.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").

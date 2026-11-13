@@ -1,6 +1,6 @@
 ---
 id: 272
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-10
@@ -50,6 +50,13 @@ bash scripts/check.sh
 - Added KEY-12 with a temporary OpenAI-compatible chat provider in the acceptance world's `providers.json`; selected it on first run, checked that its assistant model chooser appears, saved the model, and verified it in Settings.
 - Updated `docs/specs/acceptance-scenarios.md`; both KEY-02 and KEY-12 are marked `done`.
 - Verification: `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` passed (42 passed, 1 skipped); `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` and `bash scripts/check.sh` passed.
+
+## Review
+Reviewed 2026-11-13 by claude-planner against the criteria and the plan (commit `c989fe3`, PR #101).
+- KEY-02 is corrected to S6.4 (session list without the chooser, default assistant model kept, checked through Settings); `@ignore @bug-272` removed.
+- KEY-12: a test `providers.json` with an OpenAI-compatible chat provider written by `AppWorld.ConfigureChatProviderAsync` (a file write plus a fake `/v1/models` response, within the plan's allowance), provider chosen on the key screen, chooser shown, model saved and checked in Settings.
+- No product code changed; files within the plan. CI of PR #101 green. Not rerun locally (no .NET SDK).
+Verdict: done.
 
 ## Comments
 ### 2026-11-10, codex-gpt6

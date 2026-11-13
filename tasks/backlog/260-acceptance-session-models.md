@@ -1,6 +1,6 @@
 ---
 id: 260
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-09
@@ -62,6 +62,15 @@ bash scripts/check.sh
 - MOD-02 checks the page model's 1–10 bounds. The actual `NumericUpDown` is not present in the headless window's visual tree, so the step cannot drive its value; the view binds its `Minimum` and `Maximum` to those same bounds.
 - Updated `docs/specs/acceptance-scenarios.md`; MOD-01–MOD-08 are `done`. MOD-09 remains after task 236.
 - Verification: filtered model scenarios passed (8/8); the full acceptance suite passed (50 passed, 1 skipped); `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` and `bash scripts/check.sh` passed.
+
+## Review
+Reviewed 2026-11-13 by claude-planner against the criteria and the plan (commit `bb2145d`, merged in PR #101).
+- MOD-01…MOD-08 are in `Features/SessionModels.feature` with tag `@models`; the catalog rows are `done`, MOD-09 stays "after 236".
+- MOD-01/07 drive the page model (selection, run count, Save/Cancel) and check the next run's cards; MOD-04 covers the `~google` prefix; MOD-05 has an `input_image` price in the fake and shows only `output_image`; MOD-06 checks the fake's request log before and after Refresh; MOD-08 checks the image request body.
+- MOD-02 checks only the page model's 1–10 bounds because the headless tree has no `NumericUpDown`; this matches the criterion ("how exactly — by the code") and is recorded in the Report.
+- Files within the plan's line (`Support/FakeOpenRouter.cs` only new responses). CI of PR #101 green (`core`, `avalonia`, `check`). Tests were not rerun locally (no .NET SDK in the planner's container).
+- The harness error "Plan section is empty" for this card under a POSIX locale is a script defect, task 278, not this task's.
+Verdict: done.
 
 ## Комментарии
 

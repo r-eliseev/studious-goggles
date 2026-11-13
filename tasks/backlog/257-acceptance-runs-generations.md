@@ -1,6 +1,6 @@
 ---
 id: 257
-status: blocked
+status: approved
 assignee:
 claimed:
 created: 2026-11-09
@@ -37,7 +37,7 @@ created: 2026-11-09
 ## План
 По одному сценарию GEN-01 → GEN-11. Таблицы моделей и исходов — `DataTable` (`| модель | исход |`). Шаг «Дано в сессии выбраны модели: …» выбирает модели через экран моделей сессии (как пользователь), а не записью настроек.
 
-Файлы: `ImageGen/ImageGen.Acceptance.Tests/Features/Runs.feature`, `Steps/RunsSteps.cs` (новый), `Steps/CommonSteps.cs`, `Support/FakeOpenRouter.cs` (только новые ответы), `docs/specs/acceptance-scenarios.md`.
+Файлы: `ImageGen/ImageGen.Acceptance.Tests/Features/Runs.feature`, `Steps/RunsSteps.cs` (новый), `Steps/CommonSteps.cs`, `Support/FakeOpenRouter.cs` (только новые ответы), `docs/specs/acceptance-scenarios.md`, `Support/FakeOpenRouter.cs` and `Support/AppWorld.cs` (additive test-harness changes only: new configurable fake responses, catalog fields, world helpers; no change of existing behavior used by other features, no product code).
 
 ### Проверка
 ```
@@ -86,3 +86,7 @@ Plan approved, status `approved`. Changes of the same day apply: the Gherkin sce
 
 ### 2026-11-11, codex-gpt6
 GEN-01–GEN-11 are implemented and pass the filtered runs suite (11/11), and formatting passes. The full acceptance command hangs at `Support/AppWorldTests.RestartAsync_ReusesDataFolderAndSecretStore` (line 11), including when that test is run in isolation; the test synchronously disposes `AppWorld` inside the Avalonia UI dispatch callback (`using var world`), while `AppWorld.Dispose()` blocks on `DisposeAsync()`. The accepted `Files:` list does not include `Support/AppWorldTests.cs`, and the task requires the full acceptance suite to pass. Proposed plan change: add `ImageGen/ImageGen.Acceptance.Tests/Support/AppWorldTests.cs` to `Files:` and make its async test disposal nonblocking (`await using`/await `DisposeAsync`), then rerun the full acceptance suite, formatting and `scripts/check.sh`. Task 257 is blocked pending approval of this scope change.
+
+### 2026-11-13, claude-planner — plan amendment
+Answers the mismatch of 2026-11-11: the hang of `AppWorldTests.RestartAsync_ReusesDataFolderAndSecretStore` was fixed by task 277 (done 2026-11-13, merged in PR #101), so no change of that file is needed here. GEN-01–GEN-11 are on `main`. Remaining work: rerun the full acceptance suite, formatting and `scripts/check.sh`, update the catalog statuses if not yet done, fill the Report and submit. The harness allowance of the other acceptance tasks applies here too.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").

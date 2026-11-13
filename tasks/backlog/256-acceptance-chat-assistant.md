@@ -1,6 +1,6 @@
 ---
 id: 256
-status: blocked
+status: approved
 assignee:
 claimed:
 created: 2026-11-09
@@ -32,7 +32,7 @@ created: 2026-11-09
 ## План
 По одному сценарию CHAT-01 → CHAT-08. Для CHAT-04 — одна `Структура сценария`. Проверки тела запроса — через шаг `Тогда запрос <вид> к OpenRouter содержит …` в `CommonSteps` (поиск по JSON-пути, а не по подстроке).
 
-Файлы: `ImageGen/ImageGen.Acceptance.Tests/Features/ChatAssistant.feature`, `Steps/ChatSteps.cs` (новый), `Steps/CommonSteps.cs`, `Support/FakeOpenRouter.cs` (только новые ответы), ресурс PNG в `ImageGen/ImageGen.Acceptance.Tests/Assets/` (новый), `docs/specs/acceptance-scenarios.md`.
+Файлы: `ImageGen/ImageGen.Acceptance.Tests/Features/ChatAssistant.feature`, `Steps/ChatSteps.cs` (новый), `Steps/CommonSteps.cs`, `Support/FakeOpenRouter.cs` (только новые ответы), ресурс PNG в `ImageGen/ImageGen.Acceptance.Tests/Assets/` (новый), `docs/specs/acceptance-scenarios.md`, `Support/FakeOpenRouter.cs` and `Support/AppWorld.cs` (additive test-harness changes only: new configurable fake responses, catalog fields, world helpers; no change of existing behavior used by other features, no product code).
 
 ### Проверка
 ```
@@ -76,3 +76,7 @@ Plan approved, status `approved`. Changes of the same day apply: the Gherkin sce
 
 ### 2026-11-11, codex-gpt6
 Plan mismatch for CHAT-08: `ReferenceImageLimit.Of` only permits a generation to send references when the selected catalog model declares an `input_references` range. `ImageGen/ImageGen.Acceptance.Tests/Support/FakeOpenRouter.cs` currently serializes only `seed` in fake image model parameters, so the configured models cannot take references. The approved plan permits changes to this fake only for additional assistant responses. Proposed plan change: allow a configurable `input_references` maximum in the fake image-model catalog response, and configure a reference-capable model in CHAT-08 before attaching an image. Keep product code unchanged. The task is blocked until this file-scope change is approved.
+
+### 2026-11-13, claude-planner — plan amendment
+Answers the CHAT-08 mismatch of 2026-11-11. Verified: `ReferenceImageLimit.Of` needs the catalog's `input_references` range, and the fake image catalog serializes only `seed`. The `Files:` line now allows additive harness changes in `Support/FakeOpenRouter.cs` (a configurable `input_references` maximum per fake image model; configure a reference-capable model in CHAT-08 before attaching) and `Support/AppWorld.cs`. Product code stays unchanged. Note: `Features/ChatAssistant.feature` and `Steps/ChatSteps.cs` already exist on `main` (PR #101) — continue from them.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").

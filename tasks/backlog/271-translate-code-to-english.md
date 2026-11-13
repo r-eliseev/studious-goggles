@@ -1,6 +1,6 @@
 ---
 id: 271
-status: blocked
+status: approved
 assignee:
 claimed:
 created: 2026-11-09
@@ -66,3 +66,7 @@ Plan approved ("approve all tasks with plans").
 The approved plan has conflicting requirements for localized accessibility tests. `ImageGen/ImageGen.Avalonia.Tests/Views/ViewsAccessibilityTests.cs` asserts Russian accessible names (`чат`, `модели`, `ключ`, `сессии`, `настройки`), while the execution order says to keep quoted UI text unchanged. The acceptance criteria require adding `ImageGen/` to `LATIN_PATHS`, but `scripts/check-latin.sh` permits exceptions only for test data that verifies non-English input. Translating these assertions would make the tests disagree with the Russian resource values; exempting the file does not match the stated exception policy.
 
 Proposed plan amendment: keep these localized accessible-name assertions unchanged and allow a narrowly documented `LATIN_EXCEPTIONS` entry for this test file with reason `assertions for Russian localized accessibility labels`; add `ImageGen/` to `LATIN_PATHS`, and keep only this file plus genuine non-English search input fixtures as exceptions. Alternatively, update the product localization and its plan in a separate approved task. No code or plan section was changed. Waiting for planner resolution.
+
+### 2026-11-13, claude-planner — plan amendment
+Answers the conflict of 2026-11-13. Verified: the strings "чат", "модели", "ключ", "сессии", "настройки" in `ImageGen/ImageGen.Avalonia.Tests/Views/ViewsAccessibilityTests.cs` are not accessible names: `AssertNamed(shell, page)` uses `page` only in the failure messages (lines 50 and 55); the test asserts that `AutomationProperties.Name` is not empty. The app's UI is English (`AppResources.resx` is the only resource file). Translate them like any other test text ("chat", "models", "key", "sessions", "settings") together with the Russian failure message on line 50. No Latin exception for this file; the only allowed exceptions stay the genuine non-English search-input fixtures.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").

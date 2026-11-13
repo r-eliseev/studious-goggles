@@ -32,7 +32,7 @@ Environment: Linux or Windows (headless).
 1. Add video routes to the fake (start with self-checks in `FakeNetworkTests`).
 2. Implement scenarios VID-01 → VID-04 one at a time.
 
-Files: `ImageGen/ImageGen.Acceptance.Tests/Features/Video.feature`, `Steps/VideoSteps.cs` (new), `Steps/CommonSteps.cs`, `Support/FakeOpenRouter.cs`, `Support/FakeNetworkTests.cs`, `docs/specs/acceptance-scenarios.md`.
+Files: `ImageGen/ImageGen.Acceptance.Tests/Features/Video.feature`, `Steps/VideoSteps.cs` (new), `Steps/CommonSteps.cs`, `Support/FakeOpenRouter.cs`, `Support/FakeNetworkTests.cs`, `docs/specs/acceptance-scenarios.md`, `Support/FakeOpenRouter.cs`, `Support/FakePlatform.cs` and `Support/AppWorld.cs` (additive test-harness changes only, amendment of 2026-11-13).
 
 ### Verification
 ```
@@ -66,3 +66,7 @@ Plan approved, status `approved`. Changes of the same day apply: the Gherkin sce
 
 ### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan) — plan extended
 Tasks 221–223 are done, so VID-05 (audio) is added to this task: with an audio model selected in the session, the assistant gets the `generate_audio` tool (request body), the call creates an audio card (`IsAudio`) that becomes done with an audio file in the data folder; without an audio model the tool is not offered. The fake's audio route follows the code of the OpenRouter audio client (task 221: `chat/completions` with an audio stream) — take the shape from the code and `docs/knowledge/media-generation.md`, not from memory. Expectations from `docs/specs/media-generation.md` (the audio requirements). Split into separate catalog rows (VID-05, VID-06, …) as needed. Plan approved.
+
+### 2026-11-13, claude-planner — plan amendment
+Preventive amendment for all open acceptance tasks: tasks 255, 256 and 261 were blocked only because a needed fake response or world helper was outside their `Files:` line. Additive changes in `Support/FakeOpenRouter.cs`, `Support/FakePlatform.cs` and `Support/AppWorld.cs` are now allowed (new configurable responses, catalog fields, world helpers; no change of behavior other features rely on; no product code). Product/specification discrepancies are still `@ignore @bug-NNN` plus a new task. If two open tasks need the same harness change, the second one reuses it from `main`.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").

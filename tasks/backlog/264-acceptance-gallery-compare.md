@@ -31,7 +31,7 @@ Environment: Linux or Windows (headless).
 ## Plan
 Implement scenarios GAL-01 → GAL-05 one at a time.
 
-Files: `ImageGen/ImageGen.Acceptance.Tests/Features/Gallery.feature`, `Steps/GallerySteps.cs` (new), `Steps/CommonSteps.cs`, `Support/FakePlatform.cs` (if the viewer is replaced), `docs/specs/acceptance-scenarios.md`.
+Files: `ImageGen/ImageGen.Acceptance.Tests/Features/Gallery.feature`, `Steps/GallerySteps.cs` (new), `Steps/CommonSteps.cs`, `Support/FakePlatform.cs` (if the viewer is replaced), `docs/specs/acceptance-scenarios.md`, `Support/FakeOpenRouter.cs`, `Support/FakePlatform.cs` and `Support/AppWorld.cs` (additive test-harness changes only, amendment of 2026-11-13).
 
 ### Verification
 ```
@@ -62,3 +62,7 @@ Created at the owner's request to plan application test scenarios for GPT Luna. 
 
 ### 2026-11-09, owner (in the chat, recorded by claude-bdd-plan)
 Plan approved, status `approved`. Changes of the same day apply: the Gherkin scenarios, step texts, bindings, comments and the "Report" are in English (`docs/conventions.md`, "Language"; ADR 0031 is accepted); a "Structure of a scenario" in this plan is a `Scenario Outline`. Scenario expectations and wording are in the English catalog `docs/specs/acceptance-scenarios.md`. The acceptance project runs in CI (task 252). The flow tests in `ImageGen.Avalonia.Tests/Flows` that a scenario of this task covers are deleted by task 267, not here.
+
+### 2026-11-13, claude-planner — plan amendment
+Preventive amendment for all open acceptance tasks: tasks 255, 256 and 261 were blocked only because a needed fake response or world helper was outside their `Files:` line. Additive changes in `Support/FakeOpenRouter.cs`, `Support/FakePlatform.cs` and `Support/AppWorld.cs` are now allowed (new configurable responses, catalog fields, world helpers; no change of behavior other features rely on; no product code). Product/specification discrepancies are still `@ignore @bug-NNN` plus a new task. If two open tasks need the same harness change, the second one reuses it from `main`.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").

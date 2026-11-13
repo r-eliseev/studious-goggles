@@ -29,7 +29,7 @@ Environment: Linux or Windows (headless).
 ## Plan
 Implement scenarios SRCH-01 → SRCH-04 one at a time.
 
-Files: `ImageGen/ImageGen.Acceptance.Tests/Features/Search.feature`, `Steps/SearchSteps.cs` (new), `Steps/CommonSteps.cs`, `Support/FakeOpenRouter.cs` (embeddings route), `docs/specs/acceptance-scenarios.md`.
+Files: `ImageGen/ImageGen.Acceptance.Tests/Features/Search.feature`, `Steps/SearchSteps.cs` (new), `Steps/CommonSteps.cs`, `Support/FakeOpenRouter.cs` (embeddings route), `docs/specs/acceptance-scenarios.md`, `Support/FakeOpenRouter.cs`, `Support/FakePlatform.cs` and `Support/AppWorld.cs` (additive test-harness changes only, amendment of 2026-11-13).
 
 ### Verification
 ```
@@ -63,3 +63,7 @@ Plan approved, status `approved`. Changes of the same day apply: the Gherkin sce
 
 ### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan) — plan extended
 Tasks 226–228 are done, so SRCH-05 is added to this task: the index status in Settings (`SettingsPageModel.SemanticIndexStatus`) goes Off → Indexing → Ready while the embeddings fake answers; choosing another embedding model (`EmbeddingModels`, `SelectedEmbeddingModel`, `ChangeEmbeddingModelAsync`, the catalog from the OpenRouter fake) reindexes the history (requests to `embeddings` with the new model id in the fake's log); an unavailable model is shown (`IsEmbeddingModelUnavailable`). Split SRCH-05 into separate catalog rows if one scenario gets too long (next free SRCH ids). Files: the same as in the plan plus `Support/FakeOpenRouter.cs` (the embedding model catalog route). Plan approved.
+
+### 2026-11-13, claude-planner — plan amendment
+Preventive amendment for all open acceptance tasks: tasks 255, 256 and 261 were blocked only because a needed fake response or world helper was outside their `Files:` line. Additive changes in `Support/FakeOpenRouter.cs`, `Support/FakePlatform.cs` and `Support/AppWorld.cs` are now allowed (new configurable responses, catalog fields, world helpers; no change of behavior other features rely on; no product code). Product/specification discrepancies are still `@ignore @bug-NNN` plus a new task. If two open tasks need the same harness change, the second one reuses it from `main`.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").

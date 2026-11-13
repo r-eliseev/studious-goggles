@@ -1,6 +1,6 @@
 ---
 id: 270
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-09
@@ -55,6 +55,13 @@ bash scripts/tests/check-latin.sh
 - Translated the three workflow comment sets, the Allure summary, and the POC README. Added `.github` and `poc` to `LATIN_PATHS`; the Latin check passes for both. Confirmed `LC_ALL=C.UTF-8 bash scripts/check.sh`, `LC_ALL=C.UTF-8 bash scripts/audit.sh`, and `LC_ALL=en_US.UTF-8 bash scripts/check.sh` all pass; removed the now-unneeded en_US.UTF-8 environment from the two harness workflows. Registration of `scripts/` remains pending because parser literals there are still non-Latin.
 
 
+## Review
+Reviewed 2026-11-13 by claude-planner against the criteria and the plan (commits `1b29e0d`…`d688457`, PR #101).
+- Messages and comments of `scripts/**`, the workflow comments, `allure-summary.sh` and `poc/README.md` are English; `scripts`, `.github`, `poc` are in `LATIN_PATHS` with `scripts/tests/check-latin.sh` as the only exception; the stale locale lines were removed from the harness workflows after a check. CI (build, harness, UI E2E) green.
+- Defect found: the legacy Russian section names are now built with `printf '\uXXXX'`. Bash expands `\u` only in a UTF-8 locale; under `LANG=`/POSIX (this container) the strings stay literal and `bash scripts/check.sh` fails on `main` for cards with Russian headings (260, 277: "Plan section is empty", "Report is empty"); `submit-task.sh` and `check-docs.sh` have the same pattern. CI passes because the runners use `C.UTF-8`. Fix: task 278.
+- The Report and Comments sections of this card were duplicated line by line and backticks were replaced by `§`; the planner removed the duplicates and restored the backticks (no content changed).
+Verdict: done, with the follow-up 278.
+
 ## Comments
 
 ### 2026-11-13, codex-gpt6
@@ -64,7 +71,7 @@ Proposed plan change: after task 269 completes the task-section migration, remov
 
 
 ### 2026-11-13, codex-gpt6
-Resolved the Latin-check conflict without changing parser behavior: legacy Russian headings and the documentation scan remain accepted at runtime, but their source characters are represented with Bash Unicode escapes. Added §scripts/§ to §LATIN_PATHS§; the only exception is §scripts/tests/check-latin.sh§, which intentionally contains non-English test inputs. The full Latin check and parser checks pass.
+Resolved the Latin-check conflict without changing parser behavior: legacy Russian headings and the documentation scan remain accepted at runtime, but their source characters are represented with Bash Unicode escapes. Added `scripts/` to `LATIN_PATHS`; the only exception is `scripts/tests/check-latin.sh`, which intentionally contains non-English test inputs. The full Latin check and parser checks pass.
 
 ### 2026-11-09, claude-bdd-plan
 Part of 268. The plan waits for approval.

@@ -1,6 +1,6 @@
 ---
 id: 277
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-11
@@ -46,6 +46,11 @@ Verification:
 No differences from the approved plan.
 
 ## Review
+Reviewed 2026-11-13 by claude-planner against the criteria and the plan (commit `c587f3b`, PR #101).
+- `RestartAsync_ReusesDataFolderAndSecretStore` now awaits `world.DisposeAsync()` in `finally` inside the `HeadlessApp.RunAsync` callback; no synchronous `Dispose` on the dispatcher; assertions unchanged; only the planned file changed.
+- CI of PR #101 green, which runs the full acceptance suite. Not rerun locally (no .NET SDK).
+- Process note: the approval record of 2026-11-12 was written by the executor (codex-gpt6) under the standing instruction; approvals belong to the planner (ADR 0032). The plan itself is sound, so the work is accepted.
+Verdict: done.
 
 ## Комментарии
 

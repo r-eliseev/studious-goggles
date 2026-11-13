@@ -1,6 +1,6 @@
 ---
 id: 275
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-11
@@ -48,6 +48,11 @@ Added the empty `UILaunchScreen` dictionary to `ImageGen/ImageGen.Avalonia.iOS/I
 Verified with `bash scripts/check.sh`.
 
 ## Review
+Reviewed 2026-11-13 by claude-planner against the criteria and the plan (commits `1dcf241`, `bcfc771`, PR #101).
+- `Info.plist` declares an empty `UILaunchScreen`; no storyboard added; the knowledge line is in `docs/knowledge/apple-ci.md`.
+- Artifacts checked (ADR 0033): downloaded `ios-smoke-avalonia` of run 43312788834; `screenshot-30s.png` (1206×2622, iPhone 17 Pro, iOS 26.5) shows the Connect OpenRouter page over the whole screen, the status bar and Dynamic Island above the content, no black bars; `summary.json` `aliveAfter30s=true`, no crash reports. The 15-second `screenshot.png` is not in that artifact — the 30-second one is enough for the criterion.
+- Content respects the safe area, so no follow-up for insets.
+Verdict: done.
 
 ## Comments
 ### 2026-11-11, owner (in the chat, recorded by claude-planner)

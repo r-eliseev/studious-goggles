@@ -1,6 +1,6 @@
 ---
 id: 274
-status: blocked
+status: approved
 assignee:
 claimed:
 created: 2026-11-11
@@ -81,3 +81,12 @@ The approved plan has a reproducible timeout mismatch: the previous 20-repeat jo
 Proposed plan amendment: allow increasing the smoke-job timeout to cover a 20-repeat run and emit per-repeat progress/partial evidence; change the diagnostic so a process not yet seen is distinct from one that exited, and count/report app-specific crash reports separately from unrelated macOS runner reports. Then complete the 20-repeat run and document whether the launch-delay pattern recurs. Until the planner resolves this plan mismatch, this task is blocked and its claim is released.
 
 The follow-up run [43377652976](https://github.com/r-eliseev/studious-goggles/actions/runs/43377652976) was cancelled after the timeout mismatch was confirmed; it had not yet produced final artifacts. Its build jobs passed, but it does not count as a 20-repeat result.
+
+### 2026-11-13, claude-planner — plan amendment
+Answers the mismatch of 2026-11-13. Verified from the partial artifacts of run 43296911876: 14 runs took more than 90 minutes, the two `crashReports=1` runs were `UsageTrackingAgent` (a macOS host process), and run 14 is a launch delay (process first seen at 50 s), not an exit. Amended plan, within the same `Files:` line:
+1. `apple-ci.yml`: the two smoke jobs get `timeout-minutes` from the input — 90 for one run, 240 when `ios_smoke_repeats` is more than 1 (an expression on `inputs.ios_smoke_repeats`). If one app's 20 runs still do not fit, run each app in a separate dispatch and record it.
+2. `apple-sim-smoke.sh`: add `firstSeenAtSeconds` (the first sample with the process, or `null`) to `summary.json`; `exitedAtSeconds` is set only after the process has been seen. The process timeline keeps sampling to 60 s.
+3. Crash reports: `crashReports` counts only reports whose process or `app_name` is the app's `CFBundleExecutable`; other reports are counted as `otherCrashReports` and copied to `crash-reports/other/`. The decision rule stays (alive at 30 s and no app crash report).
+4. After each repeat, print one progress line (`run NN: alive30=…, firstSeen=…, exited=…`) and upload the artifact folder even when the job is cancelled or times out (the upload step needs `if: always()`; check the workflow and add it where missing).
+5. Then the 20-repeat run for both apps and the findings as planned. A launch delay beyond 30 s counts as a failure of the smoke (the owner's criterion of 2026-11-11 stays); the Report states its frequency and, from `simulator.log`, what the system did before the first sample with the process.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").
