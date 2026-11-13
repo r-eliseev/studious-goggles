@@ -8,7 +8,7 @@ Feature: Chat and assistant
       | response | text |
       | text     | Could you tell me more about the style? |
     When the user creates a new session
-    And the user sends the message "Make a red bicycle"
+    And the user submits the chat message "Make a red bicycle"
     Then the assistant message "Could you tell me more about the style?" is shown
     And no run is shown in the chat
 
@@ -19,7 +19,7 @@ Feature: Chat and assistant
       | response       | prompt                                                        |
       | generate_images | A red bicycle with a brass bell, leaning against a brick wall. |
     When the user creates a new session
-    And the user sends the message "Draw a red bicycle"
+    And the user submits the chat message "Draw a red bicycle"
     Then the assistant tool prompt "A red bicycle with a brass bell, leaning against a brick wall." is preserved in the run, card, and generation request
 
   @CHAT-03 @S2.1
@@ -32,8 +32,8 @@ Feature: Chat and assistant
       | response | text                      |
       | text     | I will warm the lighting. |
     When the user creates a new session
-    And the user sends the message "Paint a lighthouse"
-    And the user sends the message "Make the lighting warmer"
+    And the user submits the chat message "Paint a lighthouse"
+    And the user submits the chat message "Make the lighting warmer"
     Then the latest assistant request contains the system prompt and current run prompt "A watercolor lighthouse on a rocky coast at sunset."
 
   @CHAT-04 @S2.5
@@ -43,7 +43,7 @@ Feature: Chat and assistant
       | response | status | body                           |
       | error    | <status> | {"error":{"message":"failure"}} |
     When the user creates a new session
-    And the user sends the message "Draw a red bicycle"
+    And the user submits the chat message "Draw a red bicycle"
     Then the user message "Draw a red bicycle" remains in the chat
     And an assistant error message "<error>" is shown
 
@@ -70,7 +70,7 @@ Feature: Chat and assistant
       | response        | prompt                                     |
       | generate_images | A red bicycle leaning against a brick wall. |
     When the user creates a new session
-    And the user sends the message "Draw a red bicycle"
+    And the user submits the chat message "Draw a red bicycle"
     Then an assistant error message "Something went wrong." is shown
     When the user retries the assistant response
     Then the assistant tool prompt "A red bicycle leaning against a brick wall." is preserved in the run, card, and generation request
@@ -80,3 +80,18 @@ Feature: Chat and assistant
     Given the user has a saved OpenRouter key
     When the user creates a new session
     Then the chat shows the default assistant model
+
+  @CHAT-08 @S2.3 @F4.5 @F10.6
+  Scenario: An attached picture is sent as a generation reference after consent
+    Given the OpenRouter image model catalog:
+      | id                                  | name            | seed | price per MP | input references |
+      | black-forest-labs/flux.2-klein-4b  | FLUX.2 Klein 4B | true | 0.014        | 4                |
+    And the user has a saved OpenRouter key
+    And the assistant answers with:
+      | response        | prompt                                      |
+      | generate_images | Turn this reference into a watercolor scene. |
+    And the user accepts the image consent
+    When the user creates a new session
+    And the user attaches the sample PNG
+    And the user submits the chat message "Make this a watercolor"
+    Then the "image generation" request to OpenRouter has a value at JSON path "$.input_references[0]"

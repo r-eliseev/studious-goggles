@@ -3,6 +3,7 @@ using ImageGen.Acceptance.Tests.Support;
 using ImageGen.Avalonia.Views;
 using ImageGen.Core.Services;
 using ImageGen.Presentation.PageModels;
+using ImageGen.Presentation.Services;
 using Reqnroll;
 using Xunit;
 
@@ -45,6 +46,53 @@ public sealed class ChatSteps(ScenarioContext scenario)
         Chat.InputText = text;
         return Task.FromResult(true);
     }, TestContext.Current.CancellationToken);
+
+    [When("the user attaches the sample PNG")]
+    public Task WhenTheUserAttachesTheSamplePng() => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        var imagePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../Assets/reference.png"));
+        var content = await File.ReadAllBytesAsync(imagePath, cancellationToken);
+        var image = new PickedImage(content, "image/png", "reference.png");
+        World.Platform.QueuePickedImage(image);
+        await Chat.AttachImageCommand.ExecuteAsync(null);
+        Assert.Single(Chat.PendingAttachments);
+        scenario.Set($"data:image/png;base64,{Convert.ToBase64String(content)}", "chat.reference-image-data-url");
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [When("the user submits the chat message {string}")]
+    public async Task WhenTheUserSubmitsTheChatMessage(string message)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        Task? execution = null;
+        await Task.Run(() => HeadlessApp.RunAsync(_ =>
+        {
+            Chat.InputText = message;
+            execution = Chat.SendCommand.ExecuteAsync(null);
+            return Task.FromResult(true);
+        }, cancellationToken), cancellationToken).ConfigureAwait(false);
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        Assert.NotNull(execution);
+        try
+        {
+            await execution!.WaitAsync(timeout.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            var requests = World.Network.Requests.Select(request => $"{request.Method} {request.Address}").ToArray();
+            var isBusy = await HeadlessApp.RunAsync(_ => Task.FromResult(Chat.IsBusy), CancellationToken.None);
+            throw new TimeoutException($"Sending the chat message timed out; Chat.IsBusy={isBusy}; requests={string.Join(", ", requests)}.");
+        }
+
+        await HeadlessApp.RunAsync(_ =>
+        {
+            Assert.False(Chat.IsBusy);
+            Assert.Contains(Chat.Items.OfType<MessageItemViewModel>(), item => item.IsUser && item.Text == message);
+            return Task.FromResult(true);
+        }, cancellationToken);
+    }
 
     [Then("sending a chat message is unavailable")]
     public void ThenSendingAChatMessageIsUnavailable() => Assert.False(Chat.SendCommand.CanExecute(null));
