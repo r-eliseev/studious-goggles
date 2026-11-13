@@ -6,142 +6,142 @@ claimed:
 created: 2026-10-27
 ---
 
-# Ручная проверка скелета на Windows
+# Manual Windows check of the application skeleton
 
-## Описание
-Проверить ходячий скелет от начала до конца с настоящим ключом OpenRouter и записать результат. Проверку выполняет человек (нужны ключ и клики в приложении); агент готовит сборку, читает журнал и оформляет найденные дефекты задачами. Код в этой задаче не меняется.
+## Description
+Check the working application skeleton end to end with a real OpenRouter key and record the result. A person performs the check (the key and app interaction are required); the agent prepares the build, reads the log, and files tasks for defects. This task does not change code.
 
-Зависит от: 015.
-Среда: только Windows (запуск приложения и ручная проверка человеком).
+Depends on: 015.
+Environment: Windows only (run the app and perform the manual check).
 
-## Критерии готовности
-- Каждый пункт сценария из плана отмечен в «Отчёте»: прошёл или нет, с описанием расхождения.
-- На каждое расхождение создана задача `scripts/new-task.sh --publish backlog <имя>` с шагами воспроизведения; номера перечислены в «Отчёте».
-- Найденные неочевидные факты (например, поведение бесплатной модели ассистента) записаны в `docs/knowledge/`.
+## Acceptance criteria
+- Mark every scenario item in “Report” as passed or failed, with a description of any discrepancy.
+- Create a task for every discrepancy with reproduction steps using `scripts/new-task.sh --publish backlog <name>`; list the task numbers in “Report”.
+- Record any non-obvious findings (for example, behavior of the free assistant model) in `docs/knowledge/`.
 
-## Анализ
-- Это первый живой вызов OpenRouter: при подготовке задач ключа не было, клиент проверен только на подменённом HTTP.
-- Генерации платные: модель по умолчанию `black-forest-labs/flux.2-klein-4b` стоит около $0.014 за мегапиксель. Сценарий ниже тратит меньше $0.20.
-- Бесплатная модель ассистента может отвечать 429 (лимит частоты); это ожидаемо и должно показываться в чате ошибкой.
+## Analysis
+- This is the first live OpenRouter call: there was no key while the tasks were prepared, and the client was tested only with a fake HTTP handler.
+- Generations cost money: the default model `black-forest-labs/flux.2-klein-4b` costs about $0.014 per megapixel. The scenario below costs less than $0.20.
+- The free assistant model may return 429 (rate limit); this is expected and should appear as an error in chat.
 
-## План
-После «Refresh» у моделей OpenRouter в строке видна цена («$0.014 / MP» у FLUX.2 Klein 4B), у моделей fal — «price unknown»; повторное открытие экрана берёт цены из кэша без задержки.
+## Plan
+After “Refresh”, OpenRouter model rows show a price (“$0.014 / MP” for FLUX.2 Klein 4B), while fal models show “price unknown”. Reopening the screen reads prices from cache without delay.
 
-В Windows MAUI: широкое окно — шапка как раньше; длинное название обрезается, чипы переносятся на вторую строку.
+In MAUI on Windows, the wide window keeps the existing header; long names are truncated and chips wrap onto a second line.
 
-Дополнительно проверить обновление списка сессий: новое сообщение сразу обновляет название строки и число прогонов; Repeat увеличивает число прогонов без перемещения строки; при активном поиске обновление сохраняет запрос, результаты, прокрутку и подсветку текущей сессии.
+Also check session list updates: a new message immediately updates the row title and run count; Repeat increments the run count without moving the row; while search is active, updates preserve the query, results, scroll position, and highlight of the current session.
 
-Актуальная область этой задачи — Windows. Android follow-up из исторических комментариев выполняются в140, комментарии не переписываются. Внешний вид/названия кнопок сверять с текущей версией (после135 название экрана ключа станет provider-neutral). Прежние оценки стоимости не являются гарантией: перед живыми вызовами показать текущую цену человеку; существующие картинки использовать повторно.
+The current scope is Windows. Android follow-up items from historical comments belong to task 140; do not rewrite those comments. Compare appearance and button names with the current version (after task 135 the key screen becomes provider-neutral). Previous cost estimates are not guaranteed: show the person the current price before live calls, and reuse existing images.
 
-1. Агент: собрать приложение `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0` и передать человеку путь `ImageGen/ImageGen.Maui/bin/Debug/net10.0-windows10.0.19041.0/win-x64/ImageGen.Maui.exe`.
-2. Человек проходит сценарий и пишет результат каждого пункта в «Комментарии»:
-   1. Первый запуск: открывается страница «OpenRouter key». Неверный ключ → «OpenRouter rejected this key.» Верный ключ → возврат к пустому списку сессий.
-   2. «New session» → открывается чат, кнопка «Models: 1 × 1».
-   3. Сообщение «draw a red fox in a snowy forest» → появляется блок прогона с промптом (`Prompt: ...`, один раз, без дубля в сообщении ассистента — задача 057) и карточка; карточка проходит «Queued»/«Generating...» → «Done» с картинкой, моделью, сидом и ценой.
-   4. Сообщение «make it night» → новый прогон с изменённым промптом (в промпте есть ночь, остальное сохранено).
-   5. Сообщение без ясной задачи (например «hi») → ассистент отвечает текстом без прогона.
-   6. На карточке: Repeat → новая карточка с тем же сидом; New seed → новая карточка с другим сидом; Edit → окно с точным промптом, после правки — карточка с тем же сидом и новым промптом.
-   7. Кнопка моделей → выбрать 2 модели и 2 запуска → Save → «Models: 2 × 2»; следующее сообщение даёт 4 карточки, у двух моделей одинаковые пары сидов.
-   8. Модель без seed (на экране моделей «no seed») → на карточке «seed not supported».
-   9. Зафиксировать провайдер и commit. Закрыть приложение во время генерации, открыть снова: задание с persisted resumable handle (fal) возобновляется без повторного submit; без handle (синхронный OpenRouter до102/129) получает Interrupted. При отсутствующем provider после106 ожидается ModelUnavailable. Не применять одно ожидание Error ко всем провайдерам; сверить S3.8 текущей версии.
-   10. Назад к списку → сессия названа по первому сообщению; Delete → подтверждение → сессия исчезает, папка `%LOCALAPPDATA%\User Name\com.companyname.imagegen.maui\Data\images\<id>` удалена.
-   11. Поиск по сессиям (задача 101): запрос «watte» находит сессию со словом «water», запрос «lighthu» — сессию со словом «lighthouse». Точное начало слова («wate») должно стоять в выдаче выше совпадения с опечаткой.
-   12. Доступность (задача 103): на пустом списке сессий экранный диктор читает у кнопки «New session».
-   13. Экран моделей сессии (задачи 090, 092 и 204): на узкой странице и в широкой панели есть три вкладки «Image models», «Assistant model» и «Video models», по умолчанию открыта первая; переключение не сбрасывает выборы; один Save сохраняет выбранные модели и ассистента. Модели сгруппированы по производителю, выбранная группа раскрыта; нажатие на заголовок сворачивает и раскрывает её. Поиск оставляет только совпавшие раскрытые группы; после очистки восстанавливаются состояния до поиска, после Refresh состояние сохраняется. Tab фокусирует вкладки, Enter переключает; диктор читает название вкладки и заголовок группы с expanded/collapsed. Проверить, что в группе ассистента можно выбрать только одну модель.
-   14. Клавиатура/safe area (задача 095, только Windows): страницы не получили видимых изменений и не добавляют лишних отступов при обычном запуске.
-   15. Сводка прогона (задача 096): отправить промпт на 2 модели × 2, проверить обновление счётчика и суммы цен по мере готовности карточек и совпадение сводки после перезапуска.
-   16. Лента MAUI (задача 097): открыть длинную сессию — видна последняя строка; отправить сообщение и дождаться карточки — она не скрыта полем ввода; во время обновления карточки нижний край остаётся виден, пока пользователь следует за концом; прокрутить вверх — обновление не дёргает ленту; вернуться вниз — следование возобновляется.
-   17. Повторно открыть и закрыть чат после отправки — нет повторных прокруток и ошибок от исчезнувшей страницы.
-   18. MAUI MediaElement (задача205): готовое видео на карточке показано как обложка/значок с Play (219); Play открывает отдельную страницу и запускает видео, Escape/Back закрывает её и останавливает звук; аудио-карточка остаётся встроенным плеером с controls. Проверить Windows-карточку, контекстное меню и keyboard navigation.
+1. Agent: build the app with `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-windows10.0.19041.0` and give the person the path `ImageGen/ImageGen.Maui/bin/Debug/net10.0-windows10.0.19041.0/win-x64/ImageGen.Maui.exe`.
+2. The person follows the scenario and records the result of each item in “Comments”:
+   1. First run: the “OpenRouter key” page opens. An invalid key shows “OpenRouter rejected this key.”; a valid key returns to the empty sessions list.
+   2. “New session” opens chat with the “Models: 1 × 1” button.
+   3. Send “draw a red fox in a snowy forest” → a run block with the prompt (`Prompt: ...`, shown once, not duplicated in the assistant message — task 057) and a card appear; the card transitions from “Queued”/“Generating...” to “Done” with image, model, seed, and price.
+   4. Send “make it night” → a new run with an updated prompt (the prompt mentions night and preserves the rest).
+   5. Send a message without a clear request (for example, “hi”) → the assistant replies with text and no run.
+   6. On a card: Repeat creates a new card with the same seed; New seed creates a new card with a different seed; Edit opens a window with the exact prompt, then creates a card with the same seed and edited prompt.
+   7. Open the model picker, select 2 models and 2 runs, then Save → “Models: 2 × 2”; the next message creates 4 cards, with the same pair of seeds for each model.
+   8. A model without seed support (shown as “no seed” on the model screen) displays “seed not supported” on its card.
+   9. Record the provider and commit. Close the app during generation and reopen it: a job with a persisted resumable handle (fal) resumes without another submit; a job without a handle (synchronous OpenRouter before 102/129) becomes Interrupted. A missing provider after 106 should produce ModelUnavailable. Do not expect Error for every provider; compare with current S3.8.
+   10. Return to the list → the session is named after its first message; Delete → confirm → the session disappears and `%LOCALAPPDATA%\User Name\com.companyname.imagegen.maui\Data\images\<id>` is removed.
+   11. Session search (task 101): query “watte” finds a session containing “water”; query “lighthu” finds one containing “lighthouse”. An exact word prefix (“wate”) should rank above a typo match.
+   12. Accessibility (task 103): on an empty sessions list, the screen reader reads the “New session” button label.
+   13. Session models screen (tasks 090, 092, and 204): the narrow page and wide pane have “Image models”, “Assistant model”, and “Video models” tabs, with the first open by default; switching tabs does not reset selections; one Save persists selected models and assistant. Models are grouped by vendor and the selected group is expanded; clicking the header collapses or expands it. Search keeps only matching expanded groups; clearing search restores their prior states, and Refresh preserves the current state. Tab focuses tabs and Enter switches them; the screen reader announces the tab name and group header with expanded/collapsed state. Verify only one assistant model can be selected.
+   14. Keyboard/safe area (task 095, Windows only): pages show no visible changes and add no extra spacing during normal startup.
+   15. Run summary (task 096): send a prompt to 2 models × 2; check that the counter and total price update as cards complete and that the summary matches after restart.
+   16. MAUI transcript (task 097): open a long session and verify the last row is visible; send a message and wait for a card, which must not be hidden by the input; while the card updates, keep the bottom edge visible as long as the user follows the end; scroll up and verify updates do not jerk the transcript; scroll down and verify following resumes.
+   17. Reopen and close chat after sending; there should be no duplicate scrolling or errors from a disappeared page.
+   18. MAUI MediaElement (task 205): a completed video appears on its card as a poster/icon with Play (219); Play opens a separate page and starts the video; Escape/Back closes it and stops audio; an audio card remains an embedded player with controls. Check the Windows card, context menu, and keyboard navigation.
 
-3. Агент: по комментариям заполнить «Отчёт», завести задачи на расхождения, обновить `docs/knowledge/` и `docs/status.md`.
+3. Agent: use the comments to fill in “Report”, create tasks for discrepancies, and update `docs/knowledge/` and `docs/status.md`.
 
-После задачи 131 проверить MAUI Windows viewer: открыть готовую карточку, проверить вписывание без обрезки и перелистывание внутри одного run, закрытие кнопкой и Escape, возврат фокуса на карточку, bitmap не закрывает окно, свободный фон закрывает; проверить портретное и альбомное изображения, letterbox, padding и toolbar; отсутствующий файл показывает локализованное сообщение. После146 проверить failed previous/next: сохраняются показанная картинка, позиция и доступное имя; повторное нажатие пробует тот же соседний файл; быстрые переходы не применяют устаревшую загрузку.
+After task 131, check the MAUI Windows viewer: open a completed card; verify that the image fits without cropping and navigation stays within one run; close with the button and Escape; verify focus returns to the card; clicking the bitmap does not close the window, while clicking the empty background does. Check portrait and landscape images, letterboxing, padding, and toolbar; a missing file shows a localized message. After task 146, check failed previous/next navigation: the displayed image, position, and accessible name are preserved; retrying uses the same adjacent file; rapid navigation does not apply stale loads.
 
-Файлы: `tasks/v0.1/016-skeleton-manual-check.md`, `docs/knowledge/*.md`, `docs/status.md` (только по результатам проверки)
+Files: `tasks/v0.1/016-skeleton-manual-check.md`, `docs/knowledge/*.md`, `docs/status.md` (only based on check results)
 
-### Проверка
+### Verification
 ```
 scripts/check.sh
 ```
 
-### Сохранение картинки (задача 080)
-1. Windows: пункт «Save image as…» у готовой карточки открывает диалог «Сохранить как»; предложенное имя `imagegen-<8 символов>.png`; файл открывается.
-2. Android-пункты перенесены в140; iOS проверяется только при наличии отдельной согласованной среды.
-3. На карточке после сохранения появляется «Saved».
+### Saving an image (task 080)
+1. Windows: “Save image as…” on a completed card opens the “Сохранить как” dialog; suggested filename is `imagegen-<8 characters>.png`; the file opens.
+2. Android items moved to task 140; check iOS only if a separate, approved environment is available.
+3. After saving, the card shows “Saved”.
 
-Задача 156 (MAUI Windows): в «Assistant model» модели OpenRouter и настроенных chat-провайдеров показаны с подписью провайдера; модели одного имени различаются. Выбрать модель другого провайдера, сохранить и повторно открыть экран — сохранённые provider id и model id остаются выбранными. Image-only Together в список не попадает.
+Task 156 (MAUI Windows): in “Assistant model”, OpenRouter models and configured chat providers appear with provider labels; same-named models are distinguishable. Select a model from another provider, save, and reopen the screen; the saved provider id and model id remain selected. Image-only Together does not appear in the list.
 
-### Сравнение изображений (задача 023, MAUI Windows)
-Открыть Compare в меню успешной карточки, выбрать другую успешную картинку той же сессии; проверить подписи model/seed/cost, рядом и Overlay, слайдер мышью и клавишами ←/→. Убедиться, что изображения сохраняют пропорции, закрытие Close/Escape возвращает в чат, отсутствующий файл показывает сообщение.
+### Image comparison (task 023, MAUI Windows)
+Open Compare from a successful card's menu and select another successful image from the same session; check model/seed/cost labels, side-by-side and Overlay modes, and the slider with the mouse and ←/→ keys. Verify that images preserve their aspect ratio, Close/Escape returns to chat, and a missing file shows a message.
 
-## Отчёт
+## Report
 
-## Комментарии
+## Comments
 
 ### 2026-10-30, codex-gpt6
-Задача 133: на Windows MAUI проверить отображение фактических ширины/высоты и сокращённого ratio под картинкой, отсутствие строки на карточке без изображения, сохранение строки при обновлении той же карточки, сброс при новой генерации и доступность dimensions через Narrator.
+Task 133: on MAUI Windows, verify the actual width/height and shortened ratio under an image, no line on a card without an image, preservation of the line when the same card updates, reset on a new generation, and availability of dimensions through Narrator.
 
-### 2026-10-28, claude-07d6 (задача 020, параметры)
-Добавить к ручной проверке MAUI под Windows: экран «Параметры» сессии (кнопка рядом с «Модели» в чате) открывается, пикеры показывают варианты выбранных моделей и «По умолчанию модели», сохранение возвращает в чат; на карточке с заменой видна строка «Соотношение сторон: … → …».
+### 2026-10-28, claude-07d6 (task 020, parameters)
+Add to the MAUI Windows manual check: the session “Параметры” screen (button beside “Модели” in chat) opens; pickers show options for selected models and “По умолчанию модели”; saving returns to chat; a replaced card shows “Соотношение сторон: … → …”.
 
-### 2026-10-28, claude-07d6 (задача 045, журнал)
-Добавить к ручной проверке MAUI под Windows: после сценария открыть `%LOCALAPPDATA%`-папку приложения (`FileSystem.AppDataDirectory`) → `logs/imagegen-<дата>.log`. Первая строка — запуск с версией, оболочкой `MAUI` и путём к логам; ключа в файле нет. Android-часть на устройстве — тот же файл в папке приложения.
+### 2026-10-28, claude-07d6 (task 045, logging)
+Add to the MAUI Windows manual check: after the scenario, open the app's `%LOCALAPPDATA%` folder (`FileSystem.AppDataDirectory`) → `logs/imagegen-<date>.log`. The first line records startup, version, `MAUI` shell, and log path; no key is present. On Android, check the same file in the app folder on the device.
 
-### 2026-10-28, claude-07d6 (задача 018, вложения)
-Добавить к ручной проверке MAUI под Windows: кнопка «Attach image» открывает выбор файла, согласие F10.6 показывается перед первой картинкой, счётчик «N of 4» обновляется, удаление вложения работает; после отправки картинка уходит ассистенту (если модель её принимает).
+### 2026-10-28, claude-07d6 (task 018, attachments)
+Add to the MAUI Windows manual check: “Attach image” opens the file picker, F10.6 consent appears before the first image, “N of 4” updates, and an attachment can be removed; after sending, the image is sent to the assistant if the model accepts it.
 
-### 2026-10-28, claude-07d6 (задача 019, описание)
-Добавить к ручной проверке MAUI под Windows: кнопки «Describe» и «Prompt» на готовой карточке; диалог показывает провайдера, модель и цену или «cost unknown»; поле ввода не меняется до подтверждения.
+### 2026-10-28, claude-07d6 (task 019, image description)
+Add to the MAUI Windows manual check: “Describe” and “Prompt” buttons appear on a completed card; the dialog shows provider, model, and price or “cost unknown”; the input is unchanged until confirmation.
 
-### 2026-10-28, первая попытка ручной проверки (владелец, записал claude)
-Собрано из `main` d4cae55, запущено на Windows. Страница ключа работает: ключ проверен (`GET /key` → 200) и сохранён. Сценарий отложен владельцем после пункта 3: ассистент ответил «Assistant error (RateLimited): Provider returned error» — бесплатная `google/gemma-4-31b-it:free` перегружена у провайдера (429, `upstream_provider_shared_pool`, по журналу). Замечания владельца стали задачами: 049 (платная модель ассистента по умолчанию и выбор модели), 050 (отправка по Enter), 051 (макеты и дизайн-система), 052 (журнал пишет маску ключа из ответа `/key`). Продолжить сценарий после 049.
+### 2026-10-28, owner (first manual check attempt, recorded by claude)
+Built from `main` d4cae55 and run on Windows. The key page works: the key was checked (`GET /key` → 200) and saved. The owner paused the scenario after item 3: the assistant returned “Assistant error (RateLimited): Provider returned error” because the free `google/gemma-4-31b-it:free` model was overloaded by its provider (429, `upstream_provider_shared_pool`, according to the log). Owner feedback became tasks: 049 (paid default assistant model and model selection), 050 (send with Enter), 051 (mockups and design system), and 052 (log contains the key mask from the `/key` response). Resume the scenario after 049.
 
-### 2026-10-28, вторая попытка ручной проверки (владелец, записал claude)
-Собрано из ветки 053 (be25d0b), Windows. Сессия «blue square moon» переключена на `anthropic/claude-haiku-5.5`: ассистент вызвал `generate_images`, генерация `Succeeded` за 6 с, $0.014, файл сохранён (232 КБ JPEG). Найдено: картинка на карточке не видна — 054 (кнопки не обрезаны, видны при прокрутке); Enter не отправляет — 056 (Windows-часть 050); нужно копирование текста — 055; промпт показан дважды (сообщение ассистента и блок прогона) — 057.
+### 2026-10-28, owner (second manual check attempt, recorded by claude)
+Built from branch 053 (be25d0b) and run on Windows. The “blue square moon” session was switched to `anthropic/claude-haiku-5.5`: the assistant called `generate_images`; generation `Succeeded` in 6 s, cost $0.014, and the file was saved (232 KB JPEG). Findings: image is not visible on the card — 054 (buttons are not clipped and remain visible while scrolling); Enter does not send — 056 (Windows part of 050); text copying is needed — 055; the prompt appears twice (assistant message and run block) — 057.
 
-### 2026-10-28, claude (задача 062, тема MAUI — что проверить на Windows)
-Ручной пункт для волны 2 (062). Не проверено в облачной сессии: окно MAUI и смена темы.
-1. В папке данных создать `appearance.json` с `{"style":"gallery","theme":"dark"}`, запустить: тёмная тема, акцент бирюзовый (`#5EC2B5`), шрифт Onest у текста.
-2. Заменить на `{"style":"quiet","theme":"system"}` и переключить тему Windows: приложение меняет тему без перезапуска.
-3. Значения `IgFontSizeBody`, `IgControlHeight` по платформе (WinUI 14 или 15, высота 32) видны на экране, где они используются (после задач 063–072).
+### 2026-10-28, claude (task 062, MAUI theme: Windows checks)
+Manual item for wave 2 (062). Not checked in the cloud session: the MAUI window and theme switching.
+1. Create `appearance.json` in the data folder with `{"style":"gallery","theme":"dark"}` and launch: dark theme, teal accent (`#5EC2B5`), and Onest font for text.
+2. Change it to `{"style":"quiet","theme":"system"}` and switch the Windows theme; the app should change theme without restarting.
+3. Verify platform values for `IgFontSizeBody` and `IgControlHeight` (WinUI 14 or 15, height 32) on screens where they are used (after tasks 063–072).
 
-### 2026-10-28, claude (задача 055, копирование текста — MAUI, Windows и Android)
-1. Windows: у ответа ассистента и у строки промпта прогона есть кнопка «Copy»; нажатие кладёт текст в буфер (вставить в блокнот), рядом на две секунды появляется «Copied».
-2. Android: та же кнопка «Copy» у ответа ассистента и промпта копирует текст. Долгого нажатия для копирования нет: метка MAUI не выделяется (решение записано в `docs/knowledge/maui.md`).
+### 2026-10-28, claude (task 055, copy text: MAUI, Windows and Android)
+1. Windows: the assistant response and run prompt row have a “Copy” button; clicking copies the text (paste it into Notepad), and “Copied” appears beside it for two seconds.
+2. Android: the same “Copy” button on the assistant response and prompt copies text. Long-press copying is unavailable: MAUI labels cannot be selected (decision recorded in `docs/knowledge/maui.md`).
 
-### 2026-10-28, claude (задача 066, список сессий и ключ — MAUI, Windows и Android)
-1. Windows: список делится на «Today» и «Earlier»; при ширине окна от 840 справа пустое состояние «What do you want to draw?»; при наведении на строку видна иконка корзины.
-2. Android: удаление сессии — свайп влево и красная кнопка Delete (подтверждение есть).
-3. Экран ключа: карточка по центру; при отказе ключа текст ошибки красный (само поле в MAUI не подсвечивается — записано в отчёте 066).
+### 2026-10-28, claude (task 066, sessions list and key: MAUI, Windows and Android)
+1. Windows: the list is divided into “Today” and “Earlier”; at window widths of 840 or more, the right side shows the empty state “What do you want to draw?”; hovering over a row shows a trash icon.
+2. Android: delete a session by swiping left and tapping the red Delete button (confirmation is shown).
+3. Key screen: the card is centered; an invalid key shows red error text (the MAUI field itself is not highlighted; see task 066 report).
 
-### 2026-10-28, claude (задача 070, модели и параметры — MAUI, Windows и Android)
-1. Модели: «Image models · N selected» меняется при отметке флажка; ассистент выбирается переключателем (одна отметка), у строки видны теги «free» и «takes images».
-2. Кнопки Save и Cancel внизу; на Windows Save слева. На Android Cancel — системный «назад» и кнопка Cancel тоже работает.
+### 2026-10-28, claude (task 070, models and parameters: MAUI, Windows and Android)
+1. Models: “Image models · N selected” changes when a checkbox is toggled; choose the assistant with a single-selection radio button, and verify row tags “free” and “takes images”.
+2. Save and Cancel buttons are at the bottom; on Windows, Save is on the left. On Android, system Back acts as Cancel, and the Cancel button also works.
 
-### 2026-10-28, claude (задача 072, диалоги Avalonia — что проверить на рабочем столе)
-Диалоги подтверждения и ввода: заголовок крупнее, поля на всю ширину, кнопка удаления красная. Порядок кнопок: основная первой на Windows и Linux. Escape закрывает окно как «Cancel», Enter в однострочном вводе подтверждает. Не проверено в облачной сессии (нужен рабочий стол): см. также 046.
+### 2026-10-28, claude (task 072, Avalonia dialogs: desktop checks)
+Confirmation and input dialogs: larger title, full-width fields, red delete button. Button order: primary action first on Windows and Linux. Escape closes the window as “Cancel”; Enter confirms single-line input. Not checked in the cloud session (desktop required); see 046.
 
-### 2026-10-28, claude (задача 065, экран настроек — MAUI и Avalonia)
-1. Шестерёнка внизу списка сессий открывает «Settings»; ключ показан последними четырьмя символами; «Change…» ведёт на экран ключа.
-2. Стиль (Quiet, Gallery, Notebook) и тема (System, Light, Dark) меняются сразу и сохраняются после перезапуска (`appearance.json`).
-3. На Windows «Open folder» открывает папку логов; на Android кнопки нет.
+### 2026-10-28, claude (task 065, Settings screen: MAUI and Avalonia)
+1. The gear at the bottom of the sessions list opens “Settings”; the key is shown by its last four characters; “Change…” opens the key screen.
+2. Style (Quiet, Gallery, Notebook) and theme (System, Light, Dark) change immediately and persist after restart (`appearance.json`).
+3. On Windows, “Open folder” opens the logs folder; the button is absent on Android.
 
 ### 2026-10-29, codex-review
-Android ручные сценарии вынесены в140. Исторические результаты сохранены; текущий recovery проверяется по провайдеру/S3.8, а не общим ожиданием Interrupted для fal.
+Android manual scenarios were moved to task 140. Historical results are preserved; current recovery is checked by provider/S3.8, not by a blanket Interrupted expectation for fal.
 
-### 2026-10-30, codex-gpt6 (задача 135)
-После135/136 проверить provider-neutral keys в MAUI Windows:
-1. Settings перечисляет настроенных провайдеров, показывает маску последних четырёх символов или Not connected; Change открывает экран с именем выбранного провайдера.
-2. По очереди добавить/сменить ключи OpenRouter, fal и Together (если зарегистрирован136): каждый сохраняется под своим провайдером; неверная проверка не заменяет старый ключ.
-3. Remove для необязательного провайдера удаляет только его ключ и оставляет Settings открытым. Remove OpenRouter показывает предупреждение о необходимом ключе ассистента; после возврата к Sessions ввод OpenRouter запрашивается снова.
-4. Без ключа конкретного provider запрос чата/генерации показывает обычную ошибку InvalidKey и приложение остаётся открытым. Открыть обычный журнал и убедиться, что ключи/Authorization отсутствуют; реальные секреты в комментарии не записывать.
-5. В списке моделей совпадающие имена от разных провайдеров различаются по подписи provider display name и id.
+### 2026-10-30, codex-gpt6 (task 135)
+After tasks 135/136, check provider-neutral keys in MAUI Windows:
+1. Settings lists configured providers and shows either the last four key characters or Not connected; Change opens the key screen for the selected provider.
+2. Add or replace OpenRouter, fal, and Together keys in turn (if Together is registered by 136); each is stored under its provider, and invalid validation does not replace the old key.
+3. Remove for an optional provider deletes only its key and leaves Settings open. Remove for OpenRouter shows a warning that the assistant key is required; after returning to Sessions, OpenRouter key entry is requested again.
+4. Without a key for a given provider, a chat/generation request shows the usual InvalidKey error and the app remains open. Open the regular log and verify that it contains no keys or Authorization headers; do not record real secrets in comments.
+5. In the model list, same-named models from different providers are distinguishable by provider display name and id.
 
-### 2026-11-01, claude-audit (задачи 088, 139, 148 — меню карточки и просмотрщик, MAUI Windows)
-1. «…» у готовой карточки: клик мышью и Tab + Enter открывают то же меню, что правый клик; Escape закрывает; повторное открытие работает; у карточек Running/Queued кнопка неактивна; у карточки из истории (после перезапуска) работает; пункт Copy prompt копирует промпт (088).
-2. Просмотрщик открывается на весь экран (без рамки и панели задач) в окне, где он открыт. Close, Escape и ошибка загрузки картинки возвращают окно как было: обычное — на то же место и в том же размере, развёрнутое — развёрнутым. Пять открытий и закрытий подряд, второй монитор (если есть), закрытие основного окна при открытом просмотрщике (139).
-3. В просмотрщике, открытом со средней картинки, Left/Right листают картинки того же прогона, на первой и последней дальше не идут (без зацикливания), одно нажатие — один шаг; Escape закрывает; после повторного открытия фокус на Close (148).
+### 2026-11-01, claude-audit (tasks 088, 139, 148: card menu and viewer, MAUI Windows)
+1. “…” on a completed card: mouse click and Tab + Enter open the same menu as right-click; Escape closes it; it can be reopened. The button is disabled for Running/Queued cards and works for a card from history after restart. Copy prompt copies the prompt (088).
+2. The viewer opens full-screen (without title bar or taskbar) on the same monitor as its window. Close, Escape, and image-load errors restore the previous window state: a normal window returns to the same position and size; a maximized window remains maximized. Open and close five times in a row, test a second monitor if available, and close the main window while the viewer is open (139).
+3. In the viewer opened from a middle image, Left/Right navigate only within the same run and stop at the first/last image (no wrapping), one press moves one step; Escape closes it; after reopening, focus is on Close (148).
 
 ### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan)
 Plan approved ("approve all tasks with plans").
