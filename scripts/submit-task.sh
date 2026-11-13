@@ -13,7 +13,8 @@ f=$(task_file . "$ID")
 [ -n "$f" ] || { echo "Task $ID not found" >&2; exit 3; }
 st=$(task_field "$f" status)
 [ "$st" = "in-progress" ] || { echo "Only an 'in-progress' task can be submitted (status '$st')" >&2; exit 4; }
-awk '($0=="## Отчёт" || $0=="## Report"){p=1; next} /^## /{p=0} p && NF {f=1} END{exit !f}' "$f" \
+legacy_report=$(printf '\u041e\u0442\u0447\u0451\u0442')
+awk -v legacy_report="## $legacy_report" '($0==legacy_report || $0=="## Report"){p=1; next} /^## /{p=0} p && NF {f=1} END{exit !f}' "$f" \
   || { echo "Fill in the Report of $f first: what changed, commands and results, differences from the plan" >&2; exit 5; }
 task_set "$f" status review
 task_set "$f" assignee ""

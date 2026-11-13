@@ -40,7 +40,10 @@ done < <(find . -name '*.md' -not -path './.git/*' -not -path './node_modules/*'
 
 # 5. architecture.md describes architecture, not work progress: no task numbers, tasks/ paths, or status section
 if [ -f docs/architecture.md ]; then
-  grep -nE '[Зз]адач[^ ]* +[0-9]{3}|[Tt]asks? +[0-9]{3}|tasks/|^#+ +(Состояние|Status|State)' docs/architecture.md | while IFS= read -r line; do
+  task_initials=$(printf '\u0417\u0437')
+  task_suffix=$(printf '\u0430\u0434\u0430\u0447')
+  state_heading=$(printf '\u0421\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0435')
+  grep -nE "[$task_initials]${task_suffix}[^ ]* +[0-9]{3}|[Tt]asks? +[0-9]{3}|tasks/|^#+ +($state_heading|Status|State)" docs/architecture.md | while IFS= read -r line; do
     echo "ERROR: docs/architecture.md:${line%%:*}: work progress (task number, tasks/ path, or status section) belongs in a task report"
   done | grep . && fail=1
 fi

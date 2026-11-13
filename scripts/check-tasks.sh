@@ -6,6 +6,12 @@ fail=0
 allowed=" todo planned approved in-progress review done blocked cancelled "
 ids=" "
 filled() { awk -v h="$2" '$0=="## " h {p=1; next} /^## /{p=0} p && NF {f=1} END{exit !f}' "$1"; }
+legacy_plan=$(printf '\u041f\u043b\u0430\u043d')
+legacy_report=$(printf '\u041e\u0442\u0447\u0451\u0442')
+legacy_approval=$(printf '\u043f\u043b\u0430\u043d \u043e\u0434\u043e\u0431\u0440\u0435\u043d')
+legacy_description=$(printf '\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435')
+legacy_acceptance=$(printf '\u041a\u0440\u0438\u0442\u0435\u0440\u0438\u0438 \u0433\u043e\u0442\u043e\u0432\u043d\u043e\u0441\u0442\u0438')
+legacy_analysis=$(printf '\u0410\u043d\u0430\u043b\u0438\u0437')
 
 while IFS= read -r f; do
   id=$(task_field "$f" id); st=$(task_field "$f" status)
@@ -20,10 +26,10 @@ while IFS= read -r f; do
   if [ -n "$st" ]; then
     case "$allowed" in *" $st "*) ;; *) echo "ERROR: $f: unknown status '$st'"; fail=1 ;; esac
     case "$st" in planned|approved|in-progress|review|done)
-      { filled "$f" "План" || filled "$f" "Plan"; } || { echo "ERROR: $f: status '$st', but the Plan section is empty"; fail=1; } ;;
+      { filled "$f" "$legacy_plan" || filled "$f" "Plan"; } || { echo "ERROR: $f: status '$st', but the Plan section is empty"; fail=1; } ;;
     esac
     if [ "$st" = "done" ]; then
-      { filled "$f" "Отчёт" || filled "$f" "Report"; } || { echo "ERROR: $f: status 'done', but the Report section is empty"; fail=1; }
+      { filled "$f" "$legacy_report" || filled "$f" "Report"; } || { echo "ERROR: $f: status 'done', but the Report section is empty"; fail=1; }
     fi
     if [ "$st" = "in-progress" ] && [ -z "$as" ]; then
       echo "ERROR: $f: status 'in-progress', but assignee is missing"; fail=1
@@ -50,7 +56,7 @@ done < <(find tasks -type f -name '[0-9][0-9]*-*.md' | sort)
 section_text() {  # <file> <heading> [<heading>]: the body of the first matching "## " section
   awk -v a="$2" -v b="${3:-$2}" '($0=="## " a || $0=="## " b){p=1; next} /^## /{p=0} p' "$1"
 }
-approvals() { grep -ciE 'plan( amendment)? approved|план одобрен' "$1" || true; }
+approvals() { grep -ciE "plan( amendment)? approved|$legacy_approval" "$1" || true; }
 base="${BASE_REF:-origin/main}"
 if git rev-parse --verify -q "$base^{commit}" >/dev/null 2>&1; then
   oldf=$(mktemp)
@@ -62,14 +68,14 @@ if git rev-parse --verify -q "$base^{commit}" >/dev/null 2>&1; then
       : > "$oldf"; old=""
     fi
     case "$old:$st" in approved:in-progress|approved:review|approved:blocked|in-progress:in-progress|in-progress:review|in-progress:blocked)
-      for sec in "Описание|Description" "Критерии готовности|Acceptance criteria" "Анализ|Analysis" "План|Plan"; do
+      for sec in "$legacy_description|Description" "$legacy_acceptance|Acceptance criteria" "$legacy_analysis|Analysis" "$legacy_plan|Plan"; do
         if [ "$(section_text "$f" "${sec%%|*}" "${sec##*|}")" != "$(section_text "$oldf" "${sec%%|*}" "${sec##*|}")" ]; then
           echo "ERROR: $f: section '${sec##*|}' changed while executing (status $old -> $st); only the planner changes it, the executor writes a question in Comments"; fail=1
         fi
       done ;;
     esac
     if [ "$st" = "review" ]; then
-      { filled "$f" "Отчёт" || filled "$f" "Report"; } || { echo "ERROR: $f: status 'review', but the Report is empty"; fail=1; }
+      { filled "$f" "$legacy_report" || filled "$f" "Report"; } || { echo "ERROR: $f: status 'review', but the Report is empty"; fail=1; }
       [ -z "$as" ] || { echo "ERROR: $f: status 'review', but the task is still claimed ($as): scripts/submit-task.sh"; fail=1; }
     fi
     if [ "$st" = "done" ] && [ "$old" != "done" ]; then
