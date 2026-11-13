@@ -128,10 +128,10 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 ### Settings and appearance (`Settings.feature`, task 261)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| SET-01 | The default style is Quiet, the theme is as in the system | S6.1, S6.2 | planned |
-| SET-02 | Changing the style and the theme applies immediately and is kept after a restart | S6.3 | planned |
-| SET-03 | Settings is entered from the sessions screen; the screen is called "Settings" | S6.4 | planned |
-| SET-04 | Clear logs deletes the log files, the app keeps writing the log | — | planned (261) |
+| SET-01 | The default style is Quiet, the theme is as in the system | S6.1, S6.2 | done |
+| SET-02 | Changing the style and the theme applies immediately and is kept after a restart | S6.3 | done |
+| SET-03 | Settings is entered from the sessions screen; the screen is called "Settings" | S6.4 | done |
+| SET-04 | Clear logs deletes the log files, the app keeps writing the log | — | done |
 
 ### Spending (`Spending.feature`, task 262)
 | id | Scenario | Requirements | Status |
