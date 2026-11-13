@@ -70,6 +70,7 @@ bash scripts/check.sh
 - Added Core refresh tests and an initializer test proving startup completion does not wait for the background refresh.
 - Verification passed: Core tests (851), Presentation tests (546), Avalonia tests (187 passed, 2 platform skips), Web tests (21), Acceptance tests (50 passed, 1 skip); Core/Presentation/Web `dotnet format --verify-no-changes`; `bash scripts/check.sh`.
 - No plan deviations. Avalonia platform skips: Windows DPAPI and unavailable Linux Secret Service D-Bus.
+- CI follow-up: the `core` job also formats the Core.Tests project; formatted the new test file and verified it with `dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-no-changes --include ImageGen/ImageGen.Core.Tests/Services/ModelCatalogRefreshServiceTests.cs`.
 
 ## Comments
 

@@ -1,6 +1,6 @@
 using ImageGen.Core.Domain.Generations;
-using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Domain.Keys;
+using ImageGen.Core.Domain.Models;
 using ImageGen.Core.Platform;
 using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
@@ -145,24 +145,45 @@ public sealed class ModelCatalogRefreshServiceTests
 
     private static ImageModel Image(string provider, string id, DateTimeOffset? fetched = null) => new()
     {
-        ProviderId = provider, Id = id, Name = id, SupportsSeed = false, SupportsImageInput = false,
-        MaxImagesPerRequest = 1, FetchedAt = fetched ?? DateTimeOffset.UnixEpoch, Parameters = [],
+        ProviderId = provider,
+        Id = id,
+        Name = id,
+        SupportsSeed = false,
+        SupportsImageInput = false,
+        MaxImagesPerRequest = 1,
+        FetchedAt = fetched ?? DateTimeOffset.UnixEpoch,
+        Parameters = [],
     };
 
     private static VideoModel Video(string id, DateTimeOffset? fetched = null) => new()
     {
-        ProviderId = ProviderIds.OpenRouter, Id = id, Name = id, FetchedAt = fetched ?? DateTimeOffset.UnixEpoch,
-        Durations = [], Resolutions = [], AspectRatios = [], FrameImages = [], PriceSkus = new Dictionary<string, decimal>(),
+        ProviderId = ProviderIds.OpenRouter,
+        Id = id,
+        Name = id,
+        FetchedAt = fetched ?? DateTimeOffset.UnixEpoch,
+        Durations = [],
+        Resolutions = [],
+        AspectRatios = [],
+        FrameImages = [],
+        PriceSkus = new Dictionary<string, decimal>(),
     };
 
     private static AudioModel Audio(string id, DateTimeOffset? fetched = null) => new()
     {
-        ProviderId = ProviderIds.OpenRouter, Id = id, Name = id, Output = AudioOutput.ChatAudio, FetchedAt = fetched ?? DateTimeOffset.UnixEpoch,
+        ProviderId = ProviderIds.OpenRouter,
+        Id = id,
+        Name = id,
+        Output = AudioOutput.ChatAudio,
+        FetchedAt = fetched ?? DateTimeOffset.UnixEpoch,
     };
 
     private static EmbeddingModel Embedding(string id, DateTimeOffset? fetched = null) => new()
     {
-        ProviderId = ProviderIds.OpenRouter, Id = id, Name = id, Description = string.Empty, FetchedAt = fetched ?? DateTimeOffset.UnixEpoch,
+        ProviderId = ProviderIds.OpenRouter,
+        Id = id,
+        Name = id,
+        Description = string.Empty,
+        FetchedAt = fetched ?? DateTimeOffset.UnixEpoch,
     };
 
     private sealed class ManualTimeProvider(DateTimeOffset now) : TimeProvider
