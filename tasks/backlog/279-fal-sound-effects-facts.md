@@ -1,8 +1,8 @@
 ---
 id: 279
-status: in-progress
-assignee: codex-20261113
-claimed: 2026-11-13T13:44:35Z
+status: review
+assignee:
+claimed:
 created: 2026-11-13
 ---
 
@@ -40,6 +40,10 @@ bash scripts/check.sh
 ```
 
 ## Report
+
+- Queried all 61 `text-to-audio` catalog entries (one page, no next cursor) and fetched OpenAPI schemas for eight entries whose names or descriptions mention sound effects, SFX, or ambience. Documented input fields, bounds/defaults, looping, output fields/formats, and the scheduled retirement/replacement of ElevenLabs v2.
+- Compared ElevenLabs SFX v3's submit/status/result/cancel contract to `FalImageProvider`, recorded the OpenRouter-specific assumptions in the current audio catalog path, and proposed initial integration candidates and open design questions.
+- Verification: `bash scripts/check.sh` passed; `git diff --check` passed. No product code or packages changed. Prices remain unknown without a fal key.
 
 ## Review
 
