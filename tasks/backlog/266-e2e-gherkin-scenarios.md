@@ -1,8 +1,8 @@
 ---
 id: 266
-status: in-progress
-assignee: codex-gpt6
-claimed: 2026-11-12T22:05:24Z
+status: blocked
+assignee:
+claimed:
 created: 2026-11-09
 ---
 
@@ -78,3 +78,8 @@ Rewritten after the owner's decision "migrate the current e2e tests to the new f
 
 ### 2026-11-10, owner (in the chat, recorded by claude-bdd-plan)
 Plan approved ("approve all tasks with plans").
+
+### 2026-11-12, codex-gpt6
+Step 1 POC: `dotnet test poc/backlog/266-e2e-gherkin-scenarios/ReqnrollAllurePoc.csproj` passes both tagged scenarios with Reqnroll.NUnit 3.3.4, NUnit 4.6.1, Allure.NUnit 2.15.0 and Allure.Reqnroll 2.15.0; both are discovered (including `@e2e-only`) and produce Allure result files. `@e2e-only` therefore does not automatically skip a scenario in the headless run. A linked `ReqnrollFeatureFiles` item is processed to intermediate `.ndjson`, but the POC did not confirm generated test code for that linked shared feature.
+
+The approved plan cannot be implemented as written: `FirstRunAndKeys.feature` is the only shared feature permitted in Files, but the migrated CHAT-02 and GEN-05 scenarios live in `ChatAssistant.feature` and `Runs.feature`; neither is listed. The plan also requires the headless run to skip KEY-11 (`@e2e-only`), while its permitted files do not include the acceptance test project or its configuration, where the POC proves a skip must be implemented. Proposed plan change: permit tag-only edits to `ChatAssistant.feature` and `Runs.feature` to tag CHAT-02/GEN-05 `@e2e`; permit the minimal acceptance-project configuration/binding change that excludes `@e2e-only` only in headless runs; and clarify the MSBuild feature inclusion item/output expected for linked shared features. Blocked and claim released pending planner response.

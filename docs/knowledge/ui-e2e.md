@@ -1,5 +1,11 @@
 # Knowledge about MAUI UI E2E
 
+## Reqnroll and Allure compatibility (task 266)
+
+The task 266 proof of concept on .NET 10 passed with `Reqnroll.NUnit` 3.3.4, `NUnit` 4.6.1, `Allure.NUnit` 2.15.0 and `Allure.Reqnroll` 2.15.0 in one project. `dotnet test` discovered and passed both `@e2e` and `@e2e-only` scenarios, and both produced Allure result files. Therefore the `@e2e-only` tag does not itself exclude a scenario from the headless run; the acceptance-test project needs an explicit runtime filter or binding if that scenario is shared.
+
+Adding a shared feature as an MSBuild `ReqnrollFeatureFiles` item successfully processes it, but the generated intermediate output observed in the POC was an `.ndjson` file; only the local example feature produced a generated C# file. Linking shared feature generation into another project still needs verification.
+
 ## OpenAI-compatible mock contract (task 243)
 
 The route and payload shapes below are confirmed from `OpenAiCompatibleClient` and `OpenAiChatWire`:
