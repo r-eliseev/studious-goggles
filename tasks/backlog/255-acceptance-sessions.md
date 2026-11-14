@@ -1,6 +1,6 @@
 ---
 id: 255
-status: approved
+status: review
 assignee:
 claimed:
 created: 2026-11-09
@@ -61,6 +61,10 @@ bash scripts/check.sh
 - Acceptance harness cleanup advances its `FakeTimeProvider` before stopping app services, so delayed semantic-index refreshes do not leave teardown waiting on frozen test time. AppWorld teardown is asynchronous.
 - Not implemented: SES-07, SES-08 and SES-10. SES-07 is blocked by the approved plan's file list: the fake chat model catalog is hard-coded empty, so Settings has no second assistant model to select. The required `Support/FakeOpenRouter.cs` change is not authorized by the current plan; see the latest comment.
 - Verification so far: category runs passed for SES-02, SES-03 and SES-05; SES-04 had one pass and one expected skip. The full acceptance suite has not completed successfully after these additions. Formatting and `scripts/check.sh` remain to be run after the plan mismatch is resolved.
+- Final work on 2026-11-13: SES-07, SES-08 and SES-10 are implemented. SES-07 configures two fake OpenRouter chat models, changes the default in Settings, and proves an existing session retains its assistant model while a new session uses the new default. SES-08 sends two user messages that each receive a `generate_images` tool response, then checks the session row shows `· 2 runs`. SES-10 chooses the first empty-list example through `StartExampleCommand` and verifies its exact text is sent once in the new chat and sets its title. The fake chat-model catalog remains unchanged by default for other scenarios.
+- Updated the SES-07, SES-08 and SES-10 catalog statuses to `done`.
+- Verification: `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait "Category=sessions"` passed (10 passed, 1 skipped); the full acceptance suite passed (53 passed, 1 skipped, SES-04 `@bug-276`); `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` passed; `bash scripts/check.sh` passed.
+- Each new scenario was first run with its missing bindings and failed with Reqnroll's expected missing-step error, then passed after the minimum bindings were added. No differences from the approved plan.
 
 ## Комментарии
 

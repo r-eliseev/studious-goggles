@@ -60,6 +60,8 @@ public sealed class AppWorld : IDisposable
 
     public FakeTimeProvider Time { get; }
 
+    public TimeZoneInfo LocalTimeZone { get; set; } = TimeZoneInfo.Local;
+
     public SequenceSeedSource Seeds { get; }
 
     public FakePlatform Platform { get; }
@@ -139,6 +141,7 @@ public sealed class AppWorld : IDisposable
         services.ConfigureHttpClientDefaults(builder => builder.ConfigurePrimaryHttpMessageHandler(() => Network));
         services.AddHttpClient(FalImageProvider.TransportName).ConfigurePrimaryHttpMessageHandler(() => Network);
         services.AddSingleton<TimeProvider>(Time);
+        services.AddSingleton(LocalTimeZone);
         services.AddSingleton<ISeedSource>(Seeds);
         services.AddSingleton<IClipboardService>(Platform);
         services.AddSingleton<IDialogService>(Platform);

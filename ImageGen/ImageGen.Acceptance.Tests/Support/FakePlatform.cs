@@ -14,6 +14,8 @@ public sealed class FakePlatform : IClipboardService, IDialogService, IImageSave
 
     public List<(string Title, string Message, string Accept, string Cancel, bool Destructive)> Confirmations { get; } = [];
 
+    public List<(string Title, string Cancel, IReadOnlyList<string> Options)> ChooseRequests { get; } = [];
+
     public List<(string SourcePath, string SuggestedFileName, string MediaType)> SaveRequests { get; } = [];
 
     public int FilePickerRequests { get; private set; }
@@ -50,8 +52,11 @@ public sealed class FakePlatform : IClipboardService, IDialogService, IImageSave
     public Task<string?> PromptAsync(string title, string message, string accept, string cancel, string initialValue) =>
         Task.FromResult(_promptAnswers.TryDequeue(out var answer) ? answer : null);
 
-    public Task<string?> ChooseAsync(string title, string cancel, IReadOnlyList<string> options) =>
-        Task.FromResult<string?>(null);
+    public Task<string?> ChooseAsync(string title, string cancel, IReadOnlyList<string> options)
+    {
+        ChooseRequests.Add((title, cancel, options.ToArray()));
+        return Task.FromResult<string?>(null);
+    }
 
     public Task<ImageSaveResult> SaveAsync(string sourcePath, string suggestedFileName, string mediaType, CancellationToken cancellationToken)
     {

@@ -14,7 +14,10 @@ public sealed class FakeOpenRouter
     private readonly FakeNetwork _network;
     private readonly ConcurrentQueue<AssistantReply> _assistantReplies = new();
     private readonly ConcurrentDictionary<string, GenerationReply> _generationReplies = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, float[]> _embeddingVectors = new(StringComparer.Ordinal);
     private IReadOnlyList<ImageModel> _imageModels = [];
+    private IReadOnlyList<EmbeddingModelInfo> _embeddingModels = [new("baai/bge-m3", "BGE M3")];
+    private IReadOnlyList<AssistantModel> _assistantModels = [new("anthropic/claude-haiku-5.5", "Claude Haiku 5.5")];
     private HttpStatusCode _keyStatusCode = HttpStatusCode.OK;
     private bool _keyNetworkError;
 
@@ -27,13 +30,11 @@ public sealed class FakeOpenRouter
             if (_keyNetworkError) throw new HttpRequestException("Fake OpenRouter connection failure.");
             return Task.FromResult(JsonResponse(_keyStatusCode, "{}"));
         });
-        network.AddResponse(HttpMethod.Get, Host, "/api/v1/embeddings/models", HttpStatusCode.OK, "{\"data\":[]}");
-        network.AddResponse(
-            HttpMethod.Get,
-            Host,
-            "/api/v1/models",
-            HttpStatusCode.OK,
-            "{\"data\":[{\"id\":\"anthropic/claude-haiku-5.5\",\"name\":\"Claude Haiku 5.5\",\"supported_parameters\":[\"tools\"]}]}");
+        network.AddRoute(HttpMethod.Get, Host, "/api/v1/embeddings/models", (_, _) =>
+            Task.FromResult(JsonResponse(HttpStatusCode.OK, EmbeddingModelsJson())));
+        network.AddRoute(HttpMethod.Post, Host, "/api/v1/embeddings", HandleEmbeddingsAsync);
+        network.AddRoute(HttpMethod.Get, Host, "/api/v1/models",
+            (_, _) => Task.FromResult(JsonResponse(HttpStatusCode.OK, AssistantModelsJson())));
         network.AddResponse(HttpMethod.Get, Host, "/api/v1/videos/models", HttpStatusCode.OK, "{\"data\":[]}");
         network.AddRoute(HttpMethod.Get, Host, "/api/v1/images/models", (_, _) => Task.FromResult(JsonResponse(HttpStatusCode.OK, ImageModelsJson())));
         network.AddRoute(HttpMethod.Get, Host, "/api/v1/images/models/*/endpoints", (request, _) =>
@@ -87,6 +88,25 @@ public sealed class FakeOpenRouter
         _imageModels = models.ToArray();
     }
 
+    public void SetAssistantModels(IEnumerable<AssistantModel> models)
+    {
+        ArgumentNullException.ThrowIfNull(models);
+        _assistantModels = models.ToArray();
+    }
+
+    public void SetEmbeddingModels(IEnumerable<EmbeddingModelInfo> models)
+    {
+        ArgumentNullException.ThrowIfNull(models);
+        _embeddingModels = models.ToArray();
+    }
+
+    public void SetEmbeddingVectors(IEnumerable<KeyValuePair<string, float[]>> vectors)
+    {
+        ArgumentNullException.ThrowIfNull(vectors);
+        _embeddingVectors.Clear();
+        foreach (var pair in vectors) _embeddingVectors[pair.Key] = pair.Value.ToArray();
+    }
+
     public void SetKeyResponse(HttpStatusCode statusCode)
     {
         _keyStatusCode = statusCode;
@@ -105,6 +125,9 @@ public sealed class FakeOpenRouter
 
     public void SetImage(string modelId, int width = 64, int height = 64, decimal cost = 0.01m) =>
         _generationReplies[modelId] = GenerationReply.Image(width, height, cost);
+
+    public void SetImageWithoutCost(string modelId, int width = 64, int height = 64) =>
+        _generationReplies[modelId] = GenerationReply.Image(width, height, cost: null);
 
     public void SetGenerationError(string modelId, HttpStatusCode statusCode, string body) =>
         _generationReplies[modelId] = GenerationReply.Error(statusCode, body);
@@ -178,6 +201,33 @@ public sealed class FakeOpenRouter
         return Task.FromResult(JsonResponse(HttpStatusCode.OK, root.ToJsonString()));
     }
 
+    private async Task<HttpResponseMessage> HandleEmbeddingsAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var body = await request.Content!.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        var root = JsonNode.Parse(body) ?? throw new InvalidOperationException("The embedding request has no JSON body.");
+        var modelId = root["model"]?.GetValue<string>() ?? "baai/bge-m3";
+        var inputs = root["input"]?.AsArray() ?? throw new InvalidOperationException("The embedding request has no input array.");
+        var data = new JsonArray();
+        for (var index = 0; index < inputs.Count; index++)
+        {
+            var text = inputs[index]?.GetValue<string>() ?? string.Empty;
+            var vector = _embeddingVectors.TryGetValue(text, out var configured) ? configured : [1f, 0f, 0f];
+            data.Add(new JsonObject
+            {
+                ["index"] = index,
+                ["embedding"] = new JsonArray(vector.Select(value => (JsonNode?)JsonValue.Create(value)).ToArray()),
+            });
+        }
+
+        return JsonResponse(HttpStatusCode.OK, new JsonObject
+        {
+            ["model"] = modelId,
+            ["data"] = data,
+            ["usage"] = new JsonObject { ["prompt_tokens"] = inputs.Count },
+        }.ToJsonString());
+    }
+
     private async Task<HttpResponseMessage> HandleImageAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var body = await request.Content!.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -196,7 +246,7 @@ public sealed class FakeOpenRouter
         var responseBody = new JsonObject
         {
             ["data"] = new JsonArray(new JsonObject { ["b64_json"] = b64, ["media_type"] = "image/png" }),
-            ["usage"] = new JsonObject { ["cost"] = reply.Cost },
+            ["usage"] = reply.Cost is { } cost ? new JsonObject { ["cost"] = cost } : null,
         }.ToJsonString();
         return JsonResponse(HttpStatusCode.OK, responseBody);
     }
@@ -232,6 +282,33 @@ public sealed class FakeOpenRouter
                 ["id"] = model.Id,
                 ["name"] = model.Name,
                 ["supported_parameters"] = supportedParameters,
+            });
+        }
+
+        return new JsonObject { ["data"] = models }.ToJsonString();
+    }
+
+    private string EmbeddingModelsJson() => new JsonObject
+    {
+        ["data"] = new JsonArray(_embeddingModels.Select(model => (JsonNode?)new JsonObject
+        {
+            ["id"] = model.Id,
+            ["name"] = model.Name,
+            ["context_length"] = 8192,
+            ["pricing"] = new JsonObject { ["prompt"] = 0.0000001m },
+        }).ToArray()),
+    }.ToJsonString();
+
+    private string AssistantModelsJson()
+    {
+        var models = new JsonArray();
+        foreach (var model in _assistantModels)
+        {
+            models.Add(new JsonObject
+            {
+                ["id"] = model.Id,
+                ["name"] = model.Name,
+                ["supported_parameters"] = new JsonArray("tools"),
             });
         }
 
@@ -331,13 +408,15 @@ public sealed class FakeOpenRouter
     private sealed record GenerationReply(
         int Width,
         int Height,
-        decimal Cost,
+        decimal? Cost,
         HttpStatusCode? ErrorStatus = null,
         string? ErrorBody = null,
         bool IsFiltered = false,
         FakeNetwork.HeldResponse? Held = null)
     {
         public static GenerationReply Image(int width, int height, decimal cost) => new(width, height, cost);
+
+        public static GenerationReply Image(int width, int height, decimal? cost) => new(width, height, cost);
 
         public static GenerationReply Error(HttpStatusCode statusCode, string body) => new(0, 0, 0, statusCode, body);
 
@@ -357,4 +436,8 @@ public sealed class FakeOpenRouter
         IReadOnlyList<string>? Formats = null,
         IReadOnlyList<string>? Qualities = null,
         int? MaxInputReferences = null);
+
+    public sealed record AssistantModel(string Id, string Name);
+
+    public sealed record EmbeddingModelInfo(string Id, string Name);
 }

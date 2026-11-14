@@ -1,6 +1,6 @@
 ---
 id: 263
-status: approved
+status: review
 assignee:
 claimed:
 created: 2026-11-09
@@ -52,6 +52,16 @@ bash scripts/check.sh
 - In the “Report”, list passing scenarios, ignored scenarios and their tracking tasks, commands and results, and differences from the plan. Update scenario statuses in `docs/specs/acceptance-scenarios.md`.
 
 ## Report
+
+Implemented SRCH-01–06 in `ImageGen/ImageGen.Acceptance.Tests/Features/Search.feature` and `Steps/SearchSteps.cs`; added configurable embeddings and an embedding-model catalog route to `Support/FakeOpenRouter.cs`. Updated the catalog statuses in `docs/specs/acceptance-scenarios.md`.
+
+Verification:
+- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait Category=search` — passed, 6 scenarios.
+- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` — passed, 79 passed and 2 ignored. Two earlier full-suite attempts each encountered one unrelated intermittent failure in existing scenarios; the third full run passed.
+- `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` — passed after correcting import order.
+- `bash scripts/check.sh` — passed (`Harness: all checks passed`).
+
+No product behavior or plan scope changed. SRCH-05 was split into SRCH-05 and SRCH-06 as allowed by the plan.
 
 ## Comments
 

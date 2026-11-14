@@ -58,10 +58,10 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 | SES-04 | Renaming to an empty string or to more than 40 characters is not accepted | S1.2 | discrepancy (276) |
 | SES-05 | Deleting with confirmation → the session is not in the list, also after a restart; declining the confirmation → the session stays | S1.1 | done |
 | SES-06 | A new session gets the default settings: one model `black-forest-labs/flux.2-klein-4b`, one run, the assistant model from Settings | S1.3 | done |
-| SES-07 | Changing the default assistant model in Settings affects only new sessions | S1.3 | planned |
-| SES-08 | The list row shows the number of runs ("· 2 runs") after two runs | S1.2 | planned |
+| SES-07 | Changing the default assistant model in Settings affects only new sessions | S1.3 | done |
+| SES-08 | The list row shows the number of runs ("· 2 runs") after two runs | S1.2 | done |
 | SES-09 | Sessions are grouped: today's in "Today", older ones in "Earlier" (time from `FakeTimeProvider`) | S1.1 | done |
-| SES-10 | An example from the empty list starts a new session with this text | S1.1 | planned |
+| SES-10 | An example from the empty list starts a new session with this text | S1.1 | done |
 | SES-11 | Clearing the whole history from Settings: sessions and files deleted, keys and settings kept | S1.4 | planned (273) |
 
 ### Chat and assistant (`ChatAssistant.feature`, task 256)
@@ -94,23 +94,23 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 ### Cancellation and recovery (`CancelAndRecovery.feature`, task 258)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| CAN-01 | Cancelling one active generation → "cancelled", the others continue | S3.5.1, F5.4 | planned |
-| CAN-02 | Cancelling the whole run → all active ones "cancelled", finished ones do not change | S3.5.1, S3.5.2 | planned |
-| CAN-03 | The result arrived before the cancellation → the card stays "done" | S3.5.2 | planned |
-| CAN-04 | A generation did not finish, the app was restarted → "Interrupted" (failed) | S3.8 | planned |
-| CAN-05 | The time of the cancellation request is stored and visible after a restart | S3.5.3 | planned |
+| CAN-01 | Cancelling one active generation → "cancelled", the others continue | S3.5.1, F5.4 | blocked (258) |
+| CAN-02 | Cancelling the whole run → all active ones "cancelled", finished ones do not change | S3.5.1, S3.5.2 | blocked (258) |
+| CAN-03 | The result arrived before the cancellation → the card stays "done" | S3.5.2 | blocked (258) |
+| CAN-04 | A generation did not finish, the app was restarted → "Interrupted" (failed) | S3.8 | blocked (258) |
+| CAN-05 | The time of the cancellation request is stored and visible after a restart | S3.5.3 | blocked (258) |
 
 ### Card actions (`CardActions.feature`, task 259)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| ACT-01 | Repeat → a new run of one generation: the same prompt, model and seed | S4.1, S4.4 | planned |
-| ACT-02 | New seed → the same prompt and model, another seed | S4.2 | planned |
-| ACT-03 | Edit → the prompt opens for editing; after confirmation — a run with the edited prompt without the assistant | S4.3 | planned |
-| ACT-04 | Other model… on an error → the model picker; "Used in this session" on top; the choice starts a run on the chosen model | S4.5 | planned |
-| ACT-05 | Copy prompt → the clipboard holds the exact prompt | S4.6 | planned |
-| ACT-06 | Details on an error → the original error text; the card shows a short reason | S4.7, F9.1 | planned |
-| ACT-07 | Save image → a save dialog with the name `imagegen-<8 characters of id>.<extension>` | S4.8 | planned |
-| ACT-08 | Actions are unavailable where the specification does not give them (Details on a done card, Save on an error) | S4.5–S4.8 | planned |
+| ACT-01 | Repeat → a new run of one generation: the same prompt, model and seed | S4.1, S4.4 | done |
+| ACT-02 | New seed → the same prompt and model, another seed | S4.2 | done |
+| ACT-03 | Edit → the prompt opens for editing; after confirmation — a run with the edited prompt without the assistant | S4.3 | done |
+| ACT-04 | Other model… on an error → the model picker; "Used in this session" on top; the choice starts a run on the chosen model | S4.5 | done |
+| ACT-05 | Copy prompt → the clipboard holds the exact prompt | S4.6 | done |
+| ACT-06 | Details on an error → the original error text; the card shows a short reason | S4.7, F9.1 | done |
+| ACT-07 | Save image → a save dialog with the name `imagegen-<8 characters of id>.<extension>` | S4.8 | done |
+| ACT-08 | Actions are unavailable where the specification does not give them (Details on a done card, Save on an error) | S4.5–S4.8 | done |
 
 ### Session models and parameters (`SessionModels.feature`, task 260)
 | id | Scenario | Requirements | Status |
@@ -136,20 +136,21 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 ### Spending (`Spending.feature`, task 262)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| SPD-01 | Two finished generations with a price → the total for the day is their sum, grouped by provider and model | F8.3 | planned |
-| SPD-02 | A generation without a price → counted in "operations with unknown price", not in the sum | F8.3 | planned |
-| SPD-03 | The week is ISO, from Monday; a generation of last Sunday is not in the current week | F8.3 | planned |
-| SPD-04 | The "expensive run" threshold is off by default; with a threshold below the estimate the assistant warns before sending | F8.4 | planned |
-| SPD-05 | The monthly limit is kept after a restart | F8.4 | planned |
+| SPD-01 | Two finished generations with a price → the total for the day is their sum, grouped by provider and model | F8.3 | done |
+| SPD-02 | A generation without a price → counted in "operations with unknown price", not in the sum | F8.3 | done |
+| SPD-03 | The week is ISO, from Monday; a generation of last Sunday is not in the current week | F8.3 | done |
+| SPD-04 | The "expensive run" threshold is off by default; with a threshold below the estimate the assistant warns before sending | F8.4 | discrepancy (280) |
+| SPD-05 | The monthly limit is kept after a restart | F8.4 | done |
 
 ### Search (`Search.feature`, task 263)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| SRCH-01 | Words: searching by a session title and by a generation prompt finds the session | S1.4 | planned |
-| SRCH-02 | Words: nothing found → the "no results" state; clearing the search returns the list | S1.4 | planned |
-| SRCH-03 | Meaning is off by default; turning it on in Settings indexes the history (embeddings from the fake) | S1.4 | planned |
-| SRCH-04 | Meaning: results are not mixed with Words | S1.4 | planned |
-| SRCH-05 | The index status and the choice of the embedding model | — | planned (263) |
+| SRCH-01 | Words: searching by a session title and by a generation prompt finds the session | S1.4 | done |
+| SRCH-02 | Words: nothing found → the "no results" state; clearing the search returns the list | S1.4 | done |
+| SRCH-03 | Meaning is off by default; turning it on in Settings indexes the history (embeddings from the fake) | S1.4 | done |
+| SRCH-04 | Meaning: results are not mixed with Words | S1.4 | done |
+| SRCH-05 | The index status and the choice of the embedding model | — | done |
+| SRCH-06 | Settings show when the configured embedding model is unavailable | — | done |
 
 ### Gallery, viewer and comparison (`Gallery.feature`, task 264)
 | id | Scenario | Requirements | Status |

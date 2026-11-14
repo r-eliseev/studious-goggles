@@ -1,6 +1,6 @@
 ---
 id: 262
-status: approved
+status: review
 assignee:
 claimed:
 created: 2026-11-09
@@ -56,6 +56,14 @@ bash scripts/check.sh
 - In the “Report”, list passing scenarios, ignored scenarios and their tracking tasks, commands and results, and differences from the plan. Update scenario statuses in `docs/specs/acceptance-scenarios.md`.
 
 ## Report
+
+- Added `Spending.feature` and `SpendingSteps.cs`. SPD-01 verifies two actual generation charges total `$0.044`, grouped by provider/model; SPD-02 verifies missing `usage.cost` is excluded and counted as unknown; SPD-03 verifies a Sunday expense is outside Monday's ISO week but remains in the month; SPD-05 verifies a monthly limit survives app restart.
+- Extended `FakeOpenRouter`/`CommonSteps` with a successful image response that omits `usage.cost`. Added a test-world `TimeZoneInfo` seam in `AppWorld`, with a clock setup step for deterministic calendar boundaries.
+- SPD-04 is `@ignore @bug-280`: `SpendingService.CheckAsync` returns `ExpensiveRun`, but `ChatPageModel.SendAsync` only displays the monthly-limit warning. Created task 280 with the reproduction and proposed plan. The other SPD scenarios pass.
+- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait Category=spending` — 4 passed, 1 skipped (SPD-04, `@bug-280`).
+- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` — 73 passed, 2 skipped (SES-04 `@bug-276`; SPD-04 `@bug-280`).
+- `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` — passed.
+- `bash scripts/check.sh` — pending.
 
 ## Comments
 

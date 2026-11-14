@@ -68,6 +68,40 @@ Feature: Sessions
     When the user creates a new session
     Then the chat shows the default assistant model
 
+  @SES-07 @S1.3
+  Scenario: Changing the default assistant model affects only new sessions
+    Given the OpenRouter assistant model catalog:
+      | id                             | name             |
+      | anthropic/claude-haiku-5.5     | Claude Haiku 5.5 |
+      | anthropic/claude-sonnet-4      | Claude Sonnet 4  |
+    And the user has a saved OpenRouter key
+    When the user creates a new session
+    And the user returns to the session list
+    And the user opens settings
+    And the user selects assistant model "anthropic/claude-sonnet-4" as the default
+    And the user saves the default assistant model
+    And the user returns to the session list
+    And the user opens the first session
+    Then the chat shows assistant model "anthropic/claude-haiku-5.5"
+    When the user returns to the session list
+    And the user creates a new session
+    Then the chat shows assistant model "anthropic/claude-sonnet-4"
+
+  @SES-08 @S1.2
+  Scenario: The session row shows the number of runs
+    Given the user has a saved OpenRouter key
+    And the assistant answers with:
+      | response        | prompt                         |
+      | generate_images | A lighthouse by the ocean.    |
+    And the assistant answers with:
+      | response        | prompt                         |
+      | generate_images | A red bicycle by a brick wall. |
+    When the user creates a new session
+    And the user sends the message "Paint a lighthouse"
+    And the user sends the message "Draw a red bicycle"
+    And the user returns to the session list
+    Then the first session row shows "· 2 runs"
+
   @SES-09 @S1.1
   Scenario: Sessions are grouped by the fake local date
     Given the user has a saved OpenRouter key
@@ -77,4 +111,11 @@ Feature: Sessions
     And the user returns to the session list
     Then one session is in Today and one session is in Earlier
 
-
+  @SES-10 @S1.1
+  Scenario: Choosing an example from the empty session list sends it in a new session
+    Given the user has a saved OpenRouter key
+    And the assistant answers with:
+      | response | text                    |
+      | text     | Let's start with this. |
+    When the user chooses the first example from the empty session list
+    Then the selected example is sent once

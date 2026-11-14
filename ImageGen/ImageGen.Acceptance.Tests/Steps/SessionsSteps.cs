@@ -31,6 +31,8 @@ public sealed class SessionsSteps(ScenarioContext scenario)
 
     private ChatPageModel Chat => Assert.IsType<ChatPageModel>(Assert.IsType<ChatView>(World.Window.PageArea.Content).DataContext);
 
+    private SettingsPageModel Settings => Assert.IsType<SettingsPageModel>(Assert.IsType<SettingsView>(World.Window.PageArea.Content).DataContext);
+
     [When("the user creates a new session")]
     public Task WhenTheUserCreatesANewSession() => HeadlessApp.RunAsync(async cancellationToken =>
     {
@@ -41,6 +43,25 @@ public sealed class SessionsSteps(ScenarioContext scenario)
             "the new session chat to open", cancellationToken);
         return true;
     }, TestContext.Current.CancellationToken);
+
+    [When("the user chooses the first example from the empty session list")]
+    public async Task WhenTheUserChoosesTheFirstExampleFromTheEmptySessionList()
+    {
+        var text = await HeadlessApp.RunAsync(async _ =>
+        {
+            var exampleText = Sessions.Examples[0];
+            Assert.True(Sessions.HasNoSessions);
+            await Sessions.StartExampleCommand.ExecuteAsync(exampleText);
+            scenario.Set(exampleText, "sessions.example");
+            return exampleText;
+        }, TestContext.Current.CancellationToken);
+
+        await World.WaitUntilAsync(() => World.Window.PageArea.Content is ChatView, "the example chat to open", TestContext.Current.CancellationToken);
+        await World.WaitUntilAsync(
+            () => Chat.Items.OfType<MessageItemViewModel>().Any(message => message.IsUser && message.Text == text),
+            "the selected example to be sent",
+            TestContext.Current.CancellationToken);
+    }
 
     [When("the user sends the message {string}")]
     public async Task WhenTheUserSendsTheMessage(string message)
@@ -93,6 +114,25 @@ public sealed class SessionsSteps(ScenarioContext scenario)
         return true;
     }, TestContext.Current.CancellationToken);
 
+    [When("the user selects assistant model {string} as the default")]
+    public Task WhenTheUserSelectsAssistantModelAsTheDefault(string modelId) => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        var settings = Settings;
+        await World.WaitUntilAsync(
+            () => settings.AssistantModels.Any(option => option.Reference.ModelId == modelId),
+            $"assistant model '{modelId}' to load in Settings",
+            cancellationToken);
+        settings.SelectedAssistantModel = Assert.Single(settings.AssistantModels, option => option.Reference.ModelId == modelId);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [When("the user saves the default assistant model")]
+    public Task WhenTheUserSavesTheDefaultAssistantModel() => HeadlessApp.RunAsync(async _ =>
+    {
+        await Settings.SaveDefaultAssistantModelCommand.ExecuteAsync(null);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
     [When("the delete confirmation is declined")]
     public void WhenTheDeleteConfirmationIsDeclined() => World.Platform.QueueConfirmation(false);
 
@@ -127,6 +167,29 @@ public sealed class SessionsSteps(ScenarioContext scenario)
     public void ThenTheFirstSessionRetainsItsOriginalTitle() =>
         Assert.Equal(Session.NewSessionTitle, Sessions.Sessions[0].Title);
 
+    [Then("the first session row shows {string}")]
+    public async Task ThenTheFirstSessionRowShows(string text)
+    {
+        await World.WaitUntilAsync(
+            () => Sessions.Sessions.Count > 0 && Sessions.Sessions[0].DetailsText.EndsWith(text, StringComparison.Ordinal),
+            $"the first session row to show '{text}'",
+            TestContext.Current.CancellationToken);
+        Assert.EndsWith(text, Sessions.Sessions[0].DetailsText, StringComparison.Ordinal);
+    }
+
+    [Then("the selected example is sent once")]
+    public async Task ThenTheSelectedExampleIsSentOnce()
+    {
+        var text = scenario.Get<string>("sessions.example");
+        await World.WaitUntilAsync(
+            () => Chat.Items.OfType<MessageItemViewModel>().Any(message => message.IsUser && message.Text == text),
+            "the selected example message to appear",
+            TestContext.Current.CancellationToken);
+        var userMessages = Chat.Items.OfType<MessageItemViewModel>().Where(message => message.IsUser).ToArray();
+        Assert.Equal(text, Assert.Single(userMessages).Text);
+        Assert.Equal(text[..Math.Min(40, text.Length)], Chat.Title);
+    }
+
     [Then("the app shows a rename error")]
     public void ThenTheAppShowsARenameError() => Assert.NotEmpty(World.Platform.Alerts);
 
@@ -159,6 +222,16 @@ public sealed class SessionsSteps(ScenarioContext scenario)
         await World.WaitUntilAsync(() => Chat.AssistantText.Length > 0, "the assistant model label to load", TestContext.Current.CancellationToken);
         Assert.Contains(SessionSettings.DefaultAssistantModelId, Chat.AssistantText, StringComparison.Ordinal);
         Assert.Contains("1", Chat.ModelsButtonText, StringComparison.Ordinal);
+    }
+
+    [Then("the chat shows assistant model {string}")]
+    public async Task ThenTheChatShowsAssistantModel(string modelId)
+    {
+        await World.WaitUntilAsync(
+            () => Chat.AssistantText.Contains(modelId, StringComparison.Ordinal),
+            $"assistant model '{modelId}' to appear in the chat",
+            TestContext.Current.CancellationToken);
+        Assert.Contains(modelId, Chat.AssistantText, StringComparison.Ordinal);
     }
 
     [Then("one session is in Today and one session is in Earlier")]
