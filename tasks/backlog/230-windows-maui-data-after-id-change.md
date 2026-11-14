@@ -63,3 +63,7 @@ Created from the 2026-11-04 review finding (030, Windows ApplicationId changed w
 
 ### 2026-11-07, owner (in chat, recorded by claude-audit)
 Instruction: "create tasks for problems that do not have tasks"; the plan was approved under the earlier instruction "approve all tasks that come up".
+
+### 2026-11-14, claude-planner — plan amendment
+New fact (task 283): the unpackaged MAUI Windows data folder contains the publisher display name. Run 43593886862 (`preflight-windows-reports`, `dataDir`) shows `%LOCALAPPDATA%\Roman Eliseev\com.eliseev.imagegen\Data` after task 030 changed the publisher from "User Name". So Windows users of releases before 030 have their data in a third place, `%LOCALAPPDATA%\User Name\com.eliseev.imagegen\Data`. The legacy-folder rule of this task now covers an ordered list of candidates: first `User Name\com.eliseev.imagegen`, then the pre-id-change folder measured in step 1. `LegacyDataMigration.TryMigrate` keeps its contract and is called with the first candidate that has `imagegen.db`. Add a test with two candidates where only the second has a database. The manual check in 016 installs a release from before 030.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").
