@@ -1,6 +1,6 @@
 ---
 id: 030
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-10-27
@@ -51,6 +51,11 @@ Verification: `grep -n 'Publisher' ImageGen/ImageGen.Maui/Platforms/Windows/Pack
 The name Omnilite, the attached image reference, new vector MAUI icon/splash, and previously approved `com.eliseev.imagegen` were applied to all MAUI target frameworks. The Android id was not changed from releases after task 164; Windows/iOS/Mac Catalyst now use the shared id. Old data was neither deleted nor migrated. Verified: Presentation tests 466/466; MAUI Android build with 0 warnings/errors; Avalonia build with 0 warnings/errors; `dotnet format` for the two changed .NET projects and `scripts/check.sh` passed. Actual Windows data/secret paths were not checked.
 
 The task remains blocked from full completion: exact `Publisher` and `PublisherDisplayName` values were not provided or invented; on Windows, the effect of the id change on unpackaged data/secret paths must be checked, and instructions for using the old profile/keys must be documented.
+
+## Review
+Reviewed 2026-11-14 by claude-planner. `Package.appxmanifest` has `Publisher="CN=Roman Eliseev"` and `PublisherDisplayName` "Roman Eliseev"; other lines unchanged; the `maui` job green. The task's own criteria are met.
+Side effect, a planner error in the Analysis ("the publisher does not change the data folder by itself"): the unpackaged MAUI Windows data folder contains the publisher display name (`preflight-windows-reports` of run 43593886862: `...\AppData\Local\Roman Eliseev\com.eliseev.imagegen\Data`). Since PR #110, Windows UI E2E `FirstRunWithMock_GeneratesImage` fails (it hard-codes "User Name") — task 283; Windows users' data moved again — added to task 230 (amendment of 2026-11-14).
+Verdict: done, with follow-ups 283 and 230.
 
 ## Comments
 

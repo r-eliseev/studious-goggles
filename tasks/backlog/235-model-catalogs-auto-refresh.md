@@ -1,6 +1,6 @@
 ---
 id: 235
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-07
@@ -71,6 +71,11 @@ bash scripts/check.sh
 - Verification passed: Core tests (851), Presentation tests (546), Avalonia tests (187 passed, 2 platform skips), Web tests (21), Acceptance tests (50 passed, 1 skip); Core/Presentation/Web `dotnet format --verify-no-changes`; `bash scripts/check.sh`.
 - No plan deviations. Avalonia platform skips: Windows DPAPI and unavailable Linux Secret Service D-Bus.
 - CI follow-up: the `core` job also formats the Core.Tests project; formatted the new test file and verified it with `dotnet format ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj --verify-no-changes --include ImageGen/ImageGen.Core.Tests/Services/ModelCatalogRefreshServiceTests.cs`.
+
+## Review
+Reviewed 2026-11-14 by claude-planner. `ModelCatalogRefreshService` exists and is registered; the Web host starts it from `StartupInitializer` with its own cancellation; `AppInitializer` starts it fire-and-forget after initialization, as planned. PR #109 CI green.
+Defect: the refresh in `AppInitializer` runs with `CancellationToken.None` and is never awaited, so on Windows it keeps `imagegen.db` open after the container is disposed. `main` `windows-tests` has been red since this merge (`SessionModelsFlowTests.LongCatalog_SaveAndCancelStayVisibleOnBothTabs`, runs 43487552864 and 43593886799). The plan did not ask for cancellation on disposal, and the PR's own Windows run happened to pass. Fix: task 281.
+Verdict: done, with the follow-up 281.
 
 ## Comments
 

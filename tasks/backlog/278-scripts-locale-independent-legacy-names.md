@@ -1,6 +1,6 @@
 ---
 id: 278
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-13
@@ -68,6 +68,8 @@ bash scripts/tests/check-docs.sh
 No differences from the approved plan.
 
 ## Review
+Reviewed 2026-11-14 by claude-planner. The `\u` escapes are gone from `scripts/` (`grep -rn '\\u04' scripts/` → none). `scripts/tests/locale-independent.sh` is in `scripts/check.sh`. Under `env -i LC_ALL=C` the test prints "ok", and `bash scripts/check.sh` passes in this container's POSIX locale, where it failed on 2026-11-13. PR #103 CI green.
+Verdict: done.
 
 ## Comments
 
