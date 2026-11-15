@@ -1024,6 +1024,58 @@ public class ChatPageModelTests
         Assert.True(user.IsUser);
     }
 
+    [Theory]
+    [InlineData("0.01", true)]
+    [InlineData(null, false)]
+    public async Task SendCommand_ExpensiveRunThreshold_WarnsWhenConfiguredAndStillSends(string? thresholdText, bool expectsWarning)
+    {
+        var directory = Path.Combine(Directory.GetCurrentDirectory(), "tmp", "spending-chat-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var catalogModel = TestModels.Model(ImageModel, "Image");
+            catalogModel.Prices = [new ImageModelPrice("output_image", ImagePriceUnit.Image, 0.02m, null)];
+            _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns([catalogModel]);
+            var settingsFile = new SpendingSettingsFile(new TestPaths(directory), NullLogger<SpendingSettingsFile>.Instance);
+            decimal? threshold = thresholdText is null
+                ? null
+                : decimal.Parse(thresholdText, System.Globalization.CultureInfo.InvariantCulture);
+            await settingsFile.SaveAsync(new SpendingSettings(null, threshold), TestContext.Current.CancellationToken);
+            var expenses = Substitute.For<IExpenseRepository>();
+            expenses.ListAsync(Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult<IReadOnlyList<ImageGen.Core.Domain.Expenses.Expense>>([]));
+            var spending = new SpendingService(expenses, settingsFile, TimeProvider.System, TimeZoneInfo.Utc);
+            var model = CreateModel(_session.Id, new CostEstimator(Catalog), spending);
+            await model.OnAppearingAsync();
+            model.InputText = "draw a fox";
+
+            await model.SendCommand.ExecuteAsync(null);
+
+            if (expectsWarning)
+            {
+                await _dialogs.Received(1).AlertAsync(
+                    AppResources.SpendingWarningTitle,
+                    AppResources.SpendingExpensiveRunMessage);
+                Received.InOrder(() =>
+                {
+                    _dialogs.AlertAsync(AppResources.SpendingWarningTitle, AppResources.SpendingExpensiveRunMessage);
+                    _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
+                });
+            }
+            else
+            {
+                await _dialogs.DidNotReceive().AlertAsync(Arg.Any<string>(), Arg.Any<string>());
+            }
+
+            await _chat.Received(1).CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
+            Assert.Contains(model.Items.OfType<MessageItemViewModel>(), message => message.IsUser && message.Text == "draw a fox");
+        }
+        finally
+        {
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+    }
+
     [Fact]
     public async Task SendCommand_AssistantStartsRun_RunAppearsInTimeline()
     {

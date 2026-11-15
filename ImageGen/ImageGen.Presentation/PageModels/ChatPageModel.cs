@@ -363,10 +363,17 @@ public sealed partial class ChatPageModel(
         if (_costEstimator is not null && _spendingService is not null)
         {
             var estimate = await EstimateAsync(_sessionId, CancellationToken.None);
-            if (estimate is not null
-                && await _spendingService.CheckAsync(estimate, CancellationToken.None) == SpendingWarning.MonthlyLimitReached)
+            if (estimate is not null)
             {
-                await dialogs.AlertAsync(AppResources.SpendingWarningTitle, AppResources.SpendingMonthlyLimitMessage);
+                var warning = await _spendingService.CheckAsync(estimate, CancellationToken.None);
+                if (warning == SpendingWarning.MonthlyLimitReached)
+                {
+                    await dialogs.AlertAsync(AppResources.SpendingWarningTitle, AppResources.SpendingMonthlyLimitMessage);
+                }
+                else if (warning == SpendingWarning.ExpensiveRun)
+                {
+                    await dialogs.AlertAsync(AppResources.SpendingWarningTitle, AppResources.SpendingExpensiveRunMessage);
+                }
             }
         }
 

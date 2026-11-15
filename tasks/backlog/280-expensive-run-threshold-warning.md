@@ -1,8 +1,8 @@
 ---
 id: 280
-status: in-progress
-assignee: codex-20261115
-claimed: 2026-11-15T09:48:03Z
+status: review
+assignee:
+claimed:
 created: 2026-11-13
 ---
 
@@ -38,6 +38,12 @@ bash scripts/check.sh
 ```
 
 ## Report
+
+- `ChatPageModel.SendAsync` now displays the expensive-run warning with the new `SpendingExpensiveRunMessage` resource, then continues sending. The monthly-limit warning remains unchanged.
+- Added Presentation coverage for a threshold below the known estimate and for the disabled threshold; verified the alert precedes the assistant request and sending still succeeds.
+- Activated SPD-04 in `Spending.feature`, added its threshold setup and assertions in `SpendingSteps`, and marked the catalog row done.
+- Verification passed: Presentation.Tests (552/552), Acceptance.Tests (80 passed, 1 skipped), formatting for Presentation, Presentation.Tests, and Acceptance.Tests, and `bash scripts/check.sh`.
+- No deviation from the approved plan.
 
 ## Review
 

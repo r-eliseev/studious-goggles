@@ -70,11 +70,21 @@ Feature: Spending
     When the user selects the spending month
     Then spending total is "$0.02"
 
-  @SPD-04 @F8.4 @ignore @bug-280
+  @SPD-04 @F8.4
   Scenario: The expensive-run threshold warns before an assistant message is sent
-    Given the user has saved an OpenRouter key
-    And the next run estimate is below the configured spending threshold
-    When the user sends a message that would start a run
+    Given the user has a saved OpenRouter key
+    And the assistant answers with:
+      | response        | prompt   |
+      | generate_images | A fox    |
+    And the provider answers generation for model "black-forest-labs/flux.2-klein-4b" with:
+      | response | width | height | cost  |
+      | picture  | 64    | 64     | 0.014 |
+    When the user creates a new session
+    And the user selects image models for this run:
+      | model id                         |
+      | black-forest-labs/flux.2-klein-4b |
+    And the expensive run threshold is below the next run estimate
+    And the user submits the chat message "Draw a fox"
     Then a spending warning is shown before the message is sent
     And the message can still be sent
 

@@ -4,6 +4,8 @@ using ImageGen.Avalonia.Services.Navigation;
 using ImageGen.Avalonia.Views;
 using ImageGen.Presentation;
 using ImageGen.Presentation.PageModels;
+using ImageGen.Presentation.Resources.Strings;
+using ImageGen.Presentation.Spending;
 using Microsoft.Extensions.DependencyInjection;
 using Reqnroll;
 using Xunit;
@@ -17,6 +19,9 @@ public sealed class SpendingSteps(ScenarioContext scenario)
 
     private SpendingPageModel Spending => Assert.IsType<SpendingPageModel>(
         Assert.IsType<SpendingView>(World.Window.PageArea.Content).DataContext);
+
+    private ChatPageModel Chat => Assert.IsType<ChatPageModel>(
+        Assert.IsType<ChatView>(World.Window.PageArea.Content).DataContext);
 
     [Given("the spending clock is at {string} in time zone {string}")]
     public void GivenSpendingClockIsAtInTimeZone(string dateTime, string timeZoneId)
@@ -58,6 +63,28 @@ public sealed class SpendingSteps(ScenarioContext scenario)
 
     [Then("the monthly spending limit is {string}")]
     public void ThenMonthlySpendingLimitIs(string amount) => Assert.Equal(amount, Spending.MonthlyLimitText);
+
+    [When("the expensive run threshold is below the next run estimate")]
+    public Task WhenTheExpensiveRunThresholdIsBelowTheNextRunEstimate() => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        var settings = World.Provider.GetRequiredService<SpendingSettingsFile>();
+        await settings.SaveAsync(new SpendingSettings(null, 0.01m), cancellationToken);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [Then("a spending warning is shown before the message is sent")]
+    public void ThenASpendingWarningIsShownBeforeTheMessageIsSent() => Assert.Contains(
+        World.Platform.Alerts,
+        alert => alert.Title == AppResources.SpendingWarningTitle && alert.Message == AppResources.SpendingExpensiveRunMessage);
+
+    [Then("the message can still be sent")]
+    public Task ThenTheMessageCanStillBeSent() => HeadlessApp.RunAsync(_ =>
+    {
+        Assert.Contains(Chat.Items.OfType<MessageItemViewModel>(), message => message.IsUser && message.Text == "Draw a fox");
+        Assert.Contains(World.Network.Requests, request =>
+            request.Method == "POST" && new Uri(request.Address).AbsolutePath == "/api/v1/chat/completions");
+        return Task.FromResult(true);
+    }, TestContext.Current.CancellationToken);
 
     private Task OpenSpendingAsync(SpendingPeriod period) => HeadlessApp.RunAsync(async cancellationToken =>
     {
