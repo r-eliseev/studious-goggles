@@ -66,7 +66,7 @@ scripts/check.sh
 ```
 
 ### Saving an image (task 080)
-1. Windows: “Save image as…” on a completed card opens the “Сохранить как” dialog; suggested filename is `imagegen-<8 characters>.png`; the file opens.
+1. Windows: “Save image as…” on a completed card opens the “Save image as…” dialog; suggested filename is `imagegen-<8 characters>.png`; the file opens.
 2. Android items moved to task 140; check iOS only if a separate, approved environment is available.
 3. After saving, the card shows “Saved”.
 
@@ -83,7 +83,7 @@ Open Compare from a successful card's menu and select another successful image f
 Task 133: on MAUI Windows, verify the actual width/height and shortened ratio under an image, no line on a card without an image, preservation of the line when the same card updates, reset on a new generation, and availability of dimensions through Narrator.
 
 ### 2026-10-28, claude-07d6 (task 020, parameters)
-Add to the MAUI Windows manual check: the session “Параметры” screen (button beside “Модели” in chat) opens; pickers show options for selected models and “По умолчанию модели”; saving returns to chat; a replaced card shows “Соотношение сторон: … → …”.
+Add to the MAUI Windows manual check: the session “Parameters” screen (button beside “Models” in chat) opens; pickers show options for selected models and “Model default”; saving returns to chat; a replaced card shows “Aspect ratio: … → …”.
 
 ### 2026-10-28, claude-07d6 (task 045, logging)
 Add to the MAUI Windows manual check: after the scenario, open the app's `%LOCALAPPDATA%` folder (`FileSystem.AppDataDirectory`) → `logs/imagegen-<date>.log`. The first line records startup, version, `MAUI` shell, and log path; no key is present. On Android, check the same file in the app folder on the device.
