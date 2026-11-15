@@ -1,8 +1,8 @@
 ---
 id: 281
-status: in-progress
-assignee: codex-20261115
-claimed: 2026-11-15T09:07:09Z
+status: review
+assignee:
+claimed:
 created: 2026-11-14
 ---
 
@@ -44,6 +44,20 @@ bash scripts/check.sh
 ```
 
 ## Report
+
+`AppInitializer` now owns the model-catalog refresh cancellation source and task. Both synchronous and asynchronous disposal cancel the refresh and wait up to 10 seconds; refresh cancellation and errors are logged at Debug and swallowed. `EnsureInitializedAsync` still starts refresh in the background. `ModelCatalogRefreshService` already checks and forwards cancellation between catalog operations, so no Core change was needed.
+
+Added tests for async-disposal cancellation, synchronous disposal waiting for a refresh that observes cancellation, disposal before initialization, and repeated disposal.
+
+Verification:
+- `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj` — passed, 550 tests.
+- `dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj` — passed, 187 tests, 2 platform-specific skips. `LongCatalog_SaveAndCancelStayVisibleOnBothTabs` passed.
+- `dotnet format ImageGen/ImageGen.Presentation/ImageGen.Presentation.csproj --verify-no-changes` — passed.
+- `dotnet format ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj --verify-no-changes` — passed.
+- `bash scripts/check.sh` — passed.
+- Pull request Windows CI — pending.
+
+No difference from the approved plan; the `ModelCatalogRefreshService` cancellation path already met the plan.
 
 ## Review
 

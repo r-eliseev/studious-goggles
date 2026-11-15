@@ -99,6 +99,83 @@ public class AppInitializerTests : IDisposable
         releaseRefresh.SetResult();
     }
 
+    [Fact]
+    public async Task DisposeAsync_CancelsModelCatalogRefresh()
+    {
+        var enteredRefresh = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var refreshToken = CancellationToken.None;
+        var refresh = Substitute.For<Func<CancellationToken, Task>>();
+        refresh(Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            refreshToken = call.Arg<CancellationToken>();
+            enteredRefresh.SetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, refreshToken);
+        });
+        var initializer = CreateInitializer(refreshModelCatalogs: refresh);
+
+        await initializer.EnsureInitializedAsync();
+        await enteredRefresh.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await initializer.DisposeAsync();
+
+        Assert.True(refreshToken.IsCancellationRequested);
+    }
+
+    [Fact]
+    public async Task Dispose_WaitsForModelCatalogRefreshToFinishAfterCancellation()
+    {
+        var enteredRefresh = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cancellationObserved = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var finishRefresh = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var refresh = Substitute.For<Func<CancellationToken, Task>>();
+        refresh(Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            var cancellationToken = call.Arg<CancellationToken>();
+            enteredRefresh.SetResult();
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                cancellationObserved.SetResult();
+                await finishRefresh.Task;
+            }
+        });
+        var initializer = CreateInitializer(refreshModelCatalogs: refresh);
+
+        await initializer.EnsureInitializedAsync();
+        await enteredRefresh.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var disposal = Task.Run(initializer.Dispose, TestContext.Current.CancellationToken);
+        await cancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        Assert.False(disposal.IsCompleted);
+        finishRefresh.SetResult();
+        await disposal.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task Dispose_BeforeInitialization_DoesNotPreventInitialization()
+    {
+        var refresh = Substitute.For<Func<CancellationToken, Task>>();
+        var initializer = CreateInitializer(refreshModelCatalogs: refresh);
+
+        initializer.Dispose();
+        await initializer.EnsureInitializedAsync();
+        await initializer.DisposeAsync();
+
+        _ = refresh.Received(1).Invoke(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DisposeAsync_CalledTwice_DoesNotThrow()
+    {
+        var initializer = CreateInitializer();
+        await initializer.EnsureInitializedAsync();
+
+        await initializer.DisposeAsync();
+        await initializer.DisposeAsync();
+    }
+
     public void Dispose()
     {
         SqliteConnection.ClearAllPools();
