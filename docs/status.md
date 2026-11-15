@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-11-13
+Updated: 2026-11-14
 
 Here are open questions, known problems, CI and the task queue; product decisions are collected in `docs/product.md`. Progress is not written here: what is done and what is in progress is shown by task statuses (`scripts/list-tasks.sh`, `scripts/list-tasks.sh --main in-progress`) and their "Reports".
 
@@ -13,16 +13,13 @@ CI: `.github/workflows/build.yml` (the `core` job on Ubuntu: formatting, build, 
 Before claiming, always check `Depends on` in the task file: every prerequisite must be done **in main** or in `tasks/DONE.md`. Separately check the environment and other agents' branches/held files per `docs/tasks.md`; the absence of a functional dependency does not allow two agents to edit a held file at the same time.
 
 ### Task availability
-Current statuses are in the task cards and the output of `scripts/list-tasks.sh`. As of 2026-11-13 (planner sync after PR #101):
-- **First:** 278 — the harness scripts fail under a POSIX locale (legacy Russian names built with `\u` escapes); `scripts/check.sh` is red on `main` outside UTF-8 locales. Small, Linux.
-- **Acceptance scenarios** (ADR 0031, catalog `docs/specs/acceptance-scenarios.md`; additive changes of `Support/FakeOpenRouter.cs`, `FakePlatform.cs`, `AppWorld.cs` are allowed in every open acceptance task since 2026-11-13): 257 (only the final full run and submit), then 258, 259, 262–265 (after 257); 255 (SES-07/08/10), then 273 (after 255) and 276 (reject over-long rename, owner's decision of 2026-11-13); 256 (CHAT-08), 261 (SET-02/04); 267 after 254–265.
-- **E2E on Gherkin:** 266 (amended: `@e2e` selection, headless skip hook, linked-feature check first).
-- **Translation:** 269 (after 278; Russian UI literals are replaced by the English UI text from `AppResources.resx`), 271 (the Russian strings in `ViewsAccessibilityTests` are failure-message labels, translate them).
-- **Catalogs:** 235 (re-planned: refresh through the existing catalog services, Web through `StartupInitializer`), then 236 (after 235).
-- **Apple:** 274 (amended: longer timeouts for 20 repeats, app-only crash reports, launch delay vs exit) → 247 → 248 → 250.
-- **Identity:** 030 — the Windows publisher edit (owner's values of 2026-11-13); 230 — MAUI Windows data after the id change (Windows only).
-- **Sound effects:** 279 — fal fact-finding (ADR 0035), then 168 is planned.
-- **Blocked for a real reason:** 237 (Together key, postponed by the owner on 2026-11-13), 168 (after 279), 247 (after 274).
+Current statuses are in the task cards and the output of `scripts/list-tasks.sh`. As of 2026-11-14 (planner state review):
+- **Red builds first:** 281 — `build.yml` `windows-tests` is red on `main` since PR #109 (the background catalog refresh keeps `imagegen.db` open); 282 (after 281) — the Windows acceptance step, hidden behind 281, fails on the log file lock (seen on PR #107); 283 — Windows UI E2E `FirstRunWithMock_GeneratesImage` fails since PR #110 (data folder includes the publisher; the job is `continue-on-error`, so the workflow looks green).
+- **Waiting for the planner's review:** 255, 256, 257, 259, 261, 262, 263, 279.
+- **Product fixes:** 284 (cancel of a submitted synchronous image request → stop waiting, owner's decision of 2026-11-14), then 258 (CAN-03/04 may go first); 280 (expensive-run warning, F8.4); 276 (reject over-long rename).
+- **Acceptance scenarios:** 264, 265, 273 (after 255), 267 (after 254–265).
+- **E2E on Gherkin:** 266. **Translation:** 269, 271. **Catalogs:** 236. **Apple:** 274 → 247 → 248 → 250. **Windows data:** 230 (amended: the "User Name" publisher folder is a legacy candidate). **Sound effects:** 168 after the review of 279.
+- **Blocked for a real reason:** 237 (Together key, postponed by the owner), 168 (until 279 is reviewed and 168 is planned), 247 (after 274).
 - **Manual checks** (a human at the screen): 016, 046, 140, 198.
 Finished ones are in `tasks/DONE.md`; delete `docs/specs/ui-e2e-original/` when 238–250 are all archived (247, 248, 250 remain).
 

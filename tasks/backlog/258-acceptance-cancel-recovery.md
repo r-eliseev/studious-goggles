@@ -1,6 +1,6 @@
 ---
 id: 258
-status: blocked
+status: approved
 assignee:
 claimed:
 created: 2026-11-09
@@ -11,7 +11,7 @@ created: 2026-11-09
 ## Description
 Automate the “Отмена и восстановление” section of the catalog: CAN-01 … CAN-05. File `Features/CancelAndRecovery.feature`, tag `@cancel`.
 
-Depends on: 253, 257 (run steps and holding responses).
+Depends on: 253, 257 (run steps and holding responses), 284 (stop waiting on cancel; CAN-01, CAN-02, CAN-05).
 Environment: Linux or Windows (headless).
 
 ## Acceptance criteria
@@ -71,4 +71,8 @@ Plan approved, status `approved`. Changes of the same day apply: the Gherkin sce
 
 ### 2026-11-13, claude-planner — plan amendment
 Preventive amendment for all open acceptance tasks: tasks 255, 256 and 261 were blocked only because a needed fake response or world helper was outside their `Files:` line. Additive changes in `Support/FakeOpenRouter.cs`, `Support/FakePlatform.cs` and `Support/AppWorld.cs` are now allowed (new configurable responses, catalog fields, world helpers; no change of behavior other features rely on; no product code). Product/specification discrepancies are still `@ignore @bug-NNN` plus a new task. If two open tasks need the same harness change, the second one reuses it from `main`.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").
+
+### 2026-11-14, owner (in the chat, recorded by claude-planner)
+Answer to the blocker of 2026-11-13: cancelling a submitted OpenRouter image request stops waiting and marks the generation Cancelled (product change in task 284). Plan amendment: CAN-01, CAN-02 and CAN-05 expect the "cancelled" state with the "stopped waiting" note after 284 is merged; CAN-03 and CAN-04 may be done first. If 284 is not merged when this task is claimed, do CAN-03/CAN-04, tag the others `@ignore @bug-284`, and submit.
 Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").

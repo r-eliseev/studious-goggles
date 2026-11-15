@@ -248,3 +248,6 @@ Tasks with status `done` or `cancelled` removed from `tasks/` by `scripts/archiv
 - 272 | backlog | done | 2026-11-13 | Acceptance first-run assistant model choice | `tasks/backlog/272-acceptance-key-assistant-choice.md`
 - 275 | backlog | done | 2026-11-13 | Avalonia iOS: run full screen instead of the letterboxed compatibility mode | `tasks/backlog/275-avalonia-ios-full-screen.md`
 - 277 | backlog | done | 2026-11-13 | Avoid blocking disposal in the acceptance AppWorld restart test | `tasks/backlog/277-acceptance-appworld-async-disposal.md`
+- 030 | backlog | done | 2026-11-14 | Application identity and branding | `tasks/backlog/030-app-identity.md`
+- 235 | backlog | done | 2026-11-14 | Model catalogs: automatic refresh at startup | `tasks/backlog/235-model-catalogs-auto-refresh.md`
+- 278 | backlog | done | 2026-11-14 | Harness scripts: legacy Russian names must not depend on the locale | `tasks/backlog/278-scripts-locale-independent-legacy-names.md`
