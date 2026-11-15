@@ -55,7 +55,7 @@ Verification:
 - `dotnet format ImageGen/ImageGen.Presentation/ImageGen.Presentation.csproj --verify-no-changes` — passed.
 - `dotnet format ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj --verify-no-changes` — passed.
 - `bash scripts/check.sh` — passed.
-- Pull request Windows CI — pending.
+- On PR #112, the Windows `ImageGen.Avalonia.Tests` step passed, including `LongCatalog_SaveAndCancelStayVisibleOnBothTabs`; run [43698222120](https://github.com/r-eliseev/studious-goggles/actions/runs/43698222120). The Windows job then failed in the later acceptance-test step, tracked by task 282. The full run is still in progress while other jobs finish.
 
 No difference from the approved plan; the `ModelCatalogRefreshService` cancellation path already met the plan.
 
