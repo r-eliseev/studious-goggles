@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Xml.Linq;
 using Allure.Net.Commons;
 using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
@@ -42,9 +43,18 @@ public abstract class WindowsTestBase
         Directory.CreateDirectory(_artifactDirectory);
         _stopwatch = Stopwatch.StartNew();
 
+        var executable = Environment.GetEnvironmentVariable("APP_EXE");
+        if (string.IsNullOrWhiteSpace(executable) || !File.Exists(executable))
+        {
+            throw new InvalidOperationException("APP_EXE must point to an existing ImageGen.Maui.exe.");
+        }
+
+        var (publisherDisplayName, applicationName) = ReadApplicationIdentity(executable);
         _dataDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "User Name", "com.eliseev.imagegen", "Data");
+            publisherDisplayName,
+            applicationName,
+            "Data");
         if (Directory.Exists(_dataDirectory))
         {
             Directory.Delete(_dataDirectory, recursive: true);
@@ -60,12 +70,6 @@ public abstract class WindowsTestBase
 
             Directory.CreateDirectory(_dataDirectory);
             File.Copy(providerConfig, Path.Combine(_dataDirectory, "providers.json"));
-        }
-
-        var executable = Environment.GetEnvironmentVariable("APP_EXE");
-        if (string.IsNullOrWhiteSpace(executable) || !File.Exists(executable))
-        {
-            throw new InvalidOperationException("APP_EXE must point to an existing ImageGen.Maui.exe.");
         }
 
         _recorder = new VideoRecorder();
@@ -275,5 +279,33 @@ public abstract class WindowsTestBase
         }
 
         return Environment.CurrentDirectory;
+    }
+
+    private static (string PublisherDisplayName, string ApplicationName) ReadApplicationIdentity(string executable)
+    {
+        var executableDirectory = Path.GetDirectoryName(Path.GetFullPath(executable))!;
+        var manifestPath = Path.Combine(executableDirectory, "AppxManifest.xml");
+        if (!File.Exists(manifestPath))
+        {
+            manifestPath = Path.Combine(FindRepositoryRoot(), "ImageGen", "ImageGen.Maui", "Platforms", "Windows", "Package.appxmanifest");
+        }
+
+        if (!File.Exists(manifestPath))
+        {
+            throw new FileNotFoundException("The Windows app manifest was not found next to APP_EXE or in the repository.", manifestPath);
+        }
+
+        var root = XDocument.Load(manifestPath).Root
+            ?? throw new InvalidOperationException($"The Windows app manifest '{manifestPath}' is empty.");
+        var appNamespace = root.Name.Namespace;
+        var applicationName = root.Element(appNamespace + "Identity")?.Attribute("Name")?.Value;
+        var publisherDisplayName = root.Element(appNamespace + "Properties")?
+            .Element(appNamespace + "PublisherDisplayName")?.Value;
+        if (string.IsNullOrWhiteSpace(applicationName) || string.IsNullOrWhiteSpace(publisherDisplayName))
+        {
+            throw new InvalidOperationException($"The Windows app manifest '{manifestPath}' must define Identity.Name and Properties.PublisherDisplayName.");
+        }
+
+        return (publisherDisplayName, applicationName);
     }
 }
