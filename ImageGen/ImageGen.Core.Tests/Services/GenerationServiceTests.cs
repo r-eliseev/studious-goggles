@@ -125,6 +125,65 @@ public class GenerationServiceTests
     }
 
     [Fact]
+    public async Task CancelGenerationAsync_SubmittedSynchronousImage_StopsWaitingAndDoesNotSaveLateResponse()
+    {
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseResponse = new TaskCompletionSource<ImageGenerationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        CancellationToken transportToken = default;
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            transportToken = call.Arg<CancellationToken>();
+            started.TrySetResult();
+            return await releaseResponse.Task;
+        });
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        var generation = Assert.Single(_added);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        var result = await _service.CancelGenerationAsync(generation.Id, TestContext.Current.CancellationToken);
+
+        Assert.Equal(GenerationCancelResult.StoppedWaiting, result);
+        Assert.True(transportToken.IsCancellationRequested);
+        Assert.Equal(GenerationStatus.Cancelled, generation.Status);
+        releaseResponse.TrySetResult(new ImageGenerationResult(Image, "image/png", 0.014m));
+        await _service.WhenIdleAsync();
+
+        Assert.Equal(GenerationStatus.Cancelled, generation.Status);
+        Assert.Null(generation.ImagePath);
+        await _files.DidNotReceive().SaveAsync(_session.Id, generation.Id, Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CancelRunAsync_SubmittedSynchronousImage_StopsWaitingAndMarksCancelled()
+    {
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseResponse = new TaskCompletionSource<ImageGenerationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+        _generator.GenerateAsync(Arg.Any<ImageGenerationRequest>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+        {
+            started.TrySetResult();
+            return await releaseResponse.Task;
+        });
+
+        var run = await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        var generation = Assert.Single(_added);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        var result = Assert.Single(await _service.CancelRunAsync(run.Id, TestContext.Current.CancellationToken));
+
+        Assert.Equal(generation.Id, result.GenerationId);
+        Assert.Equal(GenerationCancelResult.StoppedWaiting, result.Result);
+        Assert.Equal(GenerationStatus.Cancelled, generation.Status);
+        releaseResponse.TrySetResult(new ImageGenerationResult(Image, "image/png", 0.014m));
+        await _service.WhenIdleAsync();
+        await _files.DidNotReceive().SaveAsync(_session.Id, generation.Id, Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task CancelGenerationAsync_DuringSubmit_WaitsForLateHandleThenCancels()
     {
         var handle = Handle();

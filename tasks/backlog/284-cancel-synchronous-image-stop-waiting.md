@@ -1,8 +1,8 @@
 ---
 id: 284
-status: in-progress
-assignee: codex-20261115
-claimed: 2026-11-15T09:40:21Z
+status: review
+assignee:
+claimed:
 created: 2026-11-14
 ---
 
@@ -43,6 +43,12 @@ bash scripts/check.sh
 ```
 
 ## Report
+
+- Added an explicit synchronous-image flag to `RunningJob` when its in-memory adapter handle is published. Cancelling a submitted synchronous image now cancels the watcher and adapter transport, persists `Cancelled`, and returns `StoppedWaiting`.
+- Added Core coverage for cancelling a submitted synchronous request and cancelling its run. Both confirm that a late transport response does not save an image. The existing pre-submit and fal cancellation paths remain covered by the full Core suite.
+- Updated S3.5.1 in `docs/specs/chat-sessions.md`. The existing `GenerationItemViewModelTests.SetStoppedWaiting_ShowsProviderBillingWarning` verifies the card text, which already applies to images.
+- Verification passed: Core.Tests (853/853), Presentation.Tests (550/550), Acceptance.Tests (79 passed, 2 skipped), Core and Core.Tests format checks, and `bash scripts/check.sh`.
+- No deviation from the plan. Presentation code and resources required no edits because the existing status text is media-neutral and the card test already covers it.
 
 ## Review
 

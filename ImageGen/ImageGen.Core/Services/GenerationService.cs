@@ -145,6 +145,23 @@ public sealed class GenerationService(
         }
 
         var remote = job.GetRemoteJob();
+        if (remote is not null && job.IsSynchronousImage)
+        {
+            try
+            {
+                job.Source.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                return GenerationCancelResult.NotActive;
+            }
+
+            await remote.Value.Provider.CancelAsync(remote.Value.Handle, CancellationToken.None).ConfigureAwait(false);
+            var synchronousResult = await PersistUserCancellationAsync(job).ConfigureAwait(false);
+            logger.LogInformation("Provider cancellation is unconfirmed; stopped waiting for generation {GenerationId}.", job.GenerationId);
+            return synchronousResult == GenerationCancelResult.Cancelled ? GenerationCancelResult.StoppedWaiting : synchronousResult;
+        }
+
         if (remote is null)
         {
             if (!requestedBeforeSubmit)
@@ -1997,6 +2014,7 @@ public sealed class GenerationService(
         private int _remoteCancelStarted;
         private int _phase;
         private bool _userCancelRequested;
+        private bool _isSynchronousImage;
         private Task<GenerationCancelResult>? _userCancelTask;
 
         public RunningJob(Generation generation, CancellationTokenSource source)
@@ -2017,6 +2035,7 @@ public sealed class GenerationService(
         public TaskCompletionSource SubmitSettled { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public SemaphoreSlim StateGate { get; } = new(1, 1);
+        public bool IsSynchronousImage => _isSynchronousImage;
 
         public Task<GenerationCancelResult> GetOrStartUserCancel(Func<Task<GenerationCancelResult>> start)
         {
@@ -2074,6 +2093,7 @@ public sealed class GenerationService(
             lock (_userCancelGate)
             {
                 _phase = 3;
+                _isSynchronousImage = provider is InMemoryQueuedImageProvider or InMemoryQueuedImageConnection;
             }
 
             lock (_remoteJobGate)
