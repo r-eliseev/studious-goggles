@@ -9,7 +9,7 @@ created: 2026-11-09
 # Acceptance scenarios: gallery, viewer and comparison
 
 ## Description
-Automate the “Галерея, просмотр и сравнение” section of the catalog: GAL-01 … GAL-05. File `Features/Gallery.feature`, tag `@gallery`.
+Automate the “Gallery, viewing, and comparison” section of the catalog: GAL-01 … GAL-05. File `Features/Gallery.feature`, tag `@gallery`.
 
 Depends on: 253, 257 (run steps).
 Environment: Linux or Windows (headless).
@@ -17,7 +17,7 @@ Environment: Linux or Windows (headless).
 ## Acceptance criteria
 - Add GAL-01 … GAL-05 to `.feature`; each scenario passes or has `@ignore @bug-NNN` and a tracking task.
 - GAL-01: two sessions, each with one completed and one failed card → the gallery (`SessionsPageModel.OpenGalleryAsync`, `GalleryPageModel.Items`) contains only the two completed images, newest first.
-- GAL-02: filter by model (`Models`, `SelectedModel`) and period (`SelectedPeriod`, `ApplyFiltersAsync`); create “старые” images by advancing `FakeTimeProvider` between runs.
+- GAL-02: filter by model (`Models`, `SelectedModel`) and period (`SelectedPeriod`, `ApplyFiltersAsync`); create “older” images by advancing `FakeTimeProvider` between runs.
 - GAL-03: `GalleryPageModel.OpenAsync` opens the source session (chat route with its id).
 - GAL-04: test the viewer using Avalonia's real `IImageViewerService` or a fake, whichever is easier to verify headless (compare with `Services/OverlayImageViewerServiceTests.cs`); navigation stays within a run (`ImageViewerNavigationState`).
 - GAL-05: comparison (`CompareAsync` on a card, `ComparisonPageModel`: `Mode`, `Zoom`, `SetZoom`, `SetOffset`) switches modes and applies the same zoom to both images.
@@ -45,7 +45,7 @@ bash scripts/check.sh
 ### Execution order (for Luna)
 - First read only the files in the “Files” line, the named tests, and sections of `docs/specs/acceptance-scenarios.md`; compare signatures with current `main`.
 - Follow steps in order (ub-mode): add a scenario to `.feature`, run it and confirm it fails because the step is unbound or the expectation is unmet; add the minimal binding; get a passing scenario. One scenario per commit (include the scenario id in the commit message).
-- Derive scenario expectations from the specification, not the code. If the code behaves differently, do not weaken the scenario or fix code: add `@ignore @bug-NNN`, create a task with reproduction steps using `scripts/new-task.sh --publish backlog <name>`, and set the catalog status to “расхождение (NNN)”.
+- Derive scenario expectations from the specification, not the code. If the code behaves differently, do not weaken the scenario or fix code: add `@ignore @bug-NNN`, create a task with reproduction steps using `scripts/new-task.sh --publish backlog <name>`, and set the catalog status to “discrepancy (NNN)”.
 - Steps act as a user: use page model commands, select items, and navigate. Do not call repositories, Core services, or SQL directly, except in “Given” steps that prepare the world and in “file exists” checks.
 - Add shared steps to `Steps/CommonSteps.cs`; first check whether a step already exists with different wording.
 - Do not change files outside the “Files” line, rename existing members beyond the plan, or fix neighboring findings; those belong to separate tasks.

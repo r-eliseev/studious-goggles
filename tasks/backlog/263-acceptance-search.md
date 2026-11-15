@@ -9,7 +9,7 @@ created: 2026-11-09
 # Acceptance scenarios: session search (Words and Meaning)
 
 ## Description
-Automate the “Поиск” section of the catalog: SRCH-01 … SRCH-04. Add SRCH-05 after tasks 226–228. File `Features/Search.feature`, tag `@search`.
+Automate the “Search” section of the catalog: SRCH-01 … SRCH-04. Add SRCH-05 after tasks 226–228. File `Features/Search.feature`, tag `@search`.
 
 Depends on: 253, 257 (run steps). If task 217 (embedding model name) is not merged when this task is claimed, compare the fake's embeddings route with `main`.
 Environment: Linux or Windows (headless).
@@ -43,7 +43,7 @@ bash scripts/check.sh
 ### Execution order (for Luna)
 - First read only the files in the “Files” line, the named tests, and sections of `docs/specs/acceptance-scenarios.md`; compare signatures with current `main`.
 - Follow steps in order (ub-mode): add a scenario to `.feature`, run it and confirm it fails because the step is unbound or the expectation is unmet; add the minimal binding; get a passing scenario. One scenario per commit (include the scenario id in the commit message).
-- Derive scenario expectations from the specification, not the code. If the code behaves differently, do not weaken the scenario or fix code: add `@ignore @bug-NNN`, create a task with reproduction steps using `scripts/new-task.sh --publish backlog <name>`, and set the catalog status to “расхождение (NNN)”.
+- Derive scenario expectations from the specification, not the code. If the code behaves differently, do not weaken the scenario or fix code: add `@ignore @bug-NNN`, create a task with reproduction steps using `scripts/new-task.sh --publish backlog <name>`, and set the catalog status to “discrepancy (NNN)”.
 - Steps act as a user: use page model commands, select items, and navigate. Do not call repositories, Core services, or SQL directly, except in “Given” steps that prepare the world and in “file exists” checks.
 - Add shared steps to `Steps/CommonSteps.cs`; first check whether a step already exists with different wording.
 - Do not change files outside the “Files” line, rename existing members beyond the plan, or fix neighboring findings; those belong to separate tasks.

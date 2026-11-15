@@ -9,7 +9,7 @@ created: 2026-11-09
 # Acceptance scenarios: video
 
 ## Description
-Automate the “Видео” section of the catalog: VID-01 … VID-04. Add VID-05 (audio) after 221–223. File `Features/Video.feature`, tag `@video`.
+Automate the “Video” section of the catalog: VID-01 … VID-04. Add VID-05 (audio) after 221–223. File `Features/Video.feature`, tag `@video`.
 
 Depends on: 253, 257. If tasks 218–220 (MAUI video player and card) change `GenerationItemViewModel` when this task is claimed, compare its members with `main`.
 Environment: Linux or Windows (headless).
@@ -18,15 +18,15 @@ Environment: Linux or Windows (headless).
 - Step 1: implement video routes in `FakeOpenRouter` based on `OpenRouterClient` (`GET videos/models`, `POST videos`, job polling, `GET videos/{id}/content`). Derive response shapes only from the code and `docs/knowledge/media-generation.md`; if information is missing, ask in “Comments”.
 - Add VID-01 … VID-04 to `.feature`; each scenario passes or has `@ignore @bug-NNN` and a tracking task.
 - VID-01: without selected video models, the chat completion body has no `generate_video` tool; with a selected model, it does.
-- VID-02: calling `generate_video` creates an `IsVideo` card; after polling (time via `FakeTimeProvider`, waiting via `IAsyncDelay`, as decided in 258), status becomes “готово” and the video file is in the data folder.
-- VID-03: a content download error results in “ошибка” and no file (S “Ошибка скачивания или сохранения …” in `media-generation.md`).
-- VID-04: cancelling a video results in “отменено” and a warning that the provider may continue (use resources).
+- VID-02: calling `generate_video` creates an `IsVideo` card; after polling (time via `FakeTimeProvider`, waiting via `IAsyncDelay`, as decided in 258), status becomes “Done” and the video file is in the data folder.
+- VID-03: a content download error results in “Error” and no file (section “Download or save error …” in `media-generation.md`).
+- VID-04: cancelling a video results in “Cancelled” and a warning that the provider may continue (use resources).
 - Do not test the player in headless mode (`UnsupportedMediaPlayerService`).
 - Update the VID-* statuses in the catalog.
 
 ## Analysis
 - `ImageGen/ImageGen.Core/OpenRouter/OpenRouterClient.cs` (around lines 82, 161, 171), `ImageGen/ImageGen.Core/Services/VideoModelCatalogService.cs`, `VideoPriceCalculator.cs`; `SessionModelsPageModel.ShowVideoModels`, `VideoModels`; `GenerationItemViewModel.IsVideo`, `VideoFilePath`.
-- Specification: `docs/specs/media-generation.md`, “Требования”; ADR 0027.
+- Specification: `docs/specs/media-generation.md`, “Requirements”; ADR 0027.
 
 ## Plan
 1. Add video routes to the fake (start with self-checks in `FakeNetworkTests`).
@@ -46,7 +46,7 @@ bash scripts/check.sh
 ### Execution order (for Luna)
 - First read only the files in the “Files” line, the named tests, and sections of `docs/specs/acceptance-scenarios.md`; compare signatures with current `main`.
 - Follow steps in order (ub-mode): add a scenario to `.feature`, run it and confirm it fails because the step is unbound or the expectation is unmet; add the minimal binding; get a passing scenario. One scenario per commit (include the scenario id in the commit message).
-- Derive scenario expectations from the specification, not the code. If the code behaves differently, do not weaken the scenario or fix code: add `@ignore @bug-NNN`, create a task with reproduction steps using `scripts/new-task.sh --publish backlog <name>`, and set the catalog status to “расхождение (NNN)”.
+- Derive scenario expectations from the specification, not the code. If the code behaves differently, do not weaken the scenario or fix code: add `@ignore @bug-NNN`, create a task with reproduction steps using `scripts/new-task.sh --publish backlog <name>`, and set the catalog status to “discrepancy (NNN)”.
 - Steps act as a user: use page model commands, select items, and navigate. Do not call repositories, Core services, or SQL directly, except in “Given” steps that prepare the world and in “file exists” checks.
 - Add shared steps to `Steps/CommonSteps.cs`; first check whether a step already exists with different wording.
 - Do not change files outside the “Files” line, rename existing members beyond the plan, or fix neighboring findings; those belong to separate tasks.

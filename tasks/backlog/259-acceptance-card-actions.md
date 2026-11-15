@@ -9,7 +9,7 @@ created: 2026-11-09
 # Acceptance scenarios: generation card actions
 
 ## Description
-Automate the “Действия над генерацией” section of the catalog: ACT-01 … ACT-08. File `Features/CardActions.feature`, tag `@actions`.
+Automate the “Generation actions” section of the catalog: ACT-01 … ACT-08. File `Features/CardActions.feature`, tag `@actions`.
 
 Depends on: 253, 257.
 Environment: Linux or Windows (headless).
@@ -22,7 +22,7 @@ Environment: Linux or Windows (headless).
 - ACT-05: `CopyPromptAsync` sends the exact prompt to the clipboard fake.
 - ACT-06: `DetailsAsync` on a failed card opens a dialog with the original error text from the fake response body; the card shows a short reason (`ErrorText`), not the original text.
 - ACT-07: `SaveAsync` on a completed card sends the filename `imagegen-<first 8 id characters>.png` to the `IImageSaver` fake.
-- ACT-08, `Scenario Outline`: identify actions available for “готово”, “ошибка”, “отфильтровано”, and “отменено” states (table based on specification S4.5–S4.8). Determine availability from the user's card menu (`ShowActionsAsync` / action set in code); see `Views/CardActionsTests.cs` for how to verify it.
+- ACT-08, `Scenario Outline`: identify actions available for “Done”, “Error”, “Filtered by the provider”, and “Cancelled” states (table based on specification S4.5–S4.8). Determine availability from the user's card menu (`ShowActionsAsync` / action set in code); see `Views/CardActionsTests.cs` for how to verify it.
 - Update ACT-* statuses in the catalog.
 
 ## Analysis
@@ -48,7 +48,7 @@ bash scripts/check.sh
 ### Execution order (for Luna)
 - First read only the files in the “Files” line, the named tests, and sections of `docs/specs/acceptance-scenarios.md`; compare signatures with current `main`.
 - Follow steps in order (ub-mode): add a scenario to `.feature`, run it and confirm it fails because the step is unbound or the expectation is unmet; add the minimal binding; get a passing scenario. One scenario per commit (include the scenario id in the commit message).
-- Derive scenario expectations from the specification, not the code. If the code behaves differently, do not weaken the scenario or fix code: add `@ignore @bug-NNN`, create a task with reproduction steps using `scripts/new-task.sh --publish backlog <name>`, and set the catalog status to “расхождение (NNN)”.
+- Derive scenario expectations from the specification, not the code. If the code behaves differently, do not weaken the scenario or fix code: add `@ignore @bug-NNN`, create a task with reproduction steps using `scripts/new-task.sh --publish backlog <name>`, and set the catalog status to “discrepancy (NNN)”.
 - Steps act as a user: use page model commands, select items, and navigate. Do not call repositories, Core services, or SQL directly, except in “Given” steps that prepare the world and in “file exists” checks.
 - Add shared steps to `Steps/CommonSteps.cs`; first check whether a step already exists with different wording.
 - Do not change files outside the “Files” line, rename existing members beyond the plan, or fix neighboring findings; those belong to separate tasks.
