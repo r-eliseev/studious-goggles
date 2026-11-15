@@ -926,15 +926,30 @@ public sealed class GenerationService(
             Parameters = requested,
         };
 
-        var models = new Dictionary<ModelRef, ImageModel?>();
+        var providerModels = new Dictionary<string, IReadOnlyList<ImageModel>?>(StringComparer.Ordinal);
         var generations = new List<Generation>(pairs.Count);
-        for (var index = 0; index < pairs.Count; index++)
+        foreach (var (model, seed, references) in pairs)
         {
-            var (model, seed, references) = pairs[index];
-            if (!models.TryGetValue(model, out var image))
+            if (!providerModels.TryGetValue(model.ProviderId, out var availableModels))
             {
-                image = await ReadModelAsync(model, cancellationToken);
-                models[model] = image;
+                try
+                {
+                    var catalogModels = await catalog.GetImageModelsAsync(model.ProviderId, forceRefresh: false, cancellationToken);
+                    availableModels = catalogModels.Count == 0 ? null : catalogModels;
+                }
+                catch (ProviderException)
+                {
+                    // An unavailable catalog cannot establish that a previously selected model disappeared.
+                    availableModels = null;
+                }
+
+                providerModels[model.ProviderId] = availableModels;
+            }
+
+            var image = availableModels?.FirstOrDefault(candidate => candidate.Id == model.ModelId);
+            if (availableModels is not null && image is null)
+            {
+                continue;
             }
 
             generations.Add(new Generation
@@ -949,10 +964,15 @@ public sealed class GenerationService(
                 SeedApplied = image?.SupportsSeed ?? false,
                 Status = GenerationStatus.Queued,
                 CreatedAt = now,
-                SortOrder = index,
+                SortOrder = generations.Count,
                 Outcomes = GenerationParameterPlanner.Plan(requested, image),
                 ReferenceAttachmentIds = references,
             });
+        }
+
+        if (generations.Count == 0)
+        {
+            throw new InvalidOperationException("None of the selected image models are currently available.");
         }
 
         await runs.AddRunAsync(run, generations, cancellationToken);

@@ -184,6 +184,52 @@ public class GenerationServiceTests
     }
 
     [Fact]
+    public async Task StartRunAsync_SelectedModelMissingFromAvailableCatalog_SkipsOnlyThatModel()
+    {
+        var missing = new ModelRef(ProviderIds.OpenRouter, "vendor/discontinued");
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded), missing];
+        _session.Settings.RunsPerModel = 1;
+        _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(
+            [ModelCatalogServiceTests.Model(Seeded, "Seeded")]);
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal([Seeded], _added.Select(generation => generation.ModelId));
+    }
+
+    [Fact]
+    public async Task StartRunAsync_AllSelectedModelsMissingFromAvailableCatalog_ThrowsWithoutCreatingRun()
+    {
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, "vendor/discontinued")];
+        _session.Settings.RunsPerModel = 1;
+        _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(
+            [ModelCatalogServiceTests.Model(Seeded, "Seeded")]);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken));
+
+        Assert.Contains("available", error.Message, StringComparison.OrdinalIgnoreCase);
+        await _runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StartRunAsync_EmptyCatalog_KeepsSavedModelAndCreatesGeneration()
+    {
+        var imageProvider = Substitute.For<IModelProvider>();
+        imageProvider.ListImageModelsAsync(Arg.Any<CancellationToken>()).Returns(Array.Empty<ImageModel>());
+        _providers.GetImageProvider(ProviderIds.OpenRouter).Returns(imageProvider);
+        _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(Array.Empty<ImageModel>());
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, Seeded)];
+        _session.Settings.RunsPerModel = 1;
+
+        await _service.StartRunAsync(_session.Id, "fox", TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        Assert.Equal([Seeded], _added.Select(generation => generation.ModelId));
+    }
+
+    [Fact]
     public async Task CancelGenerationAsync_DuringSubmit_WaitsForLateHandleThenCancels()
     {
         var handle = Handle();
