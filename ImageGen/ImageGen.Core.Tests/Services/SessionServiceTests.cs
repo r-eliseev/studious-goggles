@@ -584,7 +584,7 @@ public class SessionServiceTests
         var session = ExistingSession("Old");
         _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
         var called = 0;
-        _changes.SessionChanged += (_, _) => throw new InvalidOperationException("подписчик упал");
+        _changes.SessionChanged += (_, _) => throw new InvalidOperationException("subscriber failed");
         _changes.SessionChanged += (_, _) => called++;
 
         await _service.RenameAsync(session.Id, "Lighthouse", TestContext.Current.CancellationToken);

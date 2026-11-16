@@ -7,7 +7,7 @@ namespace ImageGen.Core.Tests.Services;
 
 public sealed class SessionChangeNotifierTests
 {
-    private const string PrivateText = "секретный текст провайдера";
+    private const string PrivateText = "provider secret text";
 
     [Fact]
     public void Notify_RaisesSessionChangedWithId()

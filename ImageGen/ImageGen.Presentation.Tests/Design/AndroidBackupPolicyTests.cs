@@ -86,7 +86,7 @@ public class AndroidBackupPolicyTests
     private static XElement LoadRules(string name)
     {
         var path = Path.Combine(AndroidRoot(), "Platforms", "Android", "Resources", "xml", name);
-        Assert.True(File.Exists(path), $"Не найден файл правил бэкапа {name}");
+        Assert.True(File.Exists(path), $"Backup rules file not found: {name}");
         return XDocument.Load(path).Root!;
     }
 
