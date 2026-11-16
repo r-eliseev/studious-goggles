@@ -12,7 +12,7 @@ Use this skill with `AGENTS.md`, `docs/executor.md`, `docs/tasks.md`, and the se
 At the start of every executor session, sync the repository and reconstruct state from durable sources, not chat memory:
 
 1. Check the current branch, uncommitted changes, `origin/main`, task branches, the task card and its latest Report/Comments, and the related pull request's merge state and checks.
-2. If the current task's PR was merged, start the next task from fresh `origin/main`. If it remains open, continue its branch when that task is still authorized. Never discard or switch away from uncommitted work.
+2. If the current task's PR was merged, sync/rebase the current work branch onto fresh `origin/main` before proceeding. When the owner has asked to keep working in the same branch, keep that branch for subsequent authorized tasks; if GitHub deleted its remote ref after merge, recreate the same branch name. Do not wait for another merge to resolve a self-blocker. Never discard or switch away from uncommitted work.
 3. Read the task pool authorization in `docs/status.md` when the user says to keep processing tasks. Follow its scope until the user withdraws or changes it.
 
 ## Keep working across turns
@@ -22,6 +22,8 @@ At the start of every executor session, sync the repository and reconstruct stat
 - Finish the current task before selecting another. After submission, update the designated PR as requested, then continue with the next eligible task in the authorized pool without waiting for a merge when the user said not to wait.
 - Use one task at a time. Respect its dependencies, environment, ownership and exact plan. A task branch held by someone else or an overlapping active task is not eligible.
 - If a task is blocked, record the evidence and proposed plan change, set `blocked`, release its claim, and report the blocker. Stop work on that task; continue with another independent eligible task if the standing authorization allows it. If none remain, report the concrete blockers and stop.
+- If the blocker is caused by the current task's own branch or executor harness, and the owner authorizes continuing in the same branch, do not wait for the PR to merge. Record the owner instruction as an approved amendment in the task, resolve the blocker in place, and continue. The owner may authorize edits to that task's normally protected sections when required; preserve the protection for all other tasks and do not bypass external dependencies or another worker's active branch without authorization.
+- When the owner authorizes a batch of tasks in one branch/PR, handle one task at a time but keep the shared branch name across tasks and PR updates. A merged PR is a sync point, not a requirement to start a different branch.
 - Ask only for a decision, approval, credential, or missing fact that materially blocks the next action. Do not ask again for standing authorization already recorded.
 
 ## Implement and verify
