@@ -1,4 +1,4 @@
--- Provider ids (задача 036). Existing rows came from OpenRouter, the only provider before this migration.
+-- Provider ids (task 036). Existing rows came from OpenRouter, the only provider before this migration.
 
 ALTER TABLE generations ADD COLUMN provider_id TEXT NOT NULL DEFAULT 'openrouter';
 

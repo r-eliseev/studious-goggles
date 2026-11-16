@@ -68,7 +68,7 @@ public sealed class SqliteDatabase
             {
                 // Downgrade is not supported (ADR 0002): refuse to touch a schema this build does not know.
                 throw new InvalidOperationException(
-                    $"База создана более новой версией приложения (версия схемы {version}, известно {Migrations.All.Count}). Обновите приложение.");
+                    $"The database was created by a newer app version (schema version {version}; this app knows {Migrations.All.Count}). Update the app.");
             }
 
             await using (var wal = connection.CreateCommand())
