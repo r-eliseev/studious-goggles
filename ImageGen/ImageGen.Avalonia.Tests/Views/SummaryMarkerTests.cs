@@ -47,9 +47,9 @@ public class SummaryMarkerTests
         shell.Window.Show();
 
         await shell.Navigation.GoToAsync(Routes.ChatFor(session.Id));
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "чат открыт");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "chat opened");
         var chat = (ChatPageModel)((Control)shell.Window.PageArea.Content!).DataContext!;
-        await shell.WaitUntilAsync(() => chat.Items.OfType<SummaryMarkerViewModel>().Any(), "разделитель в ленте");
+        await shell.WaitUntilAsync(() => chat.Items.OfType<SummaryMarkerViewModel>().Any(), "summary marker in transcript");
         shell.Window.UpdateLayout();
 
         var view = Assert.IsType<ChatView>(shell.Window.PageArea.Content);

@@ -58,7 +58,7 @@ public class ChatPaneTests
         Assert.False(chat.IsWide);
 
         await chat.OpenModelsCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "models screen");
 
         Assert.IsType<SessionModelsView>(shell.Window.PageArea.Content);
         Assert.Null(chat.ModelsPane);
@@ -71,7 +71,7 @@ public class ChatPaneTests
         var chat = await OpenWideChatAsync(shell);
         await chat.OpenModelsCommand.ExecuteAsync(null);
         var pane = chat.ModelsPane!;
-        await shell.WaitUntilAsync(() => !pane.IsBusy, "панель загружена");
+        await shell.WaitUntilAsync(() => !pane.IsBusy, "pane loaded");
 
         await pane.SaveCommand.ExecuteAsync(null);
         shell.Window.UpdateLayout();

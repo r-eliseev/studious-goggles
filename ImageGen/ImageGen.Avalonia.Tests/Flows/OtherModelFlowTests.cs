@@ -18,18 +18,18 @@ public class OtherModelFlowTests
         var row = await SendAsync(shell, chat, "draw a red fox");
         var card = row.Generations.Single();
         await shell.Provider.GetRequiredService<GenerationService>().WhenIdleAsync();
-        await shell.WaitUntilAsync(() => card.IsFiltered, "карточка отфильтрована");
+        await shell.WaitUntilAsync(() => card.IsFiltered, "card filtered");
 
         await card.OtherModelCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ModelPickerView, "экран выбора модели");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ModelPickerView, "model picker screen");
         var picker = (ModelPickerPageModel)((Control)shell.Window.PageArea.Content!).DataContext!;
-        await shell.WaitUntilAsync(() => picker.AllModels.Count == 6, "каталог загружен");
+        await shell.WaitUntilAsync(() => picker.AllModels.Count == 6, "catalog loaded");
 
         var chosen = picker.AllModels.Single(m => m.Id == "vendor/beta");
         await picker.PickCommand.ExecuteAsync(chosen);
         await shell.Provider.GetRequiredService<GenerationService>().WhenIdleAsync();
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "возврат в чат");
-        await shell.WaitUntilAsync(() => chat.Items.OfType<RunItemViewModel>().Count() == 2, "второй прогон в ленте");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "returned to chat");
+        await shell.WaitUntilAsync(() => chat.Items.OfType<RunItemViewModel>().Count() == 2, "second run in transcript");
 
         var runs = chat.Items.OfType<RunItemViewModel>().ToList();
         Assert.Equal("vendor/beta", runs[1].Generations.Single().ModelText);
@@ -39,7 +39,7 @@ public class OtherModelFlowTests
     {
         chat.InputText = text;
         await chat.SendCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => chat.Items.OfType<RunItemViewModel>().Any(), "прогон в ленте");
+        await shell.WaitUntilAsync(() => chat.Items.OfType<RunItemViewModel>().Any(), "run in transcript");
         return chat.Items.OfType<RunItemViewModel>().First();
     }
 }

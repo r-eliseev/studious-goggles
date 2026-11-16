@@ -27,7 +27,7 @@ public class TranscriptScrollTests
         var (view, _) = await OpenLongChatAsync(shell);
         shell.Window.UpdateLayout();
 
-        await shell.WaitUntilAsync(() => AtEnd(GetTranscript(view)), "лента в конце длинной истории");
+        await shell.WaitUntilAsync(() => AtEnd(GetTranscript(view)), "transcript at the end of the long history");
 
         Assert.True(GetTranscript(view).Offset.Y > 0);
     }
@@ -38,7 +38,7 @@ public class TranscriptScrollTests
         using var shell = new ShellHarness();
         var (view, _) = await OpenLongChatAsync(shell);
         var transcript = GetTranscript(view);
-        await shell.WaitUntilAsync(() => AtEnd(transcript), "лента в конце");
+        await shell.WaitUntilAsync(() => AtEnd(transcript), "transcript at the end");
 
         transcript.Offset = new Vector(0, 0);
         shell.Window.UpdateLayout();
@@ -56,14 +56,14 @@ public class TranscriptScrollTests
         using var shell = new ShellHarness();
         var (view, chat) = await OpenLongChatAsync(shell);
         var transcript = GetTranscript(view);
-        await shell.WaitUntilAsync(() => AtEnd(transcript), "лента в конце");
+        await shell.WaitUntilAsync(() => AtEnd(transcript), "transcript at the end");
 
         transcript.Offset = new Vector(0, 0);
         shell.Window.UpdateLayout();
         Dispatcher.UIThread.RunJobs();
         await chat.ReloadAsync();
 
-        await shell.WaitUntilAsync(() => AtEnd(transcript), "лента возвращена в конец после обновления строк");
+        await shell.WaitUntilAsync(() => AtEnd(transcript), "transcript returned to the end after rows were refreshed");
     }
 
     [AvaloniaFact]
@@ -72,12 +72,12 @@ public class TranscriptScrollTests
         using var shell = new ShellHarness();
         var (view, _) = await OpenLongChatAsync(shell);
         var transcript = GetTranscript(view);
-        await shell.WaitUntilAsync(() => AtEnd(transcript), "лента в конце");
+        await shell.WaitUntilAsync(() => AtEnd(transcript), "transcript at the end");
 
         shell.Window.Height = 400;
         shell.Window.UpdateLayout();
 
-        await shell.WaitUntilAsync(() => AtEnd(transcript), "лента остаётся в конце после уменьшения окна");
+        await shell.WaitUntilAsync(() => AtEnd(transcript), "transcript remains at the end after the window is resized smaller");
     }
 
     [AvaloniaFact]
@@ -86,11 +86,11 @@ public class TranscriptScrollTests
         using var shell = new ShellHarness();
         var (view, chat) = await OpenLongChatAsync(shell);
         var transcript = GetTranscript(view);
-        await shell.WaitUntilAsync(() => AtEnd(transcript), "лента в конце");
+        await shell.WaitUntilAsync(() => AtEnd(transcript), "transcript at the end");
         var run = AddRun(chat, shell);
         shell.Window.UpdateLayout();
         Dispatcher.UIThread.RunJobs();
-        await shell.WaitUntilAsync(() => AtEnd(transcript), "новый прогон в конце");
+        await shell.WaitUntilAsync(() => AtEnd(transcript), "new run at the end");
 
         var card = Assert.Single(run.Generations);
         card.NoticeText = new string('x', 5000);
@@ -98,7 +98,7 @@ public class TranscriptScrollTests
         shell.Window.UpdateLayout();
         Dispatcher.UIThread.RunJobs();
 
-        await shell.WaitUntilAsync(() => AtEnd(transcript), "нижний край выросшей карточки виден");
+        await shell.WaitUntilAsync(() => AtEnd(transcript), "bottom edge of the expanded card is visible");
     }
 
     [AvaloniaFact]
@@ -110,7 +110,7 @@ public class TranscriptScrollTests
         var run = AddRun(chat, shell);
         shell.Window.UpdateLayout();
         Dispatcher.UIThread.RunJobs();
-        await shell.WaitUntilAsync(() => AtEnd(transcript), "новый прогон в конце");
+        await shell.WaitUntilAsync(() => AtEnd(transcript), "new run at the end");
 
         transcript.Offset = new Vector(0, 0);
         shell.Window.UpdateLayout();
@@ -130,7 +130,7 @@ public class TranscriptScrollTests
         using var shell = new ShellHarness();
         var (view, chat) = await OpenLongChatAsync(shell);
         var transcript = GetTranscript(view);
-        await shell.WaitUntilAsync(() => AtEnd(transcript), "лента в конце");
+        await shell.WaitUntilAsync(() => AtEnd(transcript), "transcript at the end");
         transcript.Offset = new Vector(0, 0);
         shell.Window.UpdateLayout();
         Dispatcher.UIThread.RunJobs();
@@ -149,18 +149,18 @@ public class TranscriptScrollTests
         var (view, chat) = await OpenLongChatAsync(shell);
         view.OnAppearing();
         view.OnAppearing();
-        await shell.WaitUntilAsync(() => chat.Items.Count == 40, "повторная загрузка ленты");
+        await shell.WaitUntilAsync(() => chat.Items.Count == 40, "transcript reloaded");
         shell.Window.UpdateLayout();
         Dispatcher.UIThread.RunJobs();
         var transcript = GetTranscript(view);
-        await shell.WaitUntilAsync(() => AtEnd(transcript), "лента в конце после повторного появления");
+        await shell.WaitUntilAsync(() => AtEnd(transcript), "transcript at the end after it reappears");
 
         transcript.Offset = new Vector(0, 0);
         shell.Window.UpdateLayout();
         Dispatcher.UIThread.RunJobs();
         chat.Items.Add(chat.Items[0]);
 
-        await shell.WaitUntilAsync(() => AtEnd(transcript), "одно изменение строк прокручивает в конец");
+        await shell.WaitUntilAsync(() => AtEnd(transcript), "one row change scrolls to the end");
     }
 
     private static RunItemViewModel AddRun(ChatPageModel chat, ShellHarness shell)
@@ -227,10 +227,10 @@ public class TranscriptScrollTests
 
         shell.Window.Show();
         await shell.Navigation.GoToAsync(Routes.ChatFor(session.Id));
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "чат открыт");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "chat opened");
         var view = (ChatView)shell.Window.PageArea.Content!;
         var model = (ChatPageModel)view.DataContext!;
-        await shell.WaitUntilAsync(() => model.Items.Count == 40, "40 сообщений загружены");
+        await shell.WaitUntilAsync(() => model.Items.Count == 40, "40 messages loaded");
         shell.Window.UpdateLayout();
         Dispatcher.UIThread.RunJobs();
         return (view, model);

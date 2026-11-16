@@ -50,7 +50,7 @@ public sealed class SecretServiceBackend(string collectionAlias = "default") : I
         var collectionPath = await service.ReadAliasAsync(collectionAlias);
         if (collectionPath == ObjectPath.Root)
         {
-            throw new InvalidOperationException($"В Secret Service нет коллекции «{collectionAlias}».");
+            throw new InvalidOperationException($"Secret Service collection '{collectionAlias}' does not exist.");
         }
 
         var collection = connection.CreateProxy<ISecretCollection>(BusName, collectionPath);
@@ -65,7 +65,7 @@ public sealed class SecretServiceBackend(string collectionAlias = "default") : I
             replace: true);
         if (prompt != ObjectPath.Root)
         {
-            throw new InvalidOperationException("Secret Service запросил подтверждение: ключ не сохранён.");
+            throw new InvalidOperationException("Secret Service requested confirmation; the key was not saved.");
         }
     }
 

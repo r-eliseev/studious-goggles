@@ -29,9 +29,9 @@ public class EmptyChatExampleFlowTests
             .Single();
         example.Command!.Execute(example.CommandParameter);
 
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "чат открыт");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "chat opened");
         var chat = (ChatPageModel)((Control)shell.Window.PageArea.Content!).DataContext!;
-        await shell.WaitUntilAsync(() => chat.Items.OfType<MessageItemViewModel>().Any(message => message.IsUser), "пример отправлен");
+        await shell.WaitUntilAsync(() => chat.Items.OfType<MessageItemViewModel>().Any(message => message.IsUser), "example sent");
         var sent = chat.Items.OfType<MessageItemViewModel>().Single(message => message.IsUser);
         Assert.Equal(AppResources.EmptyChatExample1, sent.Text);
         Assert.Single(chat.Items.OfType<MessageItemViewModel>(), message => message.IsUser);

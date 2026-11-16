@@ -12,7 +12,7 @@ public class DpapiSecretBackendTests
     {
         if (!OperatingSystem.IsWindows())
         {
-            Assert.Skip("DPAPI работает только на Windows.");
+            Assert.Skip("DPAPI is available only on Windows.");
         }
 
         var cancellationToken = TestContext.Current.CancellationToken;

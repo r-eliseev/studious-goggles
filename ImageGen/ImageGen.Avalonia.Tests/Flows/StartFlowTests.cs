@@ -22,7 +22,7 @@ public class StartFlowTests
 
         await shell.StartAsync();
 
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ApiKeyView, "страница ключа");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ApiKeyView, "key page");
         Assert.Equal(Routes.ApiKeyFor("openrouter", firstRun: true), shell.Navigation.CurrentRoute);
     }
 
@@ -32,7 +32,7 @@ public class StartFlowTests
         var cancellationToken = TestContext.Current.CancellationToken;
         using var shell = new ShellHarness(openRouter: StubHttpMessageHandler.Status(HttpStatusCode.OK));
         await shell.StartAsync();
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ApiKeyView, "страница ключа");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ApiKeyView, "key page");
         var model = Assert.IsType<ApiKeyPageModel>(Assert.IsType<ApiKeyView>(shell.Window.PageArea.Content).DataContext);
         await Dispatcher.UIThread.InvokeAsync(async () =>
         {
@@ -40,7 +40,7 @@ public class StartFlowTests
             await model.SaveCommand.ExecuteAsync(null);
         });
 
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionsView, "список сессий");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionsView, "session list");
         Assert.Equal("sk-or-test", await shell.Secrets.GetAsync(ImageGen.Core.Domain.Keys.SecretNames.OpenRouterApiKey, cancellationToken));
         Assert.Single(shell.OpenRouter.Requests);
         Assert.EndsWith("/key", shell.OpenRouter.Requests[0].RequestUri!.ToString(), StringComparison.Ordinal);
@@ -51,7 +51,7 @@ public class StartFlowTests
     {
         using var shell = new ShellHarness(openRouter: StubHttpMessageHandler.Status(HttpStatusCode.Unauthorized));
         await shell.StartAsync();
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ApiKeyView, "страница ключа");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ApiKeyView, "key page");
         var model = Assert.IsType<ApiKeyPageModel>(Assert.IsType<ApiKeyView>(shell.Window.PageArea.Content).DataContext);
         await Dispatcher.UIThread.InvokeAsync(async () =>
         {
@@ -71,11 +71,11 @@ public class StartFlowTests
         using var shell = new ShellHarness(dialogs: dialogs);
         await shell.SaveKeyAsync("sk-or-test");
         await shell.StartAsync();
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionsView, "список сессий");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionsView, "session list");
         await shell.Navigation.GoToAsync(Routes.Settings);
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SettingsView, "настройки");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SettingsView, "settings");
         var settings = Assert.IsType<SettingsPageModel>(Assert.IsType<SettingsView>(shell.Window.PageArea.Content).DataContext);
-        await shell.WaitUntilAsync(() => settings.ProviderKeys.Any(row => row.ProviderId == "openrouter" && row.HasKey), "ключ OpenRouter");
+        await shell.WaitUntilAsync(() => settings.ProviderKeys.Any(row => row.ProviderId == "openrouter" && row.HasKey), "OpenRouter key");
         var openRouterKey = settings.ProviderKeys.Single(row => row.ProviderId == "openrouter");
 
         await openRouterKey.RemoveCommand.ExecuteAsync(null);
@@ -84,7 +84,7 @@ public class StartFlowTests
         Assert.False(openRouterKey.HasKey);
         Assert.Null(await shell.Secrets.GetAsync(ImageGen.Core.Domain.Keys.SecretNames.OpenRouterApiKey, TestContext.Current.CancellationToken));
         await shell.Navigation.GoBackAsync();
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ApiKeyView, "повторный запрос ключа");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ApiKeyView, "key requested again");
         Assert.Equal(Routes.ApiKeyFor("openrouter", firstRun: true), shell.Navigation.CurrentRoute);
     }
 
@@ -95,7 +95,7 @@ public class StartFlowTests
         await shell.SaveKeyAsync("sk-or-test");
         await shell.InitializeDatabaseAsync();
         await shell.StartAsync();
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionsView, "список сессий");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionsView, "session list");
         var sessions = shell.Provider.GetRequiredService<SessionsPageModel>();
 
         await sessions.NewSessionCommand.ExecuteAsync(null);
@@ -115,7 +115,7 @@ public class StartFlowTests
         var session = await shell.Provider.GetRequiredService<SessionService>().CreateAsync(cancellationToken);
         await shell.StartAsync();
         var sessions = shell.Provider.GetRequiredService<SessionsPageModel>();
-        await shell.WaitUntilAsync(() => sessions.Sessions.Count == 1, "строка сессии");
+        await shell.WaitUntilAsync(() => sessions.Sessions.Count == 1, "session row");
 
         await sessions.Sessions[0].OpenCommand.ExecuteAsync(null);
 
@@ -135,7 +135,7 @@ public class StartFlowTests
         await sessionService.CreateAsync(cancellationToken);
         await shell.StartAsync();
         var sessions = shell.Provider.GetRequiredService<SessionsPageModel>();
-        await shell.WaitUntilAsync(() => sessions.Sessions.Count == 1, "строка сессии");
+        await shell.WaitUntilAsync(() => sessions.Sessions.Count == 1, "session row");
 
         await sessions.Sessions[0].DeleteCommand.ExecuteAsync(null);
 
@@ -156,7 +156,7 @@ public class StartFlowTests
         await sessionService.CreateAsync(cancellationToken);
         await shell.StartAsync();
         var sessions = shell.Provider.GetRequiredService<SessionsPageModel>();
-        await shell.WaitUntilAsync(() => sessions.Sessions.Count == 1, "строка сессии");
+        await shell.WaitUntilAsync(() => sessions.Sessions.Count == 1, "session row");
 
         await sessions.Sessions[0].DeleteCommand.ExecuteAsync(null);
 

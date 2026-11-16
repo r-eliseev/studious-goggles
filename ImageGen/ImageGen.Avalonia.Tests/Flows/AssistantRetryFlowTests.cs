@@ -17,12 +17,12 @@ public class AssistantRetryFlowTests
         var chat = await shell.OpenNewChatAsync();
         chat.InputText = "draw a red fox";
         await chat.SendCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => chat.Items[^1] is MessageItemViewModel { CanRetry: true }, "«Try again» после ошибки");
+        await shell.WaitUntilAsync(() => chat.Items[^1] is MessageItemViewModel { CanRetry: true }, "“Try again” after the error");
 
         await ((MessageItemViewModel)chat.Items[^1]).RetryCommand.ExecuteAsync(null);
         await shell.Provider.GetRequiredService<GenerationService>().WhenIdleAsync();
 
-        await shell.WaitUntilAsync(() => chat.Items.OfType<RunItemViewModel>().Any(), "ответ после повтора");
+        await shell.WaitUntilAsync(() => chat.Items.OfType<RunItemViewModel>().Any(), "response after retry");
         Assert.Single(chat.Items.OfType<MessageItemViewModel>(), message => message.IsUser);
         Assert.DoesNotContain(chat.Items.OfType<MessageItemViewModel>(), message => message is { IsError: true, CanRetry: true });
     }

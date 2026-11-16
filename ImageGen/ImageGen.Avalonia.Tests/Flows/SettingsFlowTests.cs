@@ -24,7 +24,7 @@ public class SettingsFlowTests
         await shell.SaveKeyAsync("sk-or-test");
         await shell.InitializeDatabaseAsync();
         await shell.StartAsync();
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionsView, "список сессий");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionsView, "session list");
 
         await shell.Provider.GetRequiredService<SessionsPageModel>().OpenSettingsCommand.ExecuteAsync(null);
 

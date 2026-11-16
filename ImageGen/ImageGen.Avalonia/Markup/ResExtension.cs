@@ -15,7 +15,7 @@ public sealed class ResExtension(string key) : MarkupExtension
     public static string Lookup(string key)
     {
         var property = typeof(AppResources).GetProperty(key, BindingFlags.Public | BindingFlags.Static)
-            ?? throw new InvalidOperationException($"Нет строки интерфейса «{key}».");
+            ?? throw new InvalidOperationException($"No UI string exists for '{key}'.");
         return (string?)property.GetValue(null) ?? string.Empty;
     }
 }

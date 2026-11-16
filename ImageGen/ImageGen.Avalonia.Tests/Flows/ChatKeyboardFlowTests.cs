@@ -21,7 +21,7 @@ public class ChatKeyboardFlowTests
         await shell.InitializeDatabaseAsync();
         var session = await shell.Provider.GetRequiredService<SessionService>().CreateAsync(ct);
         await shell.Navigation.GoToAsync(Routes.ChatFor(session.Id));
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "чат");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "chat");
         var view = (ChatView)shell.Window.PageArea.Content!;
         var model = (ChatPageModel)view.DataContext!;
         var input = InputOf(view);
@@ -30,7 +30,7 @@ public class ChatKeyboardFlowTests
         var args = Press(input, Key.Enter, KeyModifiers.None);
 
         Assert.True(args.Handled);
-        await shell.WaitUntilAsync(() => model.Items.Count > 0 && !model.IsBusy, "сообщение отправлено");
+        await shell.WaitUntilAsync(() => model.Items.Count > 0 && !model.IsBusy, "message sent");
         Assert.Equal("", model.InputText);
         Assert.DoesNotContain('\n', input.Text ?? "");
     }
@@ -44,7 +44,7 @@ public class ChatKeyboardFlowTests
         await shell.InitializeDatabaseAsync();
         var session = await shell.Provider.GetRequiredService<SessionService>().CreateAsync(ct);
         await shell.Navigation.GoToAsync(Routes.ChatFor(session.Id));
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "чат");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "chat");
         var view = (ChatView)shell.Window.PageArea.Content!;
         var model = (ChatPageModel)view.DataContext!;
         model.InputText = "hi";
@@ -65,7 +65,7 @@ public class ChatKeyboardFlowTests
         await shell.InitializeDatabaseAsync();
         var session = await shell.Provider.GetRequiredService<SessionService>().CreateAsync(ct);
         await shell.Navigation.GoToAsync(Routes.ChatFor(session.Id));
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "чат");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "chat");
         var view = (ChatView)shell.Window.PageArea.Content!;
         var model = (ChatPageModel)view.DataContext!;
         var input = InputOf(view);

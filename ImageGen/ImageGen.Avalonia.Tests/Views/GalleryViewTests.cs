@@ -19,7 +19,7 @@ public sealed class GalleryViewTests
 
         await shell.Navigation.GoToAsync(Routes.Gallery);
         await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is GalleryView view
-            && view.DataContext is GalleryPageModel model && !model.IsBusy, "галерея загружена");
+            && view.DataContext is GalleryPageModel model && !model.IsBusy, "gallery loaded");
         shell.Window.UpdateLayout();
 
         var page = Assert.IsType<GalleryView>(shell.Window.PageArea.Content);

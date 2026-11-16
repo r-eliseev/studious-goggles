@@ -133,7 +133,7 @@ public class ChatLayoutTests
 
         await shell.Navigation.GoToAsync(Routes.ChatFor(session.Id));
         var model = (ChatPageModel)((ChatView)shell.Window.PageArea.Content!).DataContext!;
-        await shell.WaitUntilAsync(() => model.Title == (title ?? model.Title) && model.ModelsButtonText.Length > 0, "шапка загружена");
+        await shell.WaitUntilAsync(() => model.Title == (title ?? model.Title) && model.ModelsButtonText.Length > 0, "header loaded");
         shell.Window.UpdateLayout();
         return shell;
     }

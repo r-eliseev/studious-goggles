@@ -84,7 +84,7 @@ public sealed class ShellHarness : IDisposable
         {
             if (DateTime.UtcNow > deadline)
             {
-                throw new TimeoutException("Условие не выполнилось: " + description);
+                throw new TimeoutException("Condition was not met: " + description);
             }
 
             Dispatcher.UIThread.RunJobs();
@@ -100,9 +100,9 @@ public sealed class ShellHarness : IDisposable
         await InitializeDatabaseAsync();
         var session = await Provider.GetRequiredService<SessionService>().CreateAsync(cancellationToken);
         await Navigation.GoToAsync(Routes.ChatFor(session.Id));
-        await WaitUntilAsync(() => Window.PageArea.Content is ChatView, "чат");
+        await WaitUntilAsync(() => Window.PageArea.Content is ChatView, "chat");
         var chat = (ChatPageModel)((Control)Window.PageArea.Content!).DataContext!;
-        await WaitUntilAsync(() => chat.ModelsButtonText.Length > 0, "лента загружена");
+        await WaitUntilAsync(() => chat.ModelsButtonText.Length > 0, "transcript loaded");
         return chat;
     }
 
@@ -122,10 +122,10 @@ public sealed class ShellHarness : IDisposable
         // Taken in the constructor: some tests dispose the container themselves before the harness.
         var idle = _generations.WhenIdleAsync();
         var deadline = DateTime.UtcNow.AddSeconds(10);
-        WaitForIdle(idle, deadline, "Фоновые генерации теста не завершились за 10 секунд.");
+        WaitForIdle(idle, deadline, "Background test generations did not finish within 10 seconds.");
         Dispatcher.UIThread.RunJobs();
         var imageReadsIdle = _imageFiles.WhenIdleAsync();
-        WaitForIdle(imageReadsIdle, deadline, "Фоновые чтения размеров картинок теста не завершились за 10 секунд.");
+        WaitForIdle(imageReadsIdle, deadline, "Background test image dimension reads did not finish within 10 seconds.");
     }
 
     private static void WaitForIdle(Task idle, DateTime deadline, string timeoutMessage)
