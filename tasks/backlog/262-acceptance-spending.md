@@ -9,7 +9,7 @@ created: 2026-11-09
 # Acceptance scenarios: spending
 
 ## Description
-Automate the “Расходы” section of the catalog: SPD-01 … SPD-05. File `Features/Spending.feature`, tag `@spending`.
+Automate the “Spending” section of the catalog: SPD-01 … SPD-05. File `Features/Spending.feature`, tag `@spending`.
 
 Depends on: 253, 257 (run steps).
 Environment: Linux or Windows (headless).
@@ -19,7 +19,7 @@ Environment: Linux or Windows (headless).
 - Create spending data through real runs with a price from the fake (`usage.cost`), not by writing directly to the database.
 - SPD-01: two generations priced at 0.014 and 0.03 → daily total 0.044 (format according to `SpendingPageModel.TotalText`, invariant culture), grouped by provider and model (`Groups`).
 - SPD-02: a generation without `usage.cost` is excluded from the total and included in `UnknownOperationsText`.
-- SPD-03: set the time zone and “сейчас” with `FakeTimeProvider` (`SetLocalTimeZone` if needed); run on Sunday, then advance “сейчас” to Monday → it is excluded from `Week` and included in `Month` (if still the same month).
+- SPD-03: set the time zone and current time with `FakeTimeProvider` (`SetLocalTimeZone` if needed); run on Sunday, then advance the time to Monday → it is excluded from `Week` and included in `Month` (if still the same month).
 - SPD-04: the threshold is off by default; after setting a threshold below the next run's estimate, the chat shows a warning before sending (derive exact behavior from `ChatPageModel` and F8.4).
 - SPD-05: the monthly limit (`MonthlyLimitText`, `SaveSettingsAsync`) persists after `Restart`.
 - Update SPD-* statuses in the catalog.
@@ -47,7 +47,7 @@ bash scripts/check.sh
 ### Execution order (for Luna)
 - First read only the files in the “Files” line, the named tests, and sections of `docs/specs/acceptance-scenarios.md`; compare signatures with current `main`.
 - Follow steps in order (ub-mode): add a scenario to `.feature`, run it and confirm it fails because the step is unbound or the expectation is unmet; add the minimal binding; get a passing scenario. One scenario per commit (include the scenario id in the commit message).
-- Derive scenario expectations from the specification, not the code. If the code behaves differently, do not weaken the scenario or fix code: add `@ignore @bug-NNN`, create a task with reproduction steps using `scripts/new-task.sh --publish backlog <name>`, and set the catalog status to “расхождение (NNN)”.
+- Derive scenario expectations from the specification, not the code. If the code behaves differently, do not weaken the scenario or fix code: add `@ignore @bug-NNN`, create a task with reproduction steps using `scripts/new-task.sh --publish backlog <name>`, and set the catalog status to “discrepancy (NNN)”.
 - Steps act as a user: use page model commands, select items, and navigate. Do not call repositories, Core services, or SQL directly, except in “Given” steps that prepare the world and in “file exists” checks.
 - Add shared steps to `Steps/CommonSteps.cs`; first check whether a step already exists with different wording.
 - Do not change files outside the “Files” line, rename existing members beyond the plan, or fix neighboring findings; those belong to separate tasks.

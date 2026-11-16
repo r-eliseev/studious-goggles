@@ -9,17 +9,17 @@ created: 2026-11-09
 # Acceptance scenarios: cancelling generations and recovery after restart
 
 ## Description
-Automate the “Отмена и восстановление” section of the catalog: CAN-01 … CAN-05. File `Features/CancelAndRecovery.feature`, tag `@cancel`.
+Automate the “Cancellation and recovery” section of the catalog: CAN-01 … CAN-05. File `Features/CancelAndRecovery.feature`, tag `@cancel`.
 
 Depends on: 253, 257 (run steps and holding responses), 284 (stop waiting on cancel; CAN-01, CAN-02, CAN-05).
 Environment: Linux or Windows (headless).
 
 ## Acceptance criteria
 - Add CAN-01 … CAN-05 to `.feature`; each scenario passes or has `@ignore @bug-NNN` and a tracking task.
-- CAN-01: hold two generations; cancel one (`GenerationItemViewModel.CancelAsync`) → it becomes “отменено”; after releasing the other, it becomes “готово”.
-- CAN-02: cancel a run (`RunItemViewModel.CancelRunAsync`) with one completed and two held generations → the completed one is unchanged and the other two become “отменено”.
-- CAN-03: the provider response arrives before cancellation is confirmed (steps set the order) → the card becomes “готово” and the image is saved.
-- CAN-04: hold a generation, then restart the world → the card becomes “ошибка” with reason “Interrupted” (per resources). Under S3.8, OpenRouter without a job handle becomes Interrupted; queued providers with handles are not covered here.
+- CAN-01: hold two generations; cancel one (`GenerationItemViewModel.CancelAsync`) → it becomes “Cancelled”; after releasing the other, it becomes “Done”.
+- CAN-02: cancel a run (`RunItemViewModel.CancelRunAsync`) with one completed and two held generations → the completed one is unchanged and the other two become “Cancelled”.
+- CAN-03: the provider response arrives before cancellation is confirmed (steps set the order) → the card becomes “Done” and the image is saved.
+- CAN-04: hold a generation, then restart the world → the card becomes “Error” with reason “Interrupted” (per resources). Under S3.8, OpenRouter without a job handle becomes Interrupted; queued providers with handles are not covered here.
 - CAN-05: the cancellation confirmation time (from `FakeTimeProvider`) appears on the card (`CancellationStatusText`) and remains after `Restart`.
 - No scenario waits for real time: advance fake timeouts and polling with `FakeTimeProvider.Advance` when code uses `TimeProvider`. If code waits on `Task.Delay` without `TimeProvider` (`IAsyncDelay`, `SystemAsyncDelay`), record it in “Report” and replace `IAsyncDelay` through the world seam if necessary.
 - Update CAN-* statuses in the catalog.
@@ -46,7 +46,7 @@ bash scripts/check.sh
 ### Execution order (for Luna)
 - First read only the files in the “Files” line, the named tests, and sections of `docs/specs/acceptance-scenarios.md`; compare signatures with current `main`.
 - Follow steps in order (ub-mode): add a scenario to `.feature`, run it and confirm it fails because the step is unbound or the expectation is unmet; add the minimal binding; get a passing scenario. One scenario per commit (include the scenario id in the commit message).
-- Derive scenario expectations from the specification, not the code. If the code behaves differently, do not weaken the scenario or fix code: add `@ignore @bug-NNN`, create a task with reproduction steps using `scripts/new-task.sh --publish backlog <name>`, and set the catalog status to “расхождение (NNN)”.
+- Derive scenario expectations from the specification, not the code. If the code behaves differently, do not weaken the scenario or fix code: add `@ignore @bug-NNN`, create a task with reproduction steps using `scripts/new-task.sh --publish backlog <name>`, and set the catalog status to “discrepancy (NNN)”.
 - Steps act as a user: use page model commands, select items, and navigate. Do not call repositories, Core services, or SQL directly, except in “Given” steps that prepare the world and in “file exists” checks.
 - Add shared steps to `Steps/CommonSteps.cs`; first check whether a step already exists with different wording.
 - Do not change files outside the “Files” line, rename existing members beyond the plan, or fix neighboring findings; those belong to separate tasks.

@@ -6,55 +6,55 @@ claimed:
 created: 2026-11-09
 ---
 
-# Приёмочные сценарии: список сессий, название, удаление, настройки по умолчанию
+# Acceptance scenarios: session list, title, deletion, and default settings
 
-## Описание
-Автоматизировать раздел «Сессии» каталога `docs/specs/acceptance-scenarios.md`: SES-01 … SES-10. SES-11 (удаление всей истории) — после задачи 229, здесь не делать. Файл `Features/Sessions.feature`, тег `@sessions`.
+## Description
+Automate the “Sessions” section of the catalog `docs/specs/acceptance-scenarios.md`: SES-01 … SES-10. SES-11 (clear all history) follows task 229 and is out of scope here. File: `Features/Sessions.feature`, tag: `@sessions`.
 
-Зависит от: 253.
-Среда: Linux или Windows (headless).
+Depends on: 253.
+Environment: Linux or Windows (headless).
 
-## Критерии готовности
-- SES-01 … SES-10 в `.feature`; каждый зелёный или `@ignore @bug-NNN` с задачей.
-- SES-02: сообщение из 60 символов → название ровно первые 40 (сравнение строк, без обрезки пробелов, если спецификация её не требует — уточнить по S1.2 и коду; при неясности — вопрос в «Комментарии»).
-- SES-04: переименование в пустую строку и в 41 символ не меняет название; что видит пользователь (ошибка или неактивная кнопка) — по коду, записать в «Отчёт».
-- SES-05: отказ в диалоге подтверждения (фейк `IDialogService` отвечает «нет») — сессия остаётся; согласие — сессии нет и после `Restart`.
-- SES-09: «Today» и «Earlier» считаются по `FakeTimeProvider`; сессия, созданная «вчера» (время сдвинуто шагом «Дано сейчас <дата время>»), — в «Earlier». Шаг времени — в `CommonSteps`.
-- SES-07: смена модели ассистента по умолчанию в Settings не меняет модель уже созданной сессии, а новая сессия получает новую.
-- Статусы SES-* в каталоге обновлены.
+## Acceptance criteria
+- SES-01 … SES-10 are in `.feature`; each passes or is tagged `@ignore @bug-NNN` with a task.
+- SES-02: a 60-character message → the title contains exactly the first 40 characters (compare strings; do not trim whitespace unless required by the specification — check S1.2 and the code; if unclear, ask in “Comments”).
+- SES-04: renaming to an empty string or 41 characters does not change the title; record what the user sees (an error or a disabled button) in “Report”, according to the code.
+- SES-05: declining the confirmation dialog (the `IDialogService` fake answers “no”) leaves the session; accepting deletes the session, including after `Restart`.
+- SES-09: “Today” and “Earlier” use `FakeTimeProvider`; a session created “yesterday” (advance time with the “Given current time <date time>” step) appears under “Earlier”. The time step belongs in `CommonSteps`.
+- SES-07: changing the default assistant model in Settings does not change the model in an existing session; a new session receives the new default.
+- Update the SES-* statuses in the catalog.
 
-## Анализ
-- `ImageGen/ImageGen.Presentation/PageModels/SessionsPageModel.cs` (`Sessions`, `Today`, `Earlier`, `NewSessionAsync`, `StartExampleAsync`, `Examples`), `SessionItemViewModel.cs` (переименование и удаление — найти команды), `ChatPageModel.cs` (`Title`).
-- Ядро: `ImageGen/ImageGen.Core/Services/SessionService.cs`, правила названия — там же или в `HistoryService.cs`.
-- Настройка новых сессий: `SettingsPageModel.SaveDefaultAssistantModelAsync`, `defaults.json` (`docs/specs/chat-sessions.md`, S1.3).
-- Потоковые тесты: `Flows/EmptyChatExampleFlowTests.cs` (SES-10), `Views/SessionsViewTests.cs`.
+## Analysis
+- `ImageGen/ImageGen.Presentation/PageModels/SessionsPageModel.cs` (`Sessions`, `Today`, `Earlier`, `NewSessionAsync`, `StartExampleAsync`, `Examples`), `SessionItemViewModel.cs` (find the rename and delete commands), and `ChatPageModel.cs` (`Title`).
+- Core: `ImageGen/ImageGen.Core/Services/SessionService.cs`; title rules are there or in `HistoryService.cs`.
+- Defaults for new sessions: `SettingsPageModel.SaveDefaultAssistantModelAsync`, `defaults.json` (`docs/specs/chat-sessions.md`, S1.3).
+- Flow tests: `Flows/EmptyChatExampleFlowTests.cs` (SES-10), `Views/SessionsViewTests.cs`.
 
-## План
-По одному сценарию SES-01 → SES-10, TDD-цикл из «Порядка исполнения». Число прогонов (SES-08) получить настоящими прогонами через ассистента (`Дано ассистент отвечает вызовом generate_images …`), а не записью в БД.
+## Plan
+Implement one scenario at a time, SES-01 → SES-10, following the TDD cycle in “Execution order”. Get the run count for SES-08 from actual runs through the assistant (“Given the assistant responds with a `generate_images` call …”), not by writing to the database.
 
-Файлы: `ImageGen/ImageGen.Acceptance.Tests/Features/Sessions.feature`, `Steps/SessionsSteps.cs` (новый), `Steps/CommonSteps.cs`, `docs/specs/acceptance-scenarios.md`, `Support/FakePlatform.cs` (a queued `PromptAsync` result, approved 2026-11-10), `Support/FakeOpenRouter.cs` and `Support/AppWorld.cs` (additive test-harness changes only: new configurable fake responses, catalog fields, world helpers; no change of existing behavior used by other features, no product code).
+Files: `ImageGen/ImageGen.Acceptance.Tests/Features/Sessions.feature`, new `Steps/SessionsSteps.cs`, `Steps/CommonSteps.cs`, `docs/specs/acceptance-scenarios.md`, `Support/FakePlatform.cs` (a queued `PromptAsync` result, approved 2026-11-10), `Support/FakeOpenRouter.cs`, and `Support/AppWorld.cs` (additive test-harness changes only: configurable fake responses, catalog fields, and world helpers; no change to behavior used by other features and no product code).
 
-### Проверка
+### Verification
 ```
 dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj
 dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait "Category=sessions"
 dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes
 bash scripts/check.sh
 ```
-(Фильтр по тегу — если Reqnroll передаёт теги как категории xUnit; как именно — записано в `docs/knowledge/acceptance-tests.md` задачей 252.)
+(The tag filter applies if Reqnroll passes tags as xUnit categories; task 252 records the behavior in `docs/knowledge/acceptance-tests.md`.)
 
-### Порядок исполнения (для Luna)
-- Сначала прочитай только файлы из строки «Файлы», названные тесты и разделы `docs/specs/acceptance-scenarios.md`; сигнатуры сверяй с текущим `main`.
-- Шаги строго по порядку (ub-mode): сначала сценарий в `.feature`, запуск — он падает, потому что шаг не привязан или ожидание не выполнено; затем минимальная привязка; сценарий зелёный. Один сценарий — один коммит (id сценария в сообщении).
-- Ожидание сценария берётся из спецификации, не из кода. Если код ведёт себя иначе: не подгоняй сценарий и не чини код — тег `@ignore @bug-NNN`, новая задача `scripts/new-task.sh --publish backlog <имя>` с шагами воспроизведения, статус «расхождение (NNN)» в каталоге.
-- Шаги действуют как пользователь: команды моделей страниц, выбор пунктов, навигация. Не вызывай репозитории, сервисы ядра и SQL напрямую, кроме шагов «Дано», которые готовят мир, и проверок «файл существует».
-- Новый общий шаг — в `Steps/CommonSteps.cs`; сначала поищи, нет ли уже такого шага с другой формулировкой.
-- Не меняй файлы вне строки «Файлы», не переименовывай существующие члены сверх плана, не чини соседние находки — они в отдельных задачах.
-- Если код расходится с планом (нет такого метода, другая сигнатура), не импровизируй: остановись и запиши вопрос в «Комментарии».
-- Команды `dotnet` выполняй по одной, не параллельно. После каждого изменённого проекта — `dotnet format <проект> --verify-no-changes`.
-- В «Отчёте»: какие сценарии зелёные, какие `@ignore` и с какими задачами, команды и результаты, отличия от плана. Статусы сценариев в `docs/specs/acceptance-scenarios.md` обнови.
+### Execution order (for Luna)
+- First read only the files in the “Files” line, the named tests, and the relevant sections of `docs/specs/acceptance-scenarios.md`; compare signatures with the current `main`.
+- Follow the steps in order (ub-mode): add a scenario to `.feature`, run it and confirm it fails because a step is unbound or an expectation is unmet, then add the smallest binding and make the scenario pass. One scenario per commit (include the scenario id in the message).
+- Derive scenario expectations from the specification, not the code. If the code behaves differently, do not adapt the scenario or fix the code: use `@ignore @bug-NNN`, create a task with reproduction steps using `scripts/new-task.sh --publish backlog <name>`, and mark the catalog “discrepancy (NNN)”.
+- Steps act as the user: call page-model commands, select items, and navigate. Do not call repositories, Core services, or SQL directly, except in “Given” steps that prepare the world and checks that verify a file exists.
+- Put a new shared step in `Steps/CommonSteps.cs`; first check whether an equivalent step already exists with different wording.
+- Do not change files outside the “Files” line, rename existing members beyond the plan, or fix neighboring findings; those belong in separate tasks.
+- If the code differs from the plan (missing method or different signature), do not improvise: stop and record a question in “Comments”.
+- Run `dotnet` commands one at a time, not in parallel. After each changed project, run `dotnet format <project> --verify-no-changes`.
+- In “Report”, list passing scenarios, ignored scenarios and their tasks, commands and results, and deviations from the plan. Update the scenario statuses in `docs/specs/acceptance-scenarios.md`.
 
-## Отчёт
+## Report
 
 - Implemented: SES-01, SES-02, SES-03, SES-06 and SES-09. SES-04 empty-title case passes; its overlength case is `@ignore @bug-276` because the current code truncates instead of rejecting.
 - SES-05 confirmation decline, confirmed deletion, and absence after restart pass through the session row command.
@@ -66,10 +66,10 @@ bash scripts/check.sh
 - Verification: `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait "Category=sessions"` passed (10 passed, 1 skipped); the full acceptance suite passed (53 passed, 1 skipped, SES-04 `@bug-276`); `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` passed; `bash scripts/check.sh` passed.
 - Each new scenario was first run with its missing bindings and failed with Reqnroll's expected missing-step error, then passed after the minimum bindings were added. No differences from the approved plan.
 
-## Комментарии
+## Comments
 
 ### 2026-11-09, claude-bdd-plan
-Создано по просьбе владельца распланировать тест-сценарии приложения для исполнения GPT Luna. Сценарии и ожидания — в `docs/specs/acceptance-scenarios.md`. План ждёт одобрения.
+Created at the owner's request to plan application test scenarios for GPT Luna. Scenarios and expectations are in `docs/specs/acceptance-scenarios.md`. The plan is awaiting approval.
 
 ### 2026-11-09, owner (in the chat, recorded by claude-bdd-plan)
 Plan approved, status `approved`. Changes of the same day apply: the Gherkin scenarios, step texts, bindings, comments and the "Report" are in English (`docs/conventions.md`, "Language"; ADR 0031 is accepted); a "Structure of a scenario" in this plan is a `Scenario Outline`. Scenario expectations and wording are in the English catalog `docs/specs/acceptance-scenarios.md`. The acceptance project runs in CI (task 252). The flow tests in `ImageGen.Avalonia.Tests/Flows` that a scenario of this task covers are deleted by task 267, not here.

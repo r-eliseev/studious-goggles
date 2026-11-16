@@ -6,63 +6,63 @@ claimed:
 created: 2026-11-09
 ---
 
-# Приёмочные сценарии: настройки и внешний вид
+# Acceptance scenarios: settings and appearance
 
-## Описание
-Автоматизировать раздел «Настройки и внешний вид» каталога: SET-01 … SET-03. SET-04 (Clear logs) — после задачи 232. Файл `Features/Settings.feature`, тег `@settings`.
+## Description
+Automate the “Settings and appearance” section of the catalog: SET-01 … SET-03. SET-04 (Clear logs) follows task 232. File: `Features/Settings.feature`, tag: `@settings`.
 
-Зависит от: 253.
-Среда: Linux или Windows (headless).
+Depends on: 253.
+Environment: Linux or Windows (headless).
 
-## Критерии готовности
-- SET-01 … SET-03 в `.feature`; каждый зелёный или `@ignore @bug-NNN` с задачей.
-- SET-01: в чистой папке данных выбран стиль Quiet и тема «как в системе» (`SettingsPageModel.Styles`, выбранная тема).
-- SET-02: смена стиля на Gallery и темы на тёмную применяется сразу — проверка по ресурсам приложения Avalonia (`Application.Current.RequestedThemeVariant` и токен стиля, как в `Appearance/AvaloniaAppearanceApplierTests.cs`) — и сохраняется после `Restart`.
-- SET-03: вход в Settings с экрана сессий (`SessionsPageModel.OpenSettingsAsync`) открывает маршрут `Routes.Settings`.
-- Статусы SET-* в каталоге обновлены.
+## Acceptance criteria
+- SET-01 … SET-03 are in `.feature`; each passes or is tagged `@ignore @bug-NNN` with a task.
+- SET-01: a clean data folder has the Quiet style and “system” theme selected (`SettingsPageModel.Styles`, selected theme).
+- SET-02: changing the style to Gallery and the theme to dark applies immediately — verify through Avalonia application resources (`Application.Current.RequestedThemeVariant` and the style token, as in `Appearance/AvaloniaAppearanceApplierTests.cs`) — and persists after `Restart`.
+- SET-03: opening Settings from the sessions screen (`SessionsPageModel.OpenSettingsAsync`) navigates to `Routes.Settings`.
+- Update the SET-* statuses in the catalog.
 
-## Анализ
-- `ImageGen/ImageGen.Presentation/PageModels/SettingsPageModel.cs` (`Styles`, `SelectThemeAsync`, `LoadAsync`), `StyleOptionViewModel.cs`; `ImageGen/ImageGen.Presentation/Appearance/` (сервис и файл настроек).
-- Avalonia: `ImageGen/ImageGen.Avalonia.Tests/Appearance/AvaloniaAppearanceApplierTests.cs` — как проверяется применение.
-- Потоковые тесты: `Flows/SettingsFlowTests.cs`.
-- Спецификация: `docs/specs/chat-sessions.md` S6.1–S6.4; ADR 0014.
+## Analysis
+- `ImageGen/ImageGen.Presentation/PageModels/SettingsPageModel.cs` (`Styles`, `SelectThemeAsync`, `LoadAsync`), `StyleOptionViewModel.cs`; `ImageGen/ImageGen.Presentation/Appearance/` (service and settings file).
+- Avalonia: `ImageGen/ImageGen.Avalonia.Tests/Appearance/AvaloniaAppearanceApplierTests.cs` — how application is verified.
+- Flow tests: `Flows/SettingsFlowTests.cs`.
+- Specification: `docs/specs/chat-sessions.md` S6.1–S6.4; ADR 0014.
 
-## План
-По одному сценарию SET-01 → SET-03.
+## Plan
+Implement one scenario at a time, SET-01 → SET-03.
 
-Файлы: `ImageGen/ImageGen.Acceptance.Tests/Features/Settings.feature`, `Steps/SettingsSteps.cs`, `Steps/CommonSteps.cs`, `docs/specs/acceptance-scenarios.md`, `Support/FakeOpenRouter.cs` and `Support/AppWorld.cs` (additive test-harness changes only: new configurable fake responses, catalog fields, world helpers; no change of existing behavior used by other features, no product code); for this task `Support/AppWorld.cs` may also pass the real file logger (`configureLogging: logging => logging.AddImageGenFileLogging(<world data folder>/logs, ...)`, as `ImageGen/ImageGen.Avalonia/App.axaml.cs` line 58 does) and start `AvaloniaAppearanceApplier` against `Application.Current` for each started world (as `App.axaml.cs` line 78), disposing or stopping it with the world.
+Files: `ImageGen/ImageGen.Acceptance.Tests/Features/Settings.feature`, `Steps/SettingsSteps.cs`, `Steps/CommonSteps.cs`, `docs/specs/acceptance-scenarios.md`, `Support/FakeOpenRouter.cs` and `Support/AppWorld.cs` (additive test-harness changes only: new configurable fake responses, catalog fields, world helpers; no change of existing behavior used by other features, no product code); for this task `Support/AppWorld.cs` may also pass the real file logger (`configureLogging: logging => logging.AddImageGenFileLogging(<world data folder>/logs, ...)`, as `ImageGen/ImageGen.Avalonia/App.axaml.cs` line 58 does) and start `AvaloniaAppearanceApplier` against `Application.Current` for each started world (as `App.axaml.cs` line 78), disposing or stopping it with the world.
 
-### Проверка
+### Verification
 ```
 dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj
 dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait "Category=settings"
 dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes
 bash scripts/check.sh
 ```
-(Фильтр по тегу — если Reqnroll передаёт теги как категории xUnit; как именно — записано в `docs/knowledge/acceptance-tests.md` задачей 252.)
+(The tag filter applies if Reqnroll passes tags as xUnit categories; task 252 records the behavior in `docs/knowledge/acceptance-tests.md`.)
 
-### Порядок исполнения (для Luna)
-- Сначала прочитай только файлы из строки «Файлы», названные тесты и разделы `docs/specs/acceptance-scenarios.md`; сигнатуры сверяй с текущим `main`.
-- Шаги строго по порядку (ub-mode): сначала сценарий в `.feature`, запуск — он падает, потому что шаг не привязан или ожидание не выполнено; затем минимальная привязка; сценарий зелёный. Один сценарий — один коммит (id сценария в сообщении).
-- Ожидание сценария берётся из спецификации, не из кода. Если код ведёт себя иначе: не подгоняй сценарий и не чини код — тег `@ignore @bug-NNN`, новая задача `scripts/new-task.sh --publish backlog <имя>` с шагами воспроизведения, статус «расхождение (NNN)» в каталоге.
-- Шаги действуют как пользователь: команды моделей страниц, выбор пунктов, навигация. Не вызывай репозитории, сервисы ядра и SQL напрямую, кроме шагов «Дано», которые готовят мир, и проверок «файл существует».
-- Новый общий шаг — в `Steps/CommonSteps.cs`; сначала поищи, нет ли уже такого шага с другой формулировкой.
-- Не меняй файлы вне строки «Файлы», не переименовывай существующие члены сверх плана, не чини соседние находки — они в отдельных задачах.
-- Если код расходится с планом (нет такого метода, другая сигнатура), не импровизируй: остановись и запиши вопрос в «Комментарии».
-- Команды `dotnet` выполняй по одной, не параллельно. После каждого изменённого проекта — `dotnet format <проект> --verify-no-changes`.
-- В «Отчёте»: какие сценарии зелёные, какие `@ignore` и с какими задачами, команды и результаты, отличия от плана. Статусы сценариев в `docs/specs/acceptance-scenarios.md` обнови.
+### Execution order (for Luna)
+- First read only the files in the “Files” line, the named tests, and the relevant sections of `docs/specs/acceptance-scenarios.md`; compare signatures with the current `main`.
+- Follow the steps in order (ub-mode): add a scenario to `.feature`, run it and confirm it fails because a step is unbound or an expectation is unmet, then add the smallest binding and make the scenario pass. One scenario per commit (include the scenario id in the message).
+- Derive scenario expectations from the specification, not the code. If the code behaves differently, do not adapt the scenario or fix the code: use `@ignore @bug-NNN`, create a task with reproduction steps using `scripts/new-task.sh --publish backlog <name>`, and mark the catalog “discrepancy (NNN)”.
+- Steps act as the user: call page-model commands, select items, and navigate. Do not call repositories, Core services, or SQL directly, except in “Given” steps that prepare the world and checks that verify a file exists.
+- Put a new shared step in `Steps/CommonSteps.cs`; first check whether an equivalent step already exists with different wording.
+- Do not change files outside the “Files” line, rename existing members beyond the plan, or fix neighboring findings; those belong in separate tasks.
+- If the code differs from the plan (missing method or different signature), do not improvise: stop and record a question in “Comments”.
+- Run `dotnet` commands one at a time, not in parallel. After each changed project, run `dotnet format <project> --verify-no-changes`.
+- In “Report”, list passing scenarios, ignored scenarios and their tasks, commands and results, and deviations from the plan. Update the scenario statuses in `docs/specs/acceptance-scenarios.md`.
 
-## Отчёт
+## Report
 
 - Implemented SET-01 through SET-04 in `Features/Settings.feature` and `Steps/SettingsSteps.cs`. The scenarios cover the default appearance, immediate Avalonia theme/style application and persistence after restart, navigation to Settings from the sessions screen, and clearing old logs while new entries continue to be written.
 - `Support/AppWorld.cs` configures the file logger and starts an `AvaloniaAppearanceApplier` for each world, as allowed by the approved plan amendment.
 - Verification: the Settings category passed (4/4); the full acceptance suite passed (54 passed, 1 skipped: SES-04, tracked by task 276); formatting and `bash scripts/check.sh` passed. The first full-suite attempt timed out in SES-02; its retry passed.
 - No product code changed. All four catalog entries are marked `done`.
 
-## Комментарии
+## Comments
 
 ### 2026-11-09, claude-bdd-plan
-Создано по просьбе владельца распланировать тест-сценарии приложения для исполнения GPT Luna. Сценарии и ожидания — в `docs/specs/acceptance-scenarios.md`. План ждёт одобрения.
+Created at the owner’s request to plan application test scenarios for GPT Luna. Scenarios and expectations are in `docs/specs/acceptance-scenarios.md`. The plan is awaiting approval.
 
 ### 2026-11-09, owner (in the chat, recorded by claude-bdd-plan)
 Plan approved, status `approved`. Changes of the same day apply: the Gherkin scenarios, step texts, bindings, comments and the "Report" are in English (`docs/conventions.md`, "Language"; ADR 0031 is accepted); a "Structure of a scenario" in this plan is a `Scenario Outline`. Scenario expectations and wording are in the English catalog `docs/specs/acceptance-scenarios.md`. The acceptance project runs in CI (task 252). The flow tests in `ImageGen.Avalonia.Tests/Flows` that a scenario of this task covers are deleted by task 267, not here.

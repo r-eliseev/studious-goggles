@@ -427,6 +427,9 @@
   <data name="SpendingMonthlyLimitMessage" xml:space="preserve">
     <value>This run may bring this month's known spending to or above your limit. You can still continue.</value>
   </data>
+  <data name="SpendingExpensiveRunMessage" xml:space="preserve">
+    <value>This run's estimated known cost is above your "expensive run" threshold. You can still continue.</value>
+  </data>
   <data name="SpendingConfirmationFormat" xml:space="preserve">
     <value>Estimated known cost: {0}. Unknown model prices are not included. Continue?</value>
   </data>

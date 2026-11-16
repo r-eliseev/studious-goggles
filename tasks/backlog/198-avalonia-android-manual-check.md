@@ -26,7 +26,7 @@ The items repeat task 140 (MAUI) to compare the shells and cover unknowns from A
 3. Sessions: create, open, rename and delete sessions; scroll the list with a finger.
 4. Chat: type with the keyboard; the keyboard does not cover the input; Send/Enter sends and Backspace deletes; receive an assistant response and generate an image; scroll the feed inside a tall run.
 5. Card: tapping an image opens the full-screen viewer; Previous/Next work; Back closes the viewer; "…" and a long press open the actions; try Repeat, New seed, Edit, Save, Copy prompt, Compare (both images, drag with a finger), and Cancel during generation. On Android 10+, Save puts the image in the gallery; on Android 9, it opens the system file save dialog and writes the image to the selected location.
-6. Dialogs: confirm deletion, enter text (Edit prompt), choose an option; Back closes the dialog as "Отмена".
+6. Dialogs: confirm deletion, enter text (Edit prompt), choose an option; Back closes the dialog as "Cancel".
 7. System Back on each screen returns to the previous screen; on the session list it minimizes the app.
 8. Settings: theme and style; provider keys; default assistant model; Share logs (196) — confirm the startup log says the temporary directory is under CacheDir, then share the file with Telegram/"Downloads"; Clear logs.
 9. Semantic search: enable it, check indexing status, and search in Meaning mode.

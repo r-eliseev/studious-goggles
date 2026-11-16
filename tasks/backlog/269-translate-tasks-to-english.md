@@ -1,6 +1,6 @@
 ---
 id: 269
-status: approved
+status: blocked
 assignee:
 claimed:
 created: 2026-11-09
@@ -86,3 +86,11 @@ Plan approved ("approve all tasks with plans").
 Answers the Latin-check conflict of 2026-11-13. Verified: the app UI is English — `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx` is the only resource file (`StatusCancelled` = "Cancelled", `StatusFailed` = "Error", `StatusFiltered` = "Filtered by the provider"). The quoted Russian literals in task cards ("отменено", "готово", "ошибка", "отфильтровано" and the labels in 016, 046, 198, 243, 248, 258, 259, 262–265) are leftovers of the old Russian UI, not current UI text. Rule: replace each such literal with the current English UI text from `AppResources.resx` (search by meaning; if no resource matches, translate it and add "(UI text not found)" after it). No Latin exception for `tasks/`.
 Also: 235 and 255 no longer block the translation — 255's branch is merged, and the planner rewrote 235's card in English on 2026-11-13 (its stale branch holds only superseded card edits). Cards changed by the planner in this sync may already be English; translate what remains. Task 278 changes `scripts/check-tasks.sh` first; start from a `main` that contains 278.
 Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").
+
+### 2026-11-15, codex-20261115
+Translated task cards 255–265 where no other branch has unmerged edits: 255–259 and 261–265 are now English; cards 256, 257, and 261 were checked against their remote task branches and were identical to `origin/main` before translation. `git diff --check` and `bash scripts/check.sh` pass.
+
+Remaining cards include this task itself and task 271. The executor rules and `scripts/check-tasks.sh` prohibit changing Description, Acceptance criteria, Analysis, or Plan while a task moves from `in-progress` to `blocked` or `review`; this prevents translating task 269's own Russian Description and Analysis while executing it. Task 271 has a remote task branch with unmerged edits to its card, so it must be translated by that branch's owner. The English-only task path and parser changes cannot be completed while these files remain untranslated.
+
+### 2026-11-15, codex-20261115
+The task cannot satisfy its acceptance criteria under the current executor guard: task 269's own protected Description/Analysis sections still contain Russian, and the checker rejects changes to those sections when the executor submits or blocks the task. Proposed plan change: explicitly allow translating the current task's protected sections as a final step in the same commit that marks it `review`, or specify a planner-mediated status/branch sequence that permits that final translation without weakening the rule for other tasks. Keep task 271 untouched until its branch owner has no unmerged card edits. After the planner amends and approves the plan, finish task 269 and add `tasks/` to `LATIN_PATHS` only once every remaining task card is English.

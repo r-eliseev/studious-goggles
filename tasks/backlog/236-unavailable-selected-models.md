@@ -1,6 +1,6 @@
 ---
 id: 236
-status: approved
+status: blocked
 assignee:
 claimed:
 created: 2026-11-07
@@ -65,3 +65,8 @@ Created from the owner's question about missing models (verified in code: a mode
 
 ### 2026-11-07, owner (in chat, recorded by claude-audit)
 Proposal approved ("Yes"); the plan was approved under the earlier instruction "approve all tasks that come up".
+
+### 2026-11-15, codex-20261115
+The MAUI markup path in the approved `Files:` line does not contain the model list. `ImageGen/ImageGen.Maui/Pages/SessionModelsPage.xaml` only hosts `<controls:SessionModelsView />` (line 9); the model tabs and row templates are in `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml` (line 1 onward), which is not listed. The unavailable rows and Remove controls cannot be added to the MAUI model screen through the listed wrapper file while keeping its existing tabs and row templates.
+
+Proposed plan amendment: replace `ImageGen/ImageGen.Maui/Pages/SessionModelsPage.xaml` in `Files:` with `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml`. If the implementation needs changes to the existing model row view-model classes for unavailable state or commands, add those exact files to `Files:` before resuming; alternatively, use unavailable-row view models nested in `SessionModelsPageModel.cs`. Keep the platform behavior and tests already specified. Core progress is committed separately in this branch: available non-empty catalogs skip disappeared selected image models, empty/unavailable catalogs preserve the existing provider fallback, and a run with no retained models is rejected. Core.Tests passes (856/856); Core and Core.Tests format checks pass.

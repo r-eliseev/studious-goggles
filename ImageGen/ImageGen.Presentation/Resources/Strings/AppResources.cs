@@ -386,6 +386,8 @@ public static class AppResources
 
     public static string SpendingMonthlyLimitMessage => Get(nameof(SpendingMonthlyLimitMessage));
 
+    public static string SpendingExpensiveRunMessage => Get(nameof(SpendingExpensiveRunMessage));
+
     public static string SpendingConfirmationFormat => Get(nameof(SpendingConfirmationFormat));
 
     public static string SpendingTitle => Get(nameof(SpendingTitle));

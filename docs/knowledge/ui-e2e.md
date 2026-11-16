@@ -32,6 +32,8 @@ The first two runs through `workflow_dispatch` on the branch `task/217-embedding
 
 Checked in runs 42366477520, 42366566469 and 42367302330. Runner `runneradmin`, an interactive `console` session ID 2 Active; resolution 1024×768. The MAUI window and the AutomationId `apikey.entry` were found. The frame is not uniform: the shares of pixels outside the mean color are 0.992126 and 0.994568 in the two saved reports (>1% in all successful runs). FFmpeg gdigrab recorded an openable 10-second MP4. Data folder: `C:\Users\runneradmin\AppData\Local\User Name\com.eliseev.imagegen\Data`.
 
+After task 030 changed the publisher, run [43593886862](https://github.com/r-eliseev/studious-goggles/actions/runs/43593886862) confirmed that the unpackaged Windows app data folder includes `PublisherDisplayName`: `C:\Users\runneradmin\AppData\Local\Roman Eliseev\com.eliseev.imagegen\Data`.
+
 ### Android — a successful check
 
 [Run 42367302330](https://github.com/r-eliseev/studious-goggles/actions/runs/42367302330), commit `58a2a0d32a40693808d372ac236b4010635fe753`: the APK `com.eliseev.imagegen-Signed.apk` was built, installed and launched; the screenshot shows the Connect OpenRouter screen. The `AutomationId` is found in the XML as `resource-id="com.eliseev.imagegen:id/apikey.entry"`. `adb root` and `adb remount` succeed; a screenshot and a recording were obtained, the recording is 19.842 s long. The workflow finished successfully, the Windows preflight succeeded too. The artifacts are in `preflight-android-reports` and `preflight-windows-reports` (14 days).

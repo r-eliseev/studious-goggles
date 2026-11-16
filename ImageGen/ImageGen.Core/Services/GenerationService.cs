@@ -145,6 +145,23 @@ public sealed class GenerationService(
         }
 
         var remote = job.GetRemoteJob();
+        if (remote is not null && job.IsSynchronousImage)
+        {
+            try
+            {
+                job.Source.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                return GenerationCancelResult.NotActive;
+            }
+
+            await remote.Value.Provider.CancelAsync(remote.Value.Handle, CancellationToken.None).ConfigureAwait(false);
+            var synchronousResult = await PersistUserCancellationAsync(job).ConfigureAwait(false);
+            logger.LogInformation("Provider cancellation is unconfirmed; stopped waiting for generation {GenerationId}.", job.GenerationId);
+            return synchronousResult == GenerationCancelResult.Cancelled ? GenerationCancelResult.StoppedWaiting : synchronousResult;
+        }
+
         if (remote is null)
         {
             if (!requestedBeforeSubmit)
@@ -909,15 +926,30 @@ public sealed class GenerationService(
             Parameters = requested,
         };
 
-        var models = new Dictionary<ModelRef, ImageModel?>();
+        var providerModels = new Dictionary<string, IReadOnlyList<ImageModel>?>(StringComparer.Ordinal);
         var generations = new List<Generation>(pairs.Count);
-        for (var index = 0; index < pairs.Count; index++)
+        foreach (var (model, seed, references) in pairs)
         {
-            var (model, seed, references) = pairs[index];
-            if (!models.TryGetValue(model, out var image))
+            if (!providerModels.TryGetValue(model.ProviderId, out var availableModels))
             {
-                image = await ReadModelAsync(model, cancellationToken);
-                models[model] = image;
+                try
+                {
+                    var catalogModels = await catalog.GetImageModelsAsync(model.ProviderId, forceRefresh: false, cancellationToken);
+                    availableModels = catalogModels.Count == 0 ? null : catalogModels;
+                }
+                catch (ProviderException)
+                {
+                    // An unavailable catalog cannot establish that a previously selected model disappeared.
+                    availableModels = null;
+                }
+
+                providerModels[model.ProviderId] = availableModels;
+            }
+
+            var image = availableModels?.FirstOrDefault(candidate => candidate.Id == model.ModelId);
+            if (availableModels is not null && image is null)
+            {
+                continue;
             }
 
             generations.Add(new Generation
@@ -932,10 +964,15 @@ public sealed class GenerationService(
                 SeedApplied = image?.SupportsSeed ?? false,
                 Status = GenerationStatus.Queued,
                 CreatedAt = now,
-                SortOrder = index,
+                SortOrder = generations.Count,
                 Outcomes = GenerationParameterPlanner.Plan(requested, image),
                 ReferenceAttachmentIds = references,
             });
+        }
+
+        if (generations.Count == 0)
+        {
+            throw new InvalidOperationException("None of the selected image models are currently available.");
         }
 
         await runs.AddRunAsync(run, generations, cancellationToken);
@@ -1997,6 +2034,7 @@ public sealed class GenerationService(
         private int _remoteCancelStarted;
         private int _phase;
         private bool _userCancelRequested;
+        private bool _isSynchronousImage;
         private Task<GenerationCancelResult>? _userCancelTask;
 
         public RunningJob(Generation generation, CancellationTokenSource source)
@@ -2017,6 +2055,7 @@ public sealed class GenerationService(
         public TaskCompletionSource SubmitSettled { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public SemaphoreSlim StateGate { get; } = new(1, 1);
+        public bool IsSynchronousImage => _isSynchronousImage;
 
         public Task<GenerationCancelResult> GetOrStartUserCancel(Func<Task<GenerationCancelResult>> start)
         {
@@ -2074,6 +2113,7 @@ public sealed class GenerationService(
             lock (_userCancelGate)
             {
                 _phase = 3;
+                _isSynchronousImage = provider is InMemoryQueuedImageProvider or InMemoryQueuedImageConnection;
             }
 
             lock (_remoteJobGate)

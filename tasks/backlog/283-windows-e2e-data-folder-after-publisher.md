@@ -1,6 +1,6 @@
 ---
 id: 283
-status: approved
+status: review
 assignee:
 claimed:
 created: 2026-11-14
@@ -37,6 +37,17 @@ bash scripts/check.sh
 ```
 
 ## Report
+
+The `windows-app` artifact from PR #105 run 43497273413 did not contain `AppxManifest.xml`, so `WindowsTestBase` now reads the manifest beside `APP_EXE` when available and otherwise loads `ImageGen/ImageGen.Maui/Platforms/Windows/Package.appxmanifest` from the repository root. It validates `Identity.Name` and `Properties.PublisherDisplayName` and uses both in the LocalApplicationData path. Added the confirmed publisher-specific folder to `docs/knowledge/ui-e2e.md`.
+
+Verification:
+- `dotnet build ImageGen/ImageGen.E2E.Windows/ImageGen.E2E.Windows.csproj` — passed, 0 warnings and 0 errors.
+- `dotnet format ImageGen/ImageGen.E2E.Windows/ImageGen.E2E.Windows.csproj --verify-no-changes` — passed.
+- `bash scripts/check.sh` — passed.
+- Windows `ui-e2e.yml` `test-windows` for PR #112 — passed in run [43699409512](https://github.com/r-eliseev/studious-goggles/actions/runs/43699409512); all 5 tests passed. The TRX marks `FirstRunWithMock_GeneratesImage` as Passed. Inspected its 8.33-second, 1024×768 recording; the final frame shows the generated red-square image.
+- The PR's separate `build.yml` `windows-tests` job still fails in the acceptance-test step after the Avalonia suite; task 282 tracks that file-lock issue.
+
+No difference from the approved plan. A manual Windows app run is unavailable in this Linux environment; the Windows CI workflow supplied the planned verification.
 
 ## Review
 
