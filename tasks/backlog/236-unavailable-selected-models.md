@@ -1,6 +1,6 @@
 ---
 id: 236
-status: blocked
+status: approved
 assignee:
 claimed:
 created: 2026-11-07
@@ -35,7 +35,7 @@ Environment: Linux (Presentation, Avalonia headless, MAUI Android build).
 3. Add unavailable and Remove rows, the chip and assistant validation; add resources.
 4. Update both shells' markup; build; check items 140 and 046.
 
-Files: `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SettingsPageModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Maui/Pages/SessionModelsPage.xaml`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Avalonia/Views/SessionModelsView.axaml`, `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`, Core, Presentation and Avalonia tests, `tasks/backlog/140-android-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`.
+Files: `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SettingsPageModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Avalonia/Views/SessionModelsView.axaml`, `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`, Core, Presentation and Avalonia tests, `tasks/backlog/140-android-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`.
 
 ### Verification
 ```
@@ -67,6 +67,10 @@ Created from the owner's question about missing models (verified in code: a mode
 Proposal approved ("Yes"); the plan was approved under the earlier instruction "approve all tasks that come up".
 
 ### 2026-11-15, codex-20261115
-The MAUI markup path in the approved `Files:` line does not contain the model list. `ImageGen/ImageGen.Maui/Pages/SessionModelsPage.xaml` only hosts `<controls:SessionModelsView />` (line 9); the model tabs and row templates are in `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml` (line 1 onward), which is not listed. The unavailable rows and Remove controls cannot be added to the MAUI model screen through the listed wrapper file while keeping its existing tabs and row templates.
+The MAUI markup path in the approved `Files:` line does not contain the model list. `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml` only hosts `<controls:SessionModelsView />` (line 9); the model tabs and row templates are in `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml` (line 1 onward), which is not listed. The unavailable rows and Remove controls cannot be added to the MAUI model screen through the listed wrapper file while keeping its existing tabs and row templates.
 
-Proposed plan amendment: replace `ImageGen/ImageGen.Maui/Pages/SessionModelsPage.xaml` in `Files:` with `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml`. If the implementation needs changes to the existing model row view-model classes for unavailable state or commands, add those exact files to `Files:` before resuming; alternatively, use unavailable-row view models nested in `SessionModelsPageModel.cs`. Keep the platform behavior and tests already specified. Core progress is committed separately in this branch: available non-empty catalogs skip disappeared selected image models, empty/unavailable catalogs preserve the existing provider fallback, and a run with no retained models is rejected. Core.Tests passes (856/856); Core and Core.Tests format checks pass.
+Proposed plan amendment: replace `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml` in `Files:` with `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml`. If the implementation needs changes to the existing model row view-model classes for unavailable state or commands, add those exact files to `Files:` before resuming; alternatively, use unavailable-row view models nested in `SessionModelsPageModel.cs`. Keep the platform behavior and tests already specified. Core progress is committed separately in this branch: available non-empty catalogs skip disappeared selected image models, empty/unavailable catalogs preserve the existing provider fallback, and a run with no retained models is rejected. Core.Tests passes (856/856); Core and Core.Tests format checks pass.
+
+### 2026-11-17, claude-planner — plan amendment
+Answers the mismatch of 2026-11-15. Verified: `ImageGen/ImageGen.Maui/Pages/SessionModelsPage.xaml` only hosts `controls:SessionModelsView`; the list is in `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml`. The `Files:` path is replaced (in the Plan and Analysis). Unavailable rows use a view model nested in, or next to, `SessionModelsPageModel.cs` (`ImageGen/ImageGen.Presentation/PageModels/`, a new file is allowed there); do not change the existing row view-model classes. The Core progress already on the task branch is kept.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").

@@ -109,3 +109,6 @@ The criterion stays: three consecutive green runs per app, the smoke must always
 
 ### 2026-11-13, claude-planner
 Still `blocked` on 274, whose plan was amended today (timeouts for 20 repeats, app-only crash reports, launch delay distinct from an exit) and set back to `approved`. Task 275 (full screen) is done.
+
+### 2026-11-17, claude-planner
+Task 274 is done: the failures were observed without app crash reports, mostly as `launchctl list` probe timeouts while the app had started. 247 stays `blocked` until task 285 (PID-based liveness and two 20-repeat runs) is done; then the planner returns it to `approved` with the result.

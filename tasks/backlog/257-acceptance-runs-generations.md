@@ -1,6 +1,6 @@
 ---
 id: 257
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-09
@@ -76,6 +76,10 @@ bash scripts/check.sh
 - GEN-11 is implemented; image catalog per-image prices are summed in the next run estimate. The filtered runs acceptance test passed (11/11).
 - Full verification is incomplete: `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` hangs at the existing `Support/AppWorldTests.RestartAsync_ReusesDataFolderAndSecretStore`, including when run alone. The filtered `Category=runs` acceptance test passes (11/11), formatting passes, but the plan requires the full acceptance suite and the executor is not authorized to change `Support/AppWorldTests.cs`.
 - Final verification on 2026-11-13 after task 277: the full acceptance suite passed (51 total, 50 passed, 1 skipped for SES-04 `@bug-276`); `Category=runs` passed (11/11); formatting and `bash scripts/check.sh` passed. The previous AppWorld restart hang no longer reproduces. GEN-01–GEN-11 are already marked `done` in `docs/specs/acceptance-scenarios.md`.
+
+## Review
+Reviewed 2026-11-17 by claude-planner. GEN-01–GEN-11 implemented; the earlier blocker was resolved by task 277 and the final full suite passed (2026-11-13). Catalog rows `done`. Not rerun locally (no .NET SDK in the planner container); relies on the Report and the merged PRs' CI.
+Verdict: done.
 
 ## Comments
 

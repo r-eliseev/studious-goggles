@@ -1,6 +1,6 @@
 ---
 id: 284
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-14
@@ -51,6 +51,8 @@ bash scripts/check.sh
 - No deviation from the plan. Presentation code and resources required no edits because the existing status text is media-neutral and the card test already covers it.
 
 ## Review
+Reviewed 2026-11-17 by claude-planner. `RunningJob.IsSynchronousImage` is set when the in-memory adapter handle is published; cancel of a submitted synchronous image cancels the source and the adapter, persists `Cancelled`, returns `StoppedWaiting`; late responses are not saved (two new Core tests); S3.5.1 updated; the existing card text is media-neutral. Not rerun locally (no .NET SDK in the planner container); relies on the Report and the merged PRs' CI.
+Verdict: done.
 
 ## Comments
 

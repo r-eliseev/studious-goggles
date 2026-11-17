@@ -1,6 +1,6 @@
 ---
 id: 283
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-14
@@ -50,6 +50,8 @@ Verification:
 No difference from the approved plan. A manual Windows app run is unavailable in this Linux environment; the Windows CI workflow supplied the planned verification.
 
 ## Review
+Reviewed 2026-11-17 by claude-planner. `WindowsTestBase` reads `PublisherDisplayName` and `Identity Name` from the manifest (beside the exe, else the repository's `Package.appxmanifest`); the knowledge line is added. Windows `test-windows` passed all 5 tests in run [43699409512](https://github.com/r-eliseev/studious-goggles/actions/runs/43699409512); the Report states the recording ends on the generated image.
+Verdict: done.
 
 ## Comments
 

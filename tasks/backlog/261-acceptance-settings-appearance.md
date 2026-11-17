@@ -1,6 +1,6 @@
 ---
 id: 261
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-09
@@ -58,6 +58,10 @@ bash scripts/check.sh
 - `Support/AppWorld.cs` configures the file logger and starts an `AvaloniaAppearanceApplier` for each world, as allowed by the approved plan amendment.
 - Verification: the Settings category passed (4/4); the full acceptance suite passed (54 passed, 1 skipped: SES-04, tracked by task 276); formatting and `bash scripts/check.sh` passed. The first full-suite attempt timed out in SES-02; its retry passed.
 - No product code changed. All four catalog entries are marked `done`.
+
+## Review
+Reviewed 2026-11-17 by claude-planner. SET-01–SET-04 implemented; `AppWorld` starts the file logger and `AvaloniaAppearanceApplier` as amended. The Windows log-lock regression it introduced (PR #107 merged with `windows-tests` red) was fixed by task 282. The Report mentions one SES-02 timeout in a full-suite run — see task 286. Not rerun locally (no .NET SDK in the planner container); relies on the Report and the merged PRs' CI.
+Verdict: done.
 
 ## Comments
 

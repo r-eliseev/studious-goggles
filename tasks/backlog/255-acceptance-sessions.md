@@ -1,6 +1,6 @@
 ---
 id: 255
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-09
@@ -65,6 +65,10 @@ bash scripts/check.sh
 - Updated the SES-07, SES-08 and SES-10 catalog statuses to `done`.
 - Verification: `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait "Category=sessions"` passed (10 passed, 1 skipped); the full acceptance suite passed (53 passed, 1 skipped, SES-04 `@bug-276`); `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` passed; `bash scripts/check.sh` passed.
 - Each new scenario was first run with its missing bindings and failed with Reqnroll's expected missing-step error, then passed after the minimum bindings were added. No differences from the approved plan.
+
+## Review
+Reviewed 2026-11-17 by claude-planner. SES-01–SES-10 are in `Sessions.feature`; SES-07 uses the fake chat catalog allowed by the 2026-11-13 amendment; SES-04's overlength case stays `@ignore @bug-276` (task 276 approved). Catalog rows updated. Harness changes stay in `Support/`; no product code. Not rerun locally (no .NET SDK in the planner container); relies on the Report and the merged PRs' CI.
+Verdict: done.
 
 ## Comments
 

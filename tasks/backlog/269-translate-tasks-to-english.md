@@ -1,6 +1,6 @@
 ---
 id: 269
-status: blocked
+status: approved
 assignee:
 claimed:
 created: 2026-11-09
@@ -9,48 +9,44 @@ created: 2026-11-09
 # Translate the tasks and the task section names to English
 
 ## Description
-Part of 268. The task files (`tasks/backlog/*.md`, `tasks/v0.1/*.md`, `tasks/_template.md`, `tasks/DONE.md`) are in Russian, and the task scripts parse some Russian section names: `scripts/check-tasks.sh` checks that "План"/"Отчёт" (Plan/Report) are filled (since 2026-11-09 it also accepts `## Plan` and `## Report`). The documentation already describes the English names (`docs/tasks.md`, "Section names").
+Part of 268. Most task files are English already (see the Report). What remains, as of 2026-11-17: this card's own history (it quoted the old Russian headings), task 271's card (done, to be archived by the planner), and the harness side — the legacy Russian section names still accepted by the scripts, built from UTF-8 byte escapes since task 278: `scripts/check-tasks.sh` lines 9–14 (`legacy_plan`, `legacy_report`, `legacy_approval`, `legacy_description`, `legacy_acceptance`, `legacy_analysis`) and `scripts/submit-task.sh` line 16 (`legacy_report`). The documentation already describes the English names (`docs/tasks.md`, "Section names").
 
-The section names map like this: Описание → Description, Критерии готовности → Acceptance criteria, Анализ → Analysis, План → Plan, Отчёт → Report, Комментарии → Comments; lines: «Зависит от» → "Depends on", «Среда» → "Environment", «Файлы:» → "Files:", «Проверка» → "Verification", «Порядок исполнения (для Luna)» → "Execution order (for Luna)".
+Amended 2026-11-17 by the planner: the planner translated this card and archives 271, so no executor has to edit a protected section of its own card.
 
 Depends on: —
 Environment: Linux or Windows.
 
 ## Acceptance criteria
-- `tasks/_template.md` uses the English section names; `scripts/new-task.sh` renders it unchanged.
-- `scripts/check-tasks.sh` checks only `## Plan` and `## Report` (the Russian alternatives are removed) — in the same commit as the last task file is translated, so that no commit leaves the check broken.
-- Every task file is translated: the front matter is unchanged (`id`, `status`, `assignee`, `claimed`, `created`), the headings and lines use the mapping above, the prose is English. Comments keep their dated headers (`### YYYY-MM-DD, <name>`); a comment's text is translated, the author stays.
-- Tasks claimed by another agent (`assignee` set, `in-progress`, or a `task/NNN-*` branch on origin — today 243, 245, 246, 247, 249) are translated last and only after checking that the branch has no unmerged edits of the same file; otherwise leave them and list them in the "Report" (the owner of the branch translates them).
-- `tasks/DONE.md`: the titles and statuses of the lines are translated; `scripts/archive-tasks.sh` writes new lines in English (`unknown` instead of the Russian placeholder).
-- `scripts/release-notes.sh` takes task titles from the files: check that the release notes for the last tag still list the tasks (`bash scripts/tests/release-notes-empty-previous.sh`).
+- No task file contains Cyrillic letters: `python3 -c` or `grep -P` check over `tasks/` returns nothing (write the command used in the Report). If a card still has Russian text, translate it (headings and lines to the English names, prose to English; front matter unchanged; dated comment headers kept). Russian UI literals become the current English UI text from `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx` (amendment of 2026-11-13).
+- `tasks/DONE.md` is English; `scripts/archive-tasks.sh` writes English lines.
+- `scripts/check-tasks.sh` and `scripts/submit-task.sh` accept only the English sections and approval phrase: the `legacy_*` variables and their alternatives are removed, in the same commit as `tasks` is added to `LATIN_PATHS` in `scripts/check-latin.sh`.
+- `scripts/tests/locale-independent.sh` (task 278) tests the legacy headings; with the legacy names gone it is removed from `scripts/check.sh` and deleted, or rewritten to check that the English headings work under `LC_ALL=C` — choose the rewrite if it still guards something real, and say which in the Report.
+- `scripts/tests/task-roles.sh` and `scripts/tests/release-notes-empty-previous.sh` pass.
 - `docs/tasks.md`, "Section names": the transition paragraph is removed.
-- `tasks` is added to `LATIN_PATHS` in `scripts/check-latin.sh`.
 
 ## Analysis
-- Parsers: `scripts/check-tasks.sh` (`filled`), `scripts/tasks-lib.sh` (front matter only), `scripts/archive-tasks.sh` (the DONE line), `scripts/release-notes.sh` (titles), `scripts/list-tasks.sh` (front matter). Check them all with `grep -n` for Russian words before starting.
-- About 60 files, ≈550 KB. Translate in batches by number range (001–099, 100–199, 200–251, 252–271), one commit per batch.
+- `grep -n legacy_ scripts/*.sh scripts/tests/*.sh` lists every use. `scripts/check-docs.sh` also builds Russian words from byte escapes for the architecture scan (task 278); that is a documentation check, not a task parser, and stays.
+- Archived task files are deleted by `scripts/archive-tasks.sh`, so done tasks need no translation once archived.
 
 ## Plan
-1. Template and `new-task.sh` check (`scripts/new-task.sh backlog probe` into a scratch copy, not committed).
-2. Batches of task files.
-3. `DONE.md` and `archive-tasks.sh`.
-4. `check-tasks.sh` English only, `LATIN_PATHS`, `docs/tasks.md`.
+1. Find remaining Cyrillic in `tasks/`; translate what is left.
+2. Remove the legacy names from `check-tasks.sh` and `submit-task.sh`; adapt or remove `locale-independent.sh`; add `tasks` to `LATIN_PATHS`; one commit.
+3. `docs/tasks.md` paragraph; verification.
 
-Files: `tasks/**`, `scripts/check-tasks.sh`, `scripts/archive-tasks.sh`, `scripts/check-latin.sh`, `docs/tasks.md`.
+Files: `tasks/**`, `scripts/check-tasks.sh`, `scripts/submit-task.sh`, `scripts/check-latin.sh`, `scripts/check.sh`, `scripts/tests/locale-independent.sh`, `scripts/archive-tasks.sh`, `docs/tasks.md`.
 
 ### Verification
 ```
 bash scripts/check.sh
+env LC_ALL=C bash scripts/check.sh
+bash scripts/tests/task-roles.sh
 bash scripts/tests/release-notes-empty-previous.sh
 TASKS_BRANCH=main scripts/list-tasks.sh --main approved
 ```
 
-### Execution order (for Luna)
-- First read only the files of the "Files" line; work file by file and commit in small steps (one folder per commit).
-- Translate without changing the meaning: do not shorten, do not "improve" the content, do not fix facts — a wrong fact becomes a comment or a new task, not a silent edit.
-- Keep identifiers, paths, commands, ids, numbers, links and quoted UI texts unchanged; translate only the prose.
-- If something is ambiguous, keep the original meaning and write a question in "Comments".
-- After each commit run `bash scripts/check.sh`. In the "Report": what was translated, which paths were added to `LATIN_PATHS`, what stayed as an exception and why.
+### Execution order
+- Translate without changing meaning; keep identifiers, paths, commands, ids, numbers and links.
+- After each commit run `bash scripts/check.sh`. In the Report: what was translated, the Cyrillic check command and its empty output, and the decision on `locale-independent.sh`.
 
 ## Report
 
@@ -71,7 +67,7 @@ TASKS_BRANCH=main scripts/list-tasks.sh --main approved
 ## Comments
 
 ### 2026-11-13, codex-gpt6
-The approved plan has incompatible requirements for the Latin-only check. `Execution order` says to keep quoted UI text unchanged, and the translated task cards retain required Russian UI/status literals (for example `tasks/backlog/258-acceptance-cancel-recovery.md` uses `“отменено”` as an expected application status). The acceptance criteria also require adding all of `tasks/` to `LATIN_PATHS`, while `scripts/check-latin.sh` rejects every non-Latin letter and allows exceptions only for non-English test data. Therefore the check cannot pass without either changing the task content contrary to the approved translation rule or widening the checker exceptions contrary to its current documented purpose.
+The approved plan has incompatible requirements for the Latin-only check. `Execution order` says to keep quoted UI text unchanged, and the translated task cards retain required Russian UI/status literals (for example `tasks/backlog/258-acceptance-cancel-recovery.md` uses `"cancelled" (Russian in the card at the time)` as an expected application status). The acceptance criteria also require adding all of `tasks/` to `LATIN_PATHS`, while `scripts/check-latin.sh` rejects every non-Latin letter and allows exceptions only for non-English test data. Therefore the check cannot pass without either changing the task content contrary to the approved translation rule or widening the checker exceptions contrary to its current documented purpose.
 
 Proposed plan change: explicitly permit exact quoted UI/status literals in task cards through a narrowly scoped allowlist for `tasks/` (separate from test-data exceptions), while keeping the rest of task files under `LATIN_PATHS`; alternatively, approve translating those literals and accepting that task examples no longer match the current UI. Please choose the intended rule and update the plan before implementation continues.
 
@@ -83,7 +79,7 @@ Part of 268. Changing `scripts/` is allowed by the owner's request to translate 
 Plan approved ("approve all tasks with plans").
 
 ### 2026-11-13, claude-planner — plan amendment
-Answers the Latin-check conflict of 2026-11-13. Verified: the app UI is English — `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx` is the only resource file (`StatusCancelled` = "Cancelled", `StatusFailed` = "Error", `StatusFiltered` = "Filtered by the provider"). The quoted Russian literals in task cards ("отменено", "готово", "ошибка", "отфильтровано" and the labels in 016, 046, 198, 243, 248, 258, 259, 262–265) are leftovers of the old Russian UI, not current UI text. Rule: replace each such literal with the current English UI text from `AppResources.resx` (search by meaning; if no resource matches, translate it and add "(UI text not found)" after it). No Latin exception for `tasks/`.
+Answers the Latin-check conflict of 2026-11-13. Verified: the app UI is English — `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx` is the only resource file (`StatusCancelled` = "Cancelled", `StatusFailed` = "Error", `StatusFiltered` = "Filtered by the provider"). The quoted Russian literals in task cards (the Russian words for "cancelled", "done", "error", "filtered" and the labels in 016, 046, 198, 243, 248, 258, 259, 262–265) are leftovers of the old Russian UI, not current UI text. Rule: replace each such literal with the current English UI text from `AppResources.resx` (search by meaning; if no resource matches, translate it and add "(UI text not found)" after it). No Latin exception for `tasks/`.
 Also: 235 and 255 no longer block the translation — 255's branch is merged, and the planner rewrote 235's card in English on 2026-11-13 (its stale branch holds only superseded card edits). Cards changed by the planner in this sync may already be English; translate what remains. Task 278 changes `scripts/check-tasks.sh` first; start from a `main` that contains 278.
 Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").
 
@@ -94,3 +90,7 @@ Remaining cards include this task itself and task 271. The executor rules and `s
 
 ### 2026-11-15, codex-20261115
 The task cannot satisfy its acceptance criteria under the current executor guard: task 269's own protected Description/Analysis sections still contain Russian, and the checker rejects changes to those sections when the executor submits or blocks the task. Proposed plan change: explicitly allow translating the current task's protected sections as a final step in the same commit that marks it `review`, or specify a planner-mediated status/branch sequence that permits that final translation without weakening the rule for other tasks. Keep task 271 untouched until its branch owner has no unmerged card edits. After the planner amends and approves the plan, finish task 269 and add `tasks/` to `LATIN_PATHS` only once every remaining task card is English.
+
+### 2026-11-17, claude-planner — plan amendment
+Answers the self-block of 2026-11-15: the planner rewrote this card in English (the Russian heading names it quoted are now described in words), and task 271 is reviewed and archived, so no card the executor must edit carries protected Russian text. The plan above covers only what remains.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").

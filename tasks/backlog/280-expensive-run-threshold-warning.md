@@ -1,6 +1,6 @@
 ---
 id: 280
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-13
@@ -46,6 +46,8 @@ bash scripts/check.sh
 - No deviation from the approved plan.
 
 ## Review
+Reviewed 2026-11-17 by claude-planner. `SendAsync` shows `SpendingExpensiveRunMessage` and still sends; Presentation tests for both branches; SPD-04 active and `done`. Not rerun locally (no .NET SDK in the planner container); relies on the Report and the merged PRs' CI.
+Verdict: done.
 
 ## Comments
 

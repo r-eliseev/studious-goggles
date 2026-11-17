@@ -1,6 +1,6 @@
 ---
 id: 271
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-09
@@ -60,6 +60,10 @@ bash scripts/check.sh
 - Added `ImageGen/` to `LATIN_PATHS`. Added only `ImageGen/ImageGen.Core.Tests/Search/FuzzyMatcherTests.cs` to `LATIN_EXCEPTIONS`, because its Cyrillic strings are inputs under test for fuzzy matching. No other Cyrillic text remains in `ImageGen/`.
 - Verification passed: Core.Tests (856/856), Data.Tests (149/149), Presentation.Tests (552/552), Avalonia.Tests (187 passed, 2 skipped for Windows DPAPI and unavailable D-Bus Secret Service); `dotnet format --verify-no-changes` passed for Data, Data.Tests, Avalonia, Avalonia.Tests, Core.Tests, and Presentation.Tests; `bash scripts/check-latin.sh ImageGen` and `bash scripts/check.sh` passed.
 - The stale remote task branch had no open PR and was blocked since 2026-11-13. Owner explicitly authorized takeover and continuation in the shared branch on 2026-11-16. No changes were taken from its stale task-card state; the current approved card and planner amendment on main were used.
+
+## Review
+Reviewed 2026-11-17 by claude-planner. `ImageGen` is in `LATIN_PATHS`; the only new exception is `FuzzyMatcherTests.cs` (Cyrillic search input under test, within the policy); `bash scripts/check.sh` passes on `main`. The accessibility-test labels were translated per the 2026-11-13 amendment. Not rerun locally (no .NET SDK in the planner container); relies on the Report and the merged PRs' CI.
+Verdict: done.
 
 ## Comments
 

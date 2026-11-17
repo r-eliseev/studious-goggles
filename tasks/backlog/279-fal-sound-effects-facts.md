@@ -1,6 +1,6 @@
 ---
 id: 279
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-13
@@ -46,6 +46,8 @@ bash scripts/check.sh
 - Verification: `bash scripts/check.sh` passed; `git diff --check` passed. No product code or packages changed. Prices remain unknown without a fal key.
 
 ## Review
+Reviewed 2026-11-17 by claude-planner. 61 `text-to-audio` entries checked, eight sound-effect schemas documented in `docs/knowledge/media-generation.md`, the queue contract compared with `FalImageProvider`, OpenRouter-only assumptions of the audio path listed, prices unknown without a key. No product code.
+Verdict: done; task 168 is to be planned from these findings.
 
 ## Comments
 

@@ -1,6 +1,6 @@
 ---
 id: 259
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-09
@@ -66,6 +66,10 @@ bash scripts/check.sh
 - `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` — passed.
 - `bash scripts/check.sh` — passed (`Harness: all checks passed`).
 - No scenarios were ignored. The separate task 258 is blocked by the cancellation-semantics discrepancy recorded in its Comments section.
+
+## Review
+Reviewed 2026-11-17 by claude-planner. ACT-01–ACT-08 implemented; `FakePlatform` records the action menu (allowed harness change). The CAN rows marked `blocked (258)` in the catalog are now unblocked by task 284 and are task 258's to update. Not rerun locally (no .NET SDK in the planner container); relies on the Report and the merged PRs' CI.
+Verdict: done.
 
 ## Comments
 

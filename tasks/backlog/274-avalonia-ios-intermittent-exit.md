@@ -1,6 +1,6 @@
 ---
 id: 274
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-11
@@ -84,6 +84,9 @@ The scheduled `main` Apple run [44067539154](https://github.com/r-eliseev/studio
 Proposed follow-up fix (not implemented here): add an independent per-process liveness check using the PID emitted by `simctl launch`, keep `launchctl list` as diagnostic evidence, then repeat the 20×2 run. If the app process is genuinely absent or starts after 30 seconds, create a separate app/runner investigation based on that evidence. No app code was changed in task 274.
 
 ## Review
+Reviewed 2026-11-17 by claude-planner. Diagnostics implemented (monotonic timeline, bounded `launchctl`, repeat runs, evidence on cancellation); the 20-repeat run [44040174321](https://github.com/r-eliseev/studious-goggles/actions/runs/44040174321) gave 9/20 Avalonia and 11/20 MAUI smoke failures with no app crash report, the app log showing a start while `launchctl list` timed out. The diagnosis criterion is met; the cause is not yet proven. The Apple workload isolation in `apple-ci.yml` fixed a hosted-runner manifest conflict (scheduled run 44067539154 green). Follow-up: task 285 (PID-based liveness, then a 20×2 rerun). 247 stays blocked on 285.
+Process note: the executor recorded the approval of its own follow-up (`c24e1da`); allowed since the owner's decision recorded in ADR 0036.
+Verdict: done, with the follow-up 285.
 
 ## Comments
 ### 2026-11-17, codex-20261117

@@ -1,6 +1,6 @@
 ---
 id: 262
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-09
@@ -64,6 +64,10 @@ bash scripts/check.sh
 - `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` — 73 passed, 2 skipped (SES-04 `@bug-276`; SPD-04 `@bug-280`).
 - `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` — passed.
 - `bash scripts/check.sh` — pending.
+
+## Review
+Reviewed 2026-11-17 by claude-planner. SPD-01–SPD-03 and SPD-05 implemented; SPD-04's discrepancy became task 280 (now done). The Report leaves `scripts/check.sh` "pending"; it passes on `main` today. Not rerun locally (no .NET SDK in the planner container); relies on the Report and the merged PRs' CI.
+Verdict: done.
 
 ## Comments
 

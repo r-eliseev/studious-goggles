@@ -1,6 +1,6 @@
 ---
 id: 256
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-09
@@ -67,6 +67,10 @@ bash scripts/check.sh
 - CHAT-08 is implemented. The scenario uses a reference-capable fake image model, the test `IFilePickerService` queues `Assets/reference.png`, and the recorded OpenRouter generation request is checked for its first `input_references` entry. The fake catalog gained an optional maximum reference count, and `CommonSteps` gained JSON path assertions for array indices.
 - Verification: `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait "Category=chat"` passed (10/10); the full acceptance suite passed (51 passed, 1 skipped); `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` passed; `bash scripts/check.sh` passed.
 - The chat-local submission step allows 30 seconds for command completion and checks Avalonia-bound state on the UI dispatcher; this keeps the session-specific timeout behavior localized to `ChatAssistant.feature`.
+
+## Review
+Reviewed 2026-11-17 by claude-planner. CHAT-01–CHAT-08 implemented; CHAT-08 uses a reference-capable fake model (`input_references` maximum, amendment of 2026-11-13) and checks `input_references[0]` in the request. Full acceptance suite and formatting passed per the Report. Not rerun locally (no .NET SDK in the planner container); relies on the Report and the merged PRs' CI.
+Verdict: done.
 
 ## Comments
 

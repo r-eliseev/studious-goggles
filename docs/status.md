@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-11-14
+Updated: 2026-11-17
 
 Here are open questions, known problems, CI and the task queue; product decisions are collected in `docs/product.md`. Progress is not written here: what is done and what is in progress is shown by task statuses (`scripts/list-tasks.sh`, `scripts/list-tasks.sh --main in-progress`) and their "Reports".
 
@@ -13,13 +13,13 @@ CI: `.github/workflows/build.yml` (the `core` job on Ubuntu: formatting, build, 
 Before claiming, always check `Depends on` in the task file: every prerequisite must be done **in main** or in `tasks/DONE.md`. Separately check the environment and other agents' branches/held files per `docs/tasks.md`; the absence of a functional dependency does not allow two agents to edit a held file at the same time.
 
 ### Task availability
-Current statuses are in the task cards and the output of `scripts/list-tasks.sh`. As of 2026-11-14 (planner state review):
-- **Red builds first:** 281 — `build.yml` `windows-tests` is red on `main` since PR #109 (the background catalog refresh keeps `imagegen.db` open); 282 (after 281) — the Windows acceptance step, hidden behind 281, fails on the log file lock (seen on PR #107); 283 — Windows UI E2E `FirstRunWithMock_GeneratesImage` fails since PR #110 (data folder includes the publisher; the job is `continue-on-error`, so the workflow looks green).
-- **Waiting for the planner's review:** 255, 256, 257, 259, 261, 262, 263, 279.
-- **Product fixes:** 284 (cancel of a submitted synchronous image request → stop waiting, owner's decision of 2026-11-14), then 258 (CAN-03/04 may go first); 280 (expensive-run warning, F8.4); 276 (reject over-long rename).
-- **Acceptance scenarios:** 264, 265, 273 (after 255), 267 (after 254–265).
-- **E2E on Gherkin:** 266. **Translation:** 269, 271. **Catalogs:** 236. **Apple:** 274 → 247 → 248 → 250. **Windows data:** 230 (amended: the "User Name" publisher folder is a legacy candidate). **Sound effects:** 168 after the review of 279.
-- **Blocked for a real reason:** 237 (Together key, postponed by the owner), 168 (until 279 is reviewed and 168 is planned), 247 (after 274).
+Current statuses are in the task cards and the output of `scripts/list-tasks.sh`. As of 2026-11-17 (planner sync; 281–284, 255–263, 271, 274, 279, 280 done):
+- **Product fixes:** 276 (reject over-long rename), 258 (cancel scenarios; 284 is done, so all CAN rows can go), 236 (unavailable selected models; amended: MAUI list is `Controls/SessionModelsView.xaml`).
+- **Stability:** 286 — find the intermittent acceptance failures (diagnosis); 285 — iOS smoke liveness by PID, then 247 → 248 → 250.
+- **Acceptance scenarios:** 264, 265, 273, then 267 (after 254–265).
+- **E2E on Gherkin:** 266. **Translation:** 269 (amended: only the rest of `tasks/` and removing the legacy Russian names from the scripts), then 268 closes.
+- **Windows data:** 230 (the "User Name" publisher folder is a legacy candidate). **Sound effects:** 168 is planned next from task 279's findings.
+- **Blocked for a real reason:** 237 (Together key, postponed by the owner), 168 (to be planned), 247 (after 285).
 - **Manual checks** (a human at the screen): 016, 046, 140, 198.
 Finished ones are in `tasks/DONE.md`; delete `docs/specs/ui-e2e-original/` when 238–250 are all archived (247, 248, 250 remain).
 
@@ -28,6 +28,8 @@ Before a claim, check the dependencies and the environment in the card. There ar
 ### Standing instructions of the owner (ADR 0033–0034)
 - **2026-11-07**, in the chat (translated from Russian): "approve all tasks that will come". A task approved by it gets its own record `Plan approved (standing instruction of 2026-11-07: "approve all tasks that will come")`. In force until the owner withdraws it.
 - **2026-11-11**, in the chat (translated from Russian; ADR 0034): execute approved tasks and tasks returned for changes one at a time; update the existing PR after each task, do not wait for merges, and keep working across routine messages. This executor authorization remains active until the owner changes or withdraws it. Dependencies, environment limits, active branches, and missing credentials still block the affected task; continue with another independent authorized task where possible.
+
+- **2026-11-17**, in the chat (ADR 0036): the executor may approve amendments of its own current task and review and close its own tasks under the standing instructions; batches may share one branch/PR.
 
 ### Queues by dependency
 - Sessions/screen: 021–024 done.
