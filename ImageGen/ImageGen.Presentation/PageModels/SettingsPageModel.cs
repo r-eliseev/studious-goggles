@@ -199,8 +199,13 @@ public sealed partial class SettingsPageModel(
         if (selectedAssistant is null)
         {
             var defaultModel = defaultAssistantModel.Current;
+            var catalogModels = await chatModels.FindModelsAsync(defaultModel.ProviderId, CancellationToken.None);
+            var unavailableName = catalogModels is { Count: > 0 }
+                && !catalogModels.Any(model => model.Id == defaultModel.ModelId && model.SupportsTools)
+                    ? string.Format(CultureInfo.CurrentCulture, AppResources.SelectedModelUnavailableFormat, defaultModel.ModelId)
+                    : defaultModel.ModelId;
             selectedAssistant = new AssistantModelOption(defaultModel,
-                defaultModel.ModelId,
+                unavailableName,
                 providers.TryGet(defaultModel.ProviderId, out var currentProvider) ? currentProvider.DisplayName : defaultModel.ProviderId);
             AssistantModels.Insert(0, selectedAssistant);
         }

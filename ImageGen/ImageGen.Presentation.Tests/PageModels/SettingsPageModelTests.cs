@@ -176,6 +176,7 @@ public sealed class SettingsPageModelTests : IDisposable
         Assert.Equal(3, model.AssistantModels.Count);
         Assert.Equal(defaultModel, model.AssistantModels[0].Reference);
         Assert.Same(model.AssistantModels[0], model.SelectedAssistantModel);
+        Assert.Equal(string.Format(AppResources.SelectedModelUnavailableFormat, defaultModel.ModelId), model.AssistantModels[0].Name);
     }
 
     [Fact]

@@ -164,6 +164,12 @@ public static class AppResources
 
     public static string ModelsButtonFormat => Get(nameof(ModelsButtonFormat));
 
+    public static string ModelsButtonUnavailableFormat => Get(nameof(ModelsButtonUnavailableFormat));
+
+    public static string SelectedModelUnavailableFormat => Get(nameof(SelectedModelUnavailableFormat));
+
+    public static string AssistantModelUnavailableMessage => Get(nameof(AssistantModelUnavailableMessage));
+
     public static string RunPromptFormat => Get(nameof(RunPromptFormat));
 
     public static string StatusQueued => Get(nameof(StatusQueued));

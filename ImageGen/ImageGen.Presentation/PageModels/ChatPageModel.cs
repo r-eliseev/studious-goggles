@@ -6,6 +6,8 @@ using ImageGen.Core.Domain.Chat;
 using ImageGen.Core.Domain.Descriptions;
 using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Domain.Models;
+using ImageGen.Core.Domain.Sessions;
+using ImageGen.Core.Providers;
 using ImageGen.Core.Services;
 using ImageGen.Core.Storage;
 using ImageGen.Presentation.Resources.Strings;
@@ -43,12 +45,20 @@ public sealed partial class ChatPageModel(
     SpendingService? spendingService = null,
     IImageComparisonService? imageComparison = null,
     IMediaPlayerService? mediaPlayer = null,
-    IVideoPosterService? videoPosterService = null) : ObservableObject
+    IVideoPosterService? videoPosterService = null,
+    ChatModelCatalogService? chatModels = null,
+    ModelCatalogService? modelCatalog = null,
+    VideoModelCatalogService? videoCatalog = null,
+    AudioModelCatalogService? audioCatalog = null) : ObservableObject
 {
     private readonly ErrorAlert _errorAlert = errorAlert;
     private readonly CostEstimator? _costEstimator = costEstimator;
     private readonly SpendingService? _spendingService = spendingService;
     private readonly IImageComparisonService? _imageComparison = imageComparison;
+    private readonly ChatModelCatalogService? _chatModels = chatModels;
+    private readonly ModelCatalogService? _modelCatalog = modelCatalog;
+    private readonly VideoModelCatalogService? _videoCatalog = videoCatalog;
+    private readonly AudioModelCatalogService? _audioCatalog = audioCatalog;
     private readonly Dictionary<Guid, GenerationItemViewModel> _cards = [];
     private bool _imageConsentGiven;
     private Guid _sessionId;
@@ -223,14 +233,20 @@ public sealed partial class ChatPageModel(
             }
             var settings = timeline.Session.Settings;
             Title = timeline.Session.Title;
-            ModelsButtonText = string.Format(
+            var modelsButtonText = string.Format(
                 CultureInfo.CurrentCulture,
                 AppResources.ModelsButtonFormat,
                 settings.ImageModels.Count,
                 settings.RunsPerModel,
                 settings.VideoModels.Count,
                 settings.AudioModels.Count);
-            AssistantText = string.Format(CultureInfo.CurrentCulture, AppResources.AssistantLabelFormat, settings.AssistantModel.ModelId);
+            var unavailableCount = await CountUnavailableModelsAsync(settings);
+            ModelsButtonText = unavailableCount > 0
+                ? string.Format(CultureInfo.CurrentCulture, AppResources.ModelsButtonUnavailableFormat, modelsButtonText, unavailableCount)
+                : modelsButtonText;
+            AssistantText = await IsAssistantModelUnavailableAsync(settings.AssistantModel)
+                ? string.Format(CultureInfo.CurrentCulture, AppResources.SelectedModelUnavailableFormat, settings.AssistantModel.ModelId)
+                : string.Format(CultureInfo.CurrentCulture, AppResources.AssistantLabelFormat, settings.AssistantModel.ModelId);
 
             Items.Clear();
             _cards.Clear();
@@ -360,6 +376,14 @@ public sealed partial class ChatPageModel(
     {
         var text = InputText;
         var pending = PendingAttachments.ToList();
+        var session = await sessions.GetAsync(_sessionId, CancellationToken.None);
+        if (session is not null && await IsAssistantModelUnavailableAsync(session.Settings.AssistantModel))
+        {
+            await dialogs.AlertAsync(AppResources.ErrorTitle, AppResources.AssistantModelUnavailableMessage);
+            await OpenModelsAsync();
+            return;
+        }
+
         if (_costEstimator is not null && _spendingService is not null)
         {
             var estimate = await EstimateAsync(_sessionId, CancellationToken.None);
@@ -413,6 +437,76 @@ public sealed partial class ChatPageModel(
     }
 
     private bool CanSend() => !IsBusy && (!string.IsNullOrWhiteSpace(InputText) || PendingAttachments.Count > 0);
+
+    private async Task<bool> IsAssistantModelUnavailableAsync(ModelRef model)
+    {
+        if (_chatModels is null)
+        {
+            return false;
+        }
+
+        var catalog = await _chatModels.FindModelsAsync(model.ProviderId, CancellationToken.None);
+        return catalog is { Count: > 0 } && !catalog.Any(candidate => candidate.Id == model.ModelId && candidate.SupportsTools);
+    }
+
+    private async Task<int> CountUnavailableModelsAsync(SessionSettings settings)
+    {
+        var count = 0;
+        if (_modelCatalog is not null)
+        {
+            foreach (var group in settings.ImageModels.GroupBy(model => model.ProviderId, StringComparer.Ordinal))
+            {
+                try
+                {
+                    var catalog = await _modelCatalog.GetImageModelsAsync(group.Key, forceRefresh: false, CancellationToken.None);
+                    if (catalog.Count > 0)
+                    {
+                        count += group.Count(selected => catalog.All(candidate => candidate.Id != selected.ModelId));
+                    }
+                }
+                catch (ProviderException)
+                {
+                    // An unavailable catalog cannot establish that a saved model disappeared.
+                }
+            }
+        }
+
+        if (_videoCatalog is not null && settings.VideoModels.Any(model => model.ProviderId == ProviderIds.OpenRouter))
+        {
+            try
+            {
+                var catalog = await _videoCatalog.GetVideoModelsAsync(forceRefresh: false, CancellationToken.None);
+                if (catalog.Count > 0)
+                {
+                    count += settings.VideoModels.Count(selected => selected.ProviderId == ProviderIds.OpenRouter
+                        && catalog.All(candidate => candidate.Id != selected.ModelId));
+                }
+            }
+            catch (ProviderException)
+            {
+                // An unavailable catalog cannot establish that a saved model disappeared.
+            }
+        }
+
+        if (_audioCatalog is not null && settings.AudioModels.Any(model => model.ProviderId == ProviderIds.OpenRouter))
+        {
+            try
+            {
+                var catalog = await _audioCatalog.GetAudioModelsAsync(forceRefresh: false, CancellationToken.None);
+                if (catalog.Count > 0)
+                {
+                    count += settings.AudioModels.Count(selected => selected.ProviderId == ProviderIds.OpenRouter
+                        && catalog.All(candidate => candidate.Id != selected.ModelId));
+                }
+            }
+            catch (ProviderException)
+            {
+                // An unavailable catalog cannot establish that a saved model disappeared.
+            }
+        }
+
+        return count;
+    }
 
     /// <summary>C4.1: the marker goes after the last message the summary covers; without that message it goes first.</summary>
     private void InsertSummaryMarker(ConversationSummary summary)

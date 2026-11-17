@@ -75,6 +75,9 @@ In Settings, tap Share logs: the system Share sheet opens, the shared file is av
 
 ## Comments
 
+### 2026-11-17, codex-20261117 — task 236 manual follow-up
+If the test account has a saved session model that is no longer offered by a non-empty provider catalog, open Session models on Android: verify the selected reference is shown at the top of its section as unavailable, Remove is announced by TalkBack and removes it after Save, and the model count/chip warning updates. Repeat for video/audio if such saved references are available. If the session assistant model is unavailable, verify its marker, send shows the unavailable-model alert and opens Session models without sending or clearing the text. In Settings, verify an unavailable default assistant is marked. If the account has no retired model reference, record this item as not checked; do not fabricate or manually edit private app data.
+
 ### 2026-10-30, codex-gpt6
 Task 133: on Android, check actual dimensions and the shortened ratio below a successfully generated image, hiding the row when the file is missing, updating it for a new generation, and reading dimensions with TalkBack.
 

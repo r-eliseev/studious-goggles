@@ -1746,6 +1746,38 @@ public class GenerationServiceTests
     }
 
     [Fact]
+    public async Task StartRunWithAttachmentsAsync_AllSelectedModelsUnavailable_ThrowsModelUnavailable()
+    {
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, "vendor/discontinued")];
+        var attachment = Attachment();
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _service.StartRunWithAttachmentsAsync(_session.Id, "a fox", [attachment.Id], TestContext.Current.CancellationToken));
+
+        Assert.Equal(GenerationService.NoSelectedImageModelsAvailableMessage, error.Message);
+        await _runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StartRunWithAttachmentsAsync_SkipsUnavailableModelAndRunsAvailableModel()
+    {
+        _session.Settings.ImageModels = [
+            new ModelRef(ProviderIds.OpenRouter, Seeded),
+            new ModelRef(ProviderIds.OpenRouter, "vendor/discontinued"),
+        ];
+        _session.Settings.RunsPerModel = 1;
+        _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns([ModelWithReferences(Seeded, 1)]);
+        var attachment = Attachment();
+
+        var result = await _service.StartRunWithAttachmentsAsync(_session.Id, "a fox", [attachment.Id], TestContext.Current.CancellationToken);
+        await _service.WhenIdleAsync();
+
+        Assert.NotNull(result.Run);
+        Assert.Empty(result.SkippedModels);
+        Assert.Equal([Seeded], _added.Select(generation => generation.ModelId));
+    }
+
+    [Fact]
     public async Task StartRunWithAttachmentsAsync_ModelWithOneReference_SendsFirstAttachmentOnly()
     {
         var first = Attachment();

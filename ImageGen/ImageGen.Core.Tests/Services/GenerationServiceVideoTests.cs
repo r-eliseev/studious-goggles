@@ -54,6 +54,32 @@ public sealed class GenerationServiceVideoTests
     }
 
     [Fact]
+    public async Task StartVideoRunAsync_SkipsUnavailableSelectedModel()
+    {
+        var fixture = new Fixture();
+
+        await fixture.Service.StartVideoRunAsync(
+            fixture.Session.Id, "film", [new ModelRef("openrouter", "seeded"), new ModelRef("openrouter", "discontinued")],
+            VideoParameters.Default, null, TestContext.Current.CancellationToken);
+        await fixture.Service.WhenIdleAsync();
+
+        Assert.Equal(["seeded"], fixture.Generations.Select(generation => generation.ModelId));
+    }
+
+    [Fact]
+    public async Task StartVideoRunAsync_AllSelectedModelsUnavailable_ThrowsWithoutCreatingRun()
+    {
+        var fixture = new Fixture();
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.StartVideoRunAsync(
+            fixture.Session.Id, "film", [new ModelRef("openrouter", "discontinued")],
+            VideoParameters.Default, null, TestContext.Current.CancellationToken));
+
+        Assert.Contains("available", error.Message, StringComparison.OrdinalIgnoreCase);
+        await fixture.Runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task StartVideoRunAsync_ProviderSucceeds_SavesStreamAndPublishesTerminalState()
     {
         var fixture = new Fixture();
@@ -129,7 +155,7 @@ public sealed class GenerationServiceVideoTests
 
             return await finish.Task.WaitAsync(call.Arg<CancellationToken>());
         });
-        var models = Enumerable.Range(0, 5).Select(index => new ModelRef("openrouter", $"model-{index}")).ToArray();
+        var models = Enumerable.Repeat(new ModelRef("openrouter", "seeded"), 5).ToArray();
 
         await fixture.Service.StartVideoRunAsync(
             fixture.Session.Id, "film", models, VideoParameters.Default, null, TestContext.Current.CancellationToken);

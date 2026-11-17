@@ -1148,6 +1148,22 @@ public class AssistantServiceTests
     }
 
     [Fact]
+    public async Task SendUserMessageAsync_AllImageModelsUnavailable_ShowsClearErrorAndKeepsUserMessage()
+    {
+        _session.Settings.ImageModels = [new ModelRef(ProviderIds.OpenRouter, "vendor/discontinued")];
+        ReplyWithToolCall("""{"prompt":"a fox"}""");
+
+        var result = await _service.SendUserMessageAsync(_session.Id, "a fox", TestContext.Current.CancellationToken);
+
+        Assert.Null(result.Run);
+        Assert.True(result.AssistantMessage.IsError);
+        Assert.Equal(ErrorKind.ModelUnavailable, result.AssistantMessage.ErrorKind);
+        Assert.Contains("None of the selected image models are currently available", result.AssistantMessage.Text, StringComparison.Ordinal);
+        Assert.Equal("a fox", result.UserMessage.Text);
+        await _runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task SendUserMessageAsync_ProviderRateLimited_SavesUserAndErrorMessage()
     {
         _chat.CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>())

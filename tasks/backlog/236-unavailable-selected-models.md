@@ -1,8 +1,8 @@
 ---
 id: 236
-status: in-progress
-assignee: codex-20261117
-claimed: 2026-11-17T17:32:50Z
+status: review
+assignee:
+claimed:
 created: 2026-11-07
 ---
 
@@ -31,11 +31,11 @@ Environment: Linux (Presentation, Avalonia headless, MAUI Android build).
 
 ## Plan
 1. Write failing Core and Presentation tests.
-2. Skip unavailable models in `GenerationService`.
+2. Skip unavailable models in `GenerationService`; return the clear all-unavailable reason through `AssistantService`.
 3. Add unavailable and Remove rows, the chip and assistant validation; add resources.
 4. Update both shells' markup; build; check items 140 and 046.
 
-Files: `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SettingsPageModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Avalonia/Views/SessionModelsView.axaml`, `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`, Core, Presentation and Avalonia tests, `tasks/backlog/140-android-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`.
+Files: `ImageGen/ImageGen.Core/Services/GenerationService.cs`, `ImageGen/ImageGen.Core/Services/AssistantService.cs`, `ImageGen/ImageGen.Presentation/PageModels/SessionModelsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/ChatPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/SettingsPageModel.cs`, `ImageGen/ImageGen.Presentation/PageModels/UnavailableModelOptionViewModel.cs`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.resx`, `ImageGen/ImageGen.Presentation/Resources/Strings/AppResources.cs`, `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml`, `ImageGen/ImageGen.Maui/Pages/ChatPage.xaml`, `ImageGen/ImageGen.Avalonia/Views/SessionModelsView.axaml`, `ImageGen/ImageGen.Avalonia/Views/ChatView.axaml`, `docs/specs/chat-sessions.md`, Core, Presentation and Avalonia tests, `tasks/backlog/140-android-manual-check.md`, `tasks/backlog/046-desktop-manual-check.md`.
 
 ### Verification
 ```
@@ -58,6 +58,17 @@ bash scripts/check.sh
 
 ## Report
 
+Implemented unavailable selected-model handling across Core, Presentation, MAUI and Avalonia. Generation skips selected image/video/audio models that are absent from a non-empty authoritative catalog; empty or failed catalog lookups preserve saved references for provider fallback. If all selected models are unavailable, the run is rejected with a clear message surfaced by `AssistantService`. Session model screens show removable unavailable rows, chat guards an unavailable assistant model while preserving the draft, the model chip shows the unavailable count, and Settings marks an unavailable default assistant. Updated the chat session specification. The existing embedding `model_unavailable` status remains provided by tasks 227/228; this task did not change that flow.
+
+Verification:
+- `dotnet test --project ImageGen/ImageGen.Core.Tests/ImageGen.Core.Tests.csproj` — 864 passed.
+- `dotnet test --project ImageGen/ImageGen.Presentation.Tests/ImageGen.Presentation.Tests.csproj` — 558 passed.
+- `dotnet test --project ImageGen/ImageGen.Avalonia.Tests/ImageGen.Avalonia.Tests.csproj` — 187 passed, 2 skipped (Secret Service unavailable in this Linux session; DPAPI is Windows-only).
+- `dotnet build ImageGen/ImageGen.Maui/ImageGen.Maui.csproj -f net10.0-android` — succeeded, 0 errors; Android SDK emitted XA0033 while parsing the OpenJDK version banner.
+- `dotnet format` `--verify-no-changes` passed for Core, Core.Tests, Presentation, Presentation.Tests, Avalonia and MAUI (MAUI workspace-load warning only).
+- `bash scripts/check.sh` — passed. `git diff --check` — passed.
+- Android and desktop manual checks were not performed in this environment; follow-up scenarios are recorded in tasks 140 and 046.
+
 ## Comments
 
 ### 2026-11-07, claude-audit
@@ -74,3 +85,11 @@ Proposed plan amendment: replace `ImageGen/ImageGen.Maui/Controls/SessionModelsV
 ### 2026-11-17, claude-planner — plan amendment
 Answers the mismatch of 2026-11-15. Verified: `ImageGen/ImageGen.Maui/Pages/SessionModelsPage.xaml` only hosts `controls:SessionModelsView`; the list is in `ImageGen/ImageGen.Maui/Controls/SessionModelsView.xaml`. The `Files:` path is replaced (in the Plan and Analysis). Unavailable rows use a view model nested in, or next to, `SessionModelsPageModel.cs` (`ImageGen/ImageGen.Presentation/PageModels/`, a new file is allowed there); do not change the existing row view-model classes. The Core progress already on the task branch is kept.
 Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").
+
+### 2026-11-17, codex-20261117 — plan amendment
+The approved criterion requires the clear all-models-unavailable reason to be shown to the user. `GenerationService` throws the required `InvalidOperationException`, but `AssistantService.SendUserMessageAsync` catches it in its generic handler and replaces it with “The assistant could not complete this turn.” Add `ImageGen/ImageGen.Core/Services/AssistantService.cs` to `Files:` and catch the all-unavailable start failure at the generation-tool boundary so its clear message becomes the accepted-turn error. This amendment is approved by the executor under the owner's standing instruction recorded in ADR 0036.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come"; executor may approve own current-task amendments per ADR 0036).
+
+### 2026-11-17, codex-20261117 — plan amendment
+The implemented selected-model behavior changes the session models screen, assistant model selection and send flow described by S1.3, S5.3 and S6.4 in `docs/specs/chat-sessions.md`. Add that spec to `Files:` so it can define the unavailable marker/removal behavior and clarify that an empty or failed catalog leaves a saved reference unverified. This amendment is approved by the executor under the owner's standing instruction recorded in ADR 0036.
+Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come"; executor may approve own current-task amendments per ADR 0036).
