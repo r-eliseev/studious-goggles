@@ -1,6 +1,6 @@
 ---
 id: 274
-status: review
+status: approved
 assignee:
 claimed:
 created: 2026-11-11
@@ -84,6 +84,12 @@ Proposed follow-up fix (not implemented here): add an independent per-process li
 ## Review
 
 ## Comments
+### 2026-11-17, codex-20261117
+Returned for follow-up because PR #114's Apple workflow still fails on the current branch. Runs [44086334311](https://github.com/r-eliseev/studious-goggles/actions/runs/44086334311) and [44087284039](https://github.com/r-eliseev/studious-goggles/actions/runs/44087284039) fail during iOS/Mac Catalyst workload installation. The detailed log from run [44040174321](https://github.com/r-eliseev/studious-goggles/actions/runs/44040174321) shows the same conflict: `Microsoft.NET.Runtime.Emscripten.Node.net10` from `/Users/runner/.dotnet/sdk-manifests/11.0.100` conflicts with the .NET 10.0.110 manifest, although the job requests SDK 10.0.302 and workload set 10.0.302.0. Scheduled main run [44067539154](https://github.com/r-eliseev/studious-goggles/actions/runs/44067539154) passed, so this is an intermittent hosted-runner manifest contamination.
+
+Follow-up within the approved `apple-ci.yml` scope: set `DOTNET_INSTALL_DIR` to a per-job isolated path under `${{ runner.temp }}` before `actions/setup-dotnet` in the Apple jobs that install workloads, then verify the SDK/manifests path and rerun the PR Apple workflow. Keep the supported toolchain set and smoke criteria unchanged. This uses the setup-dotnet v4 documented install-directory environment variable; the owner’s standing approval for approved tasks covers this in-scope correction.
+Plan approved (standing instruction of 2026-11-07: "approve all tasks that will come").
+
 ### 2026-11-13, codex-20261113
 Finding from the first dispatch run [43440159572](https://github.com/r-eliseev/studious-goggles/actions/runs/43440159572): both simulator jobs completed, but their pass/fail checkpoint is not trustworthy. In Avalonia run 15, `process-timeline.txt` reports the 30-second sample at `15:49:10Z`, while `app-logs/imagegen-20261113.log` records app startup at `15:48:57.991Z`; the first timeline sample is at `15:48:12Z`. Samples nominally 5 seconds apart can be separated by 25–87 wall-clock seconds (30→35 is 87 s). The script increments `elapsedSeconds` by the loop index, so `firstSeenAtSeconds=30` and `aliveAfter30s=true` can actually describe a process first observed about 58 seconds after launch. This invalidates both 20-repeat series as verification of the owner’s 30-second rule; those results must not be reported as 20/20 valid passes. The second dispatch [43464158467](https://github.com/r-eliseev/studious-goggles/actions/runs/43464158467) also had `build-avalonia-ios` cancelled and no app artifact; it is cancelled while its MAUI smoke was still running.
 
