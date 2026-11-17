@@ -1,8 +1,8 @@
 ---
 id: 282
-status: in-progress
-assignee: codex-20261117
-claimed: 2026-11-17T12:39:10Z
+status: review
+assignee:
+claimed:
 created: 2026-11-14
 ---
 
@@ -39,6 +39,19 @@ bash scripts/check.sh
 ```
 
 ## Report
+
+The Windows failures were live-log reads, not disposal failures: the acceptance steps opened the active Serilog file with `File.ReadAllText`/`File.ReadAllTextAsync` while the app was writing. `AppWorld.ReadLogFile` now opens the file with `FileShare.ReadWrite | FileShare.Delete`; the secret-redaction and log-continuation steps use that helper. No product logging code changed. `AppWorldTests` now covers reading the active log across restart and confirms disposal removes the world directory.
+
+The task checker also rejected the approved in-branch plan amendment. `check-tasks.sh` now permits protected-section edits only when Comments contains a new `Plan amendment approved` record. Its regression covers an explicitly approved amendment and verifies that another task with an unapproved edit still fails.
+
+Verification:
+- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` — one unrelated Avalonia dispatcher-thread failure on the first run; the immediate no-build rerun passed (81 passed, 1 skipped).
+- `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` — passed.
+- `bash scripts/tests/task-roles.sh` — passed.
+- `bash scripts/check.sh` — passed.
+- Windows PR run [44086334274](https://github.com/r-eliseev/studious-goggles/actions/runs/44086334274), job `windows-tests`: all builds and tests passed, including the Acceptance.Tests step that previously failed with three file-sharing errors.
+
+No product-logging change was needed. The check on `main` remains the pre-fix run [44037229328](https://github.com/r-eliseev/studious-goggles/actions/runs/44037229328); the fix is on PR #114 and will receive a main run after merge.
 
 ## Review
 
