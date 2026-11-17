@@ -77,6 +77,6 @@ None is confirmed to be the TSF skill from source 01. TSF was not mentioned on a
 
 ## Unresolved
 
-- ZazenCodes' `software-factory-claude-code-v2` (the stated origin of factory-setup's payload): not found on the ZazenCodes GitHub profile (pinned repos only); a SkillsMP creator profile lists a ZazenCodes "factory" skill with `/factory <feature>`, `/factory next`, `/factory approve <job-id>`, `/factory rework <job-id> <note>` (spec -> build -> review -> approve loop), but that host was not reachable and the repo name is unconfirmed.
+- ZazenCodes' `software-factory-claude-code-v2`: **resolved by the code reading** (`02-factory-kits-code-reading.md`, section 2): per factory-setup's `NOTICE` it is the folder `src/software-factory-claude-code-v2` in `https://github.com/zazencodes/zazencodes-season-3`, commit `5fc7c983f44d623057ef65361f25cf23cab2abef`, GPLv3. A SkillsMP page lists a ZazenCodes `/factory` skill (`/factory <feature>`, `next`, `approve <job-id>`, `rework <job-id> <note>`); that host was not reachable.
 - Relation of "Tiny Software Factories" (source 01) to SSSF: both are "factory as a skill + template", both link to IndyDevDan's material, but the SSSF page does not mention TSF. Still a hypothesis.
-- The `docs/*.md` files of PaddyMc and the source code of every repo were not read.
+- Source code is now being read: see `02-factory-kits-code-reading.md`.
