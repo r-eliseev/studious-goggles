@@ -25,6 +25,21 @@ Source: `docs/factory/sources/01-tsf-lesson-2.md`. Each claim below is stated by
 
 ## Open questions
 
+Raised by the owner on 2026-11-17. Status of all: open (no research done yet). "Anchor" = where the source touches the question. Answers must cite sources by number; the author's marketing claims are to be separated from verifiable facts.
+
+| # | Question | Anchor in source 01 | Expected answer |
+|---|---|---|---|
+| Q1 | What is "liquid software"? | C3: software that changes shape with the problem, designed from day one to be customized by its user | definition, who coined it, prior art (if any), how it differs from configurable or extensible software |
+| Q2 | What is a "liquid software factory"? | C3, C4: the tiny software factory is called liquid software | how the factory differs from liquid software in general; what is liquid in it (template, skills, settings, agents?) |
+| Q3 | The source speaks of a meta-optimization of how a programmer works and of what is built. How to do it? | C1: leverage is in the meta-optimization, not in the models, tools and harnesses | a concrete method: what is measured, what is changed, how often, with which feedback |
+| Q4 | Human in the loop -> near the loop -> out of the loop: more detail | C2 | exact definitions, decision points, stop conditions, examples, what must be true before moving to the next mode, risks of "out" |
+| Q5 | How does agentic engineering work in general? | C1, C6, C7 (the term is used, not defined) | the discipline: practices, roles, loop structure, verification; sources beyond the video |
+| Q6 | What are Tiny Software Factories (the course/product)? Find more than the video says | C3-C5, C12 (the video is an advertisement for it) | the product: author, content of levels 1-4, the template, price/license, independent descriptions or reviews |
+| Q7 | How does a factory adapt to the problem and to the progress of development? | C3, C6, C10 (agent edits its own settings; configure step) | the adaptation mechanism: what changes (config, skills, agents, UI), who triggers it, how it is kept consistent over time |
+| Q8 | Find the "tiny software factory" (TSF) skill that is shown | C5, C6: one "super skill" with init and configure workflows, `/tsf` command, `.tsf` directory | the actual skill file or repository, its commands and structure; if it is not public, say so |
+
+Earlier open questions (still open):
+
 1. The source describes a UI-driven runtime (settings menu, themes, hotkeys). How much of that is essential, and how much is demo detail for the concept?
-2. Level 1 (foundations) and levels 3-4 are not in this source yet. Are more sources coming?
-3. Is "out of the loop" in scope, or only "near the loop"?
+2. Level 1 (foundations) and levels 3-4 are not in this source yet. Are more sources coming? (Part of this is Q6.)
+3. Is "out of the loop" in scope, or only "near the loop"? (Depends on Q4.)
