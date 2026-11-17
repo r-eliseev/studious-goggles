@@ -2,6 +2,8 @@
 
 ## Principle P1 (owner, 2026-11-17)
 
+**Goal (2026-11-17):** the aim is an instruction on how to build a universal software factory, not the definition. **P6:** do not assume, ask questions, the earlier the better (not counting the current flow; meaning to be confirmed, `open-threads.md` OT07).
+
 The system being built is **universal**. Everything found is documented even if it does not apply to the current harness as it is; applicability is a column in `docs/factory/catalog.md`, not a filter. See `docs/factory/README.md`.
 
 Short items the owner asked to keep. Each cites where it came from. Not sources, not decisions: candidates for the concept.

@@ -151,3 +151,17 @@ Applicability to this repository's planner/executor harness: **exists** (already
 | C124 | Server lease and action outbox | TTL and heartbeat lease; compare-and-set leased actions; orphan requeue | GE | n/a here |
 | C125 | Agent pane and process recovery | agents survive a restart and are adopted again | GE | n/a here |
 | C126 | Isolation for parallel agents | port offsets, tests that pass twice on a dirty database | S03 T3 (Understanding Data) | n/a here |
+
+## 12. Cross-cutting concepts (added 2026-11-17)
+
+| ID | Mechanism | What it is | Source | Here |
+|---|---|---|---|---|
+| C130 | Error-diversity techniques | change the model family, the input (independent interpretation of the requirement), the mechanism (executable oracles), the information the checker sees; prompt changes give little | W08; Nogueira 2026; Ron 2026; Verga 2024 | candidate |
+| C131 | Failure-independence measurement | pairwise failure-correlation test and the share of the independence gain realized by an ensemble | Knight-Leveson 1986; Nogueira 2026 | candidate |
+| C132 | Evidence grading | every empirical claim carries sample, population, venue and a weight grade; weak data does not carry a decision alone | W06; `evidence-register.md` | n/a here (meta) |
+| C133 | Review cadence with switching | review share by class, starting high and lowered after clean samples, raised after an escaped defect; plus time-based and event-based reviews | W14.3; acceptance sampling (MIL-STD-105, ANSI/ASQ Z1.4); DORA | candidate |
+| C134 | Review of the factory's own rules | checks, prompts, skills, thresholds are reviewed like code because they define what counts as correct | W14.3; Goodhart | candidate |
+| C135 | Executor profile | capability, reliability and error correlation, cost and speed, availability, memory, ability to ask, incentives and accountability, trust, observability | W14.4 | candidate |
+| C136 | Ask before assuming | clarifying questions early, not guesses (owner rule P6); human side of "assumptions list" and deferred tool calls | W09; S04 | candidate |
+| C137 | Measure the criterion, reality judges | the human defines what counts as value (the evaluation criterion), experiments and indicators judge; most ideas fail to move target metrics | W10; Kohavi | candidate |
+
