@@ -1,5 +1,9 @@
 # Owner notes: things to remember
 
+## Principle P1 (owner, 2026-11-17)
+
+The system being built is **universal**. Everything found is documented even if it does not apply to the current harness as it is; applicability is a column in `docs/factory/catalog.md`, not a filter. See `docs/factory/README.md`.
+
 Short items the owner asked to keep. Each cites where it came from. Not sources, not decisions: candidates for the concept.
 
 | # | Item | Status | Origin |

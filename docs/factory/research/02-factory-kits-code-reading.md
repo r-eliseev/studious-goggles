@@ -155,7 +155,7 @@ All six sections above are helper-agent reports, unverified by the main session;
 | Human gate | none in the kit | label `factory:needs-human`, ESCALATE | PR merge | PR (existing repos) | merge + `/factory complete` | plan approval (standing instruction) and the planner agent's review |
 | Install / upgrade | copy-and-skip, no upgrade | manifest hashes, safe/held upgrade, sabotage check | idempotent `init` with marker block | `init`, templates | single executable | not applicable (repository-bound) |
 
-Candidate ideas to adopt (ranked by value for this harness; each needs the owner's decision; costs are estimates):
+Candidate ideas for this harness (ranked by value here; each needs the owner's decision; costs are estimates). The complete list of mechanisms, including everything that does not apply here, is `docs/factory/catalog.md`:
 1. **Typed pause and per-stage budgets** (geut): a bounded correction/round count per task stage with a typed "needs human" state; low cost (a few lines in the task Report/Comments convention plus `check-tasks.sh`).
 2. **Verdict evidence must resolve** (geut): a review "Verification" list with `path:line` citations per acceptance criterion, checked by a script; medium cost.
 3. **Checks that can fail** (factory-setup): prove `scripts/check.sh` fails on an injected violation; low cost.
@@ -167,4 +167,4 @@ Candidate ideas to adopt (ranked by value for this harness; each needs the owner
 9. **Prompt version, cost and transcript per run** (PaddyMc): needed for the metrics in owner-notes N1; cost depends on the agent runtime.
 10. **Controller owns state; plan accepted from files** (geut): already close to this harness (state in task files); keep.
 
-Not to copy (from the same reports): existence-only claim gates presented as diff checks; placeholder quality commands that pass; enforcement that is skipped after earlier failure; heavy servers and runtimes (Herdr/Pi, LangGraph, 60k-line codebases) for a repo-bound harness; the builder writing the tests that judge it.
+Not applicable to a repo-bound harness, **kept for the universal catalog** (`docs/factory/catalog.md`, principle P1; they are not rejected):  existence-only claim gates presented as diff checks; placeholder quality commands that pass; enforcement that is skipped after earlier failure; heavy servers and runtimes (Herdr/Pi, LangGraph, 60k-line codebases) for a repo-bound harness; the builder writing the tests that judge it.
