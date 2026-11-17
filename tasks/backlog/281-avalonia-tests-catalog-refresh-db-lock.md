@@ -1,6 +1,6 @@
 ---
 id: 281
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-14
@@ -60,6 +60,9 @@ Verification:
 No difference from the approved plan; the `ModelCatalogRefreshService` cancellation path already met the plan.
 
 ## Review
+
+### 2026-11-17, codex-20261117
+Reviewed the implementation diff in PR #112 against all acceptance criteria and plan steps. `AppInitializer` owns and cancels the refresh token, retains the refresh task, implements bounded sync/async disposal, and preserves background initialization. The report records the Core cancellation path check and the added cancellation/disposal tests. The Windows `windows-tests` run [43698222120](https://github.com/r-eliseev/studious-goggles/actions/runs/43698222120) passed the `ImageGen.Avalonia.Tests` build and test steps, including `LongCatalog_SaveAndCancelStayVisibleOnBothTabs`; its later Acceptance test step failed on the log-file lock tracked by task 282. Changed files match the approved `Files:` list. Verdict: accepted; task 282 remains the follow-up for the separate acceptance harness failure.
 
 ## Comments
 
