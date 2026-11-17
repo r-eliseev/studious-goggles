@@ -1,8 +1,8 @@
 ---
 id: 274
-status: in-progress
-assignee: codex-20261117
-claimed: 2026-11-17T12:56:46Z
+status: review
+assignee:
+claimed:
 created: 2026-11-11
 ---
 
@@ -66,6 +66,8 @@ Verification:
 - Embedded Python syntax parse and `bash scripts/check.sh` — passed.
 - `shellcheck` is not installed in the local environment.
 - PR #114 checks: harness, UI E2E, Android, Windows build, core, Avalonia, Docker and other non-Apple checks passed. `windows-tests` failed in the acceptance step (task 282); the two iOS build jobs failed with a hosted .NET workload manifest conflict in run [44041619896](https://github.com/r-eliseev/studious-goggles/actions/runs/44041619896).
+- After isolating the .NET SDK/workload installation under `$RUNNER_TEMP/dotnet` for the Apple jobs that install workloads, the Apple workflow passed in [44088295597](https://github.com/r-eliseev/studious-goggles/actions/runs/44088295597). Its log confirms `DOTNET_INSTALL_DIR=/Users/runner/work/_temp/dotnet`, SDK `10.0.302`, and only the `10.0.100` SDK manifest directory before installing workload `10.0.302.0`.
+- The full PR #114 check set on commit `06c0ecb6ad0e2fca08aebec6af1b44e5c39a388b` passed on 2026-11-17: harness, Apple builds/preflight, Linux core/Avalonia/Avalonia Android/Docker, Windows tests and build, MAUI Android/Windows, Android and Windows UI E2E, and Allure report. Apple smoke jobs were skipped as configured for this PR event; the separate 20-repeat diagnostic evidence remains the completed run [44040174321](https://github.com/r-eliseev/studious-goggles/actions/runs/44040174321) documented above.
 - The required 20-repeat manual run completed for both apps in [44040174321](https://github.com/r-eliseev/studious-goggles/actions/runs/44040174321), using the compatible Xcode 26.4.1 / .NET 10.0.203 option. It reported 11/20 MAUI and 9/20 Avalonia smoke failures, with zero app crash reports. Treat these as failed smoke observations, not confirmed app exits: the failed runs frequently timed out in `launchctl list`.
 
 Representative evidence from Avalonia run 05:
