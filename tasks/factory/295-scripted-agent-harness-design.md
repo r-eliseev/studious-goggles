@@ -33,3 +33,7 @@ Environment: any (documents); the design may later need access to Claude Code in
 
 ### 2026-11-17, planner-session
 Created from the owner's request; queued as the next topic. Analysis and Plan not written yet.
+
+### 2026-11-17, planner-session
+Owner's answers (recorded in `docs/factory/decisions.md`, `scripted-harness-requirements`): one agent per task **and** a queue of tasks with several agents; on the owner's machine **and** in the cloud; the script controls rights, budget, checks and escalations first; any control surface is fine as long as **the agent cannot bypass the control**. Verified background added to `docs/factory/research/scripted-harness-around-agents.md`: the ACP file-system and terminal methods are optional client capabilities (not enforcement), the Claude Code adapter enables the built-in tools by default and can disable them with a client flag, the Agent SDK evaluates hooks, deny rules, ask rules, permission mode, allow rules and then the callback, with traps (no callback in `bypassPermissions`, pattern denies match only as written). New criterion: the design includes an end-to-end check that the agent cannot bypass the host (tools served by the host or OS isolation).
+
