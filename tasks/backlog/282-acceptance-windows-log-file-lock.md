@@ -1,6 +1,6 @@
 ---
 id: 282
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-14
@@ -54,6 +54,9 @@ Verification:
 No product-logging change was needed. The check on `main` remains the pre-fix run [44037229328](https://github.com/r-eliseev/studious-goggles/actions/runs/44037229328); the fix is on PR #114 and will receive a main run after merge.
 
 ## Review
+
+### 2026-11-17, codex-20261117
+Reviewed the implementation and verification against the amended plan. Live log reads use explicit shared access in both failing acceptance steps; the `AppWorldTests` case covers reads across restart and confirms directory removal after disposal. The checker amendment requires a new approval record, and its regression also rejects an unapproved edit to a separate task. No product logging files changed. Windows `windows-tests` passed all test projects and the Acceptance step in [run 44086334274](https://github.com/r-eliseev/studious-goggles/actions/runs/44086334274). Accepted; task complete.
 
 ## Comments
 
