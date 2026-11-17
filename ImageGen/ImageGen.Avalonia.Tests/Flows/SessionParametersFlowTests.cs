@@ -22,18 +22,18 @@ public class SessionParametersFlowTests
         var sessions = shell.Provider.GetRequiredService<SessionService>();
         var session = await sessions.CreateAsync(ct);
         await shell.Navigation.GoToAsync(Routes.ChatFor(session.Id));
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "чат");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "chat");
 
         await shell.Navigation.GoToAsync(Routes.SessionParametersFor(session.Id));
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionParametersView, "экран параметров");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionParametersView, "parameters screen");
         var model = (SessionParametersPageModel)((Control)shell.Window.PageArea.Content!).DataContext!;
-        await shell.WaitUntilAsync(() => model.OutputFormatOptions.Count > 0, "список загружен");
+        await shell.WaitUntilAsync(() => model.OutputFormatOptions.Count > 0, "list loaded");
         model.SelectedOutputFormat = model.OutputFormatOptions.Single(o => o.Value == "webp");
 
         await model.SaveCommand.ExecuteAsync(null);
 
         var stored = await sessions.GetAsync(session.Id, ct);
         Assert.Equal("webp", stored!.Settings.Parameters.OutputFormat);
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "обратно в чат");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "back to chat");
     }
 }

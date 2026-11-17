@@ -47,7 +47,7 @@ public sealed class AvaloniaNavigationService(PageRoutes routes, ILogger<Avaloni
     public Task GoToAsync(string route)
     {
         var (path, query) = RouteParser.Parse(route);
-        var create = routes.Find(path) ?? throw new InvalidOperationException($"Неизвестный маршрут: {path}");
+        var create = routes.Find(path) ?? throw new InvalidOperationException($"Unknown route: {path}");
         var host = RequireHost();
 
         var view = create(query);
@@ -70,7 +70,7 @@ public sealed class AvaloniaNavigationService(PageRoutes routes, ILogger<Avaloni
         }
 
         var (path, query) = RouteParser.Parse(route);
-        var create = routes.Find(path) ?? throw new InvalidOperationException($"Неизвестный маршрут: {path}");
+        var create = routes.Find(path) ?? throw new InvalidOperationException($"Unknown route: {path}");
         var host = RequireHost();
 
         var view = create(query);
@@ -97,7 +97,7 @@ public sealed class AvaloniaNavigationService(PageRoutes routes, ILogger<Avaloni
     }
 
     private ContentControl RequireHost() =>
-        _host ?? throw new InvalidOperationException("Окно приложения ещё не создано: некуда показать страницу.");
+        _host ?? throw new InvalidOperationException("The application window has not been created; there is nowhere to show the page.");
 
     private static void Leave(Control view)
     {

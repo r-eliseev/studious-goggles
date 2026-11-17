@@ -28,7 +28,7 @@ public class ChatFlowTests
         var card = row.Generations.Single();
 
         await shell.Provider.GetRequiredService<GenerationService>().WhenIdleAsync();
-        await shell.WaitUntilAsync(() => card.IsFinished && card.HasImage, "карточка готова");
+        await shell.WaitUntilAsync(() => card.IsFinished && card.HasImage, "card is ready");
 
         Assert.Equal(AppResources.StatusSucceeded, card.StatusText);
         Assert.Same(row, chat.Items.OfType<RunItemViewModel>().Single());
@@ -46,7 +46,7 @@ public class ChatFlowTests
         var row = await SendAsync(shell, chat, "draw a red fox");
         var card = row.Generations.Single();
         await shell.Provider.GetRequiredService<GenerationService>().WhenIdleAsync();
-        await shell.WaitUntilAsync(() => card.IsFinished, "карточка готова");
+        await shell.WaitUntilAsync(() => card.IsFinished, "card is ready");
 
         await card.RepeatCommand.ExecuteAsync(null);
         await shell.Provider.GetRequiredService<GenerationService>().WhenIdleAsync();
@@ -63,7 +63,7 @@ public class ChatFlowTests
         var row = await SendAsync(shell, chat, "draw a red fox");
         var card = row.Generations.Single();
         await shell.Provider.GetRequiredService<GenerationService>().WhenIdleAsync();
-        await shell.WaitUntilAsync(() => card.IsFinished, "карточка готова");
+        await shell.WaitUntilAsync(() => card.IsFinished, "card is ready");
 
         await card.NewSeedCommand.ExecuteAsync(null);
         await shell.Provider.GetRequiredService<GenerationService>().WhenIdleAsync();
@@ -85,7 +85,7 @@ public class ChatFlowTests
         var row = await SendAsync(shell, chat, "draw a red fox");
         var card = row.Generations.Single();
         await shell.Provider.GetRequiredService<GenerationService>().WhenIdleAsync();
-        await shell.WaitUntilAsync(() => card.IsFinished, "карточка готова");
+        await shell.WaitUntilAsync(() => card.IsFinished, "card is ready");
 
         await card.EditCommand.ExecuteAsync(null);
         await shell.Provider.GetRequiredService<GenerationService>().WhenIdleAsync();
@@ -107,7 +107,7 @@ public class ChatFlowTests
         var row = await SendAsync(shell, chat, "draw a red fox");
         var card = row.Generations.Single();
         await shell.Provider.GetRequiredService<GenerationService>().WhenIdleAsync();
-        await shell.WaitUntilAsync(() => card.IsFinished, "карточка готова");
+        await shell.WaitUntilAsync(() => card.IsFinished, "card is ready");
 
         await card.EditCommand.ExecuteAsync(null);
         await shell.Provider.GetRequiredService<GenerationService>().WhenIdleAsync();
@@ -123,7 +123,7 @@ public class ChatFlowTests
 
         chat.InputText = "draw a red fox";
         await chat.SendCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => !chat.IsBusy, "ответ получен");
+        await shell.WaitUntilAsync(() => !chat.IsBusy, "response received");
 
         var messages = chat.Items.OfType<MessageItemViewModel>().ToList();
         Assert.Contains(messages, message => !message.IsUser && message.IsError);
@@ -135,7 +135,7 @@ public class ChatFlowTests
     {
         chat.InputText = text;
         await chat.SendCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => chat.Items.OfType<RunItemViewModel>().Any(), "прогон в ленте");
+        await shell.WaitUntilAsync(() => chat.Items.OfType<RunItemViewModel>().Any(), "run in transcript");
         return chat.Items.OfType<RunItemViewModel>().First();
     }
 }

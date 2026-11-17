@@ -117,10 +117,10 @@ public class SessionsViewTests
         shell.Window.Show();
         await shell.Navigation.GoToAsync(Routes.Sessions);
         var model = shell.Provider.GetRequiredService<SessionsPageModel>();
-        await shell.WaitUntilAsync(() => model.Sessions.Count == 1, "список загружен");
+        await shell.WaitUntilAsync(() => model.Sessions.Count == 1, "list loaded");
 
         model.SearchText = "lighthose";
-        await shell.WaitUntilAsync(() => model.SearchResults.Count == 1, "поиск выполнен");
+        await shell.WaitUntilAsync(() => model.SearchResults.Count == 1, "search completed");
         shell.Window.UpdateLayout();
 
         var view = Assert.IsType<SessionsView>(shell.Window.PageArea.Content);

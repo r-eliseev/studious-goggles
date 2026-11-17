@@ -13,7 +13,7 @@ public static class SecretFileNames
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         if (!SafeName.IsMatch(name))
         {
-            throw new ArgumentException("Недопустимое имя секрета: допустимы латинские буквы, цифры, «_», «-» и «.».", nameof(name));
+            throw new ArgumentException("Invalid secret name: only ASCII letters, digits, '_', '-' and '.' are allowed.", nameof(name));
         }
 
         return Path.Combine(dataDirectory, "secrets", name + ".bin");

@@ -26,9 +26,9 @@ public class SessionModelsFlowTests
         var chat = await shell.OpenNewChatAsync();
 
         await chat.OpenModelsCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "models screen");
         var models = (SessionModelsPageModel)((Control)shell.Window.PageArea.Content!).DataContext!;
-        await shell.WaitUntilAsync(() => models.Models.Count == 6, "каталог загружен");
+        await shell.WaitUntilAsync(() => models.Models.Count == 6, "catalog loaded");
 
         models.Models.Single(model => model.Id == "vendor/beta").IsSelected = true;
         models.Models.Single(model => model.Id == SessionSettings.DefaultImageModelId).IsSelected = false;
@@ -36,7 +36,7 @@ public class SessionModelsFlowTests
         await models.SaveCommand.ExecuteAsync(null);
 
         await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView
-            && chat.ModelsButtonText == string.Format(AppResources.ModelsButtonFormat, 1, 3, 0, 0), "подпись кнопки моделей");
+            && chat.ModelsButtonText == string.Format(AppResources.ModelsButtonFormat, 1, 3, 0, 0), "model button label");
         var saved = await shell.Provider.GetRequiredService<SessionService>().ListAsync(TestContext.Current.CancellationToken);
         Assert.Equal([new ImageGen.Core.Domain.Models.ModelRef(ImageGen.Core.Providers.ProviderIds.OpenRouter, "vendor/beta")], saved.Single().Settings.ImageModels);
         Assert.Equal(3, saved.Single().Settings.RunsPerModel);
@@ -48,7 +48,7 @@ public class SessionModelsFlowTests
         using var shell = new ShellHarness(openRouter: OpenRouterFakes.Create());
         var chat = await shell.OpenNewChatAsync();
         await chat.OpenModelsCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "models screen");
         var models = (SessionModelsPageModel)((Control)shell.Window.PageArea.Content!).DataContext!;
         shell.Window.Show();
         shell.Window.UpdateLayout();
@@ -67,9 +67,9 @@ public class SessionModelsFlowTests
         using var shell = new ShellHarness(openRouter: OpenRouterFakes.Create());
         var chat = await shell.OpenNewChatAsync();
         await chat.OpenModelsCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "models screen");
         var models = (SessionModelsPageModel)((Control)shell.Window.PageArea.Content!).DataContext!;
-        await shell.WaitUntilAsync(() => models.Models.Count == 6, "каталог загружен");
+        await shell.WaitUntilAsync(() => models.Models.Count == 6, "catalog loaded");
 
         models.SearchText = "beta";
         Assert.Single(models.Models);
@@ -85,10 +85,10 @@ public class SessionModelsFlowTests
         using var shell = new ShellHarness(openRouter: OpenRouterFakes.Create());
         var chat = await shell.OpenNewChatAsync();
         await chat.OpenModelsCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "models screen");
         var view = (SessionModelsView)shell.Window.PageArea.Content!;
         var models = (SessionModelsPageModel)view.DataContext!;
-        await shell.WaitUntilAsync(() => models.ImageModelGroups.Count == 2, "группы моделей");
+        await shell.WaitUntilAsync(() => models.ImageModelGroups.Count == 2, "model groups");
         shell.Window.Show();
         shell.Window.UpdateLayout();
 
@@ -107,10 +107,10 @@ public class SessionModelsFlowTests
         using var shell = new ShellHarness(openRouter: OpenRouterFakes.Create());
         var chat = await shell.OpenNewChatAsync();
         await chat.OpenModelsCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "models screen");
         var view = (SessionModelsView)shell.Window.PageArea.Content!;
         var models = (SessionModelsPageModel)view.DataContext!;
-        await shell.WaitUntilAsync(() => models.Models.Count == 6, "каталог загружен");
+        await shell.WaitUntilAsync(() => models.Models.Count == 6, "catalog loaded");
         Assert.Contains(models.Models, model => model.Reference.ProviderId == "together" && model.ProviderText == "Together AI (together)");
         shell.Window.Show();
         shell.Window.UpdateLayout();
@@ -120,7 +120,7 @@ public class SessionModelsFlowTests
         shell.Window.UpdateLayout();
 
         await shell.WaitUntilAsync(() => view.GetVisualDescendants().OfType<TextBlock>()
-            .Any(text => text.Text?.Contains("$0.014 / MP", StringComparison.Ordinal) == true), "цена OpenRouter");
+            .Any(text => text.Text?.Contains("$0.014 / MP", StringComparison.Ordinal) == true), "OpenRouter price");
 
         var details = view.GetVisualDescendants().OfType<TextBlock>().Select(text => text.Text ?? "").ToList();
         Assert.Contains(details, text => text.Contains("$0.014 / MP", StringComparison.Ordinal));
@@ -134,10 +134,10 @@ public class SessionModelsFlowTests
         using var shell = new ShellHarness(openRouter: OpenRouterFakes.Create());
         var chat = await shell.OpenNewChatAsync();
         await chat.OpenModelsCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "models screen");
         var view = (SessionModelsView)shell.Window.PageArea.Content!;
         var models = (SessionModelsPageModel)view.DataContext!;
-        await shell.WaitUntilAsync(() => models.ImageModelGroups.Count == 2, "группы моделей");
+        await shell.WaitUntilAsync(() => models.ImageModelGroups.Count == 2, "model groups");
         shell.Window.Show();
         shell.Window.UpdateLayout();
         var expander = view.GetVisualDescendants().OfType<Expander>().Single(item => Equals(item.Header, "vendor (1) · 0 selected"));
@@ -155,7 +155,7 @@ public class SessionModelsFlowTests
         using var shell = new ShellHarness(openRouter: OpenRouterFakes.Create());
         var chat = await shell.OpenNewChatAsync();
         await chat.OpenModelsCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "models screen");
         shell.Window.Show();
         shell.Window.UpdateLayout();
 
@@ -177,7 +177,7 @@ public class SessionModelsFlowTests
         using var shell = new ShellHarness(openRouter: OpenRouterFakes.Create());
         var chat = await shell.OpenNewChatAsync();
         await chat.OpenModelsCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "models screen");
         shell.Window.Show();
         shell.Window.UpdateLayout();
 
@@ -198,7 +198,7 @@ public class SessionModelsFlowTests
         using var shell = new ShellHarness(openRouter: OpenRouterFakes.Create());
         var chat = await shell.OpenNewChatAsync();
         await chat.OpenModelsCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "models screen");
         shell.Window.Show();
         shell.Window.UpdateLayout();
 
@@ -230,7 +230,7 @@ public class SessionModelsFlowTests
         await shell.WaitUntilAsync(
             () => shell.Window.PageArea.Content is SessionModelsView view
                 && ((SessionModelsPageModel)view.DataContext!).Models.Count == 64,
-            "длинный каталог моделей");
+            "long model catalog");
         shell.Window.UpdateLayout();
 
         var view = (SessionModelsView)shell.Window.PageArea.Content!;
@@ -292,9 +292,9 @@ public class SessionModelsFlowTests
         await shell.InitializeDatabaseAsync();
         var session = await shell.Provider.GetRequiredService<SessionService>().CreateAsync(TestContext.Current.CancellationToken);
         await shell.Navigation.GoToAsync(Routes.ChatFor(session.Id));
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "чат");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "chat");
         var chat = (ChatPageModel)((Control)shell.Window.PageArea.Content!).DataContext!;
-        await shell.WaitUntilAsync(() => chat.ModelsButtonText.Length > 0, "лента загружена");
+        await shell.WaitUntilAsync(() => chat.ModelsButtonText.Length > 0, "transcript loaded");
         return chat;
     }
 }

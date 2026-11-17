@@ -32,7 +32,7 @@ public sealed class KeychainSecretBackend : ISecretBackend
             return null;
         }
 
-        EnsureSuccess(exitCode, "чтение");
+        EnsureSuccess(exitCode, "read");
         return output.TrimEnd('\n');
     }
 
@@ -41,7 +41,7 @@ public sealed class KeychainSecretBackend : ISecretBackend
         var hex = Convert.ToHexString(Encoding.UTF8.GetBytes(value));
         var command = $"add-generic-password -U -s {Service} -a {CheckName(name)} -X {hex}\n";
         var (exitCode, _, _) = await RunAsync(["-i"], command, cancellationToken);
-        EnsureSuccess(exitCode, "запись");
+        EnsureSuccess(exitCode, "write");
     }
 
     public async Task RemoveAsync(string name, CancellationToken cancellationToken)
@@ -52,7 +52,7 @@ public sealed class KeychainSecretBackend : ISecretBackend
             cancellationToken);
         if (exitCode != ItemNotFound)
         {
-            EnsureSuccess(exitCode, "удаление");
+            EnsureSuccess(exitCode, "delete");
         }
     }
 
@@ -61,7 +61,7 @@ public sealed class KeychainSecretBackend : ISecretBackend
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         if (!SafeName.IsMatch(name))
         {
-            throw new ArgumentException("Недопустимое имя секрета.", nameof(name));
+            throw new ArgumentException("Invalid secret name.", nameof(name));
         }
 
         return name;
@@ -72,7 +72,7 @@ public sealed class KeychainSecretBackend : ISecretBackend
         if (exitCode != 0)
         {
             // The message names the operation and the exit code only: never the value.
-            throw new InvalidOperationException($"Связка ключей macOS: ошибка при операции «{operation}» (код {exitCode}).");
+            throw new InvalidOperationException($"macOS Keychain operation '{operation}' failed (exit code {exitCode}).");
         }
     }
 
@@ -93,7 +93,7 @@ public sealed class KeychainSecretBackend : ISecretBackend
             start.ArgumentList.Add(argument);
         }
 
-        using var process = Process.Start(start) ?? throw new InvalidOperationException("Не удалось запустить security.");
+        using var process = Process.Start(start) ?? throw new InvalidOperationException("Could not start security.");
         if (stdin is not null)
         {
             await process.StandardInput.WriteAsync(stdin.AsMemory(), cancellationToken);

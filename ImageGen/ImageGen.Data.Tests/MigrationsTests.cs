@@ -87,7 +87,7 @@ public class MigrationsTests
     [Fact]
     public void Load_Script_IsReturnedUnchanged()
     {
-        const string script = "CREATE TABLE t (id INTEGER);\n-- комментарий\r\n";
+        const string script = "CREATE TABLE t (id INTEGER);\n-- comment\r\n";
 
         var migrations = Migrations.Load([("0001_a.sql", script)]);
 

@@ -1,6 +1,6 @@
 ---
 id: 271
-status: approved
+status: review
 assignee:
 claimed:
 created: 2026-11-09
@@ -54,6 +54,13 @@ bash scripts/check.sh
 
 ## Report
 
+### 2026-11-16, codex-20261116
+- Translated exception messages, migration documentation/comments, and the 0002 migration comment. Checked `Migrations` and `MigrationsTests`: migrations are ordered/applied by schema version; there is no checksum verification, so the comment-only edit does not alter migration behavior.
+- Translated Avalonia view wait descriptions, test messages and skip reasons, plus the Core and Presentation test messages. Updated the accessibility test's failure labels per the planner's approved amendment.
+- Added `ImageGen/` to `LATIN_PATHS`. Added only `ImageGen/ImageGen.Core.Tests/Search/FuzzyMatcherTests.cs` to `LATIN_EXCEPTIONS`, because its Cyrillic strings are inputs under test for fuzzy matching. No other Cyrillic text remains in `ImageGen/`.
+- Verification passed: Core.Tests (856/856), Data.Tests (149/149), Presentation.Tests (552/552), Avalonia.Tests (187 passed, 2 skipped for Windows DPAPI and unavailable D-Bus Secret Service); `dotnet format --verify-no-changes` passed for Data, Data.Tests, Avalonia, Avalonia.Tests, Core.Tests, and Presentation.Tests; `bash scripts/check-latin.sh ImageGen` and `bash scripts/check.sh` passed.
+- The stale remote task branch had no open PR and was blocked since 2026-11-13. Owner explicitly authorized takeover and continuation in the shared branch on 2026-11-16. No changes were taken from its stale task-card state; the current approved card and planner amendment on main were used.
+
 ## Comments
 
 ### 2026-11-09, claude-bdd-plan
@@ -70,3 +77,6 @@ Proposed plan amendment: keep these localized accessible-name assertions unchang
 ### 2026-11-13, claude-planner — plan amendment
 Answers the conflict of 2026-11-13. Verified: the strings "чат", "модели", "ключ", "сессии", "настройки" in `ImageGen/ImageGen.Avalonia.Tests/Views/ViewsAccessibilityTests.cs` are not accessible names: `AssertNamed(shell, page)` uses `page` only in the failure messages (lines 50 and 55); the test asserts that `AutomationProperties.Name` is not empty. The app's UI is English (`AppResources.resx` is the only resource file). Translate them like any other test text ("chat", "models", "key", "sessions", "settings") together with the Russian failure message on line 50. No Latin exception for this file; the only allowed exceptions stay the genuine non-English search-input fixtures.
 Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks that will come").
+
+### 2026-11-16, codex-20261116
+Owner instruction: take over task 271 and continue it in the existing shared branch without waiting for a merge. The previous remote task branch is stale: its last commit set the card to `blocked` on 2026-11-13, and there is no open PR. The planner's 2026-11-13 amendment is present on `main` and resolves the accessibility-test conflict; the five Russian terms are failure-message labels, not asserted accessible names. This task is resumed on the shared branch after the owner explicitly authorized takeover.

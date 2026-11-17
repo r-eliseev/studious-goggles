@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 namespace ImageGen.Data;
 
 /// <summary>
-/// Ordered schema migrations. Every embedded <c>Migrations/NNNN_имя.sql</c> file is one migration;
+/// Ordered schema migrations. Every embedded <c>Migrations/NNNN_name.sql</c> file is one migration;
 /// a new migration is a new file, without code changes. Never edit a released migration; append a new one.
 /// </summary>
 internal static class Migrations
@@ -21,7 +21,7 @@ internal static class Migrations
 
     /// <summary>
     /// Validates a set of named scripts and returns them ordered by number.
-    /// Numbers must be 0001, 0002, … without gaps or repeats; names must match <c>NNNN_имя.sql</c>.
+    /// Numbers must be 0001, 0002, … without gaps or repeats; names must match <c>NNNN_name.sql</c>.
     /// </summary>
     internal static IReadOnlyList<Migration> Load(IEnumerable<(string Name, string Script)> scripts)
     {
@@ -33,14 +33,14 @@ internal static class Migrations
             if (!NamePattern.IsMatch(name))
             {
                 throw new InvalidOperationException(
-                    $"Неверное имя миграции {name}: ожидается NNNN_имя.sql (4 цифры, строчные латинские буквы, цифры и _).");
+                    $"Invalid migration name {name}: expected NNNN_name.sql (4 digits, lowercase Latin letters, digits, and _).");
             }
 
             var number = int.Parse(name.AsSpan(0, 4), CultureInfo.InvariantCulture);
             if (number == 0)
             {
                 throw new InvalidOperationException(
-                    $"Неверный номер миграции в {name}: нумерация начинается с 0001.");
+                    $"Invalid migration number in {name}: numbering starts at 0001.");
             }
 
             parsed.Add(new Migration(number, name, script));
@@ -48,7 +48,7 @@ internal static class Migrations
 
         if (parsed.Count == 0)
         {
-            throw new InvalidOperationException("Нет ни одной миграции схемы базы данных.");
+            throw new InvalidOperationException("There are no database schema migrations.");
         }
 
         parsed.Sort((left, right) => left.Number != right.Number
@@ -69,10 +69,10 @@ internal static class Migrations
             {
                 var previous = parsed[index - 1];
                 throw new InvalidOperationException(
-                    $"Два файла миграции с номером {current.Number:D4}: {previous.Name}, {current.Name}. Перенумеруйте один из них.");
+                    $"Two migration files have number {current.Number:D4}: {previous.Name}, {current.Name}. Renumber one of them.");
             }
 
-            throw new InvalidOperationException($"Пропущена миграция {expected:D4}: следующий файл — {current.Name}.");
+            throw new InvalidOperationException($"Migration {expected:D4} is missing: the next file is {current.Name}.");
         }
 
         return parsed;

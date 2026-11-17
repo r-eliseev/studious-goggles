@@ -24,13 +24,13 @@ public class LoggingFlowTests
         await shell.InitializeDatabaseAsync();
         var session = await shell.Provider.GetRequiredService<SessionService>().CreateAsync(cancellationToken);
         await shell.Navigation.GoToAsync(Routes.ChatFor(session.Id));
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "чат");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is ChatView, "chat");
         var chat = (ChatPageModel)((Control)shell.Window.PageArea.Content!).DataContext!;
-        await shell.WaitUntilAsync(() => chat.ModelsButtonText.Length > 0, "лента загружена");
+        await shell.WaitUntilAsync(() => chat.ModelsButtonText.Length > 0, "transcript loaded");
 
         chat.InputText = "draw a red fox";
         await chat.SendCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => chat.Items.OfType<RunItemViewModel>().Any(), "прогон в ленте");
+        await shell.WaitUntilAsync(() => chat.Items.OfType<RunItemViewModel>().Any(), "run in transcript");
         await shell.Provider.GetRequiredService<GenerationService>().WhenIdleAsync();
 
         // Disposing the container closes the file, so that everything written so far is on disk.

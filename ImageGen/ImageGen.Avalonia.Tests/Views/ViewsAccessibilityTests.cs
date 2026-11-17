@@ -21,20 +21,20 @@ public class ViewsAccessibilityTests
         shell.Window.Show();
 
         var chat = await shell.OpenNewChatAsync();
-        AssertNamed(shell, "чат");
+        AssertNamed(shell, "chat");
 
         await chat.OpenModelsCommand.ExecuteAsync(null);
-        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "экран моделей");
-        AssertNamed(shell, "модели");
+        await shell.WaitUntilAsync(() => shell.Window.PageArea.Content is SessionModelsView, "models screen");
+        AssertNamed(shell, "models");
 
         await shell.Navigation.GoToAsync(Routes.ApiKeyFor("openrouter"));
-        AssertNamed(shell, "ключ");
+        AssertNamed(shell, "key");
 
         await shell.Navigation.GoToAsync(Routes.Sessions);
-        AssertNamed(shell, "сессии");
+        AssertNamed(shell, "sessions");
 
         await shell.Navigation.GoToAsync(Routes.Settings);
-        AssertNamed(shell, "настройки");
+        AssertNamed(shell, "settings");
     }
 
     private static void AssertNamed(ShellHarness shell, string page)
@@ -47,7 +47,7 @@ public class ViewsAccessibilityTests
             .Where(control => control.TemplatedParent is null && control is Button or TextBox or CheckBox or NumericUpDown)
             .ToList();
 
-        Assert.True(controls.Count > 0, page + ": нет интерактивных контролов в визуальном дереве (" + view.GetType().Name + ")");
+        Assert.True(controls.Count > 0, page + ": no interactive controls in the visual tree (" + view.GetType().Name + ")");
         foreach (var control in controls)
         {
             Assert.False(

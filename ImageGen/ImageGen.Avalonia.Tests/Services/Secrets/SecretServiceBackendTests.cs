@@ -15,7 +15,7 @@ public class SecretServiceBackendTests
         var backend = new SecretServiceBackend("session");
         if (!await backend.IsAvailableAsync(cancellationToken))
         {
-            Assert.Skip("Secret Service с коллекцией 'session' недоступен: нет сессии D-Bus или службы.");
+            Assert.Skip("Secret Service collection 'session' is unavailable: no D-Bus session or service.");
         }
 
         var name = "test_" + Guid.NewGuid().ToString("N");
