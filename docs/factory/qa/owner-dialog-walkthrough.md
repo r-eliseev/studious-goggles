@@ -323,6 +323,8 @@
 
 ## `mocks-stubs-fakes-difference` (owner-dialog, line 1143)
 
+> **Отложено владельцем (2026-11-17):** таксономия Dummy, Stub, Spy, Mock, Fake требует отдельного объяснения; вопрос оставлен открытым (`test-doubles-taxonomy-explained`), вернёмся позже.
+
 **Original text the owner refers to (Quote, 1 line):**
 
 > т моки, стабы и fake'и

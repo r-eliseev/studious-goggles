@@ -30,3 +30,4 @@ A log of decisions the owner made in the working sessions, so that none depends 
 | `owner-view-mda`: the owner sees MDA as a weak alternative, "roughly speaking just DAO generation from XML" | 2026-11-17 | recorded (the owner's view, not a verified claim) | no |
 | `low-code-as-heir`: the owner finds the question "is low-code the heir of the classic software factory idea" the most interesting; add it as an open research question | 2026-11-17 | open research question (`low-code-as-heir`) | yes |
 | `poc-formalize-imagegen`: try to formalize the current ImageGen code as a DSL plus UML plus other models, as a proof-of-concept task | 2026-11-17 | task created | yes |
+| `test-doubles-taxonomy-deferred`: the Dummy, Stub, Spy, Mock, Fake taxonomy is not explained in passing; it gets a separate explanation later | 2026-11-17 | deferred (open thread `test-doubles-taxonomy-explained`) | yes |
