@@ -251,3 +251,18 @@ Tasks with status `done` or `cancelled` removed from `tasks/` by `scripts/archiv
 - 030 | backlog | done | 2026-11-14 | Application identity and branding | `tasks/backlog/030-app-identity.md`
 - 235 | backlog | done | 2026-11-14 | Model catalogs: automatic refresh at startup | `tasks/backlog/235-model-catalogs-auto-refresh.md`
 - 278 | backlog | done | 2026-11-14 | Harness scripts: legacy Russian names must not depend on the locale | `tasks/backlog/278-scripts-locale-independent-legacy-names.md`
+- 255 | backlog | done | 2026-11-17 | Acceptance scenarios: session list, title, deletion, and default settings | `tasks/backlog/255-acceptance-sessions.md`
+- 256 | backlog | done | 2026-11-17 | Acceptance scenarios: chat and assistant | `tasks/backlog/256-acceptance-chat-assistant.md`
+- 257 | backlog | done | 2026-11-17 | Acceptance scenarios: runs and generations | `tasks/backlog/257-acceptance-runs-generations.md`
+- 259 | backlog | done | 2026-11-17 | Acceptance scenarios: generation card actions | `tasks/backlog/259-acceptance-card-actions.md`
+- 261 | backlog | done | 2026-11-17 | Acceptance scenarios: settings and appearance | `tasks/backlog/261-acceptance-settings-appearance.md`
+- 262 | backlog | done | 2026-11-17 | Acceptance scenarios: spending | `tasks/backlog/262-acceptance-spending.md`
+- 263 | backlog | done | 2026-11-17 | Acceptance scenarios: session search (Words and Meaning) | `tasks/backlog/263-acceptance-search.md`
+- 271 | backlog | done | 2026-11-17 | Translate the remaining Russian in the code to English | `tasks/backlog/271-translate-code-to-english.md`
+- 274 | backlog | done | 2026-11-17 | Avalonia iOS: find why the app sometimes exits right after launch in the simulator | `tasks/backlog/274-avalonia-ios-intermittent-exit.md`
+- 279 | backlog | done | 2026-11-17 | fal sound effects: models, schemas and the queue contract (fact-finding) | `tasks/backlog/279-fal-sound-effects-facts.md`
+- 280 | backlog | done | 2026-11-17 | Chat: warn before sending when the run is above the "expensive run" threshold | `tasks/backlog/280-expensive-run-threshold-warning.md`
+- 281 | backlog | done | 2026-11-17 | Red main: the background catalog refresh keeps imagegen.db open after the app is disposed (Windows) | `tasks/backlog/281-avalonia-tests-catalog-refresh-db-lock.md`
+- 282 | backlog | done | 2026-11-17 | Acceptance tests on Windows: the log file stays locked when a world is deleted | `tasks/backlog/282-acceptance-windows-log-file-lock.md`
+- 283 | backlog | done | 2026-11-17 | Windows UI E2E: the test writes providers.json to the old publisher folder | `tasks/backlog/283-windows-e2e-data-folder-after-publisher.md`
+- 284 | backlog | done | 2026-11-17 | Cancel of a submitted synchronous image request: stop waiting, mark Cancelled | `tasks/backlog/284-cancel-synchronous-image-stop-waiting.md`
