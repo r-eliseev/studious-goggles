@@ -55,6 +55,10 @@ Unanswered or only partly answered inside the dialog: the choice of a first task
 - 01 (TSF) talks about "near the loop" as a mode of the human; 03 says the mode is a property of task class and repository, which is the per-action idea from `docs/factory/owner-notes.md` (N2, N3).
 - Neither 01 nor 02 addresses what 03 treats as central: independent verification, the oracle problem and understanding debt. The concept should start from 03 and use 01/02 for shape and tooling.
 
+## 5a. Walkthrough of every owner question
+
+All 43 questions with their quoted context, a direct answer and a verified, aggregated answer (13 threads, with corrections to the original dialog) are in `docs/factory/qa/03-owner-questions-walkthrough.md`; the verbatim question list is `docs/factory/sources/03a-owner-questions.md`.
+
 ## 6. Questions for the next step
 
 1. Which real flow do we walk through (the pending request, L2099)?
