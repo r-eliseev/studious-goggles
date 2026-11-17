@@ -26,6 +26,7 @@ alive=false
 crash_count=0
 other_crash_count=0
 launch_pid=''
+launch_started_monotonic=''
 exited_at_seconds=null
 first_seen_at_seconds=null
 result=1
@@ -189,48 +190,124 @@ if ! grep -qw arm64 <<<"$architectures"; then
 fi
 
 xcrun simctl install "$udid" "$app_path"
+launch_started_monotonic=$(python3 -c 'import time; print(time.monotonic())')
 xcrun simctl launch --console-pty "$udid" "$bundle_id" >"$out_dir/launch.log" 2>&1 &
 launch_pid=$!
 launched=true
-is_running() {
-  # Not a pipe into grep -q: grep exits at the first match, launchctl then gets SIGPIPE, and with pipefail the
-  # check failed for a running app (run 42409893841: "running at 15 s", then "signal 13: Broken pipe" at 30 s).
-  local services
-  services=$(xcrun simctl spawn "$udid" launchctl list) || return 1
-  grep -Fq "$bundle_id" <<<"$services"
-}
-printf 'elapsedSeconds\ttimestampUtc\trunning\tlaunchctlEntry\n' >"$out_dir/process-timeline.txt"
-# Keep the established decision point at 30 s; continue sampling to 60 s for exit diagnostics only.
-for elapsed_seconds in $(seq 5 5 60); do
-  sleep 5
-  services=$(xcrun simctl spawn "$udid" launchctl list 2>&1 || true)
-  launchctl_entry=$(grep -F "$bundle_id" <<<"$services" || true)
-  if [ -n "$launchctl_entry" ]; then
-    running=yes
-    if [ "$first_seen_at_seconds" = null ]; then
-      first_seen_at_seconds=$elapsed_seconds
-    fi
-  else
-    running=no
-    if [ "$first_seen_at_seconds" != null ] && [ "$exited_at_seconds" = null ]; then
-      exited_at_seconds=$elapsed_seconds
-    fi
-  fi
-  timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  printf '%s\t%s\t%s\t%s\n' "$elapsed_seconds" "$timestamp" "$running" "$launchctl_entry" >>"$out_dir/process-timeline.txt"
+timeline_result=$(python3 - "$udid" "$bundle_id" "$out_dir" "$launch_started_monotonic" <<'PY'
+import datetime
+import json
+import math
+import pathlib
+import subprocess
+import sys
+import time
 
-  if [ "$elapsed_seconds" -eq 15 ]; then
-    if [ "$running" = yes ]; then
-      echo "process is running at 15 s" >&2
-    else
-      echo "process not found at 15 s; checking again at 30 s" >&2
-    fi
-    xcrun simctl io "$udid" screenshot "$out_dir/screenshot.png"
-  elif [ "$elapsed_seconds" -eq 30 ]; then
-    [ "$running" != yes ] || alive=true
-    xcrun simctl io "$udid" screenshot "$out_dir/screenshot-30s.png"
-  fi
-done
+udid, bundle_id, out_dir, launch_started = sys.argv[1:]
+out_dir = pathlib.Path(out_dir)
+launch_started = float(launch_started)
+first_seen_at_seconds = None
+exited_at_seconds = None
+seen_running_by_30 = False
+exited_by_30 = False
+unconfirmed_probe_failure_by_30 = False
+screenshots = []
+
+with (out_dir / "process-timeline.txt").open("w", encoding="utf-8") as timeline:
+    timeline.write("elapsedSeconds\ttimestampUtc\trunning\tlaunchctlEntry\tprobeStatus\n")
+    scheduled_seconds = 5
+    while scheduled_seconds <= 60:
+        delay = launch_started + scheduled_seconds - time.monotonic()
+        if delay > 0:
+            time.sleep(delay)
+
+        if scheduled_seconds in (15, 30):
+            screenshot_name = "screenshot.png" if scheduled_seconds == 15 else "screenshot-30s.png"
+            try:
+                screenshots.append(subprocess.Popen(
+                    ["xcrun", "simctl", "io", udid, "screenshot", str(out_dir / screenshot_name)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                ))
+            except OSError:
+                pass
+
+        try:
+            probe = subprocess.run(
+                ["xcrun", "simctl", "spawn", udid, "launchctl", "list"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=4,
+            )
+            probe_succeeded = probe.returncode == 0
+            if probe_succeeded:
+                launchctl_entry = next(
+                    (line.strip() for line in probe.stdout.splitlines() if bundle_id in line),
+                    "",
+                )
+                probe_status = "ok"
+            else:
+                detail = probe.stderr.strip() or f"exit code {probe.returncode}"
+                launchctl_entry = f"probe failed: {detail}"
+                probe_status = "error"
+        except subprocess.TimeoutExpired:
+            probe_succeeded = False
+            launchctl_entry = "probe timed out after 4s"
+            probe_status = "timeout"
+        except OSError as error:
+            probe_succeeded = False
+            launchctl_entry = f"probe failed: {error}"
+            probe_status = "error"
+
+        elapsed_seconds = max(0.0, time.monotonic() - launch_started)
+        running = probe_succeeded and bundle_id in launchctl_entry
+        if running:
+            if first_seen_at_seconds is None:
+                first_seen_at_seconds = math.ceil(elapsed_seconds)
+            if elapsed_seconds <= 30:
+                seen_running_by_30 = True
+                unconfirmed_probe_failure_by_30 = False
+        elif probe_succeeded and first_seen_at_seconds is not None:
+            if exited_at_seconds is None:
+                exited_at_seconds = math.ceil(elapsed_seconds)
+            if elapsed_seconds <= 30:
+                exited_by_30 = True
+        elif not probe_succeeded and first_seen_at_seconds is not None and elapsed_seconds <= 30:
+            unconfirmed_probe_failure_by_30 = True
+
+        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        entry = launchctl_entry.replace("\t", " ")
+        timeline.write(
+            f"{elapsed_seconds:.3f}\t{timestamp}\t{'yes' if running else 'no'}\t{entry}\t{probe_status}\n"
+        )
+        timeline.flush()
+
+        scheduled_seconds += 5
+        while scheduled_seconds <= elapsed_seconds:
+            scheduled_seconds += 5
+        if elapsed_seconds >= 60:
+            break
+
+for screenshot in screenshots:
+    try:
+        screenshot.wait(timeout=20)
+    except subprocess.TimeoutExpired:
+        screenshot.kill()
+        screenshot.wait()
+
+print(json.dumps({
+    "firstSeenAtSeconds": first_seen_at_seconds,
+    "exitedAtSeconds": exited_at_seconds,
+    "aliveAfter30Seconds": seen_running_by_30 and not exited_by_30 and not unconfirmed_probe_failure_by_30,
+}, separators=(",", ":")))
+PY
+)
+first_seen_at_seconds=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["firstSeenAtSeconds"] if json.loads(sys.argv[1])["firstSeenAtSeconds"] is not None else "null")' "$timeline_result")
+exited_at_seconds=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["exitedAtSeconds"] if json.loads(sys.argv[1])["exitedAtSeconds"] is not None else "null")' "$timeline_result")
+if [ "$(python3 -c 'import json,sys; print(str(json.loads(sys.argv[1])["aliveAfter30Seconds"]).lower())' "$timeline_result")" = true ]; then
+  alive=true
+fi
 copy_crash_reports
 printf 'run %s: alive30=%s firstSeen=%s exited=%s appCrashReports=%s otherCrashReports=%s\n' \
   "${IOS_SMOKE_RUN_NUMBER:-01}" "$alive" "$first_seen_at_seconds" "$exited_at_seconds" "$crash_count" "$other_crash_count"
