@@ -82,6 +82,8 @@ Applicability to this repository's planner/executor harness: **exists** (already
 | C64 | Understanding-debt practices | predict before reading, agent quizzes the owner, architecture diff, bounded change size, manual incident analysis | S03 T9 | candidate |
 | C65 | Pre-mortem and assumptions | "imagine it failed, why" before starting; the agent lists assumptions before acting | S03 T11 (D4, D5) | candidate |
 | C66 | Interviewer agent | extracts tacit knowledge by asking the owner concrete questions | S03 T7 (D3) | unknown |
+| C68 | Commander's intent and trust earned per area | centralized intent, decentralized execution; autonomy granted according to trust that must be earned and sustained (mission command, NATO AJP-01) | W01; human-org-parallels | candidate |
+| C69 | Verification versus validation | "building the product right" versus "building the right product": two separate questions with separate mechanisms | W04; Boehm 1984 | candidate |
 | C67 | Post-merge watch role | a rotating person watches the release branch after merge | monday.com (secondary) | n/a here |
 
 ## 6. Observability and metrics
