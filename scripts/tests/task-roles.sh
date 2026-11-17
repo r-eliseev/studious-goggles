@@ -65,6 +65,12 @@ task "$A" in-progress luna "Step one, changed." "" "" "### 2026-11-10, owner
 Plan approved."
 expect_fail "the executor changes the plan" "changed while executing"
 
+task "$A" in-progress luna "Step one, amended." "" "" "### 2026-11-10, owner
+Plan approved.
+### 2026-11-10, planner
+Plan amendment approved."
+expect_pass "an explicitly approved plan amendment during execution"
+
 task "$A" in-progress luna "Step one." "Did step one." "" "### 2026-11-10, owner
 Plan approved."
 expect_pass "the executor writes only the report"

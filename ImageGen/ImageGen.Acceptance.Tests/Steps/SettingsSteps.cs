@@ -107,7 +107,7 @@ public sealed class SettingsSteps(ScenarioContext scenario)
         var logger = World.Provider.GetRequiredService<ILogger<SettingsSteps>>();
         logger.LogInformation("Acceptance log continuation marker.");
         await World.WaitUntilAsync(() => File.Exists(path)
-            && File.ReadAllText(path).Contains("Acceptance log continuation marker.", StringComparison.Ordinal),
+            && World.ReadLogFile(path).Contains("Acceptance log continuation marker.", StringComparison.Ordinal),
             "the log file to receive another entry", TestContext.Current.CancellationToken);
     }
 }
