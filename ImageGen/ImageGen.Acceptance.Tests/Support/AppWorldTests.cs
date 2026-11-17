@@ -8,6 +8,35 @@ namespace ImageGen.Acceptance.Tests.Support;
 public sealed class AppWorldTests
 {
     [Fact]
+    public async Task ReadLogFile_WhileRunningAndAfterRestart_AllowsSharedReadAndCleansUp()
+    {
+        var dataDirectory = string.Empty;
+
+        await HeadlessApp.RunAsync(async cancellationToken =>
+        {
+            var world = new AppWorld();
+            dataDirectory = world.DataDirectory;
+            try
+            {
+                await world.StartAsync(cancellationToken);
+                var logFile = Assert.Single(Directory.GetFiles(Path.Combine(dataDirectory, "logs"), "imagegen-*.log"));
+                Assert.Contains("Navigation to sessions", world.ReadLogFile(logFile), StringComparison.Ordinal);
+
+                await world.RestartAsync(cancellationToken);
+
+                Assert.Contains("Navigation to sessions", world.ReadLogFile(logFile), StringComparison.Ordinal);
+                return true;
+            }
+            finally
+            {
+                await world.DisposeAsync();
+            }
+        }, TestContext.Current.CancellationToken);
+
+        Assert.False(Directory.Exists(dataDirectory));
+    }
+
+    [Fact]
     public async Task RestartAsync_ReusesDataFolderAndSecretStore()
     {
         await HeadlessApp.RunAsync(async cancellationToken =>

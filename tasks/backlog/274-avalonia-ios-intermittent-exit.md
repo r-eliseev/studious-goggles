@@ -1,8 +1,8 @@
 ---
 id: 274
-status: in-progress
-assignee: codex-20261116
-claimed: 2026-11-16T07:35:38Z
+status: review
+assignee:
+claimed:
 created: 2026-11-11
 ---
 
@@ -59,9 +59,39 @@ bash scripts/check.sh
 
 ## Report
 
+Implemented the diagnostics in the three planned files. The script now measures elapsed time from launch with a monotonic clock, records each query's actual time and status, bounds `launchctl list` probes, and keeps screenshot capture from blocking the timeline. The workflow supports repeated fresh simulator runs and preserves evidence on cancellation.
+
+Verification:
+- `bash -n ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh` — passed.
+- Embedded Python syntax parse and `bash scripts/check.sh` — passed.
+- `shellcheck` is not installed in the local environment.
+- PR #114 checks: harness, UI E2E, Android, Windows build, core, Avalonia, Docker and other non-Apple checks passed. `windows-tests` failed in the acceptance step (task 282); the two iOS build jobs failed with a hosted .NET workload manifest conflict in run [44041619896](https://github.com/r-eliseev/studious-goggles/actions/runs/44041619896).
+- After isolating the .NET SDK/workload installation under `$RUNNER_TEMP/dotnet` for the Apple jobs that install workloads, the Apple workflow passed in [44088295597](https://github.com/r-eliseev/studious-goggles/actions/runs/44088295597). Its log confirms `DOTNET_INSTALL_DIR=/Users/runner/work/_temp/dotnet`, SDK `10.0.302`, and only the `10.0.100` SDK manifest directory before installing workload `10.0.302.0`.
+- The full PR #114 check set on commit `06c0ecb6ad0e2fca08aebec6af1b44e5c39a388b` passed on 2026-11-17: harness, Apple builds/preflight, Linux core/Avalonia/Avalonia Android/Docker, Windows tests and build, MAUI Android/Windows, Android and Windows UI E2E, and Allure report. Apple smoke jobs were skipped as configured for this PR event; the separate 20-repeat diagnostic evidence remains the completed run [44040174321](https://github.com/r-eliseev/studious-goggles/actions/runs/44040174321) documented above.
+- The required 20-repeat manual run completed for both apps in [44040174321](https://github.com/r-eliseev/studious-goggles/actions/runs/44040174321), using the compatible Xcode 26.4.1 / .NET 10.0.203 option. It reported 11/20 MAUI and 9/20 Avalonia smoke failures, with zero app crash reports. Treat these as failed smoke observations, not confirmed app exits: the failed runs frequently timed out in `launchctl list`.
+
+Representative evidence from Avalonia run 05:
+```
+process timeline: 10.505s no / launchctl timed out; 19.118s no / timed out; 24.192s no / timed out; 29.207s no / timed out
+launch.log: com.eliseev.imagegen.avalonia: 22808
+app log: 2026-11-17 08:08:10.940 ... starting in the Avalonia iOS shell
+simulator.log: RunningBoard lookupHandleForPredicate activity; no app termination record
+```
+The process and app log show that the app started, while the observer did not successfully query it during the 30-second window. In MAUI run 09, the app log started at 08:32:01Z and `launch.log` reported PID 42190, but `launchctl` first returned the process at elapsed 46.681s after timing out on earlier samples. Other runs had no app log or process during the 60-second window, so slow or missing launch remains possible. No collected report identifies an app crash or confirms a post-launch exit. The strongest hypothesis is Simulator launch/query contention on the hosted runner, compounded by `launchctl list` timing out; this does not establish the cause of the original app exit.
+
+The scheduled `main` Apple run [44067539154](https://github.com/r-eliseev/studious-goggles/actions/runs/44067539154) passed both iOS builds and both single-run iOS smoke jobs. The earlier manifest conflict did not recur, but the 20-run results above still fail the task's smoke criterion.
+
+Proposed follow-up fix (not implemented here): add an independent per-process liveness check using the PID emitted by `simctl launch`, keep `launchctl list` as diagnostic evidence, then repeat the 20×2 run. If the app process is genuinely absent or starts after 30 seconds, create a separate app/runner investigation based on that evidence. No app code was changed in task 274.
+
 ## Review
 
 ## Comments
+### 2026-11-17, codex-20261117
+Returned for follow-up because PR #114's Apple workflow still fails on the current branch. Runs [44086334311](https://github.com/r-eliseev/studious-goggles/actions/runs/44086334311) and [44087284039](https://github.com/r-eliseev/studious-goggles/actions/runs/44087284039) fail during iOS/Mac Catalyst workload installation. The detailed log from run [44040174321](https://github.com/r-eliseev/studious-goggles/actions/runs/44040174321) shows the same conflict: `Microsoft.NET.Runtime.Emscripten.Node.net10` from `/Users/runner/.dotnet/sdk-manifests/11.0.100` conflicts with the .NET 10.0.110 manifest, although the job requests SDK 10.0.302 and workload set 10.0.302.0. Scheduled main run [44067539154](https://github.com/r-eliseev/studious-goggles/actions/runs/44067539154) passed, so this is an intermittent hosted-runner manifest contamination.
+
+Follow-up within the approved `apple-ci.yml` scope: set `DOTNET_INSTALL_DIR` to a per-job isolated path under `${{ runner.temp }}` before `actions/setup-dotnet` in the Apple jobs that install workloads, then verify the SDK/manifests path and rerun the PR Apple workflow. Keep the supported toolchain set and smoke criteria unchanged. This uses the setup-dotnet v4 documented install-directory environment variable; the owner’s standing approval for approved tasks covers this in-scope correction.
+Plan approved (standing instruction of 2026-11-07: "approve all tasks that will come").
+
 ### 2026-11-13, codex-20261113
 Finding from the first dispatch run [43440159572](https://github.com/r-eliseev/studious-goggles/actions/runs/43440159572): both simulator jobs completed, but their pass/fail checkpoint is not trustworthy. In Avalonia run 15, `process-timeline.txt` reports the 30-second sample at `15:49:10Z`, while `app-logs/imagegen-20261113.log` records app startup at `15:48:57.991Z`; the first timeline sample is at `15:48:12Z`. Samples nominally 5 seconds apart can be separated by 25–87 wall-clock seconds (30→35 is 87 s). The script increments `elapsedSeconds` by the loop index, so `firstSeenAtSeconds=30` and `aliveAfter30s=true` can actually describe a process first observed about 58 seconds after launch. This invalidates both 20-repeat series as verification of the owner’s 30-second rule; those results must not be reported as 20/20 valid passes. The second dispatch [43464158467](https://github.com/r-eliseev/studious-goggles/actions/runs/43464158467) also had `build-avalonia-ios` cancelled and no app artifact; it is cancelled while its MAUI smoke was still running.
 
@@ -99,3 +129,10 @@ Plan amendment approved (standing instruction of 2026-11-07: "approve all tasks 
 
 ### 2026-11-16, codex-20261116
 Owner instruction: take over task 274 and continue in the existing shared branch without waiting for a merge. The old remote task branch has no open PR and was last updated on 2026-11-13; it is blocked by an elapsed-time mismatch documented in its comments. The approved plan amendment in the current card/main resolves that mismatch: 240-minute timeout for repeated runs, distinct first-seen/exited timestamps, app-only crash counting, progress lines, and always-uploaded evidence. Continuing that work here.
+
+### 2026-11-17, codex-20261116 — owner-approved implementation clarification
+The 20-repeat dispatch [43825048969](https://github.com/r-eliseev/studious-goggles/actions/runs/43825048969) completed with one MAUI failure and three Avalonia failures. Its timeline labels are still loop counters, not elapsed time: for example, MAUI run 05 has the sample labelled 30 s at `08:09:03Z`, but the app log starts at `08:09:25Z`; Avalonia run 13 has the sample labelled 30 s at `09:06:53Z`, while the app log starts at `09:07:28Z`. The intervals between samples also exceed a minute in places. This is a self-block in the diagnostic and cannot verify the actual 30-second rule. The owner directed continuation of self-blocked work in the same branch. This clarification implements the existing 30-second criterion using monotonic time, bounds each probe, and prevents screenshot capture from blocking sampling. No app code is changed.
+Owner-approved continuation in the same branch (owner instruction in chat); standing task-pool approval recorded 2026-11-07.
+
+### 2026-11-17, codex-20261116
+The corrected dispatch [44039721757](https://github.com/r-eliseev/studious-goggles/actions/runs/44039721757) did not reach either smoke: both iOS build jobs failed while installing the MAUI workload because the .NET 11.0.100 Emscripten manifest conflicts with the .NET 10.0.110 manifest. Avalonia/macOS, Catalyst and Apple preflight passed. Retried the required 20 runs via the existing diagnostic toolchain option `ios_toolchain=26.4.1` / .NET 10.0.203 in [44040174321](https://github.com/r-eliseev/studious-goggles/actions/runs/44040174321); both iOS builds passed and both smoke jobs are running. The failed first dispatch does not count as a reproduction.

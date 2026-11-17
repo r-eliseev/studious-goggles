@@ -57,6 +57,12 @@ section_text() {  # <file> <heading> [<heading>]: the body of the first matching
   awk -v a="$2" -v b="${3:-$2}" '($0=="## " a || $0=="## " b){p=1; next} /^## /{p=0} p' "$1"
 }
 approvals() { grep -ciE "plan( amendment)? approved|$legacy_approval" "$1" || true; }
+has_new_plan_amendment_approval() {
+  local current_count base_count
+  current_count=$(approvals "$1")
+  base_count=$(approvals "$2")
+  [ "$current_count" -gt "$base_count" ] && grep -qiE 'plan amendment approved' "$1"
+}
 base="${BASE_REF:-origin/main}"
 if git rev-parse --verify -q "$base^{commit}" >/dev/null 2>&1; then
   oldf=$(mktemp)
@@ -68,9 +74,13 @@ if git rev-parse --verify -q "$base^{commit}" >/dev/null 2>&1; then
       : > "$oldf"; old=""
     fi
     case "$old:$st" in approved:in-progress|approved:review|approved:blocked|in-progress:in-progress|in-progress:review|in-progress:blocked)
+      amended=0
+      has_new_plan_amendment_approval "$f" "$oldf" && amended=1
       for sec in "$legacy_description|Description" "$legacy_acceptance|Acceptance criteria" "$legacy_analysis|Analysis" "$legacy_plan|Plan"; do
         if [ "$(section_text "$f" "${sec%%|*}" "${sec##*|}")" != "$(section_text "$oldf" "${sec%%|*}" "${sec##*|}")" ]; then
-          echo "ERROR: $f: section '${sec##*|}' changed while executing (status $old -> $st); only the planner changes it, the executor writes a question in Comments"; fail=1
+          if [ "$amended" -ne 1 ]; then
+            echo "ERROR: $f: section '${sec##*|}' changed while executing (status $old -> $st); only the planner changes it, the executor writes a question in Comments"; fail=1
+          fi
         fi
       done ;;
     esac

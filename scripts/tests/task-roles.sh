@@ -53,10 +53,12 @@ expect_pass() { bash scripts/check-tasks.sh >/dev/null 2>&1 || { bash scripts/ch
 expect_fail() { if out=$(bash scripts/check-tasks.sh 2>&1); then fail "expected failure: $1"; fi
   printf '%s\n' "$out" | grep -Fq -- "$2" || fail "expected '$2' for: $1, got: $out"; }
 
-A=tasks/backlog/001-a.md; B=tasks/backlog/002-b.md
+A=tasks/backlog/001-a.md; B=tasks/backlog/002-b.md; D=tasks/backlog/004-d.md
 task "$A" approved "" "Step one." "" "" "### 2026-11-10, owner
 Plan approved."
 task "$B" planned "" "Step one." "" "" ""
+task "$D" approved "" "Step one." "" "" "### 2026-11-10, owner
+Plan approved."
 git add -A && git commit -qm base
 export BASE_REF=$(git rev-parse HEAD)
 expect_pass "unchanged base"
@@ -64,6 +66,17 @@ expect_pass "unchanged base"
 task "$A" in-progress luna "Step one, changed." "" "" "### 2026-11-10, owner
 Plan approved."
 expect_fail "the executor changes the plan" "changed while executing"
+
+task "$A" in-progress luna "Step one, amended." "" "" "### 2026-11-10, owner
+Plan approved.
+### 2026-11-10, planner
+Plan amendment approved."
+expect_pass "an explicitly approved plan amendment during execution"
+task "$D" in-progress luna "Step one, changed." "" "" "### 2026-11-10, owner
+Plan approved."
+expect_fail "an amendment to another task without approval" "changed while executing"
+task "$D" approved "" "Step one." "" "" "### 2026-11-10, owner
+Plan approved."
 
 task "$A" in-progress luna "Step one." "Did step one." "" "### 2026-11-10, owner
 Plan approved."

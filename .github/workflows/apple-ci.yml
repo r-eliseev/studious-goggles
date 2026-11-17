@@ -39,6 +39,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - name: Set isolated .NET SDK directory
+        run: echo "DOTNET_INSTALL_DIR=$RUNNER_TEMP/dotnet" >> "$GITHUB_ENV"
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
@@ -63,9 +65,16 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+      - name: Set isolated .NET SDK directory
+        run: echo "DOTNET_INSTALL_DIR=$RUNNER_TEMP/dotnet" >> "$GITHUB_ENV"
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ inputs.ios_toolchain == '26.4.1' && '10.0.203' || '10.0.302' }}
+      - name: Verify isolated .NET workload manifests
+        run: |
+          printf 'DOTNET_INSTALL_DIR=%s\n' "$DOTNET_INSTALL_DIR"
+          dotnet --version
+          find "$DOTNET_INSTALL_DIR/sdk-manifests" -mindepth 1 -maxdepth 1 -type d -print
       - name: Select compatible Xcode
         run: sudo xcode-select -s "/Applications/Xcode_${{ inputs.ios_toolchain || '26.6' }}.app/Contents/Developer"
       - name: Install compatible iOS workload
@@ -109,9 +118,16 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+      - name: Set isolated .NET SDK directory
+        run: echo "DOTNET_INSTALL_DIR=$RUNNER_TEMP/dotnet" >> "$GITHUB_ENV"
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.302
+      - name: Verify isolated .NET workload manifests
+        run: |
+          printf 'DOTNET_INSTALL_DIR=%s\n' "$DOTNET_INSTALL_DIR"
+          dotnet --version
+          find "$DOTNET_INSTALL_DIR/sdk-manifests" -mindepth 1 -maxdepth 1 -type d -print
       - name: Select Xcode 26.6
         run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
       - name: Install compatible Mac Catalyst workload
@@ -156,9 +172,16 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+      - name: Set isolated .NET SDK directory
+        run: echo "DOTNET_INSTALL_DIR=$RUNNER_TEMP/dotnet" >> "$GITHUB_ENV"
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ inputs.ios_toolchain == '26.4.1' && '10.0.203' || '10.0.302' }}
+      - name: Verify isolated .NET workload manifests
+        run: |
+          printf 'DOTNET_INSTALL_DIR=%s\n' "$DOTNET_INSTALL_DIR"
+          dotnet --version
+          find "$DOTNET_INSTALL_DIR/sdk-manifests" -mindepth 1 -maxdepth 1 -type d -print
       - name: Select compatible Xcode
         run: sudo xcode-select -s "/Applications/Xcode_${{ inputs.ios_toolchain || '26.6' }}.app/Contents/Developer"
       - name: Install compatible iOS workload
@@ -196,6 +219,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: Set isolated .NET SDK directory
+        run: echo "DOTNET_INSTALL_DIR=$RUNNER_TEMP/dotnet" >> "$GITHUB_ENV"
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x

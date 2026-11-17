@@ -133,7 +133,7 @@ public sealed class FirstRunSteps
         {
             foreach (var file in Directory.EnumerateFiles(logsDirectory))
             {
-                Assert.DoesNotContain("sk-or-acceptance-invalid", await File.ReadAllTextAsync(file, TestContext.Current.CancellationToken), StringComparison.Ordinal);
+                Assert.DoesNotContain("sk-or-acceptance-invalid", _world.ReadLogFile(file), StringComparison.Ordinal);
             }
         }
     }
