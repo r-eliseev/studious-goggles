@@ -1,8 +1,8 @@
 ---
 id: 274
-status: in-progress
-assignee: codex-20261116
-claimed: 2026-11-16T07:35:38Z
+status: review
+assignee:
+claimed:
 created: 2026-11-11
 ---
 
@@ -58,6 +58,28 @@ bash scripts/check.sh
 ```
 
 ## Report
+
+Implemented the diagnostics in the three planned files. The script now measures elapsed time from launch with a monotonic clock, records each query's actual time and status, bounds `launchctl list` probes, and keeps screenshot capture from blocking the timeline. The workflow supports repeated fresh simulator runs and preserves evidence on cancellation.
+
+Verification:
+- `bash -n ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh` — passed.
+- Embedded Python syntax parse and `bash scripts/check.sh` — passed.
+- `shellcheck` is not installed in the local environment.
+- PR #114 checks: harness, UI E2E, Android, Windows build, core, Avalonia, Docker and other non-Apple checks passed. `windows-tests` failed in the acceptance step (task 282); the two iOS build jobs failed with a hosted .NET workload manifest conflict in run [44041619896](https://github.com/r-eliseev/studious-goggles/actions/runs/44041619896).
+- The required 20-repeat manual run completed for both apps in [44040174321](https://github.com/r-eliseev/studious-goggles/actions/runs/44040174321), using the compatible Xcode 26.4.1 / .NET 10.0.203 option. It reported 11/20 MAUI and 9/20 Avalonia smoke failures, with zero app crash reports. Treat these as failed smoke observations, not confirmed app exits: the failed runs frequently timed out in `launchctl list`.
+
+Representative evidence from Avalonia run 05:
+```
+process timeline: 10.505s no / launchctl timed out; 19.118s no / timed out; 24.192s no / timed out; 29.207s no / timed out
+launch.log: com.eliseev.imagegen.avalonia: 22808
+app log: 2026-11-17 08:08:10.940 ... starting in the Avalonia iOS shell
+simulator.log: RunningBoard lookupHandleForPredicate activity; no app termination record
+```
+The process and app log show that the app started, while the observer did not successfully query it during the 30-second window. In MAUI run 09, the app log started at 08:32:01Z and `launch.log` reported PID 42190, but `launchctl` first returned the process at elapsed 46.681s after timing out on earlier samples. Other runs had no app log or process during the 60-second window, so slow or missing launch remains possible. No collected report identifies an app crash or confirms a post-launch exit. The strongest hypothesis is Simulator launch/query contention on the hosted runner, compounded by `launchctl list` timing out; this does not establish the cause of the original app exit.
+
+The scheduled `main` Apple run [44067539154](https://github.com/r-eliseev/studious-goggles/actions/runs/44067539154) passed both iOS builds and both single-run iOS smoke jobs. The earlier manifest conflict did not recur, but the 20-run results above still fail the task's smoke criterion.
+
+Proposed follow-up fix (not implemented here): add an independent per-process liveness check using the PID emitted by `simctl launch`, keep `launchctl list` as diagnostic evidence, then repeat the 20×2 run. If the app process is genuinely absent or starts after 30 seconds, create a separate app/runner investigation based on that evidence. No app code was changed in task 274.
 
 ## Review
 
