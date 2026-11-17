@@ -1,8 +1,8 @@
-# Source 04: "Building always-on agents" (Anthropic, claude.com)
+# `always-on-agents`: "Building always-on agents" (Anthropic, claude.com)
 
 Type: vendor engineering article, author William Hu (acknowledgements: Rodrigo Olivares, Michael Segner). Fetched by the session on 2026-11-17 from https://claude.com/fr/resources/articles/building-always-on-agents (French site shell, English article text). The publication date is not shown in the article text (related articles on the page are dated 9-13 Nov 2026).
 Status: verbatim article body. Page chrome (navigation, related-article cards, newsletter form) and the diagrams (images, not captured) are omitted. Vendor source: claims about models and costs are the vendor's own and not independently checked.
-Derived notes: `docs/factory/notes/04-always-on-agents.md`.
+Derived notes: `docs/factory/notes/always-on-agents.md`.
 
 ---
 

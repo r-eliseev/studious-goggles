@@ -1,6 +1,6 @@
-# Research 02: source-code reading of public factory kits
+# Source-code reading of public factory kits
 
-Date: 2026-11-17. Task: `tasks/factory/288-compare-factory-kits-by-code.md`. Follows `01-factory-skills-landscape.md` (README-level).
+Date: 2026-11-17. Task: `tasks/factory/288-compare-factory-kits-by-code.md`. Follows `factory-kits-readme-level.md` (README-level).
 Method: one helper agent per repository did a shallow `git clone` into the session scratchpad (outside this repository) and read files with Read/Grep only. Nothing was installed, run or symlinked. Each section is the helper's report, condensed; it is **model output, not independently verified** by the main session. Every section lists what the helper could not verify.
 
 Status of sections: all six done (section 6 is geut/factory-skills); section 7 is a draft cross-kit synthesis for task 288, not yet reviewed by the owner.
@@ -162,9 +162,9 @@ Candidate ideas for this harness (ranked by value here; each needs the owner's d
 4. **Write-boundary check by role** (SSSF family): diff-based check that a planner change touches only `docs/` and `tasks/`, an executor change does not touch `scripts/` or `.github/`; medium cost; note its known holes (committed changes, skipped on earlier failure).
 5. **Contract linter** (PaddyMc): fixed task keys, dependency cycle check, verification-command linter, placeholder ban; some of this exists in `check-tasks.sh` (not compared line by line here).
 6. **"Zero tests selected is inconclusive"** and a stuck detector (PaddyMc): low cost.
-7. **Manifest-based upgrade** (factory-setup): relevant only if the factory becomes a separable template (see `docs/factory/owner-notes.md`, N1-N3 context and the "empty factory" gap).
+7. **Manifest-based upgrade** (factory-setup): relevant only if the factory becomes a separable template (see `docs/factory/owner-notes.md`, `attention-metrics`-`checks-before-autonomy` context and the "empty factory" gap).
 8. **Reviewer rules from the base commit** (geut): the judge's rules cannot be edited by the change under review; low cost for the planner review of changes to `AGENTS.md`/`docs/conventions.md`.
-9. **Prompt version, cost and transcript per run** (PaddyMc): needed for the metrics in owner-notes N1; cost depends on the agent runtime.
+9. **Prompt version, cost and transcript per run** (PaddyMc): needed for the metrics in owner-notes `attention-metrics`; cost depends on the agent runtime.
 10. **Controller owns state; plan accepted from files** (geut): already close to this harness (state in task files); keep.
 
-Not applicable to a repo-bound harness, **kept for the universal catalog** (`docs/factory/catalog.md`, principle P1; they are not rejected):  existence-only claim gates presented as diff checks; placeholder quality commands that pass; enforcement that is skipped after earlier failure; heavy servers and runtimes (Herdr/Pi, LangGraph, 60k-line codebases) for a repo-bound harness; the builder writing the tests that judge it.
+Not applicable to a repo-bound harness, **kept for the universal catalog** (`docs/factory/catalog.md`, principle `document-everything`; they are not rejected):  existence-only claim gates presented as diff checks; placeholder quality commands that pass; enforcement that is skipped after earlier failure; heavy servers and runtimes (Herdr/Pi, LangGraph, 60k-line codebases) for a repo-bound harness; the builder writing the tests that judge it.

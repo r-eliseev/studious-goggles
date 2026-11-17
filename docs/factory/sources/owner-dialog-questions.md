@@ -1,19 +1,23 @@
-# Source 03a: the owner's messages from the web chat, with their context
+# `owner-dialog-questions`: the owner's messages from the web chat, with their context
 
-Derived mechanically from `docs/factory/sources/03-web-chat-software-factories.md` (the primary source). Wording is unchanged; only the structure is extracted (the page's private-use icon glyphs were dropped). Contents: every message the owner wrote ("You said:"), in order, **43 messages**. Claude's answers are omitted; read them in source 03 at the line given for each item.
+Derived mechanically from `docs/factory/sources/owner-dialog.md` (the primary source). Wording is unchanged; only the structure is extracted (the page's private-use icon glyphs were dropped). Contents: every message the owner wrote ("You said:"), in order, **43 messages**. Claude's answers are omitted; read them in `owner-dialog` at the line given for each item.
 Context = the passage from an earlier Claude answer that the owner selected and attached to the message (the chat shows it as "Quote, N lines"); it is what the owner's words refer to. A message without a context block was written without a quote.
 Not all messages are questions: many are objections, remarks or "remember this" requests; none was filtered out.
-"L..." = the line of the message in source 03. Language: Russian (verbatim).
+"L..." = the line of the message in `owner-dialog`. Language: Russian (verbatim).
 
 ---
 
-## M01 (source 03, L10)
+<a id="how-factories-work"></a>
+
+## `how-factories-work` (owner-dialog, line 10)
 
 **Owner:**
 
 > как работают software factories?
 
-## M02 (source 03, L105)
+<a id="old-vs-new-compare"></a>
+
+## `old-vs-new-compare` (owner-dialog, line 105)
 
 **Context (Quote, 1 line):**
 
@@ -23,7 +27,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > а давай сравним
 
-## M03 (source 03, L165)
+<a id="twins-just-mocks"></a>
+
+## `twins-just-mocks` (owner-dialog, line 165)
 
 **Context (Quote, 1 line):**
 
@@ -33,7 +39,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > это просто моки?
 
-## M04 (source 03, L213)
+<a id="shapiro-levels-details"></a>
+
+## `shapiro-levels-details` (owner-dialog, line 213)
 
 **Context (Quote, 1 line):**
 
@@ -43,7 +51,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > тоже нужны подробности
 
-## M05 (source 03, L274)
+<a id="agents-manage-context"></a>
+
+## `agents-manage-context` (owner-dialog, line 274)
 
 **Context (Quote, 1 line):**
 
@@ -53,7 +63,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > разве агенгты не могут менеджит ь контекст?
 
-## M06 (source 03, L321)
+<a id="not-java-hibernate"></a>
+
+## `not-java-hibernate` (owner-dialog, line 321)
 
 **Context (Quote, 1 line):**
 
@@ -63,7 +75,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > джавав и гибернейт не мой мир. давай в целом смотреть
 
-## M07 (source 03, L348)
+<a id="specs-are-templates"></a>
+
+## `specs-are-templates` (owner-dialog, line 348)
 
 **Context (Quote, 3 lines):**
 
@@ -75,7 +89,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > спеки тоже шаблоны
 
-## M08 (source 03, L391)
+<a id="old-new-same-axis-objection"></a>
+
+## `old-new-same-axis-objection` (owner-dialog, line 391)
 
 **Context (Quote, 11 lines):**
 
@@ -95,7 +111,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > давай сюда глубже, пока что все кроме проверки и риска это одно и то же разными словами. проверка к4ак будто не правильная для старой концепции (там нужны тесты так или иначе, они не может быть просто права по факту), риски противоположны
 
-## M09 (source 03, L455)
+<a id="remember-comparison"></a>
+
+## `remember-comparison` (owner-dialog, line 455)
 
 **Context (Quote, 11 lines):**
 
@@ -115,7 +133,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > вавй это запомним в целом. оно в каких-то моментах мне не нравится, но потом разберемся
 
-## M10 (source 03, L483)
+<a id="twin-vs-mock-state"></a>
+
+## `twin-vs-mock-state` (owner-dialog, line 483)
 
 **Context (Quote, 9 lines):**
 
@@ -133,7 +153,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > это звучит как мок на веб сервисе. состояние у обычных моков есть, он просто теряется между тестами, потому что это просто екземпляры классов обычно. как дижитал твин появляется полное сосяние того что он эмулирует? там нет прописывания повоедения? по поводу того кто и как пишет тоже спорно. моке может быть написан агентом. его можно написать так что бы он реагировал не только на то, что реально используется в тестах. цель у мока не только в том что бы проверить вызов правильного метода, но и правильные параметры (привет всякие кэптюрэ) и правильный порядок, если хранить в нем состояние
 
-## M11 (source 03, L529)
+<a id="twin-literally-mock"></a>
+
+## `twin-literally-mock` (owner-dialog, line 529)
 
 **Context (Quote, 7 lines):**
 
@@ -149,7 +171,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > это буквально мок
 
-## M12 (source 03, L556)
+<a id="move-self-and-others-up"></a>
+
+## `move-self-and-others-up` (owner-dialog, line 556)
 
 **Context (Quote, 1 line):**
 
@@ -159,7 +183,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > ок вот эта мысль мне уже нравится. я на ней. нужно понять как двигаться дальше и двигать других людей на ней же
 
-## M13 (source 03, L615)
+<a id="level-4-to-5-details"></a>
+
+## `level-4-to-5-details` (owner-dialog, line 615)
 
 **Context (Quote, 1 line):**
 
@@ -169,7 +195,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > тже крайне инетресно, нужно больше деталей
 
-## M14 (source 03, L694)
+<a id="what-is-holdout"></a>
+
+## `what-is-holdout` (owner-dialog, line 694)
 
 **Context (Quote, 1 line):**
 
@@ -179,7 +207,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > что это?
 
-## M15 (source 03, L737)
+<a id="tacit-knowledge-extraction"></a>
+
+## `tacit-knowledge-extraction` (owner-dialog, line 737)
 
 **Context (Quote, 1 line):**
 
@@ -189,7 +219,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > хорошо, это райбал кновледж. как оего извлекать?
 
-## M16 (source 03, L784)
+<a id="humans-have-it-too"></a>
+
+## `humans-have-it-too` (owner-dialog, line 784)
 
 **Context (Quote, 1 line):**
 
@@ -199,7 +231,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > ну у людей тоже есть такое. как это решать?
 
-## M17 (source 03, L829)
+<a id="conflicting-sources-how-humans-resolve"></a>
+
+## `conflicting-sources-how-humans-resolve` (owner-dialog, line 829)
 
 **Context (Quote, 1 line):**
 
@@ -209,7 +243,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > ккк человек это делает?
 
-## M18 (source 03, L882)
+<a id="split-agents-by-errors"></a>
+
+## `split-agents-by-errors` (owner-dialog, line 882)
 
 **Context (Quote, 1 line):**
 
@@ -219,7 +255,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > есть ощущение, что мы как раз хотим разделять агентов, что бы каждый из них получал резальтаты только своих ошибок и исправля только свои проблшемы. интеграцией может заняться отдельный агент на отдельном прогоне
 
-## M19 (source 03, L931)
+<a id="humans-limited-window-too"></a>
+
+## `humans-limited-window-too` (owner-dialog, line 931)
 
 **Context (Quote, 1 line):**
 
@@ -229,7 +267,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > опять таки у людей то же. мы умеем это решанть наверно как-то
 
-## M20 (source 03, L965)
+<a id="how-agents-manage-context"></a>
+
+## `how-agents-manage-context` (owner-dialog, line 965)
 
 **Context (Quote, 1 line):**
 
@@ -239,7 +279,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > как?
 
-## M21 (source 03, L1020)
+<a id="how-to-write-specs"></a>
+
+## `how-to-write-specs` (owner-dialog, line 1020)
 
 **Context (Quote, 1 line):**
 
@@ -251,7 +293,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 > ок, это звучит как олимпиадная система программирования. ты видишь сколько тестов упало но не понимаешь какие там были входы и ожидаеммые результаты. не считая нескольких самых простых и очевидных кейсов
 > как эжто правильно разграничивать? есть уже полноценная практика?
 
-## M22 (source 03, L1121)
+<a id="remember-quiet-vs-loud-failure"></a>
+
+## `remember-quiet-vs-loud-failure` (owner-dialog, line 1121)
 
 **Context (Quote, 6 lines):**
 
@@ -266,7 +310,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > вот это очень хорошая мыслью запомни ее
 
-## M23 (source 03, L1143)
+<a id="mocks-stubs-fakes-difference"></a>
+
+## `mocks-stubs-fakes-difference` (owner-dialog, line 1143)
 
 **Context (Quote, 1 line):**
 
@@ -276,7 +322,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > о, а это интересно. а в чем разница?
 
-## M24 (source 03, L1185)
+<a id="grow-spec-writing-skill"></a>
+
+## `grow-spec-writing-skill` (owner-dialog, line 1185)
 
 **Context (Quote, 1 line):**
 
@@ -286,7 +334,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > как его разивать?
 
-## M25 (source 03, L1244)
+<a id="keeping-control"></a>
+
+## `keeping-control` (owner-dialog, line 1244)
 
 **Context (Quote, 6 lines):**
 
@@ -301,7 +351,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > так, ну я это все делаю. но важный нюанс, при этом всем мне важно сохранять контроль. это и првда самая важная штука для меня сейчас по крайней мере психологически. хотя скорее и практически. если мне задают вопрос как оно работает и почему мне нужно знать ответ
 
-## M26 (source 03, L1303)
+<a id="mutation-testing-as-proof"></a>
+
+## `mutation-testing-as-proof` (owner-dialog, line 1303)
 
 **Context (Quote, 1 line):**
 
@@ -311,7 +363,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > так-с ну это мутационное тесирование. допустим. это все еще нужно доказывать, потому что не понятно как это было прверено
 
-## M27 (source 03, L1346)
+<a id="pilot-not-transferable"></a>
+
+## `pilot-not-transferable` (owner-dialog, line 1346)
 
 **Context (Quote, 1 line):**
 
@@ -321,7 +375,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > нет гарантий, что опыт переносим
 
-## M28 (source 03, L1389)
+<a id="our-team-and-stack"></a>
+
+## `our-team-and-stack` (owner-dialog, line 1389)
 
 **Context (Quote, 1 line):**
 
@@ -331,7 +387,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > команда. проект это мешанина из микросервисов (10+) на разных языках. деплоятся отдельными пайплайнами, в некоторых местах есть сесулар архитектура. мешанина языков: тайпскрипт (цдк и фронт), джава, го, си, питон, раст. активно используем авс инфу с лямбдами, фаргейтами, степ фанкшенами, апи гейтвеями и т.д.
 
-## M29 (source 03, L1465)
+<a id="how-author-defines-human-adds-nothing"></a>
+
+## `how-author-defines-human-adds-nothing` (owner-dialog, line 1465)
 
 **Context (Quote, 1 line):**
 
@@ -341,7 +399,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > а как автор определяет что человек ничсего не привносит?
 
-## M30 (source 03, L1473)
+<a id="small-system-vs-ours"></a>
+
+## `small-system-vs-ours` (owner-dialog, line 1473)
 
 **Context (Quote, 1 line):**
 
@@ -351,7 +411,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > это звучит как довольно маленькая система. у нас в одном пакете (из десятков) 3+ млн строк кода. это второй по размеру пакет, да, но 100к+ это не редкость
 
-## M31 (source 03, L1522)
+<a id="graded-satisfaction-populism"></a>
+
+## `graded-satisfaction-populism` (owner-dialog, line 1522)
 
 **Context (Quote, 1 line):**
 
@@ -361,7 +423,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > вот тутт нужно подробнее. звучит как популюлизм
 
-## M32 (source 03, L1585)
+<a id="other-ways-to-independence"></a>
+
+## `other-ways-to-independence` (owner-dialog, line 1585)
 
 **Context (Quote, 1 line):**
 
@@ -371,7 +435,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > какие еще есть варианты?
 
-## M33 (source 03, L1654)
+<a id="twin-95-percent"></a>
+
+## `twin-95-percent` (owner-dialog, line 1654)
 
 **Context (Quote, 1 line):**
 
@@ -381,7 +447,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > в целом есть ощущение, что нормальный твин, на котором можно протестить 80+% багов это примерно 95% имплементации того что он должен мокать. не?
 
-## M34 (source 03, L1687)
+<a id="restore-understanding"></a>
+
+## `restore-understanding` (owner-dialog, line 1687)
 
 **Context (Quote, 1 line):**
 
@@ -391,7 +459,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > нужны способы это решать (это скорее всего дубликат вопроса)
 
-## M35 (source 03, L1720)
+<a id="obituary-or-postmortem"></a>
+
+## `obituary-or-postmortem` (owner-dialog, line 1720)
 
 **Context (Quote, 1 line):**
 
@@ -401,7 +471,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > ваот это прям интересная тема. это некролог или пост-мортем.э нужно больше таких найти
 
-## M36 (source 03, L1807)
+<a id="cannot-fit-claim-too-strong"></a>
+
+## `cannot-fit-claim-too-strong` (owner-dialog, line 1807)
 
 **Context (Quote, 10 lines):**
 
@@ -420,7 +492,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > ну по поводу нельзя подогнать довольно сильное утверждение. при должном усердии агент нащупает те строки которые влиячют на тесты и на какой процент, но по сути написать такие тесты для бюизнес задач это та еще проблема. по сути они пишутся из бизнес требований так же как и сама имплеементация. и так же как и имплементация могут иметь баги. ти..е тут прям реально нужен судья который решает что залагало
 
-## M37 (source 03, L1872)
+<a id="remember-people-answer-questions"></a>
+
+## `remember-people-answer-questions` (owner-dialog, line 1872)
 
 **Context (Quote, 1 line):**
 
@@ -430,7 +504,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > так, тоже хорошая мысль, запомни
 
-## M38 (source 03, L1889)
+<a id="type-rule-to-linter"></a>
+
+## `type-rule-to-linter` (owner-dialog, line 1889)
 
 **Context (Quote, 1 line):**
 
@@ -440,7 +516,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > вот давай посмотрим как мождно превратить правило "тип этой конкретной переменной в этом конкретном месте нельзя менять на беззнаковый тип, который не кратен 16 битам" в правило линтера
 
-## M39 (source 03, L1900)
+<a id="code-review-unavoidable"></a>
+
+## `code-review-unavoidable` (owner-dialog, line 1900)
 
 **Context (Quote, 1 line):**
 
@@ -450,7 +528,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > ну т.е. от код ревью нельзя убежать
 
-## M40 (source 03, L1974)
+<a id="cheap-failure-too-good"></a>
+
+## `cheap-failure-too-good` (owner-dialog, line 1974)
 
 **Context (Quote, 1 line):**
 
@@ -460,7 +540,9 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > звучит слишком хорошо. как этого достигнуть прям полноценно? без общих слов о радиусе поражения
 
-## M41 (source 03, L2079)
+<a id="yes-walk-real-flow"></a>
+
+## `yes-walk-real-flow` (owner-dialog, line 2079)
 
 **Context (Quote, 1 line):**
 
@@ -470,13 +552,17 @@ Not all messages are questions: many are objections, remarks or "remember this" 
 
 > да ъ
 
-## M42 (source 03, L2087)
+<a id="remember-pre-mortem"></a>
+
+## `remember-pre-mortem` (owner-dialog, line 2087)
 
 **Owner:**
 
 > это интересная мысль, запомни
 
-## M43 (source 03, L2103)
+<a id="remember-assumptions-list"></a>
+
+## `remember-assumptions-list` (owner-dialog, line 2103)
 
 **Context (Quote, 1 line):**
 

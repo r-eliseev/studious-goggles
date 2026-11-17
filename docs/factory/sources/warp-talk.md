@@ -1,8 +1,8 @@
-# Source 02: Zach Lloyd (Warp), "Self-improving software factories" (conference talk transcript)
+# `warp-talk`: Zach Lloyd (Warp), "Self-improving software factories" (conference talk transcript)
 
 Type: talk transcript, pasted by the owner on 2026-11-17. Video: https://www.youtube.com/watch?v=tUPPVhBBcoM (could not be fetched automatically: YouTube bot check; the text was supplied manually).
 Status: verbatim, unedited (speech-to-text artifacts kept, e.g. "cloud software factory" = probably "closed/cloud", "uh", "[laughter]").
-Derived notes: `docs/factory/notes/02-warp-self-improving-factories.md`.
+Derived notes: `docs/factory/notes/warp-talk.md`.
 
 ---
 

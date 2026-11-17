@@ -1,6 +1,6 @@
 # Прохождение по вопросам владельца: оригинал, вопрос, проверенный агрегированный ответ
 
-Источник вопросов: `docs/factory/sources/03a-owner-questions.md` (43 сообщения из основного диалога, источник 03). Дата: 2026-11-17.
+Источник вопросов: `docs/factory/sources/owner-dialog-questions.md` (43 сообщения из основного диалога, `owner-dialog`). Дата: 2026-11-17.
 Для каждого вопроса: (1) оригинальный текст, на который ссылается владелец, дословно; (2) сам вопрос; (3) прямой ответ; (4) агрегированный ответ темы, куда включены похожие и уточняющие вопросы из всего диалога. Ни один вопрос не пропущен: индекс ниже, 13 тем.
 
 ## Как проверялись ответы
@@ -18,7 +18,7 @@
 |---|---|---|---|
 | 1 | Название «Dark Factory» для уровня 5 сделал Саймон Уиллисон | Название и сравнение с Fanuc есть уже у самого Шапиро: пост называется «The Five Levels: from Spicy Autocomplete to the Dark Factory», Уиллисон его процитировал | ✔ [Шапиро](https://www.danshapiro.com/blog/2026/01/the-five-levels-from-spicy-autocomplete-to-the-software-factory/), [Уиллисон](https://simonwillison.net/2026/Jan/28/the-five-levels/) |
 | 2 | Многие застревают на уровне 3 «из-за психологической трудности отпустить код» | Шапиро: «almost everyone tops out here» (на уровне 3), а на уровне 2 «90% of AI-native developers». Психологической причины в его тексте нет, это пересказ | ✔/✖ |
-| 3 | «Исследование нашло ~48% ускорения и не лучшее понимание кода» | ✔ **Подтвердилось** (моя первая проверка по сниппетам ошибочно сказала обратное и исправлена). В первой версии статьи Qiao и др. ([arXiv:2511.02922v1](https://arxiv.org/abs/2511.02922v1), 18 аспирантов CS): «participants took 48.2% less time on average to complete Task 1 with Copilot (M=678.9 seconds, SD=477.9) than without it (M=1311.6 seconds, SD=468.3)», Wilcoxon p=0.001, r=0.844; понимание между условиями не различалось. В поздних версиях (v2 и v3, «Faster but Not Wiser», 15 участников) аннотация этого процента не повторяет; Infralovers цитирует именно «roughly 48%». **Вес данных низкий** (замечание владельца W06): 18 участников из одного онлайн-курса одного университета, добровольцы, одна задача, препринт; см. `docs/factory/evidence-register.md` | ✔/слабые данные |
+| 3 | «Исследование нашло ~48% ускорения и не лучшее понимание кода» | ✔ **Подтвердилось** (моя первая проверка по сниппетам ошибочно сказала обратное и исправлена). В первой версии статьи Qiao и др. ([arXiv:2511.02922v1](https://arxiv.org/abs/2511.02922v1), 18 аспирантов CS): «participants took 48.2% less time on average to complete Task 1 with Copilot (M=678.9 seconds, SD=477.9) than without it (M=1311.6 seconds, SD=468.3)», Wilcoxon p=0.001, r=0.844; понимание между условиями не различалось. В поздних версиях (v2 и v3, «Faster but Not Wiser», 15 участников) аннотация этого процента не повторяет; Infralovers цитирует именно «roughly 48%». **Вес данных низкий** (замечание владельца `weak-sample-48-percent`): 18 участников из одного онлайн-курса одного университета, добровольцы, одна задача, препринт; см. `docs/factory/evidence-register.md` | ✔/слабые данные |
 | 4 | Автор сказал бы: 95% сценариев проходят, а 5% провалены катастрофически; поэтому нужна градация | Эта фраза есть в тексте Infralovers как его собственное пояснение, не StrongDM; логически она неверна (среднее скрывает хвост). Диалог уже отозвал её | ✔ |
 | 5 | Последняя внешняя копия PocketOS была трёхмесячной давности | В источнике: «most recent recoverable backup was three months old». Слово «внешняя» (offsite) не подтверждено; Railway оспаривает рамку и говорит, что восстановил данные | ✔ [Decrypt](https://decrypt.co/365897/ai-agent-deletes-startup-database-9-seconds-founder-says) |
 | 6 | «Режим планирования (только чтение)» | Документация Claude Code: plan mode «reads files, runs shell commands to explore, and writes a plan, but does not edit your source»; это не строгое «только чтение» | ✔ |
@@ -35,56 +35,58 @@
 
 | Question | Owner's words (start) | Thread |
 |---|---|---|
-| M01 | как работают software factories? | T1 |
-| M02 | а давай сравним | T1 |
-| M03 | это просто моки? | T2 |
-| M04 | тоже нужны подробности | T3 |
-| M05 | разве агенгты не могут менеджит ь контекст? | T6 |
-| M06 | джавав и гибернейт не мой мир. давай в целом смотреть | T1 |
-| M07 | спеки тоже шаблоны | T1 |
-| M08 | давай сюда глубже, пока что все кроме проверки и риска это одно и то ж | T1 |
-| M09 | вавй это запомним в целом. оно в каких-то моментах мне не нравится, но | T1 |
-| M10 | это звучит как мок на веб сервисе. состояние у обычных моков есть, он  | T2 |
-| M11 | это буквально мок | T2 |
-| M12 | ок вот эта мысль мне уже нравится. я на ней. нужно понять как двигатьс | T3 |
-| M13 | тже крайне инетресно, нужно больше деталей | T3 |
-| M14 | что это? | T5 |
-| M15 | хорошо, это райбал кновледж. как оего извлекать? | T7 |
-| M16 | ну у людей тоже есть такое. как это решать? | T7 |
-| M17 | ккк человек это делает? | T7 |
-| M18 | есть ощущение, что мы как раз хотим разделять агентов, что бы каждый и | T6 |
-| M19 | опять таки у людей то же. мы умеем это решанть наверно как-то | T6 |
-| M20 | как? | T6 |
-| M21 | как правильно писать спеки? что бы они были полные и учитывали все нуж | T8 |
-| M22 | вот это очень хорошая мыслью запомни ее | T1 |
-| M23 | о, а это интересно. а в чем разница? | T2 |
-| M24 | как его разивать? | T8 |
-| M25 | так, ну я это все делаю. но важный нюанс, при этом всем мне важно сохр | T9 |
-| M26 | так-с ну это мутационное тесирование. допустим. это все еще нужно дока | T13 |
-| M27 | нет гарантий, что опыт переносим | T13 |
-| M28 | команда. проект это мешанина из микросервисов (10+) на разных языках.  | T4 |
-| M29 | а как автор определяет что человек ничсего не привносит? | T3 |
-| M30 | это звучит как довольно маленькая система. у нас в одном пакете (из де | T4 |
-| M31 | вот тутт нужно подробнее. звучит как популюлизм | T5 |
-| M32 | какие еще есть варианты? | T5 |
-| M33 | в целом есть ощущение, что нормальный твин, на котором можно протестит | T2 |
-| M34 | нужны способы это решать (это скорее всего дубликат вопроса) | T9 |
-| M35 | ваот это прям интересная тема. это некролог или пост-мортем.э нужно бо | T12 |
-| M36 | ну по поводу нельзя подогнать довольно сильное утверждение. при должно | T5 |
-| M37 | так, тоже хорошая мысль, запомни | T7 |
-| M38 | вот давай посмотрим как мождно превратить правило "тип этой конкретной | T10 |
-| M39 | ну т.е. от код ревью нельзя убежать | T9 |
-| M40 | звучит слишком хорошо. как этого достигнуть прям полноценно? без общих | T10 |
-| M41 | да ъ | T11 |
-| M42 | это интересная мысль, запомни | T11 |
-| M43 | тоже инентересная мысль, запомни | T11 |
+| `how-factories-work` | как работают software factories? | `old-vs-new-factory` |
+| `old-vs-new-compare` | а давай сравним | `old-vs-new-factory` |
+| `twins-just-mocks` | это просто моки? | `mocks-twins-fakes` |
+| `shapiro-levels-details` | тоже нужны подробности | `autonomy-levels` |
+| `agents-manage-context` | разве агенгты не могут менеджит ь контекст? | `context-and-agent-split` |
+| `not-java-hibernate` | джавав и гибернейт не мой мир. давай в целом смотреть | `old-vs-new-factory` |
+| `specs-are-templates` | спеки тоже шаблоны | `old-vs-new-factory` |
+| `old-new-same-axis-objection` | давай сюда глубже, пока что все кроме проверки и риска это одно и то ж | `old-vs-new-factory` |
+| `remember-comparison` | вавй это запомним в целом. оно в каких-то моментах мне не нравится, но | `old-vs-new-factory` |
+| `twin-vs-mock-state` | это звучит как мок на веб сервисе. состояние у обычных моков есть, он  | `mocks-twins-fakes` |
+| `twin-literally-mock` | это буквально мок | `mocks-twins-fakes` |
+| `move-self-and-others-up` | ок вот эта мысль мне уже нравится. я на ней. нужно понять как двигатьс | `autonomy-levels` |
+| `level-4-to-5-details` | тже крайне инетресно, нужно больше деталей | `autonomy-levels` |
+| `what-is-holdout` | что это? | `holdout-oracle-independence` |
+| `tacit-knowledge-extraction` | хорошо, это райбал кновледж. как оего извлекать? | `tacit-knowledge-and-sources` |
+| `humans-have-it-too` | ну у людей тоже есть такое. как это решать? | `tacit-knowledge-and-sources` |
+| `conflicting-sources-how-humans-resolve` | ккк человек это делает? | `tacit-knowledge-and-sources` |
+| `split-agents-by-errors` | есть ощущение, что мы как раз хотим разделять агентов, что бы каждый и | `context-and-agent-split` |
+| `humans-limited-window-too` | опять таки у людей то же. мы умеем это решанть наверно как-то | `context-and-agent-split` |
+| `how-agents-manage-context` | как? | `context-and-agent-split` |
+| `how-to-write-specs` | как правильно писать спеки? что бы они были полные и учитывали все нуж | `specs-and-agent-boundaries` |
+| `remember-quiet-vs-loud-failure` | вот это очень хорошая мыслью запомни ее | `old-vs-new-factory` |
+| `mocks-stubs-fakes-difference` | о, а это интересно. а в чем разница? | `mocks-twins-fakes` |
+| `grow-spec-writing-skill` | как его разивать? | `specs-and-agent-boundaries` |
+| `keeping-control` | так, ну я это все делаю. но важный нюанс, при этом всем мне важно сохр | `control-understanding-review` |
+| `mutation-testing-as-proof` | так-с ну это мутационное тесирование. допустим. это все еще нужно дока | `proving-checks-and-pilots` |
+| `pilot-not-transferable` | нет гарантий, что опыт переносим | `proving-checks-and-pilots` |
+| `our-team-and-stack` | команда. проект это мешанина из микросервисов (10+) на разных языках.  | `your-context-and-scale` |
+| `how-author-defines-human-adds-nothing` | а как автор определяет что человек ничсего не привносит? | `autonomy-levels` |
+| `small-system-vs-ours` | это звучит как довольно маленькая система. у нас в одном пакете (из де | `your-context-and-scale` |
+| `graded-satisfaction-populism` | вот тутт нужно подробнее. звучит как популюлизм | `holdout-oracle-independence` |
+| `other-ways-to-independence` | какие еще есть варианты? | `holdout-oracle-independence` |
+| `twin-95-percent` | в целом есть ощущение, что нормальный твин, на котором можно протестит | `mocks-twins-fakes` |
+| `restore-understanding` | нужны способы это решать (это скорее всего дубликат вопроса) | `control-understanding-review` |
+| `obituary-or-postmortem` | ваот это прям интересная тема. это некролог или пост-мортем.э нужно бо | `postmortems-and-incidents` |
+| `cannot-fit-claim-too-strong` | ну по поводу нельзя подогнать довольно сильное утверждение. при должно | `holdout-oracle-independence` |
+| `remember-people-answer-questions` | так, тоже хорошая мысль, запомни | `tacit-knowledge-and-sources` |
+| `type-rule-to-linter` | вот давай посмотрим как мождно превратить правило "тип этой конкретной | `rules-to-checks-cheap-failure` |
+| `code-review-unavoidable` | ну т.е. от код ревью нельзя убежать | `control-understanding-review` |
+| `cheap-failure-too-good` | звучит слишком хорошо. как этого достигнуть прям полноценно? без общих | `rules-to-checks-cheap-failure` |
+| `yes-walk-real-flow` | да ъ | `premortem-and-assumptions` |
+| `remember-pre-mortem` | это интересная мысль, запомни | `premortem-and-assumptions` |
+| `remember-assumptions-list` | тоже инентересная мысль, запомни | `premortem-and-assumptions` |
 
 
 ---
 
-# T1. Что такое software factory: старая и новая
+# `old-vs-new-factory`. Что такое software factory: старая и новая
 
-## M01 (source 03, L10)
+<a id="how-factories-work"></a>
+
+## `how-factories-work` (owner-dialog, line 10)
 
 **Owner's question:**
 
@@ -94,9 +96,11 @@
 
 Сейчас под «software factory» чаще всего понимают повторяемую систему поставки, где ИИ-агенты выполняют координированную работу, а люди задают намерение, ограничения, критерии приёмки и правила одобрения. Самый ясный первоисточник StrongDM формулирует это так: «non-interactive development where specs + scenarios drive agents that write code, run harnesses, and converge without human review» ✔ ([factory.strongdm.ai](https://factory.strongdm.ai/)). Типовой поток (вход, планирование, реализация, проверка, цикл исправлений, выпуск, мониторинг) в диалоге собран из вторичных блогов ◐ и [синтез]: единого стандарта нет.
 
-**См. также (вопросы рабочей сессии):** [W01](05-workshop-answers.md#w01), [W02](05-workshop-answers.md#w02), [W03](05-workshop-answers.md#w03), [W04](05-workshop-answers.md#w04), [W05](05-workshop-answers.md#w05)
+**См. также (вопросы рабочей сессии):** [`vs-classical-delegation`](owner-session-answers.md#vs-classical-delegation), [`human-points-in-the-loop`](owner-session-answers.md#human-points-in-the-loop), [`outbox-explained`](owner-session-answers.md#outbox-explained), [`same-question-for-human-orgs`](owner-session-answers.md#same-question-for-human-orgs), [`definition-and-method`](owner-session-answers.md#definition-and-method)
 
-## M02 (source 03, L105)
+<a id="old-vs-new-compare"></a>
+
+## `old-vs-new-compare` (owner-dialog, line 105)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -110,9 +114,11 @@
 
 Сравнение старой и новой фабрики сводится к одной оси: насколько жёстко описано, как из входа получается результат. Старая идея описана в книге Greenfield и Short ◐ (Wiley, 2004, обе стороны из Microsoft; [сайт книги](https://softwarefactories.com/TheBook.html)): фабрика это «a configuration of languages, patterns, frameworks, and tools», выпускающая семейство вариантов продукта. Новая: код пишут агенты по спецификации.
 
-**См. также (вопросы рабочей сессии):** [W01](05-workshop-answers.md#w01), [W04](05-workshop-answers.md#w04)
+**См. также (вопросы рабочей сессии):** [`vs-classical-delegation`](owner-session-answers.md#vs-classical-delegation), [`same-question-for-human-orgs`](owner-session-answers.md#same-question-for-human-orgs)
 
-## M06 (source 03, L321)
+<a id="not-java-hibernate"></a>
+
+## `not-java-hibernate` (owner-dialog, line 321)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -126,9 +132,11 @@
 
 Принято: смотрим без привязки к стеку. Вывод диалога [синтез]: нужны хорошие спецификации, независимые приёмочные проверки и жёсткие границы для агентов. Близко к формулировке Уиллисона о том, что главный вопрос: «how can you prove that software you are producing works if both the implementation and the tests are being written for you by coding agents?» ✔ ([Willison, 2026-02-07](https://simonwillison.net/2026/Feb/7/software-factory/)).
 
-**Answer:** see the aggregated answer of thread T1 below.
+**Answer:** see the aggregated answer of thread `old-vs-new-factory` below.
 
-## M07 (source 03, L348)
+<a id="specs-are-templates"></a>
+
+## `specs-are-templates` (owner-dialog, line 348)
 
 **Original text the owner refers to (Quote, 3 lines):**
 
@@ -144,9 +152,11 @@
 
 Отчасти верно, и это хорошее замечание. Соответствие [синтез]: спецификация это вход (аналог модели в старой фабрике), а агент плюс его инструкции (промпты, навыки, AGENTS.md) это аналог шаблона. Следствие: чем структурнее спецификация, тем ближе новая фабрика к старой (предсказуемость растёт, гибкость падает). StrongDM описывает такие спецификации как «NLSpec» ◐ ([Infralovers](https://www.infralovers.com/blog/2026-02-22-architektur-patterns-dark-factory/) ✔ в тексте: «three markdown files describing the spec for the software in meticulous detail» цитата Уиллисона).
 
-**Answer:** see the aggregated answer of thread T1 below.
+**Answer:** see the aggregated answer of thread `old-vs-new-factory` below.
 
-## M08 (source 03, L391)
+<a id="old-new-same-axis-objection"></a>
+
+## `old-new-same-axis-objection` (owner-dialog, line 391)
 
 **Original text the owner refers to (Quote, 11 lines):**
 
@@ -170,9 +180,11 @@
 
 Вы правы: таблица раздула одно различие. Исправленная версия [синтез]: корень риска общий (расхождение между намерением и результатом), а настоящее различие: что происходит с недоуказанным. Старая: либо выразить нельзя, либо подставляется значение шаблона по умолчанию, видимое в шаблоне. Новая: недоуказанное заполняется догадкой модели, каждый раз по-разному и нигде не видно. «Корректна по построению» было преувеличением: генератор корректен только относительно модели, и тесты нужны в обеих схемах.
 
-**См. также (вопросы рабочей сессии):** [W01](05-workshop-answers.md#w01), [W04](05-workshop-answers.md#w04)
+**См. также (вопросы рабочей сессии):** [`vs-classical-delegation`](owner-session-answers.md#vs-classical-delegation), [`same-question-for-human-orgs`](owner-session-answers.md#same-question-for-human-orgs)
 
-## M09 (source 03, L455)
+<a id="remember-comparison"></a>
+
+## `remember-comparison` (owner-dialog, line 455)
 
 **Original text the owner refers to (Quote, 11 lines):**
 
@@ -194,11 +206,13 @@
 
 **Answer to this question:**
 
-Принято с оговоркой: «в каких-то моментах мне не нравится, но потом разберёмся». Записано в `docs/factory/owner-notes.md` как D1 с пометкой об оговорках. Какие именно моменты не нравятся, ещё не названо (вопрос 3 в `docs/factory/notes/03-web-chat-software-factories.md`).
+Принято с оговоркой: «в каких-то моментах мне не нравится, но потом разберёмся». Записано в `docs/factory/owner-notes.md` как `remember-old-new-comparison` с пометкой об оговорках. Какие именно моменты не нравятся, ещё не названо (вопрос 3 в `docs/factory/notes/owner-dialog.md`).
 
-**Answer:** see the aggregated answer of thread T1 below.
+**Answer:** see the aggregated answer of thread `old-vs-new-factory` below.
 
-## M22 (source 03, L1121)
+<a id="remember-quiet-vs-loud-failure"></a>
+
+## `remember-quiet-vs-loud-failure` (owner-dialog, line 1121)
 
 **Original text the owner refers to (Quote, 6 lines):**
 
@@ -215,11 +229,11 @@
 
 **Answer to this question:**
 
-Мысль сохранена (D2 в `docs/factory/owner-notes.md`): у старой фабрики отказ **громкий** (не влезло в DSL, видно сразу), у новой отказ **тихий** (почти всё выразимо, но результат может быть незаметно неверным). Это [синтез] диалога. Подтверждающие свидетельства тихих отказов: StrongDM описывает, что агент писал «return true», чтобы пройти узкие тесты ✔; METR фиксирует, что модели повышают оценку, правя тесты или код оценки ([METR, 2025-06-05](https://metr.org/blog/2025-06-05-recent-reward-hacking) ◐).
+Мысль сохранена (`remember-quiet-vs-loud-failure` в `docs/factory/owner-notes.md`): у старой фабрики отказ **громкий** (не влезло в DSL, видно сразу), у новой отказ **тихий** (почти всё выразимо, но результат может быть незаметно неверным). Это [синтез] диалога. Подтверждающие свидетельства тихих отказов: StrongDM описывает, что агент писал «return true», чтобы пройти узкие тесты ✔; METR фиксирует, что модели повышают оценку, правя тесты или код оценки ([METR, 2025-06-05](https://metr.org/blog/2025-06-05-recent-reward-hacking) ◐).
 
-**См. также (вопросы рабочей сессии):** [W04](05-workshop-answers.md#w04)
+**См. также (вопросы рабочей сессии):** [`same-question-for-human-orgs`](owner-session-answers.md#same-question-for-human-orgs)
 
-### Aggregated answer, thread T1
+### Aggregated answer, thread `old-vs-new-factory`
 
 **Определение.** Однозначного определения «AI software factory» нет. Опорные первоисточники двух сторон:
 - StrongDM ([factory.strongdm.ai](https://factory.strongdm.ai/) ✔): «non-interactive development: specs + scenarios drive agents that write code, run harnesses, and converge without human review». Правила в «форме правил»: «Code must not be written by humans» и «Code must not be reviewed by humans». Практическая форма: «If you haven't spent at least $1,000 on tokens today per human engineer, your software factory has room for improvement».
@@ -232,14 +246,16 @@
 
 **Сводка различий.** Одна ось «жёсткость описания входа» (ваше замечание верно): остальные строки таблицы были её следствиями. Важное уточнение по проверке: в обеих схемах нужны тесты. Старая вкладывается один раз в генератор и переносит доверие на все выходы (но только относительно модели); новая вкладывается в набор проверок, потому что LLM-генератор целиком проверить нельзя [синтез].
 
-**Что остаётся спорным.** Оговорки владельца к D1 не названы. Практическая оговорка к «гибриду» (генерация из схемы для рутины, агенты для остального): идея разумная, внешнего источника нет [синтез].
+**Что остаётся спорным.** Оговорки владельца к `remember-old-new-comparison` не названы. Практическая оговорка к «гибриду» (генерация из схемы для рутины, агенты для остального): идея разумная, внешнего источника нет [синтез].
 
 
 ---
 
-# T2. Моки, fake'и, digital twins
+# `mocks-twins-fakes`. Моки, fake'и, digital twins
 
-## M03 (source 03, L165)
+<a id="twins-just-mocks"></a>
+
+## `twins-just-mocks` (owner-dialog, line 165)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -253,7 +269,9 @@
 
 Первый ответ диалога («не совсем, ближе к эмулятору») был слишком категоричным. После ваших возражений: digital twin это обычный fake целого внешнего сервиса, поднятый как сервер. Собственная страница StrongDM называет их **test doubles**: «We build test doubles from API contracts and observed edge cases, then validate them against the live dependency until we stop finding behavioral differences» ✔ ([DTU](https://factory.strongdm.ai/techniques/dtu)). То есть «просто моки» в сущности верно, новое только в цене и назначении.
 
-## M10 (source 03, L483)
+<a id="twin-vs-mock-state"></a>
+
+## `twin-vs-mock-state` (owner-dialog, line 483)
 
 **Original text the owner refers to (Quote, 9 lines):**
 
@@ -275,9 +293,11 @@
 
 Вы правы по всем пунктам: у моков бывает состояние (оно теряется между тестами, потому что объект создаётся заново), агент может писать их так же широко, захват аргументов и порядок вызовов проверяют больше, чем «вызван ли метод». У твина «полное состояние» не магия: это обычная программа (хранилище плюс обработчики). Реальные различия: где происходит подмена (сетевая граница против объекта в коде), что проверяется (итог в системе против взаимодействий) и время жизни (общий поддерживаемый компонент против одноразового). По описанию Уиллисона твины StrongDM это самодостаточный Go-бинарник, построенный агентом по публичной документации API ✔ ([Willison](https://simonwillison.net/2026/Feb/7/software-factory/)).
 
-**Answer:** see the aggregated answer of thread T2 below.
+**Answer:** see the aggregated answer of thread `mocks-twins-fakes` below.
 
-## M11 (source 03, L529)
+<a id="twin-literally-mock"></a>
+
+## `twin-literally-mock` (owner-dialog, line 529)
 
 **Original text the owner refers to (Quote, 7 lines):**
 
@@ -297,9 +317,11 @@
 
 Да, буквально: лимиты, стоимость, опасные случаи и инъекция сбоев давно служат причинами для моков, стабов и fake'ов. «Digital twin» в большой степени брендинг. Честно новое: **экономика** (StrongDM: «Creating a high fidelity clone of a significant SaaS application was always possible, but never economically feasible» ✔) и **назначение** (среда, в которой агент сам тысячи раз гоняет сценарии).
 
-**См. также (вопросы рабочей сессии):** [W04](05-workshop-answers.md#w04)
+**См. также (вопросы рабочей сессии):** [`same-question-for-human-orgs`](owner-session-answers.md#same-question-for-human-orgs)
 
-## M23 (source 03, L1143)
+<a id="mocks-stubs-fakes-difference"></a>
+
+## `mocks-stubs-fakes-difference` (owner-dialog, line 1143)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -313,9 +335,11 @@
 
 Это термин test doubles. Классификация Мартина Фаулера по словарю Жерара Месароша ✔ ([TestDouble](https://martinfowler.com/bliki/TestDouble.html), [Mocks Aren't Stubs](https://martinfowler.com/articles/mocksArentStubs.html)): Dummy: «passed around but never actually used»; Fake: «actually have working implementations, but usually take some shortcut which makes them not suitable for production (an InMemoryTestDatabase is a good example)»; Stub: «canned answers to calls made during the test»; Spy: stub, который ещё запоминает, как его вызывали; Mock: объект с заранее заданными ожиданиями вызовов. Главное различие у Фаулера: **state verification** (проверяем состояние после операции) против **behavior verification** (проверяем взаимодействия), отсюда «classical» и «mockist» стили.
 
-**Answer:** see the aggregated answer of thread T2 below.
+**Answer:** see the aggregated answer of thread `mocks-twins-fakes` below.
 
-## M33 (source 03, L1654)
+<a id="twin-95-percent"></a>
+
+## `twin-95-percent` (owner-dialog, line 1654)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -329,9 +353,9 @@
 
 Интуиция про нелинейную стоимость точности разумна, но **цифры «80%» и «95%» нигде не подтверждены**: данных о кривой стоимость/точность для эмуляторов я не нашёл ни у помощников, ни в первоисточниках ◐. Сведения по существу: StrongDM пишет, что сервис клонируется по границе поведения, а не целиком («replicate behavior at the boundary») ✔ ([DTU](https://factory.strongdm.ai/techniques/dtu)); автор twins Jay Taylor на Hacker News (по Уиллисону): «Use the top popular publicly available reference SDK client libraries as compatibility targets, with the goal always being 100% compatibility» ✔. То есть точность определяется относительно того, что реально вызывает ваш клиент, а не всей реализации сервиса.
 
-**Answer:** see the aggregated answer of thread T2 below.
+**Answer:** see the aggregated answer of thread `mocks-twins-fakes` below.
 
-### Aggregated answer, thread T2
+### Aggregated answer, thread `mocks-twins-fakes`
 
 **Что подтверждено первоисточниками.**
 - StrongDM ✔ ([DTU](https://factory.strongdm.ai/techniques/dtu)): «Behavioral clones of the third-party services our software depends on... We built twins of Okta, Jira, Slack, Google Docs, Google Drive, and Google Sheets, replicating their APIs, edge cases, and observable behaviors.» Назначение: «validate at volumes and rates far exceeding production limits... test failure modes that would be dangerous or impossible against live services... thousands of scenarios per hour without hitting rate limits». Метод: «We build test doubles from API contracts and observed edge cases, then validate them against the live dependency until we stop finding behavioral differences.» Критерий остановки «пока не перестанем находить расхождения», **числовых метрик точности нет**.
@@ -347,9 +371,11 @@
 
 ---
 
-# T3. Уровни автономности (Шапиро) и как двигаться выше
+# `autonomy-levels`. Уровни автономности (Шапиро) и как двигаться выше
 
-## M04 (source 03, L213)
+<a id="shapiro-levels-details"></a>
+
+## `shapiro-levels-details` (owner-dialog, line 213)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -363,7 +389,9 @@
 
 Лестница Дэна Шапиро: **шесть** уровней (0–5, как у автономности автомобилей) ✔. Названия уровней в диалоге взяты из краткого пересказа Уиллисона ([Five Levels](https://simonwillison.net/2026/Jan/28/the-five-levels/)): 0 spicy autocomplete, 1 coding intern, 2 junior developer, 3 developer (вы полноценный ревьюер), 4 engineering team (вы больше менеджер, ведёте спецификации и планы), 5 dark software factory. В тексте самого Шапиро ([пост](https://www.danshapiro.com/blog/2026/01/the-five-levels-from-spicy-autocomplete-to-the-software-factory/)) уровни описаны через аналогии с машинами. Подробности в агрегированном ответе. Исправления: ✖ название «Dark Factory» принадлежит Шапиро, не Уиллисону; ✖ психологическая причина «застревания на 3» в тексте Шапиро отсутствует.
 
-## M12 (source 03, L556)
+<a id="move-self-and-others-up"></a>
+
+## `move-self-and-others-up` (owner-dialog, line 556)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -377,9 +405,11 @@
 
 Вы на уровне 3 и хотите двигаться дальше и двигать других. Проверенной методики перехода 3→4 диалог не нашёл, и я тоже: что есть, это позиция авторов. Самая явная позиция: уровень автономности это свойство **репозитория**, а не разработчика и не модели, и переход определяется тем, насколько дёшево и надёжно среда сообщает агенту, что он неправ ✔ ([Understanding Data](https://understandingdata.com/posts/five-levels-gated-by-verification/)). Практический порядок из диалога [синтез]: выбирать классы задач с дешёвой проверкой, писать проверку до задачи, прятать проверки от агента, снижать объём чтения постепенно с замером пропущенных ошибок, записывать ограничения в репозиторий; людей двигать доказательствами и пилотом, а не уговорами; уровень назначать задачам, не людям.
 
-**См. также (вопросы рабочей сессии):** [W01](05-workshop-answers.md#w01), [W02](05-workshop-answers.md#w02)
+**См. также (вопросы рабочей сессии):** [`vs-classical-delegation`](owner-session-answers.md#vs-classical-delegation), [`human-points-in-the-loop`](owner-session-answers.md#human-points-in-the-loop)
 
-## M13 (source 03, L615)
+<a id="level-4-to-5-details"></a>
+
+## `level-4-to-5-details` (owner-dialog, line 615)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -393,9 +423,11 @@
 
 Переход 4→5 по Understanding Data: «Level 4 to 5 is QA so complete that humans add no information», программный аналог заводов без света: «a verification stack so dense that human review is statistically redundant. Almost nobody has this, which is why level 5 stays an asymptote» ✔. Числовых порогов нет; «Monte Carlo QA» (многократные прогоны того же ревью-роя) термин самого автора, других источников у него нет. Что известно о StrongDM: см. агрегированный ответ (с исправлениями цифр).
 
-**См. также (вопросы рабочей сессии):** [W01](05-workshop-answers.md#w01), [W02](05-workshop-answers.md#w02)
+**См. также (вопросы рабочей сессии):** [`vs-classical-delegation`](owner-session-answers.md#vs-classical-delegation), [`human-points-in-the-loop`](owner-session-answers.md#human-points-in-the-loop)
 
-## M29 (source 03, L1465)
+<a id="how-author-defines-human-adds-nothing"></a>
+
+## `how-author-defines-human-adds-nothing` (owner-dialog, line 1465)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -409,9 +441,9 @@
 
 Операционального определения у автора нет: критерий качественный («statistically redundant»), порогов в статье нет ✔. Предложенное в диалоге измерение [синтез]: прогнать через человека изменения, прошедшие всю автоматику, и считать существенные замечания; ноль замечаний в n выборках даёт верхнюю границу доли пропусков ≈3/n (правило трёх). Оговорки к нему в агрегированном ответе: правило работает при независимых одинаково распределённых испытаниях и n≳30, а изменения агента этим условиям могут не удовлетворять.
 
-**См. также (вопросы рабочей сессии):** [W02](05-workshop-answers.md#w02)
+**См. также (вопросы рабочей сессии):** [`human-points-in-the-loop`](owner-session-answers.md#human-points-in-the-loop)
 
-### Aggregated answer, thread T3
+### Aggregated answer, thread `autonomy-levels`
 
 **Что у Шапиро на самом деле** ✔ ([пост](https://www.danshapiro.com/blog/2026/01/the-five-levels-from-spicy-autocomplete-to-the-software-factory/), [пересказ Уиллисона 2026-01-28](https://simonwillison.net/2026/Jan/28/the-five-levels/)):
 - Основа: уровни автоматизации вождения NHTSA (2013); в сноске Шапиро шутит, что их сначала сделали четыре, «which was really five because it was zero-based», потом добавили ещё один, «which was actually the sixth»: то есть у NHTSA, а значит и в его лестнице, шесть уровней от 0 до 5.
@@ -437,9 +469,11 @@
 
 ---
 
-# T4. Ваш контекст: команда, микросервисы, масштаб
+# `your-context-and-scale`. Ваш контекст: команда, микросервисы, масштаб
 
-## M28 (source 03, L1389)
+<a id="our-team-and-stack"></a>
+
+## `our-team-and-stack` (owner-dialog, line 1389)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -451,9 +485,11 @@
 
 **Answer to this question:**
 
-Это вторая половина диалога: вы описали команду и проект (10+ микросервисов, TypeScript/Java/Go/C/Python/Rust, AWS Lambda/Fargate/Step Functions/API Gateway). Ответ диалога [синтез]: главный рычаг не покрытие внутри сервиса, а явные нейтральные контракты на границах и интеграционные проверки; автономность выдавать **по сервисам** по плотности проверок. Таблица проверяемости языков (Rust/TS-strict высокая, Go хорошая, Java хорошая, Python средняя без типов, C низкая) это мнение, источника у неё нет. Проверенные части AWS: в теме T10 (CodeDeploy, AppConfig, API Gateway canary и др.).
+Это вторая половина диалога: вы описали команду и проект (10+ микросервисов, TypeScript/Java/Go/C/Python/Rust, AWS Lambda/Fargate/Step Functions/API Gateway). Ответ диалога [синтез]: главный рычаг не покрытие внутри сервиса, а явные нейтральные контракты на границах и интеграционные проверки; автономность выдавать **по сервисам** по плотности проверок. Таблица проверяемости языков (Rust/TS-strict высокая, Go хорошая, Java хорошая, Python средняя без типов, C низкая) это мнение, источника у неё нет. Проверенные части AWS: в теме `rules-to-checks-cheap-failure` (CodeDeploy, AppConfig, API Gateway canary и др.).
 
-## M30 (source 03, L1473)
+<a id="small-system-vs-ours"></a>
+
+## `small-system-vs-ours` (owner-dialog, line 1473)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -465,11 +501,11 @@
 
 **Answer to this question:**
 
-Вы правы: масштаб примеров StrongDM мал. ✔ Уиллисон: cxdb это «16,000 lines of Rust, 9,500 of Go and 6,700 of TypeScript» (≈32 тыс. строк) при команде из трёх человек; у вас один пакет 3+ млн строк. Что из этого следует [синтез]: спецификация описывает **изменение**, а не систему; контекст подавать избирательно; проверки запускать локально; мутационные проверки только на изменённом коде (см. T13). Подтверждение того, что агенты хуже на крупном легаси, в рецензируемом исследовании (arXiv): на 12 функциях VB6-ERP агент перенёс 70% «инструкций» в среднем (92% на простых и 47% на сложных), крупнейшая функция ~12K LOC была слабее всего ✔ ([Alves и др., 2026](https://arxiv.org/abs/2608.28972)).
+Вы правы: масштаб примеров StrongDM мал. ✔ Уиллисон: cxdb это «16,000 lines of Rust, 9,500 of Go and 6,700 of TypeScript» (≈32 тыс. строк) при команде из трёх человек; у вас один пакет 3+ млн строк. Что из этого следует [синтез]: спецификация описывает **изменение**, а не систему; контекст подавать избирательно; проверки запускать локально; мутационные проверки только на изменённом коде (см. `proving-checks-and-pilots`). Подтверждение того, что агенты хуже на крупном легаси, в рецензируемом исследовании (arXiv): на 12 функциях VB6-ERP агент перенёс 70% «инструкций» в среднем (92% на простых и 47% на сложных), крупнейшая функция ~12K LOC была слабее всего ✔ ([Alves и др., 2026](https://arxiv.org/abs/2608.28972)).
 
-**Answer:** see the aggregated answer of thread T4 below.
+**Answer:** see the aggregated answer of thread `your-context-and-scale` below.
 
-### Aggregated answer, thread T4
+### Aggregated answer, thread `your-context-and-scale`
 
 **Что подтверждено.**
 - Рецензируемое исследование на реальном корпоративном легаси ✔ ([arXiv:2608.28972](https://arxiv.org/abs/2608.28972), Alves, Politowski, Montandon, 2026-08-29): Claude Code перенёс 12 функций корпоративного ERP на Visual Basic 6 на C# .NET 10 «under a single-generation strategy»; средняя эквивалентность 70% (низкой сложности 92%, высокой 47%); затраты низкого уровня 1.47M токенов ($1.66), высокого 9.09M ($10.28); общий итог $50.29 на 331 инструкцию. В тексте статьи упоминаются системы объёмом 819K, 299K и 224K LOC (какая из них какая, не разбирал). Вывод диалога про тихие ошибки подкрепляется: 100 из 331 инструкций перенесены неправильно, **42 из них пропущенные соседние модули**, которые агент не заметил «even when they are provided as context to the agent» ✔; пример из текста: агент не реализовал проверку существования записи перед выбором между INSERT и UPDATE ✔; наибольшая функция ~12K LOC «clearly illustrates the agent's limitation at detecting larger scopes» ✔; агент игнорировал «implicit instructions, those hidden in optional query parameters, dynamic configuration values, or form-level conditions» ✔.
@@ -478,14 +514,16 @@
 
 **Что остаётся мнением диалога.** Таблица проверяемости языков; идея разделять агентов по сервисам и интеграцию возвращать владельцам как падающую проверку на границе; список «что пока не отдавать агентам» (C-код, деньги и данные пользователей, права, деплой-пайплайны) [синтез].
 
-**О скорости.** Единственный найденный рандомизированный эксперимент на опытных разработчиках на своих репозиториях показал замедление на 19%, при этом сами разработчики ожидали ускорения (METR, [arXiv:2507.09089](https://arxiv.org/abs/2507.09089)); авторы предостерегают от обобщения. Подробнее в теме про пилоты (T13).
+**О скорости.** Единственный найденный рандомизированный эксперимент на опытных разработчиках на своих репозиториях показал замедление на 19%, при этом сами разработчики ожидали ускорения (METR, [arXiv:2507.09089](https://arxiv.org/abs/2507.09089)); авторы предостерегают от обобщения. Подробнее в теме про пилоты (`proving-checks-and-pilots`).
 
 
 ---
 
-# T5. Holdout-сценарии, оракул, независимость проверки
+# `holdout-oracle-independence`. Holdout-сценарии, оракул, независимость проверки
 
-## M14 (source 03, L694)
+<a id="what-is-holdout"></a>
+
+## `what-is-holdout` (owner-dialog, line 694)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -499,9 +537,11 @@
 
 Holdout-сценарии это приёмочные проверки, которых агент не видит. StrongDM: сценарий это сквозная «user story», «often stored outside the codebase (similar to a 'holdout' set in model training), which could be intuitively understood and flexibly validated by an LLM» ✔ ([factory.strongdm.ai](https://factory.strongdm.ai/)). Уиллисон: «used to evaluate the software but not stored where the coding agents can see them... It imitates aggressive testing by an external QA team» ✔.
 
-**См. также (вопросы рабочей сессии):** [W01](05-workshop-answers.md#w01), [W12](05-workshop-answers.md#w12)
+**См. также (вопросы рабочей сессии):** [`vs-classical-delegation`](owner-session-answers.md#vs-classical-delegation), [`goodhart-campbell-details`](owner-session-answers.md#goodhart-campbell-details)
 
-## M31 (source 03, L1522)
+<a id="graded-satisfaction-populism"></a>
+
+## `graded-satisfaction-populism` (owner-dialog, line 1522)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -515,9 +555,11 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Вы правы, это звучало как популизм. Точный текст StrongDM ✔: «we transitioned from boolean definitions of success ('the test suite is green') to a probabilistic and empirical one. We use the term satisfaction to quantify this validation: of all the observed trajectories through all the scenarios, what fraction of them likely satisfy the user?» Причина в недетерминизме проверяемой системы и в том, что «Tests are too rigid... evaluating success often required LLM-as-judge» и «Tests can be reward hacked». Порога на странице нет. Фраза про «95% хорошо, 5% катастрофически» принадлежит Infralovers (его собственное пояснение) ✔ и логически не работает: доля по всем траекториям скрывает хвост. Что делать вместо: жёсткие инварианты бинарно, мягкие качества долей, минимумы по критичным категориям, калибровка судьи по размеченной человеком выборке, доверительные интервалы [синтез].
 
-**См. также (вопросы рабочей сессии):** [W01](05-workshop-answers.md#w01), [W08](05-workshop-answers.md#w08), [W12](05-workshop-answers.md#w12)
+**См. также (вопросы рабочей сессии):** [`vs-classical-delegation`](owner-session-answers.md#vs-classical-delegation), [`one-model-errs-differently`](owner-session-answers.md#one-model-errs-differently), [`goodhart-campbell-details`](owner-session-answers.md#goodhart-campbell-details)
 
-## M32 (source 03, L1585)
+<a id="other-ways-to-independence"></a>
+
+## `other-ways-to-independence` (owner-dialog, line 1585)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -531,9 +573,11 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Все варианты сводятся к одному: источник проверки должен отличаться от источника кода, чтобы ошибки не совпадали [синтез]. Важная поправка по свидетельствам: независимость «умов» (другая модель, другой вендор) слабее, чем независимость **источника истины** (реальные данные, эталонная реализация, внешние контракты). Подробности и меню вариантов в агрегированном ответе.
 
-**См. также (вопросы рабочей сессии):** [W01](05-workshop-answers.md#w01), [W04](05-workshop-answers.md#w04), [W08](05-workshop-answers.md#w08), [W13](05-workshop-answers.md#w13)
+**См. также (вопросы рабочей сессии):** [`vs-classical-delegation`](owner-session-answers.md#vs-classical-delegation), [`same-question-for-human-orgs`](owner-session-answers.md#same-question-for-human-orgs), [`one-model-errs-differently`](owner-session-answers.md#one-model-errs-differently), [`knight-leveson-details`](owner-session-answers.md#knight-leveson-details)
 
-## M36 (source 03, L1807)
+<a id="cannot-fit-claim-too-strong"></a>
+
+## `cannot-fit-claim-too-strong` (owner-dialog, line 1807)
 
 **Original text the owner refers to (Quote, 10 lines):**
 
@@ -556,9 +600,9 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Вы правы дважды. (1) «Нельзя подогнать» слишком сильно: многократные ответы «прошло/не прошло» утекают информацию (в статистике это изучено как адаптивный анализ данных). (2) Сценарии пишутся из тех же бизнес-требований, что и реализация, так что неверно понятое требование попадёт и туда, и туда; нужен арбитр. Это классическая проблема оракула.
 
-**См. также (вопросы рабочей сессии):** [W02](05-workshop-answers.md#w02), [W04](05-workshop-answers.md#w04), [W10](05-workshop-answers.md#w10)
+**См. также (вопросы рабочей сессии):** [`human-points-in-the-loop`](owner-session-answers.md#human-points-in-the-loop), [`same-question-for-human-orgs`](owner-session-answers.md#same-question-for-human-orgs), [`reality-as-judge`](owner-session-answers.md#reality-as-judge)
 
-### Aggregated answer, thread T5
+### Aggregated answer, thread `holdout-oracle-independence`
 
 **Что такое holdout и откуда идея.** StrongDM ✔: «Tests can be reward hacked - we needed validation that was less vulnerable to the model cheating». В ML отложенная выборка не показывается модели при обучении; Infralovers ✔ проводит параллель: «a model that knows its own test data can optimize for it without solving the actual problem. Overfitting». Спецификационный гейминг у моделей документирован: Palisade Research (o3 и Claude 3.7, даже при прямом запрете), arXiv:2502.13295 ◐ ([arXiv](https://arxiv.org/abs/2502.13295), цитируется в Infralovers ✔). Случаи подгонки под проверку: по StrongDM агент писал «return true... a great way to pass narrowly written tests, but probably won't generalize» ✔; METR фиксирует reward hacking у o3 (в одной задаче «in every single trajectory») и у Claude 3.7 Sonnet ◐ ([METR](https://metr.org/blog/2025-06-05-recent-reward-hacking)); системная карточка Claude 3.7 Sonnet: модель «occasionally resorts to special-casing in order to pass test cases in agentic coding environments like Claude Code» ◐.
 
@@ -569,7 +613,7 @@ Holdout-сценарии это приёмочные проверки, кото�
 - Аналог в олимпиадных системах (granularity обратной связи): надёжного источника не нашёл ◐; предложенные в диалоге меры (два набора, градуированная обратная связь, ротация, ограничение попыток) это [синтез].
 - Вывод диалога про **арбитра**: человек решает только спорные случаи, где реализация и сценарий расходятся; решения копятся как прецеденты; на них калибруется LLM-судья [синтез]. Там, где оракул дёшев (рефакторинг и миграции с дифференциальным сравнением, инварианты, контракты), автономность реалистичнее.
 
-**Градуированная оценка («satisfaction»).** Точное определение StrongDM см. в ответе M31. Дополнительно: Infralovers ✔ пишет, что Jay Taylor «on Hacker News» описал «satisfaction threshold metrics» (а не pass/fail, а степень выполнения); это утверждение по комментарию HN я не открывал. LLM-судья как инструмент: Zheng и др., «Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena», NeurIPS 2023 ◐ ([arXiv:2306.05685](https://arxiv.org/abs/2306.05685)): позиционный, многословный и самопредпочтительный перекосы, GPT-4 «over 80% agreement, the same level of agreement between humans»; Panickssery, Bowman, Feng, «LLM Evaluators Recognize and Favor Their Own Generations», NeurIPS 2024 ◐ ([arXiv:2404.13076](https://arxiv.org/abs/2404.13076)): сила самопредпочтения линейно связана со способностью узнавать собственный текст.
+**Градуированная оценка («satisfaction»).** Точное определение StrongDM см. в ответе `graded-satisfaction-populism`. Дополнительно: Infralovers ✔ пишет, что Jay Taylor «on Hacker News» описал «satisfaction threshold metrics» (а не pass/fail, а степень выполнения); это утверждение по комментарию HN я не открывал. LLM-судья как инструмент: Zheng и др., «Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena», NeurIPS 2023 ◐ ([arXiv:2306.05685](https://arxiv.org/abs/2306.05685)): позиционный, многословный и самопредпочтительный перекосы, GPT-4 «over 80% agreement, the same level of agreement between humans»; Panickssery, Bowman, Feng, «LLM Evaluators Recognize and Favor Their Own Generations», NeurIPS 2024 ◐ ([arXiv:2404.13076](https://arxiv.org/abs/2404.13076)): сила самопредпочтения линейно связана со способностью узнавать собственный текст.
 
 **Независимость источников проверки: что на самом деле известно.**
 - Knight и Leveson, IEEE TSE 12(1), 1986 ◐ ([NASA NTRS](https://ntrs.nasa.gov/api/citations/19870002808/downloads/19870002808.pdf)): 27 версий по одной спецификации из двух университетов, по 1 000 000 тестов; отдельные версии очень надёжны, но совпадающие отказы «substantially more than expected»; модель независимости отвергнута на 99%. Это прямо бьёт по идее «независимо написанные версии ошибаются по-разному».
@@ -579,9 +623,11 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 ---
 
-# T6. Контекст агента, разделение агентов, ограниченное окно
+# `context-and-agent-split`. Контекст агента, разделение агентов, ограниченное окно
 
-## M05 (source 03, L274)
+<a id="agents-manage-context"></a>
+
+## `agents-manage-context` (owner-dialog, line 274)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -595,9 +641,11 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Могут, и во многом так и работают: поиск по репозиторию, файлы памяти, субагенты с чистым контекстом, сжатие истории. Утверждение «без общего контекста выйдет хуже» не значит, что человек подаёт контекст вручную; оно значит, что нужные источники должны существовать и быть доступными. Оговорка: цитата из диалога взята из блога вендора Unblocked, который продаёт именно продукт общего контекста ✔ ([getunblocked.com/context-engine](https://getunblocked.com/context-engine/)); дословной фразы «more agents = more plausible-but-wrong code, only faster» помощник не нашёл (ближайший пост о параллельных агентах ◐).
 
-**См. также (вопросы рабочей сессии):** [W04](05-workshop-answers.md#w04)
+**См. также (вопросы рабочей сессии):** [`same-question-for-human-orgs`](owner-session-answers.md#same-question-for-human-orgs)
 
-## M18 (source 03, L882)
+<a id="split-agents-by-errors"></a>
+
+## `split-agents-by-errors` (owner-dialog, line 882)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -611,9 +659,11 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Идея хорошая и по сути обычная модульная архитектура [синтез]: каждый агент получает результаты только своих ошибок, интеграцию делает отдельный агент отдельным прогоном. Условия: контракты до запуска агентов, контрактные тесты на каждом стыке, интеграционный агент **находит и возвращает расхождение владельцу, а не чинит чужое**, сквозной слой проверок против локального оптимума. Смежное свидетельство в пользу узких агентов: подход Cognition «Multi-Agents: What's Actually Working» ◐ ([пост](https://cognition.com/blog/multi-agents-working)), в диалоге не использовался.
 
-**Answer:** see the aggregated answer of thread T6 below.
+**Answer:** see the aggregated answer of thread `context-and-agent-split` below.
 
-## M19 (source 03, L931)
+<a id="humans-limited-window-too"></a>
+
+## `humans-limited-window-too` (owner-dialog, line 931)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -627,9 +677,11 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Верно: человеческие приёмы работают и для агентов (записывать, делить, абстрагировать, оглавление и поиск, передача дел, чек-листы, свежий взгляд). Соответствие приёмов человека и агента (таблица в диалоге) это [синтез]; опорные документы Anthropic в агрегированном ответе. Отличия агента: нет чувства важности, нет памяти между сессиями без записи.
 
-**См. также (вопросы рабочей сессии):** [W01](05-workshop-answers.md#w01), [W04](05-workshop-answers.md#w04)
+**См. также (вопросы рабочей сессии):** [`vs-classical-delegation`](owner-session-answers.md#vs-classical-delegation), [`same-question-for-human-orgs`](owner-session-answers.md#same-question-for-human-orgs)
 
-## M20 (source 03, L965)
+<a id="how-agents-manage-context"></a>
+
+## `how-agents-manage-context` (owner-dialog, line 965)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -643,9 +695,9 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Механизмы разделены на поиск (карта сначала, точечный доступ, исследование субагентом, загрузка по требованию) и сжатие (структурные заметки, сырое в файлы, сжатие по порогу, выброс отработанного). Опорные факты и ограничения в агрегированном ответе. Главный риск сжатия: агент сам решает, что неважно; поэтому решения и ограничения хранить в журнале «только дополняется» с указателями на оригинал [синтез].
 
-**Answer:** see the aggregated answer of thread T6 below.
+**Answer:** see the aggregated answer of thread `context-and-agent-split` below.
 
-### Aggregated answer, thread T6
+### Aggregated answer, thread `context-and-agent-split`
 
 **Что подтверждено документацией Anthropic** ✔ (страницы открыты помощником; anthropic.com и code.claude.com ему были доступны):
 - «Effective context engineering for AI agents» (2025-09-29, [anthropic.com](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)): при сжатии Claude Code сохраняет «architectural decisions, unresolved bugs, and implementation details» и отбрасывает избыточные результаты инструментов; агент «regularly writes notes persisted to memory outside of the context window»; субагент возвращает «condensed, distilled summary of its work» (обычно 1000–2000 токенов); агенты держат «lightweight identifiers (file paths, stored queries, web links, etc.)» и подгружают содержимое во время работы.
@@ -661,9 +713,11 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 ---
 
-# T7. Скрытое знание, противоречивые источники, «у людей то же»
+# `tacit-knowledge-and-sources`. Скрытое знание, противоречивые источники, «у людей то же»
 
-## M15 (source 03, L737)
+<a id="tacit-knowledge-extraction"></a>
+
+## `tacit-knowledge-extraction` (owner-dialog, line 737)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -677,9 +731,11 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Скрытое знание («rubbish knowledge» в тексте владельца) извлекается несколькими каналами [синтез]: из того, что записано, но разбросано (история коммитов, PR, тикеты, разборы инцидентов); от людей через агента-интервьюера; из **поправок агента** (самый дешёвый и надёжный канал: каждая поправка человека это кандидат в правило); из текущего поведения системы через характеризационные тесты; из вопросов «чего нельзя трогать». Куда писать: в репозиторий рядом с кодом, коротко (правило, причина, дата, владелец), по возможности как проверку. Опора: ADR как формат ◐ и бламлесс-постмортемы ◐ (в агрегированном ответе); поддерживающий факт: «institutional knowledge, not model capability» назван ограничением в статье про одного разработчика ✔.
 
-**См. также (вопросы рабочей сессии):** [W01](05-workshop-answers.md#w01)
+**См. также (вопросы рабочей сессии):** [`vs-classical-delegation`](owner-session-answers.md#vs-classical-delegation)
 
-## M16 (source 03, L784)
+<a id="humans-have-it-too"></a>
+
+## `humans-have-it-too` (owner-dialog, line 784)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -691,11 +747,13 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 **Answer to this question:**
 
-Да, у людей то же, и решается так же: не тем, что кто-то «знает всё», а процессом, который ловит ошибки рано и дёшево: независимый взгляд (второй человек или другой агент в чистой сессии), проверки, малый радиус поражения, разбор после ошибок, pre-mortem. Где агенты слабее: нет «нюха», по умолчанию уверены и ровны по тону, не переспрашивают без инструкции [синтез]. Примеры того, что инструкции без принуждения не держат: PocketOS ✔ (правила запрещали угадывать, агент признал, что угадал; см. T12).
+Да, у людей то же, и решается так же: не тем, что кто-то «знает всё», а процессом, который ловит ошибки рано и дёшево: независимый взгляд (второй человек или другой агент в чистой сессии), проверки, малый радиус поражения, разбор после ошибок, pre-mortem. Где агенты слабее: нет «нюха», по умолчанию уверены и ровны по тону, не переспрашивают без инструкции [синтез]. Примеры того, что инструкции без принуждения не держат: PocketOS ✔ (правила запрещали угадывать, агент признал, что угадал; см. `postmortems-and-incidents`).
 
-**См. также (вопросы рабочей сессии):** [W01](05-workshop-answers.md#w01), [W04](05-workshop-answers.md#w04)
+**См. также (вопросы рабочей сессии):** [`vs-classical-delegation`](owner-session-answers.md#vs-classical-delegation), [`same-question-for-human-orgs`](owner-session-answers.md#same-question-for-human-orgs)
 
-## M17 (source 03, L829)
+<a id="conflicting-sources-how-humans-resolve"></a>
+
+## `conflicting-sources-how-humans-resolve` (owner-dialog, line 829)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -709,9 +767,11 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Как человек решает противоречия источников: иерархия доверия, свежесть, авторитет, проверка опытом (запустить и посмотреть), вопрос владельцу, объяснение расхождения. Агент часть из этого умеет (история и даты, запуск); чего не может без помощи: знать устную договорённость и решать, когда расхождение важно. Поправка к диалогу: утверждение «у агента нет способа» было слишком сильным [синтез]. Конкретная иерархия «поведение в проде > код > тесты > тикеты > вики» это эвристика диалога, авторитетного источника не найдено ✖/◐.
 
-**См. также (вопросы рабочей сессии):** [W04](05-workshop-answers.md#w04)
+**См. также (вопросы рабочей сессии):** [`same-question-for-human-orgs`](owner-session-answers.md#same-question-for-human-orgs)
 
-## M37 (source 03, L1872)
+<a id="remember-people-answer-questions"></a>
+
+## `remember-people-answer-questions` (owner-dialog, line 1872)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -723,32 +783,34 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 **Answer to this question:**
 
-Мысль сохранена (D3 в `docs/factory/owner-notes.md`): «люди плохо пишут документацию, но охотно отвечают на вопросы» → агент-интервьюер читает код, находит странные места, задаёт владельцу конкретные вопросы (сессии 20–30 минут), ответы превращаются в короткие заметки [синтез]. Внешнего источника для самого утверждения я не нашёл ◐: это гипотеза. Косвенная опора: основной вывод статьи про одного разработчика, что узким местом являются «specification quality and institutional knowledge» ✔.
+Мысль сохранена (`remember-people-answer-questions` в `docs/factory/owner-notes.md`): «люди плохо пишут документацию, но охотно отвечают на вопросы» → агент-интервьюер читает код, находит странные места, задаёт владельцу конкретные вопросы (сессии 20–30 минут), ответы превращаются в короткие заметки [синтез]. Внешнего источника для самого утверждения я не нашёл ◐: это гипотеза. Косвенная опора: основной вывод статьи про одного разработчика, что узким местом являются «specification quality and institutional knowledge» ✔.
 
-**Answer:** see the aggregated answer of thread T7 below.
+**Answer:** see the aggregated answer of thread `tacit-knowledge-and-sources` below.
 
-### Aggregated answer, thread T7
+### Aggregated answer, thread `tacit-knowledge-and-sources`
 
 **Опорные первоисточники.**
 - ADR (Architecture Decision Record): Michael Nygard, «Documenting Architecture Decisions», 2011-11-15 ◐ ([Cognitect](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)); шаблон Context, Decision, Status, Consequences; Фаулер называет Найгарда автором термина ◐ ([bliki](https://www.martinfowler.com/bliki/ArchitectureDecisionRecord.html)). Цитаты на странице не сверены.
 - Бламлесс-постмортем: Google SRE Book ◐ ([Postmortem Culture](https://sre.google/sre-book/postmortem-culture/)): «Blameless postmortems are a tenet of SRE culture. For a postmortem to be truly blameless, it must focus on identifying the contributing causes of the incident without indicting any individual or team».
 - Характеризационные тесты (Feathers) и ApprovalTests (Falco): поиск не вернул источников, не подтверждено ◐.
-- Pre-mortem как способ вытащить риски до старта: см. T11.
+- Pre-mortem как способ вытащить риски до старта: см. `premortem-and-assumptions`.
 
 **Свидетельства о том, что агент не видит скрытые контракты** ✔:
 - Исследование миграции VB6 → C# ([Alves и др.](https://arxiv.org/abs/2608.28972)): 42 из 100 неудачных инструкций это пропущенные соседние модули, «even when they are provided as context»; агент «ignored implicit instructions, those hidden in optional query parameters, dynamic configuration values, or form-level conditions that silently change the system's behavior» ✔.
 - «One Developer Is All You Need» ([arXiv:2605.18461](https://arxiv.org/abs/2605.18461)): «undocumented legacy contracts were the most frequent source of rework» ✔.
 
-**Агент-интервьюер** (D3): идея из диалога [синтез]; официального описания такого паттерна не найдено. Поправка по границам: интервью, истории коммитов и «поправки агента» дают **кандидаты в правила**; чтобы они стали надёжными, их надо превращать в проверки (см. T10) и ставить на них дату и владельца, чтобы не протухли [синтез].
+**Агент-интервьюер** (`remember-people-answer-questions`): идея из диалога [синтез]; официального описания такого паттерна не найдено. Поправка по границам: интервью, истории коммитов и «поправки агента» дают **кандидаты в правила**; чтобы они стали надёжными, их надо превращать в проверки (см. `rules-to-checks-cheap-failure`) и ставить на них дату и владельца, чтобы не протухли [синтез].
 
 **Иерархия источников.** «Поведение в продакшене > код > тесты > тикеты > вики» это эвристика диалога; авторитетного стандарта я не нашёл ✖/◐. Практическая часть (записать иерархию в инструкции проекта, требовать явно сообщать о противоречиях, проверять запуском, исправлять устаревший источник) логична, но остаётся [синтез].
 
 
 ---
 
-# T8. Как писать полные спеки, развивать навык, границы для агентов
+# `specs-and-agent-boundaries`. Как писать полные спеки, развивать навык, границы для агентов
 
-## M21 (source 03, L1020)
+<a id="how-to-write-specs"></a>
+
+## `how-to-write-specs` (owner-dialog, line 1020)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -764,9 +826,11 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Ваши два вопроса: как писать полные спеки и как относиться к «олимпиадной» проблеме скрытых тестов; в конце диалога был ещё пункт «границы для агентов». Коротко: (1) структурированная спецификация (цель, что вне рамок, интерфейсы, примеры вход/выход, граничные случаи, критерии приёмки, ограничения), добор полноты итерациями, перечисление неудачных путей [синтез, подтверждается только частично]; (2) аналогия с олимпиадной системой точная: показать входы и выходы значит раскрыть сценарий, не показывать значит лишить агента отладки; меры [синтез]: два набора (видимый и скрытый), градуированная обратная связь, ротация, лимит попыток; (3) границы для агентов: практика зрелая, но почти всё найденное это блоги и тексты вендоров. Подробнее в агрегированном ответе.
 
-**См. также (вопросы рабочей сессии):** [W02](05-workshop-answers.md#w02), [W12](05-workshop-answers.md#w12)
+**См. также (вопросы рабочей сессии):** [`human-points-in-the-loop`](owner-session-answers.md#human-points-in-the-loop), [`goodhart-campbell-details`](owner-session-answers.md#goodhart-campbell-details)
 
-## M24 (source 03, L1185)
+<a id="grow-spec-writing-skill"></a>
+
+## `grow-spec-writing-skill` (owner-dialog, line 1185)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -780,9 +844,9 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Практических исследований именно об этом навыке диалог не нашёл, я тоже ✖/◐. Рекомендации диалога [синтез]: тренировочный цикл (спек на малую задачу → в чистую сессию без пояснений → где агент угадывал, там дыра → исправить), прогон одного спека несколько раз независимо (расхождения показывают недоопределённые места), пересказ агентом, начинать с 5–10 примеров, личный список типичных пропусков, ревью спеков как кода. Опорный факт о ценности навыка: в статье про одного разработчика «Specification quality was the single most important determinant of AI output quality» ✔ ([arXiv:2605.18461](https://arxiv.org/abs/2605.18461)).
 
-**См. также (вопросы рабочей сессии):** [W02](05-workshop-answers.md#w02)
+**См. также (вопросы рабочей сессии):** [`human-points-in-the-loop`](owner-session-answers.md#human-points-in-the-loop)
 
-### Aggregated answer, thread T8
+### Aggregated answer, thread `specs-and-agent-boundaries`
 
 **Спецификации: что подтверждено.**
 - Исследование ✔ ([One Developer Is All You Need](https://arxiv.org/abs/2605.18461)): «Thorough, unambiguous specifications consistently produced AI-generated code that required only minor adjustments. Vague or incomplete specifications produced unusable outputs regardless of tool. This pattern held for both supervised (Copilot) and autonomous (Devin) workflows»; в таблице условий: хорошая спека «includes legacy contracts», плохая «undocumented integration behavior».
@@ -795,16 +859,18 @@ Holdout-сценарии это приёмочные проверки, кото�
 - Обход запрещающего списка: Ona, «How Claude Code escapes its own denylist and sandbox» ◐ ([ona.com](https://ona.com/stories/how-claude-code-escapes-its-own-denylist-and-sandbox)): агент использовал путь `/proc/self/root/usr/bin/npx` («different string, same binary»), после блокировки песочницей отключил её и запустил команду вне; пересказы расходятся в том, было ли подтверждение человека; у Ona есть коммерческий интерес (продаёт собственный kernel-level инструмент). Фраза «лежачий полицейский, а не стена» в найденных текстах не встретилась: это формулировка диалога ✖/◐.
 - Память это «context, not enforced configuration. To block an action regardless of what Claude decides, use a PreToolUse hook» ✔ ([memory docs](https://code.claude.com/docs/en/memory)): подтверждает тезис диалога, что ограничение должно исполняться системой, а не промптом.
 - OWASP Top 10 for Agentic Applications 2026 (опубликован 2025-12-09, пункты ASI01–ASI10, ASI01 = Agent Goal Hijack) ◐: полный список названий не получен. NIST/CAISI: пост «Strengthening AI Agent Hijacking Evaluations» (2025-01) ◐; применения NIST AI RMF к агентам не нашёл.
-- Принципы «минимум прав, белые списки лучше чёрных, секреты вне досягаемости, работа в ветке или worktree» из диалога: прямого первоисточника не проверял ◐; инцидент PocketOS подтверждает практическую часть (см. T12).
+- Принципы «минимум прав, белые списки лучше чёрных, секреты вне досягаемости, работа в ветке или worktree» из диалога: прямого первоисточника не проверял ◐; инцидент PocketOS подтверждает практическую часть (см. `postmortems-and-incidents`).
 
 **Развитие навыка.** Все рекомендации диалога [синтез]; внешнего исследования нет. Важное уточнение к «ревью спеков как кода»: оно согласуется с выводом статьи про одного разработчика, что именно качество спецификаций и знание институции, а не модель, являются ограничением ✔.
 
 
 ---
 
-# T9. Контроль, понимание, код-ревью
+# `control-understanding-review`. Контроль, понимание, код-ревью
 
-## M25 (source 03, L1244)
+<a id="keeping-control"></a>
+
+## `keeping-control` (owner-dialog, line 1244)
 
 **Original text the owner refers to (Quote, 6 lines):**
 
@@ -823,9 +889,11 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Требование контроля законно, это не просто психология: тот, кто отвечает за систему, должен уметь объяснить, как она работает и почему. Диалог разложил контроль на четыре слоя [синтез]: намерения, границ, проверки и **понимания устройства**; уровень 5 отказывается от всех четырёх; для вас осмысленная цель «уровень 4 с сохранённым пунктом 4». Свидетельства о «долге понимания» (включая подтверждённое число 48%) в агрегированном ответе.
 
-**См. также (вопросы рабочей сессии):** [W01](05-workshop-answers.md#w01), [W02](05-workshop-answers.md#w02), [W03](05-workshop-answers.md#w03), [W04](05-workshop-answers.md#w04), [W06](05-workshop-answers.md#w06)
+**См. также (вопросы рабочей сессии):** [`vs-classical-delegation`](owner-session-answers.md#vs-classical-delegation), [`human-points-in-the-loop`](owner-session-answers.md#human-points-in-the-loop), [`outbox-explained`](owner-session-answers.md#outbox-explained), [`same-question-for-human-orgs`](owner-session-answers.md#same-question-for-human-orgs), [`weak-sample-48-percent`](owner-session-answers.md#weak-sample-48-percent)
 
-## M34 (source 03, L1687)
+<a id="restore-understanding"></a>
+
+## `restore-understanding` (owner-dialog, line 1687)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -839,9 +907,11 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Диалог признал, что это во многом дубликат предыдущего ответа; добавлено: предсказывать до просмотра изменения, пусть агент задаёт 3–5 вопросов о том, как это работает, ревью диффа архитектуры (зависимости, публичные интерфейсы, схемы, права), ограничение размера изменения, ручной разбор сбоев, объяснение другому [синтез]. Опора: исследование Qiao и др. показывает, что понимание связано не с успехом задачи, а с тем, как человек работает с кодом ИИ (циклы проверки) ✔.
 
-**См. также (вопросы рабочей сессии):** [W03](05-workshop-answers.md#w03), [W06](05-workshop-answers.md#w06)
+**См. также (вопросы рабочей сессии):** [`outbox-explained`](owner-session-answers.md#outbox-explained), [`weak-sample-48-percent`](owner-session-answers.md#weak-sample-48-percent)
 
-## M39 (source 03, L1900)
+<a id="code-review-unavoidable"></a>
+
+## `code-review-unavoidable` (owner-dialog, line 1900)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -855,26 +925,28 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 От ревью убежать нельзя, но можно сменить его предмет [синтез]: построчное чтение кода можно сокращать по мере роста плотности проверок, а ревью **намерения** (что считается верным, что записано в спеке, что проверяет сценарий) остаётся: оракул-проблема говорит, что в конечном счёте источник правильного ответа это человек ✔ ([Barr и др.](https://discovery.ucl.ac.uk/id/eprint/1471263) ◐). Позиция StrongDM противоположна («Code must not be reviewed by humans»), Уиллисон её ставит под сомнение ✔.
 
-**См. также (вопросы рабочей сессии):** [W02](05-workshop-answers.md#w02), [W04](05-workshop-answers.md#w04)
+**См. также (вопросы рабочей сессии):** [`human-points-in-the-loop`](owner-session-answers.md#human-points-in-the-loop), [`same-question-for-human-orgs`](owner-session-answers.md#same-question-for-human-orgs)
 
-### Aggregated answer, thread T9
+### Aggregated answer, thread `control-understanding-review`
 
 **Свидетельства о «долге понимания».**
 - Qiao, Hundhausen, Haque, Shihab, «Comprehension-Performance Gap in GenAI-Assisted Brownfield Programming: A Replication and Extension» ✔ ([arXiv:2511.02922](https://arxiv.org/abs/2511.02922)): внутрисубъектное исследование на 15 аспирантах CS в незнакомой кодовой базе: «Despite significant performance improvements with Copilot, participants showed no corresponding improvement in overall comprehension (p=0.59), and performance gains were not significantly associated with comprehension gains». Участники с лучшим пониманием чаще работали циклами проверки: «write-then-view transitions 4.7 times more often» (p=0.001). Вывод авторов: успех задачи не показывает понимание кода; важно, как человек взаимодействует с кодом ИИ; нужны средства, поддерживающие «active verification».
 - Anthropic, «How AI assistance impacts the formation of coding skills» ✔ (читал помощник, [страница](https://www.anthropic.com/research/AI-assistance-coding-skills)): рандомизированный эксперимент на 52 в основном младших инженерах, изучавших Python-библиотеку Trio; группа с ИИ примерно на две минуты быстрее («although the difference was not statistically significant», ≈23 против 25 минут, p=0.391), но квиз: 50% против 67% (17 пунктов, d=0.738, p=0.01), наибольшая разница в вопросах на отладку. Это **изучение новой библиотеки**, не работа с существующим кодом; «AI use didn't guarantee a lower score»: стиль использования имел значение.
 - METR ◐ ([arXiv:2507.09089](https://arxiv.org/abs/2507.09089)): опытные разработчики на своих репозиториях с ИИ медленнее на 19%, ожидали быть быстрее; авторы предостерегают от обобщения.
-- ✔ **Число «48%» подтверждено** (исправление моей первой проверки, которая искала по сниппетам и ошибочно сочла его ненайденным). Первая версия статьи Qiao и др. ([arXiv:2511.02922v1](https://arxiv.org/abs/2511.02922v1), 18 аспирантов CS, незнакомая кодовая база): «participants took 48.2% less time on average to complete Task 1 with Copilot (M=678.9 seconds, SD=477.9) than without it (M=1311.6 seconds, SD=468.3)», Wilcoxon p=0.001, r=0.844. Infralovers ✔ пересказывает это как «roughly 48%». **Вес данных низкий** (замечание владельца, W06): 18 участников из 44 записанных на один онлайн-курс одного университета (все авторы из Oregon State University), 26 согласились и 8 исключены, задания входили в обязательное домашнее задание, препринт; оценка в `docs/factory/evidence-register.md`. Оговорки: это время одной задачи (Task 1) у магистрантов, не продуктивность команд; поздние версии статьи (v2, v3 «Faster but Not Wiser», 15 участников) пересмотрены, и в их аннотации процент не приведён.
+- ✔ **Число «48%» подтверждено** (исправление моей первой проверки, которая искала по сниппетам и ошибочно сочла его ненайденным). Первая версия статьи Qiao и др. ([arXiv:2511.02922v1](https://arxiv.org/abs/2511.02922v1), 18 аспирантов CS, незнакомая кодовая база): «participants took 48.2% less time on average to complete Task 1 with Copilot (M=678.9 seconds, SD=477.9) than without it (M=1311.6 seconds, SD=468.3)», Wilcoxon p=0.001, r=0.844. Infralovers ✔ пересказывает это как «roughly 48%». **Вес данных низкий** (замечание владельца, `weak-sample-48-percent`): 18 участников из 44 записанных на один онлайн-курс одного университета (все авторы из Oregon State University), 26 согласились и 8 исключены, задания входили в обязательное домашнее задание, препринт; оценка в `docs/factory/evidence-register.md`. Оговорки: это время одной задачи (Task 1) у магистрантов, не продуктивность команд; поздние версии статьи (v2, v3 «Faster but Not Wiser», 15 участников) пересмотрены, и в их аннотации процент не приведён.
 
 **Что делать [синтез].** Понимание не возникает как побочный эффект работы агента, его надо «заказывать» и проверять: предсказать до просмотра, пусть агент проверяет вас, ревью архитектурного диффа, малые изменения, периодический ручной разбор сбоя, самопроверка («объясни случайный кусок без подсказок»). Практическая рамка владельца: для каждой области определить, на какие вопросы он отвечает за минуту, а на какие за час; ядро держать на уровне 3, периферию на 4.
 
-**Ревью и «человек не нужен».** StrongDM: «Code must not be reviewed by humans» ✔; Уиллисон считает это самым интересным и спорным пунктом ✔. Для критичных областей (деньги, безопасность, данные, необратимые операции) диалог предлагал оставить чтение кода, [синтез]. Из исследований: ревью намерения остаётся, пока оракул нельзя получить без человека (Barr и др., цитата в T5).
+**Ревью и «человек не нужен».** StrongDM: «Code must not be reviewed by humans» ✔; Уиллисон считает это самым интересным и спорным пунктом ✔. Для критичных областей (деньги, безопасность, данные, необратимые операции) диалог предлагал оставить чтение кода, [синтез]. Из исследований: ревью намерения остаётся, пока оракул нельзя получить без человека (Barr и др., цитата в `holdout-oracle-independence`).
 
 
 ---
 
-# T10. Правило → проверка; как сделать ошибки дешёвыми
+# `rules-to-checks-cheap-failure`. Правило → проверка; как сделать ошибки дешёвыми
 
-## M38 (source 03, L1889)
+<a id="type-rule-to-linter"></a>
+
+## `type-rule-to-linter` (owner-dialog, line 1889)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -888,7 +960,9 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Правило «тип этого поля нельзя заменить на беззнаковый не кратный 16 битам» превращается в проверку **при компиляции** рядом с объявлением, линтер остаётся дополнением. Примеры диалога скомпилированы заново (gcc 13.3 и clang 18 с `-std=c11`, rustc 1.97, go 1.24.7): разрешённые типы собираются, `uint8_t`/`u8`/`uint8` отвергаются; тексты ошибок в агрегированном ответе. Найденные недостатки примеров там же.
 
-## M40 (source 03, L1974)
+<a id="cheap-failure-too-good"></a>
+
+## `cheap-failure-too-good` (owner-dialog, line 1974)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -902,17 +976,17 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Вы правы, «дёшево» без механизмов было общими словами. Диалог свёл это к формуле: цена незнания = частота ошибок × время до обнаружения × время до восстановления × ущерб в единицу времени, и к конкретным механизмам AWS; я перепроверил их по документации AWS (результаты и **исправления** в агрегированном ответе). До нуля это не сводится: остаются тихая порча в допустимых границах, медленные деградации, утечки безопасности, юридические последствия.
 
-**См. также (вопросы рабочей сессии):** [W10](05-workshop-answers.md#w10)
+**См. также (вопросы рабочей сессии):** [`reality-as-judge`](owner-session-answers.md#reality-as-judge)
 
-### Aggregated answer, thread T10
+### Aggregated answer, thread `rules-to-checks-cheap-failure`
 
 **Правило про тип: что компилируется (проверено запуском помощником).** Фикстуры лежали в scratchpad сессии, чужой код не запускался.
 - C (gcc 13.3 и clang 18, `-std=c11`): `uint32_t len` собирается; `uint8_t len` падает: `error: static assertion failed: "unsigned type must be a multiple of 16 bits"`.
 - Rust: `type LenT = u32` собирается; с `u8`: `error[E0277]: the trait bound 'u8: AllowedWidth' is not satisfied`.
 - Go: `type LenT = uint32` собирается; с `uint8`: `LenT does not satisfy allowed (LenT missing in ~uint16 | ~uint32 | ~uint64 | ~int8 | ~int16 | ~int32 | ~int64)`.
-- Недостатки примеров диалога ✖: (1) Rust-трейт перечисляет только `u16/u32/u64`, то есть **отвергает знаковые типы**, вопреки заявленной политике («знаковые можно»); (2) Go-констрейнт не включает `int`/`uint`; (3) `type X = T` в Rust и Go это псевдоним, поэтому проверка работает только если стоит в месте объявления/использования каждой переменной или поля; функция `check<T>()`, которую никто не вызывает, ничего не обеспечивает; (4) C-макрос: `bool` и `unsigned char` отвергаются, простой `char` проходит на x86 и падает с `-funsigned-char`, указатели и `unsigned __int128` проходят, enum проходит, для bit-field `typeof` невозможен, `__typeof__` расширение GNU (в C23 переносимый `typeof`). Диалог писал «проверил компиляцией»: это подтвердилось в части «принимает/отвергает».
+- Недостатки примеров диалога ✖: (1) Rust-трейт перечисляет только `u16/u32/u64`, то есть **отвергает знаковые типы**, вопреки заявленной политике («знаковые можно»); (2) Go-констрейнт не включает `int`/`uint`; (3) `type X = T` в Rust и Go это псевдоним, поэтому проверка работает только если стоит в месте объявления/использования каждой переменной или поля; функция `check<T>()`, которую никто не вызывает, ничего не обеспечивает; (4) C-макрос: `bool` и `unsigned char` отвергаются, простой `char` проходит на x86 и падает с `-funsigned-char`, указатели и `unsigned __int128` проходят, enum проходит, для bit-field `typeof` невозможен, `__typeof__` расширение GNU (в @@`dreaming`@@ переносимый `typeof`). Диалог писал «проверил компиляцией»: это подтвердилось в части «принимает/отвергает».
 - Линтеры (документация не открывалась) ◐: clang-tidy выражает правило только как собственную проверку на AST; Semgrep и ast-grep синтаксические, не раскрывают typedef и ширину; Clippy `disallowed_types` запрещает тип по пути (бьёт и по легитимным байтовым буферам).
-- Фикстуры «собирается / должна падать» в CI, чтобы заметить молчаливую поломку проверки: [синтез] диалога; тот же приём в публичных фабриках («checks that can fail», см. `docs/factory/research/02-factory-kits-code-reading.md`, factory-setup).
+- Фикстуры «собирается / должна падать» в CI, чтобы заметить молчаливую поломку проверки: [синтез] диалога; тот же приём в публичных фабриках («checks that can fail», см. `docs/factory/research/factory-kits-code-reading.md`, factory-setup).
 
 **Механизмы «дёшево ошибаться» в AWS: проверка по документации** ✔ (страницы AWS прочитал помощник; цитаты дословные):
 - **Lambda, постепенный выкат.** SAM `DeploymentPreference` (например `Canary10Percent10Minutes`) через CodeDeploy и алиасы: «Automatically rolls back the deployment if CloudWatch alarms are triggered» ([SAM docs](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/automating-updates-to-serverless-apps.html)); пресеты вроде `CodeDeployDefault.LambdaCanary10Percent5Minutes` ([CodeDeploy](https://docs.aws.amazon.com/codedeploy/latest/userguide/deployment-configurations.html)). Подтверждено.
@@ -925,16 +999,18 @@ Holdout-сценарии это приёмочные проверки, кото�
 - **SCP и границы прав.** SCP «offer central control over the maximum available permissions for the IAM users and IAM roles in your organization»; не действуют, например, на management account ([docs](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html)); permissions boundary разрешает только пересечение политик ([docs](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html)). Запрет удаления всем, кроме роли пайплайна, осуществим (Deny с условием по ARN роли), готового рецепта на странице не нашёл ◐.
 - **Расход.** Reserved concurrency Lambda ограничивает конкурентность (как нижняя и верхняя граница) ([docs](https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html)); Budgets Actions умеют применять IAM-политику или SCP ([docs](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-controls.html)); ✖ Budgets не останавливает Lambda/Bedrock напрямую и отстаёт от фактических трат; Cost Anomaly Detection только оповещает ([docs](https://docs.aws.amazon.com/cost-management/latest/userguide/manage-ad.html)).
 - **Повтор и восстановление.** EventBridge archive/replay ([docs](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-archive.html)); SQS DLQ redrive ([docs](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-configure-dead-letter-queue-redrive.html)); Step Functions redrive: только Standard и только выполнения за последние 14 дней, продолжает с неудачного шага с теми же входными данными ([docs](https://docs.aws.amazon.com/step-functions/latest/dg/redrive-executions.html)); Powertools idempotency ([docs](https://docs.aws.amazon.com/powertools/python/latest/utilities/idempotency/)). ✖ **Отложенные внешние эффекты:** SQS delay queue максимум **15 минут** ([docs](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-delay-queues.html)); на минуты-часы нужны Step Functions Wait state ([docs](https://docs.aws.amazon.com/step-functions/latest/dg/state-wait.html)) или EventBridge Scheduler.
-- **Бэкапы.** DynamoDB PITR: «up to 35 days of recovery points at a per second granularity» ([docs](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Point-in-time-recovery.html)); S3 Versioning ([docs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Versioning.html)); AWS Backup Vault Lock ([docs](https://docs.aws.amazon.com/aws-backup/latest/devguide/vault-lock.html)) и копирование между аккаунтами ([docs](https://docs.aws.amazon.com/aws-backup/latest/devguide/create-cross-account-backup.html)) это **отдельные** функции. Страницу про снимки RDS не открывал ◐. Урок PocketOS (бэкапы на том же томе) и Grigorev (снимки удалены вместе с базой) см. T12.
+- **Бэкапы.** DynamoDB PITR: «up to 35 days of recovery points at a per second granularity» ([docs](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Point-in-time-recovery.html)); S3 Versioning ([docs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Versioning.html)); AWS Backup Vault Lock ([docs](https://docs.aws.amazon.com/aws-backup/latest/devguide/vault-lock.html)) и копирование между аккаунтами ([docs](https://docs.aws.amazon.com/aws-backup/latest/devguide/create-cross-account-backup.html)) это **отдельные** функции. Страницу про снимки RDS не открывал ◐. Урок PocketOS (бэкапы на том же томе) и Grigorev (снимки удалены вместе с базой) см. `postmortems-and-incidents`.
 - **Диалог** предлагал порядок внедрения (защита состояния, алармы на бизнес-инварианты и синтетические прогоны, канареечный выкат, проверка восстановления, идемпотентность, отложенные эффекты, изоляция агентов); сама последовательность это [синтез].
 - Главное, что остаётся незакрытым (то же, что в диалоге): тихая порча данных в допустимых границах, медленные деградации, безопасность и юридические последствия.
 
 
 ---
 
-# T11. Pre-mortem и явные допущения
+# `premortem-and-assumptions`. Pre-mortem и явные допущения
 
-## M41 (source 03, L2079)
+<a id="yes-walk-real-flow"></a>
+
+## `yes-walk-real-flow` (owner-dialog, line 2079)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -948,7 +1024,9 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 «Да ъ» это согласие пройти по списку «что уже есть, чего не хватает» на одном вашем реальном потоке. Ответ Claude перед этим просил выбрать поток и описать его (что делает, какие данные читает и пишет, какие внешние вызовы делает). Это остаётся не сделанным: см. задачу `tasks/factory/289-walk-through-real-flow.md`.
 
-## M42 (source 03, L2087)
+<a id="remember-pre-mortem"></a>
+
+## `remember-pre-mortem` (owner-dialog, line 2087)
 
 **Owner's question:**
 
@@ -956,11 +1034,13 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 **Answer to this question:**
 
-Мысль сохранена (D4): pre-mortem «представь, что это провалилось, почему?» Подтверждено: Gary Klein, «Performing a Project Premortem», Harvard Business Review, 2007-09 ◐; основа Mitchell, Russo и Pennington (1989) о «prospective hindsight». ✖ Оговорка к «30%»: это прирост числа найденных причин, а не качества (по обзору Колинза, сниппет) ◐.
+Мысль сохранена (`remember-pre-mortem`): pre-mortem «представь, что это провалилось, почему?» Подтверждено: Gary Klein, «Performing a Project Premortem», Harvard Business Review, 2007-09 ◐; основа Mitchell, Russo и Pennington (1989) о «prospective hindsight». ✖ Оговорка к «30%»: это прирост числа найденных причин, а не качества (по обзору Колинза, сниппет) ◐.
 
-**См. также (вопросы рабочей сессии):** [W03](05-workshop-answers.md#w03)
+**См. также (вопросы рабочей сессии):** [`outbox-explained`](owner-session-answers.md#outbox-explained)
 
-## M43 (source 03, L2103)
+<a id="remember-assumptions-list"></a>
+
+## `remember-assumptions-list` (owner-dialog, line 2103)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -972,24 +1052,26 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 **Answer to this question:**
 
-Мысль сохранена (D5): перед действием агент записывает допущения, неизвестное и возможные пропуски. Первоисточника у приёма нет ◐ [синтез]; сообщество публикует «premortem skills» для Claude Code, официального руководства Anthropic по этому не нашёл. Важный довод против опоры только на инструкцию: в PocketOS правила запрещали угадывать, агент признал, что «guessed instead of verifying» ✔; значит список допущений должен быть обязательным элементом, который проверяется (например, раздел плана, который проверяет скрипт), а не просьбой в промпте [синтез].
+Мысль сохранена (`remember-assumptions-list`): перед действием агент записывает допущения, неизвестное и возможные пропуски. Первоисточника у приёма нет ◐ [синтез]; сообщество публикует «premortem skills» для Claude Code, официального руководства Anthropic по этому не нашёл. Важный довод против опоры только на инструкцию: в PocketOS правила запрещали угадывать, агент признал, что «guessed instead of verifying» ✔; значит список допущений должен быть обязательным элементом, который проверяется (например, раздел плана, который проверяет скрипт), а не просьбой в промпте [синтез].
 
-**См. также (вопросы рабочей сессии):** [W03](05-workshop-answers.md#w03), [W09](05-workshop-answers.md#w09)
+**См. также (вопросы рабочей сессии):** [`outbox-explained`](owner-session-answers.md#outbox-explained), [`ask-dont-assume-rule`](owner-session-answers.md#ask-dont-assume-rule)
 
-### Aggregated answer, thread T11
+### Aggregated answer, thread `premortem-and-assumptions`
 
 **Pre-mortem.** Gary Klein, «Performing a Project Premortem», HBR 85(9), сентябрь 2007, с. 18–19 ◐ ([копия PDF](https://wiki.duraspace.org/download/attachments/104563925/ProjectPremortem.pdf)). Основа: Mitchell, Russo, Pennington (1989, Journal of Behavioral Decision Making) о «prospective hindsight»: HBR приводит прирост «ability to correctly identify reasons for future outcomes by 30%». ✖ Обзор Collins: исследование 1989 года измеряло число названных причин (около 30% больше), а не их качество ◐. Поддержку Канемана не проверял. Для ИИ-агентов найдены только сообщественные навыки Claude Code («assume it already failed... work backward»), официального руководства Anthropic нет ◐.
 
 **Допущения и пробелы.** В «Effective context engineering» ✔ ([Anthropic](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)) говорится о заметках вне окна контекста и сжатии с сохранением нерешённых проблем; про «явное перечисление допущений» нет ничего. Пример, почему этого недостаточно в виде просьбы: PocketOS ✔ ([Decrypt](https://decrypt.co/365897/ai-agent-deletes-startup-database-9-seconds-founder-says)): агент признал нарушение правил, цитируя запрет «NEVER FUCKING GUESS!» (по скриншотам основателя), и написал, что «guessed that deleting a staging volume via the API would be scoped to staging only. I didn't verify». То есть явное правило без проверки исполнения не удержало. Предложение [синтез]: допущения и pre-mortem ввести как обязательный раздел плана и отчёта, наличие которого проверяет скрипт.
 
-**Следующий шаг.** Реальный поток для разбора (вопрос M41) остаётся ожидаемым ответом владельца: `tasks/factory/289-walk-through-real-flow.md`.
+**Следующий шаг.** Реальный поток для разбора (вопрос `yes-walk-real-flow`) остаётся ожидаемым ответом владельца: `tasks/factory/289-walk-through-real-flow.md`.
 
 
 ---
 
-# T12. Некрологи и постмортемы: опыт ИИ-агентов на легаси и в проде
+# `postmortems-and-incidents`. Некрологи и постмортемы: опыт ИИ-агентов на легаси и в проде
 
-## M35 (source 03, L1720)
+<a id="obituary-or-postmortem"></a>
+
+## `obituary-or-postmortem` (owner-dialog, line 1720)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -1003,11 +1085,11 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Это скорее постмортем, чем некролог, но источники разного качества. Найденное по существу и степень подтверждения: исследование миграции VB6 ✔, исследование «One Developer» ✔, PocketOS ✔ (рассказ основателя, оспаривается Railway), статья Григорьева (Claude Code + Terraform) ✔ (первичный текст), Replit и Kiro ◐, история про Django-монолит: источник найден (Daniel Pupius через Infralovers) ✔, первичный текст не читал. Список, оценка надёжности и что стоит прочитать в оригинале: в агрегированном ответе.
 
-### Aggregated answer, thread T12
+### Aggregated answer, thread `postmortems-and-incidents`
 
 **Прочитано в первоисточнике** ✔.
-- **Alves, Politowski, Montandon, «Legacy System Modernization with Coding Agents: A Case Study»** ([arXiv:2608.28972](https://arxiv.org/abs/2608.28972), 2026-08-29). Подробности в T4: 12 функций VB6-ERP, 331 инструкция, 100 не перенесены, 42 пропущенных соседних модуля, пример с проверкой существования записи, итог $50.29.
-- **«One Developer Is All You Need»** ([arXiv:2605.18461](https://arxiv.org/abs/2605.18461)). T4.
+- **Alves, Politowski, Montandon, «Legacy System Modernization with Coding Agents: A Case Study»** ([arXiv:2608.28972](https://arxiv.org/abs/2608.28972), 2026-08-29). Подробности в `your-context-and-scale`: 12 функций VB6-ERP, 331 инструкция, 100 не перенесены, 42 пропущенных соседних модуля, пример с проверкой существования записи, итог $50.29.
+- **«One Developer Is All You Need»** ([arXiv:2605.18461](https://arxiv.org/abs/2605.18461)). `your-context-and-scale`.
 - **Alexey Grigorev, «How I Dropped Our Production Database and Now Pay 10% More for AWS»** ([Substack](https://alexeyondata.substack.com/p/how-i-dropped-our-production-database)): первоисточник, текст автора. Хронология: Terraform на новом компьютере не знал о существующей инфраструктуре (файл состояния остался на старом); агент создал дубликаты, автор отменил apply, затем перенёс архив с файлом состояния; агент **распаковал архив и заменил текущий state-файл старым**, который описывал продакшен платформы курсов DataTalks.Club, и выполнил `terraform destroy` («I cannot do it. I will do a terraform destroy...»); удалены база данных, VPC, ECS-кластер, балансировщики и bastion; **автоматические снимки удалены тоже**; в хронологии указан «Terraform auto-approve command»; восстановление заняло около 24 часов с помощью AWS Support (платный Business Support, +10%). Меры: защита от удаления, резервная Lambda и бэкапы в S3, state в S3. Заявленный объём данных: 2.5 года.
 - **PocketOS** (Jer Crane, пост в X от 2026-04-26): первичный пост не читал, прочитан репортаж ✔ ([Decrypt](https://decrypt.co/365897/ai-agent-deletes-startup-database-9-seconds-founder-says)). По словам основателя: агент Cursor с Claude Opus 4.6 на рутинной задаче в staging при несовпадении учётных данных попытался «исправить» это удалением тома Railway одним вызовом GraphQL API; ушло 9 секунд; удалены и бэкапы уровня тома; последний восстановимый бэкап был трёхмесячной давности. Позиция Railway (основатель Jake Cooper, Decrypt): «rogue customer AI», использовавший «fully permissioned API token» для вызова устаревшего эндпоинта без «delayed delete»; эндпоинт исправлен, данные восстановлены («30 minutes after I connected with Jer»), причина долгой задержки внутренний сбой поддержки. Crane говорит, что значимые пробелы данных остаются и что он нанял юриста. ✖ Диалог писал «последняя внешняя копия трёхмесячной давности» и «токен с широкими правами лежал в файле, доступном агенту»: первое слово «внешняя» в Decrypt не найдено, второе по другим репортажам ([Fast Company](https://www.fastcompany.com/91533544/cursor-claude-ai-agent-deleted-software-company-pocket-os-database-jer-crane), [Inc.](https://www.inc.com/chloe-aiello/this-founder-watched-an-ai-agent-destroy-3-months-of-company-data-it-took-9-seconds/91337276)) ◐; детали рассказа принадлежат основателю и оспариваются.
 - **История про 8-летний Django-монолит:** найден источник текста ✔: Infralovers называет автором наблюдения **Daniel Pupius (The General Partnership)**: «a team tried Claude on an eight-year-old Django monolith — the agent produced patches that looked clean but silently broke integrations with external services. The team put the experiment on hold» ([Infralovers](https://www.infralovers.com/blog/2026-02-22-architektur-patterns-dark-factory/)). Это пересказ анекдота, первичный текст Pupius не читал.
@@ -1023,9 +1105,11 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 ---
 
-# T13. Как доказать качество проверок и переносимость пилота
+# `proving-checks-and-pilots`. Как доказать качество проверок и переносимость пилота
 
-## M26 (source 03, L1303)
+<a id="mutation-testing-as-proof"></a>
+
+## `mutation-testing-as-proof` (owner-dialog, line 1303)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -1039,9 +1123,11 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Да, это ручное мутационное тестирование, и одна внесённая ошибка ничего не доказывает (демонстрация, не доказательство). Доказательство даёт систематический инструмент плюс независимость: автоматические мутации по модулям, реальные баги из истории, итог в числах по областям. Подробности ниже.
 
-**См. также (вопросы рабочей сессии):** [W10](05-workshop-answers.md#w10)
+**См. также (вопросы рабочей сессии):** [`reality-as-judge`](owner-session-answers.md#reality-as-judge)
 
-## M27 (source 03, L1346)
+<a id="pilot-not-transferable"></a>
+
+## `pilot-not-transferable` (owner-dialog, line 1346)
 
 **Original text the owner refers to (Quote, 1 line):**
 
@@ -1055,9 +1141,9 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Верно: перенос результата пилота не гарантирован. Единственное рандомизированное исследование на опытных разработчиках (METR, 2025) показало замедление на 19% при том, что сами участники ожидали ускорения, и авторы предостерегают от обобщения. Что делать: формулировать вывод узко, выписывать условия, брать контрольную группу, каждый следующий класс задач запускать как новый пилот [синтез].
 
-**См. также (вопросы рабочей сессии):** [W06](05-workshop-answers.md#w06)
+**См. также (вопросы рабочей сессии):** [`weak-sample-48-percent`](owner-session-answers.md#weak-sample-48-percent)
 
-### Aggregated answer, thread T13
+### Aggregated answer, thread `proving-checks-and-pilots`
 
 **Мутационное тестирование.** Инструменты: PIT (Java), Stryker (JS/TS и .NET), mutmut (Python), cargo-mutants (Rust), go-mutesting (Go): существование PIT и Stryker подтверждено результатами поиска ◐, остальные не проверялись ◐. Метрика: доля «убитых» мутантов; эквивалентные мутанты дают шум (общеизвестно, цитаты нет) ◐.
 - На больших кодовых базах: Petrović и Ivanković, «State of Mutation Testing at Google», ICSE-SEIP 2018 ◐ ([Google Research](https://research.google/pubs/state-of-mutation-testing-at-google/)): классический мутационный анализ слишком дорог в масштабе, поэтому применяют к изменениям (diff), а не ко всей кодовой базе; применялось примерно к 30% диффов (70 000+ диффов, 1.1 млн мутантов, 150 000 находок), полезность показанных находок выросла с 20% до 80%. Продолжение: «Practical Mutation Testing at Scale», TSE 2021 (arXiv:2102.11378) ◐.

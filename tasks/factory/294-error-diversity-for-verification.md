@@ -9,9 +9,9 @@ created: 2026-11-17
 # Plan an experiment: error diversity and independence of verification
 
 ## Description
-Owner (W08, W14.2): copies of one model fail alike; how to make even one model err differently, and what minimum of independence the definition requires. The state of knowledge is in `docs/factory/concepts/error-diversity.md` and `knight-leveson.md`: changing the model dominates, changing the prompt barely helps, ensembles realize 0.43-0.44 (different models) and under 0.3 (one model) of the independence gain, the specification is a source of common failures. Missing: a comparison of personas of one model against different models on code tasks, and any measurement of independence in this factory's own verification.
+Owner (`one-model-errs-differently`, `independence-wording`): copies of one model fail alike; how to make even one model err differently, and what minimum of independence the definition requires. The state of knowledge is in `docs/factory/concepts/error-diversity.md` and `knight-leveson.md`: changing the model dominates, changing the prompt barely helps, ensembles realize 0.43-0.44 (different models) and under 0.3 (one model) of the independence gain, the specification is a source of common failures. Missing: a comparison of personas of one model against different models on code tasks, and any measurement of independence in this factory's own verification.
 
-Depends on: the owner's choice of the wording (A, B or C) of independence in `definition.md` (OT04); access to more than one model family is a question for the owner (P6).
+Depends on: the owner's choice of the wording (A, B or C) of independence in `definition.md` (`independence-wording`); access to more than one model family is a question for the owner (`ask-dont-assume`).
 Environment: any with the model access the owner allows.
 
 ## Acceptance criteria
@@ -31,4 +31,4 @@ Environment: any with the model access the owner allows.
 ## Comments
 
 ### 2026-11-17, planner-session
-Created from W08 and W14.2; not started.
+Created from `one-model-errs-differently` and `independence-wording`; not started.

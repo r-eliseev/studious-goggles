@@ -1,9 +1,9 @@
-# Source 03 (PRIMARY): web chat "Software factories" (claude.ai share)
+# `owner-dialog` (PRIMARY): web chat "Software factories" (claude.ai share)
 
 Type: conversation between the owner and Claude (web chat), Russian, about how software factories work. Shared link: https://claude.ai/share/3aca706b-2998-41b1-a7e4-db19c8e2b567 (not fetchable from the cloud session: Cloudflare check), so the page was saved by the owner as MHTML and the text extracted from it on 2026-11-17.
 Status: verbatim conversation text, no edits to wording. Mechanical cleanup only: the page's sidebar (titles of unrelated chats) and footer were dropped, and consecutive duplicate lines were collapsed because the page renders each message twice (visible text plus accessible copy). Markers: "You said:" = owner, "Claude responded:" = Claude. Quotes the owner selected from Claude's earlier answers appear as "Quote, 1 line". Claims inside Claude's answers cite external web sources (sonarsource, faros, getunblocked, ...); treat them as secondary, not as the owner's decisions. The owner's own remarks are the primary signal.
 Language note: the chat is in Russian; the repository convention is English, so this raw file is an exception (verbatim source).
-Derived notes: `docs/factory/notes/03-web-chat-software-factories.md`.
+Derived notes: `docs/factory/notes/owner-dialog.md`.
 
 ---
 

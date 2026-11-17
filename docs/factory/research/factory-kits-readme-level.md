@@ -1,6 +1,6 @@
-# Research 01: public "software factory" skills and kits
+# Public "software factory" skills and kits
 
-Date: 2026-11-17. Answers Q8 from `docs/factory/notes/01-tsf-lesson-2.md` (the TSF skill itself was not found; these are public analogues of the pattern "one skill / one command installs a factory into a repository").
+Date: 2026-11-17. Answers `tsf-skill` from `docs/factory/notes/tsf-lesson.md` (the TSF skill itself was not found; these are public analogues of the pattern "one skill / one command installs a factory into a repository").
 Method: GitHub repository pages were read through a page-to-text tool; only what the page/README states is reported (no source code was read, no installs were run). "Page does not show" means exactly that, not that the thing is absent. Star counts and activity are as of the fetch.
 
 ## Comparison
@@ -14,7 +14,7 @@ Method: GitHub repository pages were read through a page-to-text tool; only what
 | [juan-campuzano/minifactory](https://github.com/juan-campuzano/minifactory) | Python package: engine + CLI + YAML workflows + plugins | `minifactory run`, per-run state files | declarative workflow engine | PRs for existing repos; asks before running | MIT |
 | [geut/factory-skills](https://github.com/geut/factory-skills) | Pi package: TypeScript controller + 4 skills | `/factory` command, HTTP server, SQLite | TypeScript controller ("skills describe specialist behavior only") | human merges, then `/factory complete` | not shown |
 
-None is confirmed to be the TSF skill from source 01. TSF was not mentioned on any of these pages.
+None is confirmed to be the TSF skill from `tsf-lesson`. TSF was not mentioned on any of these pages.
 
 ## Per repository
 
@@ -42,7 +42,7 @@ None is confirmed to be the TSF skill from source 01. TSF was not mentioned on a
 - **What it is:** a Claude Code skill that "installs, repairs and upgrades the software factory in any git repo you start `claude` in". README says `payload/` is derived from ZazenCodes' `software-factory-claude-code-v2` (that repo was not found, see "Unresolved").
 - **Components:** `SKILL.md` (mode selection, rules); `INSTALL.md` (judgment-heavy procedure per mode); `scripts/factory_setup.py` (stdlib-only deterministic work: preflight, copy, manifest, gitignore, AGENTS.md section, labels, `config get|set`, check detection, sabotage verification, upgrade classification); `payload/` (generic factory files); `templates/` (per-stack `checks.sh`, AGENTS.md section); `tests/smoke.sh`; `VERSION`.
 - **How it works:** `/factory-setup` runs init if nothing is installed, else upgrade; modes `init`, `checks` (re-derive `factory/checks.sh` and verify it can actually fail), `upgrade`. The payload is copied verbatim; `VERSION` and a manifest of file hashes are stamped into the target so `upgrade` can tell untouched files from tailored ones. Runtime stays in the target repo (`factory/bin/*`, a builder hook at `$CLAUDE_PROJECT_DIR/factory/bin/gate`). `labels` and `upgrade-apply` are dry runs until `--yes`. "This skill only plants and maintains it."
-- **Notable for us:** the closest to the "init / configure" idea in source 01 (separate installer, manifest-based upgrade, check that the check can fail).
+- **Notable for us:** the closest to the "init / configure" idea in `tsf-lesson` (separate installer, manifest-based upgrade, check that the check can fail).
 
 ### PaddyMc/software-factory
 - **Link:** https://github.com/PaddyMc/software-factory (50 commits, 14 open PRs at fetch time)
@@ -77,6 +77,6 @@ None is confirmed to be the TSF skill from source 01. TSF was not mentioned on a
 
 ## Unresolved
 
-- ZazenCodes' `software-factory-claude-code-v2`: **resolved by the code reading** (`02-factory-kits-code-reading.md`, section 2): per factory-setup's `NOTICE` it is the folder `src/software-factory-claude-code-v2` in `https://github.com/zazencodes/zazencodes-season-3`, commit `5fc7c983f44d623057ef65361f25cf23cab2abef`, GPLv3. A SkillsMP page lists a ZazenCodes `/factory` skill (`/factory <feature>`, `next`, `approve <job-id>`, `rework <job-id> <note>`); that host was not reachable.
-- Relation of "Tiny Software Factories" (source 01) to SSSF: both are "factory as a skill + template", both link to IndyDevDan's material, but the SSSF page does not mention TSF. Still a hypothesis.
-- Source code is now being read: see `02-factory-kits-code-reading.md`.
+- ZazenCodes' `software-factory-claude-code-v2`: **resolved by the code reading** (`factory-kits-code-reading.md`, section 2): per factory-setup's `NOTICE` it is the folder `src/software-factory-claude-code-v2` in `https://github.com/zazencodes/zazencodes-season-3`, commit `5fc7c983f44d623057ef65361f25cf23cab2abef`, GPLv3. A SkillsMP page lists a ZazenCodes `/factory` skill (`/factory <feature>`, `next`, `approve <job-id>`, `rework <job-id> <note>`); that host was not reachable.
+- Relation of "Tiny Software Factories" (`tsf-lesson`) to SSSF: both are "factory as a skill + template", both link to IndyDevDan's material, but the SSSF page does not mention TSF. Still a hypothesis.
+- Source code is now being read: see `factory-kits-code-reading.md`.

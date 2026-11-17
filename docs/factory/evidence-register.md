@@ -1,6 +1,6 @@
 # Evidence register: empirical sources used in the concept
 
-Created after the owner's remark (W06) that a sample of 18, probably from one university, is weak data. Rule (P3 extended): every empirical claim carries its sample, population, venue, independence and a **grade**: **strong** (replicated or large, peer-reviewed, relevant population), **moderate**, **weak** (small, convenience sample, preprint, single site), **anecdote** (no method shown). The grade is ours and is a judgement; it says how much weight a design decision may put on the claim. Weak and anecdotal items are kept (principle P1) but must not carry a design decision alone.
+Created after the owner's remark (`weak-sample-48-percent`) that a sample of 18, probably from one university, is weak data. Rule (`verification-labels-and-evidence` extended): every empirical claim carries its sample, population, venue, independence and a **grade**: **strong** (replicated or large, peer-reviewed, relevant population), **moderate**, **weak** (small, convenience sample, preprint, single site), **anecdote** (no method shown). The grade is ours and is a judgement; it says how much weight a design decision may put on the claim. Weak and anecdotal items are kept (principle `document-everything`) but must not carry a design decision alone.
 
 | Source | What was measured | n and population | Venue and status | Caveats | Grade |
 |---|---|---|---|---|---|

@@ -1,14 +1,14 @@
-# Source 05: the owner's questions in the working session (verbatim)
+# `owner-session-questions`: the owner's questions in the working session (verbatim)
 
 Type: the owner's messages in the Claude Code working session (not the web chat), with the passages from Claude's earlier replies that the owner attached (blockquotes, as pasted). Language: Russian, verbatim. Date: 2026-11-17.
-Status: verbatim; new questions are appended here as they come (IDs W01, W02, ...). Answers: `docs/factory/qa/05-workshop-answers.md`. The questions of the web chat (source 03) are in `03a-owner-questions.md` (IDs M01-M43).
-Method agreed with the owner on 2026-11-17 (W05): as we move on, every question is recorded here, answered with data from the dialog and new research, **cross-linked with the other questions**, and everything stays in the repository.
+Status: verbatim; new questions are appended here as they come (IDs `vs-classical-delegation`, `human-points-in-the-loop`, ...). Answers: `docs/factory/qa/owner-session-answers.md`. The questions of the web chat (`owner-dialog`) are in `owner-dialog-questions.md` (IDs all 43 questions of the owner-dialog).
+Method agreed with the owner on 2026-11-17 (`definition-and-method`): as we move on, every question is recorded here, answered with data from the dialog and new research, **cross-linked with the other questions**, and everything stays in the repository.
 
 ---
 
-## W01
+## `vs-classical-delegation`
 
-**Attached passage (from Claude's reply on M01):**
+**Attached passage (from Claude's reply on `how-factories-work`):**
 
 > Под этим сейчас обычно понимают повторяемую систему поставки: агенты выполняют координированную работу, а человек задаёт намерение, ограничения, критерии приёмки и правила одобрения
 
@@ -16,27 +16,27 @@ Method agreed with the owner on 2026-11-17 (W05): as we move on, every question 
 
 > чем это отличается от клаической схемы, где топы задают намериние, а простоые исполнители приводят его в действие?
 
-## W02
+## `human-points-in-the-loop`
 
 **Attached passage:**
 
-> Процесс (Warp, источник 02): идея → triage → спека → реализация → ревью (агент, затем человек) → проверка → выпуск → мониторинг → обратно в идеи. Человек вмешивается на трёх точках.
+> Процесс (Warp, `warp-talk`): идея → triage → спека → реализация → ревью (агент, затем человек) → проверка → выпуск → мониторинг → обратно в идеи. Человек вмешивается на трёх точках.
 
 **Owner:**
 
 > видно только одну точку. 2 остальных где-то в районе идей? почему агенты не могут их генерировать?
 
-## W03
+## `outbox-explained`
 
 **Attached passage:**
 
-> Исполнение (Anthropic, источник 04 ✔): агент «не всегда включён», он спит и просыпается на run по событию. Вокруг цикла пять примитивов: inbox событий, таймеры, память, права, outbox.
+> Исполнение (Anthropic, `always-on-agents` ✔): агент «не всегда включён», он спит и просыпается на run по событию. Вокруг цикла пять примитивов: inbox событий, таймеры, память, права, outbox.
 
 **Owner:**
 
 > понятно почти все кроме аутбокса. что это?
 
-## W04
+## `same-question-for-human-orgs`
 
 **Attached passage:**
 
@@ -46,11 +46,11 @@ Method agreed with the owner on 2026-11-17 (W05): as we move on, every question 
 
 > это похоже на вопрос в целом, как понять что сисетма должна делать и как убедиться что она делает именно это. вопросы справедливы и для организый только из людей без ИИ
 
-## W05
+## `definition-and-method`
 
 **Attached passage:**
 
-> Вопрос к тебе по M01: определение тебя устраивает?
+> Вопрос к тебе по `how-factories-work`: определение тебя устраивает?
 
 **Owner:**
 
@@ -58,7 +58,7 @@ Method agreed with the owner on 2026-11-17 (W05): as we move on, every question 
 
 ---
 
-## W06
+## `weak-sample-48-percent`
 
 **Attached passage (from Claude's correction of the 48% finding):**
 
@@ -68,7 +68,7 @@ Method agreed with the owner on 2026-11-17 (W05): as we move on, every question 
 
 > я не до конца понимаю о чем речь, но пусть будет. 18 кажется вообще не репрезентативной выборкой. они скорее всего еще и с одного универа. это такие себе данные
 
-## W07
+## `mission-command-thread`
 
 **Attached passage:**
 
@@ -78,7 +78,7 @@ Method agreed with the owner on 2026-11-17 (W05): as we move on, every question 
 
 > ок, это интереный поворот. мы вернемся к этим концептам
 
-## W08
+## `one-model-errs-differently`
 
 **Attached passage:**
 
@@ -88,7 +88,7 @@ Method agreed with the owner on 2026-11-17 (W05): as we move on, every question 
 
 > ок, это тоже довольно важно. как заставить даже одну модель ошщибаться по разному?
 
-## W09
+## `ask-dont-assume-rule`
 
 **Attached passage:**
 
@@ -98,7 +98,7 @@ Method agreed with the owner on 2026-11-17 (W05): as we move on, every question 
 
 > не совсем то что я имел в виду ,но ок. еще одно правило, не предполагай, задавай вопросы. чем раньше тем лучше (не считая текущего флоу)
 
-## W10
+## `reality-as-judge`
 
 **Attached passage:**
 
@@ -108,17 +108,17 @@ Method agreed with the owner on 2026-11-17 (W05): as we move on, every question 
 
 > что это значит и при чем тут человек? с двумя остальными все очевидно, но тут нет
 
-## W11
+## `outbox-stays-open`
 
 **Attached passage:**
 
-> W03. Что такое outbox
+> `outbox-explained`. Что такое outbox
 
 **Owner:**
 
 > оставь этот вопрос открытым. все еще сильно расплывчато
 
-## W12
+## `goodhart-campbell-details`
 
 **Attached passage:**
 
@@ -128,7 +128,7 @@ Method agreed with the owner on 2026-11-17 (W05): as we move on, every question 
 
 > нужно больше подробностей
 
-## W13
+## `knight-leveson-details`
 
 **Attached passage:**
 
@@ -138,7 +138,7 @@ Method agreed with the owner on 2026-11-17 (W05): as we move on, every question 
 
 > тоже
 
-## W14
+## `five-open-definition-points`
 
 **Attached passage:**
 

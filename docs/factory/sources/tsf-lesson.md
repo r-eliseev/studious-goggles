@@ -1,8 +1,8 @@
-# Source 01: Tiny Software Factories, lesson 2 (transcript)
+# `tsf-lesson`: Tiny Software Factories, lesson 2 (transcript)
 
 Type: video lesson transcript, pasted by the owner on 2026-11-17.
 Status: verbatim, unedited (speech-to-text artifacts kept, e.g. "prey" = "pray", "Hughes" = ImageGen, "Chinese" = Tiny).
-Derived notes: `docs/factory/notes/01-tsf-lesson-2.md`.
+Derived notes: `docs/factory/notes/tsf-lesson.md`.
 
 ---
 

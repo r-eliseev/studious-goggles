@@ -10,10 +10,10 @@ created: 2026-11-17
 
 ## Description
 Part of the software-factory concept (`docs/factory/`). Three descriptions of "how much the human is involved" exist and have not been compared:
-- Shapiro's levels 0-5, per system or per developer, gated by "who reads the code" (source 03, L221-258; the owner is at level 3);
-- the "in / near / out of the loop" modes of the TSF lesson (source 01, claim C2; Q4 in `docs/factory/notes/01-tsf-lesson-2.md`);
-- the per-action ladder (L0-L6, called LoopRails in a web search snippet, `docs/factory/qa/01-questions-on-source-01.md`, section B): found only as a search summary, the original was not opened.
-The owner's remarks: the level belongs to a task class, service or repository, not to a person (source 03, L246, L571, L1406, L1516); today every task passes the **planner agent**, not the human, and plan approval is a standing instruction (`docs/status.md`, ADR 0033); candidate notes N1-N3 in `docs/factory/owner-notes.md`.
+- Shapiro's levels 0-5, per system or per developer, gated by "who reads the code" (`owner-dialog`, L221-258; the owner is at level 3);
+- the "in / near / out of the loop" modes of the TSF lesson (`tsf-lesson`, `loop-position`; `loop-modes` in `docs/factory/notes/tsf-lesson.md`);
+- the per-action ladder (L0-L6, called LoopRails in a web search snippet, `docs/factory/qa/tsf-lesson-questions.md`, section B): found only as a search summary, the original was not opened.
+The owner's remarks: the level belongs to a task class, service or repository, not to a person (`owner-dialog`, L246, L571, L1406, L1516); today every task passes the **planner agent**, not the human, and plan approval is a standing instruction (`docs/status.md`, ADR 0033); candidate notes `attention-metrics`-`checks-before-autonomy` in `docs/factory/owner-notes.md`.
 
 Depends on: none.
 Environment: any (reading and writing documents; web access for the LoopRails original).
