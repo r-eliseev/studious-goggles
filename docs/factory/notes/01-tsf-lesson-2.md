@@ -25,7 +25,7 @@ Source: `docs/factory/sources/01-tsf-lesson-2.md`. Each claim below is stated by
 
 ## Open questions
 
-Raised by the owner on 2026-11-17. Status of all: open (no research done yet). "Anchor" = where the source touches the question. Answers must cite sources by number; the author's marketing claims are to be separated from verifiable facts.
+Raised by the owner on 2026-11-17. Status: first-pass answers in `docs/factory/qa/01-questions-on-source-01.md` (2026-11-17); Q1, Q2, Q4, Q7 answered partially, Q3 and Q5 need independent sources, Q6 and Q8 not confirmed. "Anchor" = where the source touches the question. Answers must cite sources by number; the author's marketing claims are to be separated from verifiable facts.
 
 | # | Question | Anchor in source 01 | Expected answer |
 |---|---|---|---|
