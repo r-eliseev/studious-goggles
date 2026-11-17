@@ -607,14 +607,29 @@ public class SessionServiceTests
     }
 
     [Fact]
-    public async Task RenameAsync_Long_TruncatesToMaxLength()
+    public async Task RenameAsync_LongerThanMax_ThrowsAndKeepsTitle()
     {
         var session = ExistingSession("Old");
         _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
 
-        await _service.RenameAsync(session.Id, new string('x', 60), TestContext.Current.CancellationToken);
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.RenameAsync(session.Id, new string('x', Session.MaxTitleLength + 1), TestContext.Current.CancellationToken));
 
-        Assert.Equal(new string('x', Session.MaxTitleLength), session.Title);
+        Assert.Equal("Old", session.Title);
+        await _sessions.DidNotReceive().UpdateAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RenameAsync_ExactlyMax_IsAccepted()
+    {
+        var session = ExistingSession("Old");
+        _sessions.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        var title = new string('x', Session.MaxTitleLength);
+
+        await _service.RenameAsync(session.Id, title, TestContext.Current.CancellationToken);
+
+        Assert.Equal(title, session.Title);
+        await _sessions.Received(1).UpdateAsync(session, Arg.Any<CancellationToken>());
     }
 
     [Fact]

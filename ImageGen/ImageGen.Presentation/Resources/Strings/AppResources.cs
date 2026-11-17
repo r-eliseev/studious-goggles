@@ -55,6 +55,8 @@ public static class AppResources
 
     public static string RenameEmpty => Get(nameof(RenameEmpty));
 
+    public static string RenameTooLong => Get(nameof(RenameTooLong));
+
     public static string RunsCountOne => Get(nameof(RunsCountOne));
 
     public static string SearchSessions => Get(nameof(SearchSessions));

@@ -255,8 +255,8 @@ public sealed class SessionService(
     }
 
     /// <summary>
-    /// Renames the session. The title is trimmed and cut to <see cref="Session.MaxTitleLength"/>. The change does not move
-    /// the session up the list, so <see cref="Session.UpdatedAt"/> stays as it was.
+    /// Renames the session. The title is trimmed and must fit within <see cref="Session.MaxTitleLength"/>. The change does
+    /// not move the session up the list, so <see cref="Session.UpdatedAt"/> stays as it was.
     /// </summary>
     public async Task<Session> RenameAsync(Guid sessionId, string title, CancellationToken cancellationToken)
     {
@@ -264,7 +264,12 @@ public sealed class SessionService(
         var session = await sessions.GetAsync(sessionId, cancellationToken)
             ?? throw new InvalidOperationException($"Session {sessionId} not found.");
         var trimmed = title.Trim();
-        session.Title = trimmed.Length > Session.MaxTitleLength ? trimmed[..Session.MaxTitleLength] : trimmed;
+        if (trimmed.Length > Session.MaxTitleLength)
+        {
+            throw new ArgumentException($"Session title cannot exceed {Session.MaxTitleLength} characters.", nameof(title));
+        }
+
+        session.Title = trimmed;
         await sessions.UpdateAsync(session, cancellationToken);
         changes.Notify(sessionId);
         return session;

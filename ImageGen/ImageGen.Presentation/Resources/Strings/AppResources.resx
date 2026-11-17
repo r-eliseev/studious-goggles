@@ -75,6 +75,9 @@
   <data name="RenameEmpty" xml:space="preserve">
     <value>Enter a name for the session.</value>
   </data>
+  <data name="RenameTooLong" xml:space="preserve">
+    <value>A session name can have at most 40 characters.</value>
+  </data>
   <data name="RunsCountOne" xml:space="preserve">
     <value>1 run</value>
   </data>

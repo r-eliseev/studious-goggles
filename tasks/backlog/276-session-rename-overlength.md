@@ -1,8 +1,8 @@
 ---
 id: 276
-status: in-progress
-assignee: codex-20261117
-claimed: 2026-11-17T16:58:05Z
+status: review
+assignee:
+claimed:
 created: 2026-11-11
 ---
 
@@ -56,6 +56,13 @@ bash scripts/check.sh
 - Steps strictly in order (ub-mode); run `dotnet` commands one at a time; do not change files outside "Files"; on a mismatch with the code, stop and ask in "Comments".
 
 ## Report
+
+- `SessionService.RenameAsync` now trims and rejects titles longer than 40 characters with `ArgumentException`; automatic first-message titles still truncate as before. Added Core tests for a 41-character rejection with no update and acceptance of exactly 40 characters.
+- `SessionsPageModel` checks the trimmed title before calling the service and shows the new `RenameTooLong` resource. Added a Presentation test confirming the row remains unchanged, the specific alert is shown and no repository update occurs.
+- Added Web API coverage: PATCH with a 41-character title returns 400 `invalid_request`. Enabled the long-title SES-04 acceptance scenario and marked the catalog row done; updated S1.2 to state that empty or overlength names are rejected.
+- Verification passed: Core.Tests (857/857), Presentation.Tests (553/553), Web.Tests (22/22), Acceptance.Tests (82/82; Sessions scenarios 11/11); `dotnet format --verify-no-changes` for Core, Core.Tests, Presentation, Presentation.Tests, Web.Tests and Acceptance.Tests; `bash scripts/check.sh`.
+- The first full Acceptance.Tests run had one unrelated failure in “The monthly limit persists after restarting the app” (`Expected 42.50`, actual empty). The specific scenario passed on immediate rerun, and the full suite passed on its next run. No change was made outside task 276's plan.
+- No manual check is needed; the affected flows are covered by the Core, Presentation, Web API and acceptance tests.
 
 ## Review
 
