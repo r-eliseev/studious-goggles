@@ -325,6 +325,8 @@ with (out_dir / "process-timeline.txt").open("w", encoding="utf-8") as timeline:
         elapsed_after_diagnostics = max(0.0, time.monotonic() - launch_started)
         scheduled_seconds += 5
         while scheduled_seconds <= elapsed_after_diagnostics:
+            if scheduled_seconds == 30:
+                break
             scheduled_seconds += 5
         if elapsed_after_diagnostics >= 60:
             break
