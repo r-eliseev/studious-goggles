@@ -27,6 +27,7 @@ crash_count=0
 other_crash_count=0
 launch_pid=''
 launch_started_monotonic=''
+app_pid=''
 exited_at_seconds=null
 first_seen_at_seconds=null
 result=1
@@ -86,19 +87,20 @@ copy_app_logs() {
 }
 
 write_summary() {
-  python3 - "$out_dir/summary.json" "$runtime_name" "$device_name" "$launched" "$alive" "$crash_count" "$other_crash_count" "$first_seen_at_seconds" "$exited_at_seconds" <<'PY'
+  python3 - "$out_dir/summary.json" "$runtime_name" "$device_name" "$launched" "$alive" "$crash_count" "$other_crash_count" "$first_seen_at_seconds" "$exited_at_seconds" "$app_pid" "pid" <<'PY'
 import json
 import sys
 
-keys = ("runtime", "deviceType", "launched", "aliveAfter30s", "crashReports")
+keys = ("runtime", "deviceType", "launched", "aliveAfter30s", "crashReports", "otherCrashReports", "firstSeenAtSeconds", "exitedAtSeconds", "pid", "livenessSource")
 values = sys.argv[2:]
 summary = dict(zip(keys, values))
 summary["launched"] = summary["launched"] == "true"
 summary["aliveAfter30s"] = summary["aliveAfter30s"] == "true"
 summary["crashReports"] = int(summary["crashReports"])
-summary["otherCrashReports"] = int(sys.argv[7])
-summary["firstSeenAtSeconds"] = None if sys.argv[8] == "null" else int(sys.argv[8])
-summary["exitedAtSeconds"] = None if sys.argv[9] == "null" else int(sys.argv[9])
+summary["otherCrashReports"] = int(summary["otherCrashReports"])
+summary["firstSeenAtSeconds"] = None if summary["firstSeenAtSeconds"] == "null" else int(summary["firstSeenAtSeconds"])
+summary["exitedAtSeconds"] = None if summary["exitedAtSeconds"] == "null" else int(summary["exitedAtSeconds"])
+summary["pid"] = int(summary["pid"]) if summary["pid"].isdigit() else None
 with open(sys.argv[1], "w", encoding="utf-8") as output:
     json.dump(summary, output, indent=2)
     output.write("\n")
@@ -193,28 +195,57 @@ xcrun simctl install "$udid" "$app_path"
 launch_started_monotonic=$(python3 -c 'import time; print(time.monotonic())')
 xcrun simctl launch --console-pty "$udid" "$bundle_id" >"$out_dir/launch.log" 2>&1 &
 launch_pid=$!
-launched=true
-timeline_result=$(python3 - "$udid" "$bundle_id" "$out_dir" "$launch_started_monotonic" <<'PY'
+timeline_result=$(python3 - "$udid" "$bundle_id" "$out_dir" "$launch_started_monotonic" "$out_dir/launch.log" <<'PY'
 import datetime
 import json
 import math
 import pathlib
+import re
 import subprocess
 import sys
 import time
 
-udid, bundle_id, out_dir, launch_started = sys.argv[1:]
+udid, bundle_id, out_dir, launch_started, launch_log = sys.argv[1:]
 out_dir = pathlib.Path(out_dir)
+launch_log = pathlib.Path(launch_log)
 launch_started = float(launch_started)
+pid_pattern = re.compile(r"^" + re.escape(bundle_id) + r":\s+(\d+)\s*$")
+app_pid = None
 first_seen_at_seconds = None
 exited_at_seconds = None
-seen_running_by_30 = False
-exited_by_30 = False
-unconfirmed_probe_failure_by_30 = False
+alive_at_30_seconds = False
 screenshots = []
 
+def read_app_pid():
+    try:
+        with launch_log.open(encoding="utf-8", errors="replace") as launch_output:
+            for line in launch_output:
+                match = pid_pattern.match(line.strip())
+                if match:
+                    return int(match.group(1))
+    except OSError:
+        pass
+    return None
+
+def check_pid(pid):
+    try:
+        probe = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "pid=,stat="],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+    fields = probe.stdout.strip().split()
+    if probe.returncode != 0 or not fields or fields[0] != str(pid):
+        return False
+    return len(fields) < 2 or not fields[1].startswith("Z")
+
 with (out_dir / "process-timeline.txt").open("w", encoding="utf-8") as timeline:
-    timeline.write("elapsedSeconds\ttimestampUtc\trunning\tlaunchctlEntry\tprobeStatus\n")
+    timeline.write("elapsedSeconds\ttimestampUtc\trunning\tpid\tpidStatus\tlaunchctlEntry\tprobeStatus\n")
     scheduled_seconds = 5
     while scheduled_seconds <= 60:
         delay = launch_started + scheduled_seconds - time.monotonic()
@@ -231,6 +262,31 @@ with (out_dir / "process-timeline.txt").open("w", encoding="utf-8") as timeline:
                 ))
             except OSError:
                 pass
+
+        elapsed_seconds = max(0.0, time.monotonic() - launch_started)
+        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        observed_pid = read_app_pid()
+        if observed_pid is not None:
+            app_pid = observed_pid
+        pid_alive = check_pid(app_pid) if app_pid is not None else None
+        running = pid_alive is True
+        if app_pid is None:
+            pid_status = "not-launched"
+        elif pid_alive is True:
+            pid_status = "alive"
+        elif pid_alive is False:
+            pid_status = "not-running"
+        else:
+            pid_status = "probe-error"
+
+        if running:
+            if first_seen_at_seconds is None:
+                first_seen_at_seconds = math.ceil(elapsed_seconds)
+        elif pid_alive is False and first_seen_at_seconds is not None:
+            if exited_at_seconds is None:
+                exited_at_seconds = math.ceil(elapsed_seconds)
+        if scheduled_seconds == 30:
+            alive_at_30_seconds = running
 
         try:
             probe = subprocess.run(
@@ -260,33 +316,17 @@ with (out_dir / "process-timeline.txt").open("w", encoding="utf-8") as timeline:
             launchctl_entry = f"probe failed: {error}"
             probe_status = "error"
 
-        elapsed_seconds = max(0.0, time.monotonic() - launch_started)
-        running = probe_succeeded and bundle_id in launchctl_entry
-        if running:
-            if first_seen_at_seconds is None:
-                first_seen_at_seconds = math.ceil(elapsed_seconds)
-            if elapsed_seconds <= 30:
-                seen_running_by_30 = True
-                unconfirmed_probe_failure_by_30 = False
-        elif probe_succeeded and first_seen_at_seconds is not None:
-            if exited_at_seconds is None:
-                exited_at_seconds = math.ceil(elapsed_seconds)
-            if elapsed_seconds <= 30:
-                exited_by_30 = True
-        elif not probe_succeeded and first_seen_at_seconds is not None and elapsed_seconds <= 30:
-            unconfirmed_probe_failure_by_30 = True
-
-        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         entry = launchctl_entry.replace("\t", " ")
         timeline.write(
-            f"{elapsed_seconds:.3f}\t{timestamp}\t{'yes' if running else 'no'}\t{entry}\t{probe_status}\n"
+            f"{elapsed_seconds:.3f}\t{timestamp}\t{'yes' if running else 'no'}\t{app_pid or ''}\t{pid_status}\t{entry}\t{probe_status}\n"
         )
         timeline.flush()
 
+        elapsed_after_diagnostics = max(0.0, time.monotonic() - launch_started)
         scheduled_seconds += 5
-        while scheduled_seconds <= elapsed_seconds:
+        while scheduled_seconds <= elapsed_after_diagnostics:
             scheduled_seconds += 5
-        if elapsed_seconds >= 60:
+        if elapsed_after_diagnostics >= 60:
             break
 
 for screenshot in screenshots:
@@ -297,12 +337,17 @@ for screenshot in screenshots:
         screenshot.wait()
 
 print(json.dumps({
+    "pid": app_pid,
     "firstSeenAtSeconds": first_seen_at_seconds,
     "exitedAtSeconds": exited_at_seconds,
-    "aliveAfter30Seconds": seen_running_by_30 and not exited_by_30 and not unconfirmed_probe_failure_by_30,
+    "aliveAfter30Seconds": alive_at_30_seconds,
 }, separators=(",", ":")))
 PY
 )
+app_pid=$(python3 -c 'import json,sys; value=json.loads(sys.argv[1])["pid"]; print(value if value is not None else "")' "$timeline_result")
+if [ -n "$app_pid" ]; then
+  launched=true
+fi
 first_seen_at_seconds=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["firstSeenAtSeconds"] if json.loads(sys.argv[1])["firstSeenAtSeconds"] is not None else "null")' "$timeline_result")
 exited_at_seconds=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["exitedAtSeconds"] if json.loads(sys.argv[1])["exitedAtSeconds"] is not None else "null")' "$timeline_result")
 if [ "$(python3 -c 'import json,sys; print(str(json.loads(sys.argv[1])["aliveAfter30Seconds"]).lower())' "$timeline_result")" = true ]; then
