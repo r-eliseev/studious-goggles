@@ -32,3 +32,7 @@ Environment: any; nothing is installed or run.
 
 ### 2026-11-17, planner-session
 Created with the code-reading step started by the owner's request ("read the code in subagents, install nothing"). Status stays `todo` until the reports are merged into research 02 and the comparison is planned.
+
+### 2026-11-17, planner-session
+All six code-reading reports are in `docs/factory/research/02-factory-kits-code-reading.md` (sections 1-6), with a draft cross-kit table and a ranked idea list in section 7. Acceptance criteria 1 and 2 are drafted, criterion 3 (at most ten ideas, plus what not to copy) is drafted; the comparison column for "this harness" is from `docs/tasks.md` and ADR 0032 only and was not audited against the scripts. Left `todo`: the planner still has to verify the harness column and decide with the owner.
+
