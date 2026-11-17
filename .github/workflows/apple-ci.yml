@@ -37,10 +37,10 @@ jobs:
   apple-preflight:
     runs-on: macos-26
     timeout-minutes: 60
-    env:
-      DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
     steps:
       - uses: actions/checkout@v4
+      - name: Set isolated .NET SDK directory
+        run: echo "DOTNET_INSTALL_DIR=$RUNNER_TEMP/dotnet" >> "$GITHUB_ENV"
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
@@ -63,10 +63,10 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 60
     continue-on-error: true
-    env:
-      DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
     steps:
       - uses: actions/checkout@v4
+      - name: Set isolated .NET SDK directory
+        run: echo "DOTNET_INSTALL_DIR=$RUNNER_TEMP/dotnet" >> "$GITHUB_ENV"
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ inputs.ios_toolchain == '26.4.1' && '10.0.203' || '10.0.302' }}
@@ -116,10 +116,10 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 60
     continue-on-error: true
-    env:
-      DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
     steps:
       - uses: actions/checkout@v4
+      - name: Set isolated .NET SDK directory
+        run: echo "DOTNET_INSTALL_DIR=$RUNNER_TEMP/dotnet" >> "$GITHUB_ENV"
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.302
@@ -170,10 +170,10 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 60
     continue-on-error: true
-    env:
-      DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
     steps:
       - uses: actions/checkout@v4
+      - name: Set isolated .NET SDK directory
+        run: echo "DOTNET_INSTALL_DIR=$RUNNER_TEMP/dotnet" >> "$GITHUB_ENV"
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ inputs.ios_toolchain == '26.4.1' && '10.0.203' || '10.0.302' }}
@@ -217,10 +217,10 @@ jobs:
   build-avalonia-macos:
     runs-on: macos-26
     timeout-minutes: 45
-    env:
-      DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
     steps:
       - uses: actions/checkout@v4
+      - name: Set isolated .NET SDK directory
+        run: echo "DOTNET_INSTALL_DIR=$RUNNER_TEMP/dotnet" >> "$GITHUB_ENV"
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
