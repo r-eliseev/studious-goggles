@@ -67,6 +67,16 @@ Same shape (centralized intent, decentralized execution; "mission command"), dif
 
 Rule `living-example`: the definition is shown on a running example. The example, with the facts and the flow from start to end, is `case-study-imagegen.md`. In short: the owner states goals and decisions (`docs/product.md`) and gives standing instructions; the planner agent writes specs, ADRs and tasks; the executor agent implements one approved task at a time; CI and acceptance scenarios verify; the planner agent reviews; a human checks the product at the screen and decides open questions; nobody reads the code (owner's words). Gaps against the definition (independence of verification not measured, no monitoring after release, no formal outbox) are listed there.
 
+### Universal rules for risk classes (any project; `risk-classes-universal-only`)
+
+1. A class is set by the **consequence**: reversibility, blast radius, what is touched (money, secrets, user data, third parties, the factory's own rules), visibility of a failure.
+2. A change or action takes the **highest** class of everything it touches.
+3. Each class has an approver, required checks, containment (rollback, limits, backups, isolation) and observation.
+4. The class is set **automatically** from the touched paths and the permissions needed, not from the executor's judgment.
+5. The factory's own rules are always reviewed by a human together with an agent; irreversible external actions always pass through a human.
+6. Classes and policies are reviewed after each escaped defect.
+A project's own class list (for example the ImageGen one in `case-study-imagegen.md`) is an example of applying these rules, not part of them.
+
 ### Open points
 
 1. ~~Feedback layer~~ **decided: mandatory** (`feedback-layer-mandatory`).
