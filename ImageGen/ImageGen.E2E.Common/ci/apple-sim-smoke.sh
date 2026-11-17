@@ -193,7 +193,7 @@ fi
 
 xcrun simctl install "$udid" "$app_path"
 launch_started_monotonic=$(python3 -c 'import time; print(time.monotonic())')
-xcrun simctl launch --console-pty "$udid" "$bundle_id" >"$out_dir/launch.log" 2>&1 &
+xcrun simctl launch "$udid" "$bundle_id" >"$out_dir/launch.log" 2>&1 &
 launch_pid=$!
 timeline_result=$(python3 - "$udid" "$bundle_id" "$out_dir" "$launch_started_monotonic" "$out_dir/launch.log" <<'PY'
 import datetime

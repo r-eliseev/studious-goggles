@@ -45,3 +45,9 @@ bash scripts/check.sh
 ### 2026-11-17, claude-planner
 Created from the review of task 274 (its proposed follow-up).
 Plan approved (standing instruction of 2026-11-07: "approve all tasks that will come").
+
+### 2026-11-17, codex-20261117 — dispatch 44150856492
+Dispatched `ios_smoke_repeats=20`, `ios_toolchain=26.4.1` on this task branch. MAUI iOS, MAUI Catalyst and Avalonia macOS builds succeeded. `build-avalonia-ios` was cancelled after 15m03s queued and `apple-preflight` after 17m24s queued; both jobs have no runner name and no steps ran. `smoke-ios-avalonia` was subsequently cancelled before its smoke step because its build produced no artifact. The MAUI 20-repeat smoke step started at 19:01:20Z and is still running. This dispatch does not count as a complete two-app run; retain its MAUI artifact/results, then dispatch another full run after it finishes.
+
+### 2026-11-17, codex-20261117 — MAUI artifact from dispatch 44150856492
+The MAUI smoke completed 20 repetitions and uploaded artifacts, but all 20 were invalid for the PID decision: each `summary.json` had `pid=null`, `launched=false`, `aliveAfter30s=false`; `launch.log` contained the `<bundle id>: <pid>` line only after the timeline sampling ended and cleanup killed `simctl launch --console-pty`. For example, run 01's app log records startup at 19:04:58Z and its launchctl timeline sees PID 4395 at the 5-second sample, while all PID columns stay empty; the final launch log then contains `com.eliseev.imagegen: 4395`. No app crash reports were collected. Changed the launch observer to omit `--console-pty`, so `simctl launch` returns its PID promptly while the launched app continues running. This dispatch does not count as a valid run; rerun the two-app workflow after the next check.
