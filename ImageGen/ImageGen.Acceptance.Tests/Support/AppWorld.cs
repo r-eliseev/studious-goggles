@@ -123,6 +123,14 @@ public sealed class AppWorld : IDisposable
         await StartAsync(cancellationToken);
     }
 
+    public async Task RestartAfterInterruptionAsync(CancellationToken cancellationToken)
+    {
+        _generations = null;
+        _imageFiles = null;
+        await StopCompositionAsync();
+        await StartAsync(cancellationToken);
+    }
+
     public Task WaitUntilAsync(Func<bool> condition, string description, CancellationToken cancellationToken) =>
         WaitUntilCoreAsync(condition, description, cancellationToken);
 

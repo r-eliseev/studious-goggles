@@ -5,6 +5,7 @@ using ImageGen.Acceptance.Tests.Support;
 using ImageGen.Avalonia;
 using ImageGen.Avalonia.Services.Navigation;
 using ImageGen.Avalonia.Views;
+using ImageGen.Core.Domain.Generations;
 using ImageGen.Core.Storage;
 using ImageGen.Presentation;
 using ImageGen.Presentation.PageModels;
@@ -73,6 +74,77 @@ public sealed class RunsSteps(ScenarioContext scenario)
 
     [When("the provider completes generation for model {string}")]
     public void WhenTheProviderCompletesGenerationForModel(string modelId) => World.OpenRouter.CompleteHeldGeneration(modelId);
+
+    [Then("the provider has received the generation request for model {string}")]
+    public Task ThenProviderHasReceivedGenerationRequestForModel(string modelId) => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        await World.WaitUntilAsync(
+            () => World.Network.Requests.Any(request => IsImageRequest(request)
+                && request.Body is not null
+                && ReadString(request.Body, "model") == modelId),
+            $"the provider to receive the generation for model '{modelId}'",
+            cancellationToken);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [When("the user cancels the generation for model {string}")]
+    public Task WhenTheUserCancelsGenerationForModel(string modelId) => HeadlessApp.RunAsync(async _ =>
+    {
+        var card = Assert.Single(
+            Chat.Items.OfType<RunItemViewModel>().SelectMany(run => run.Generations),
+            generation => generation.ModelId == modelId);
+        if (card.CancelCommand.CanExecute(null))
+        {
+            await card.CancelCommand.ExecuteAsync(null);
+        }
+
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [When("the user cancels the current run")]
+    public Task WhenTheUserCancelsTheCurrentRun() => HeadlessApp.RunAsync(async _ =>
+    {
+        var run = Assert.Single(Chat.Items.OfType<RunItemViewModel>());
+        Assert.True(run.CancelRunCommand.CanExecute(null));
+        await run.CancelRunCommand.ExecuteAsync(null);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [Then("generation cards for models {string} and {string} are cancelled")]
+    public Task ThenGenerationCardsForModelsAreCancelled(string firstModelId, string secondModelId) => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        var models = new[] { firstModelId, secondModelId };
+        await World.WaitUntilAsync(() => models.All(modelId => Chat.Items.OfType<RunItemViewModel>()
+            .SelectMany(run => run.Generations)
+            .Any(card => card.ModelId == modelId && card.IsCancelled && card.StatusKind == GenerationStatusKind.Cancelled)),
+            "all requested generation cards to be cancelled", cancellationToken);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [Then("the generation for model {string} is cancelled with stopped-waiting status")]
+    public Task ThenGenerationIsCancelledWithStoppedWaitingStatus(string modelId) => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        var card = Assert.Single(
+            Chat.Items.OfType<RunItemViewModel>().SelectMany(run => run.Generations),
+            generation => generation.ModelId == modelId);
+        await World.WaitUntilAsync(
+            () => card.IsCancelled && card.StatusKind == GenerationStatusKind.Cancelled
+                && card.CancellationStatusText == AppResources.StoppedWaitingMedia,
+            $"model '{modelId}' to be cancelled with the stopped-waiting status",
+            cancellationToken);
+        Assert.Equal(AppResources.StatusCancelled, card.StatusText);
+        Assert.Equal(AppResources.StoppedWaitingMedia, card.CancellationStatusText);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [Then("the generation for model {string} has failed with reason {string}")]
+    public Task ThenGenerationHasFailedWithReason(string modelId, string reason) => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        await World.WaitUntilAsync(() => Chat.Items.OfType<RunItemViewModel>()
+            .SelectMany(run => run.Generations).Any(card => card.ModelId == modelId && card.IsFailed && card.ErrorText == reason),
+            $"model '{modelId}' to fail with reason '{reason}'", cancellationToken);
+        return true;
+    }, TestContext.Current.CancellationToken);
 
     [Then("model {string} has an active generation card")]
     public Task ThenModelHasAnActiveGenerationCard(string modelId) => HeadlessApp.RunAsync(async cancellationToken =>

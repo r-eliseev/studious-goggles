@@ -94,11 +94,11 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 ### Cancellation and recovery (`CancelAndRecovery.feature`, task 258)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| CAN-01 | Cancelling one active generation → "cancelled", the others continue | S3.5.1, F5.4 | blocked (258) |
-| CAN-02 | Cancelling the whole run → all active ones "cancelled", finished ones do not change | S3.5.1, S3.5.2 | blocked (258) |
-| CAN-03 | The result arrived before the cancellation → the card stays "done" | S3.5.2 | blocked (258) |
-| CAN-04 | A generation did not finish, the app was restarted → "Interrupted" (failed) | S3.8 | blocked (258) |
-| CAN-05 | The time of the cancellation request is stored and visible after a restart | S3.5.3 | blocked (258) |
+| CAN-01 | Cancelling one active generation → "cancelled", the others continue | S3.5.1, F5.4 | discrepancy (287) |
+| CAN-02 | Cancelling the whole run → all active ones "cancelled", finished ones do not change | S3.5.1, S3.5.2 | done |
+| CAN-03 | The result arrived before the cancellation → the card stays "done" | S3.5.2 | done |
+| CAN-04 | A generation did not finish, the app was restarted → "Interrupted" (failed) | S3.8 | done |
+| CAN-05 | The time of the cancellation request is stored and visible after a restart | S3.5.3 | discrepancy (287) |
 
 ### Card actions (`CardActions.feature`, task 259)
 | id | Scenario | Requirements | Status |
