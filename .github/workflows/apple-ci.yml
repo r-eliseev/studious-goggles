@@ -37,6 +37,8 @@ jobs:
   apple-preflight:
     runs-on: macos-26
     timeout-minutes: 60
+    env:
+      DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -61,11 +63,18 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 60
     continue-on-error: true
+    env:
+      DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ inputs.ios_toolchain == '26.4.1' && '10.0.203' || '10.0.302' }}
+      - name: Verify isolated .NET workload manifests
+        run: |
+          printf 'DOTNET_INSTALL_DIR=%s\n' "$DOTNET_INSTALL_DIR"
+          dotnet --version
+          find "$DOTNET_INSTALL_DIR/sdk-manifests" -mindepth 1 -maxdepth 1 -type d -print
       - name: Select compatible Xcode
         run: sudo xcode-select -s "/Applications/Xcode_${{ inputs.ios_toolchain || '26.6' }}.app/Contents/Developer"
       - name: Install compatible iOS workload
@@ -107,11 +116,18 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 60
     continue-on-error: true
+    env:
+      DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.302
+      - name: Verify isolated .NET workload manifests
+        run: |
+          printf 'DOTNET_INSTALL_DIR=%s\n' "$DOTNET_INSTALL_DIR"
+          dotnet --version
+          find "$DOTNET_INSTALL_DIR/sdk-manifests" -mindepth 1 -maxdepth 1 -type d -print
       - name: Select Xcode 26.6
         run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
       - name: Install compatible Mac Catalyst workload
@@ -154,11 +170,18 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 60
     continue-on-error: true
+    env:
+      DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ inputs.ios_toolchain == '26.4.1' && '10.0.203' || '10.0.302' }}
+      - name: Verify isolated .NET workload manifests
+        run: |
+          printf 'DOTNET_INSTALL_DIR=%s\n' "$DOTNET_INSTALL_DIR"
+          dotnet --version
+          find "$DOTNET_INSTALL_DIR/sdk-manifests" -mindepth 1 -maxdepth 1 -type d -print
       - name: Select compatible Xcode
         run: sudo xcode-select -s "/Applications/Xcode_${{ inputs.ios_toolchain || '26.6' }}.app/Contents/Developer"
       - name: Install compatible iOS workload
@@ -194,6 +217,8 @@ jobs:
   build-avalonia-macos:
     runs-on: macos-26
     timeout-minutes: 45
+    env:
+      DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
