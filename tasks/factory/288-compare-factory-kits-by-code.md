@@ -38,3 +38,6 @@ All six code-reading reports are in `docs/factory/research/factory-kits-code-rea
 
 ### 2026-11-17, planner-session
 Criterion 3 amended on the owner's instruction (principle `document-everything`: document everything, even what does not apply to the current harness; the concept is universal). The amendment replaces "a list of what should not be copied" by the catalog with an applicability column.
+
+### 2026-11-18, planner-session
+A seventh kit is added as a source: `warpdotdev-demos/cloud-factory-demo` (`docs/factory/sources/cloud-factory-demo/`, first notes in `docs/factory/notes/cloud-factory-demo.md`). The comparison of the kits is extended by it: its controller is GitHub Actions workflows, its state lives in labels and pull requests, it splits read and write across jobs, and it has a daily skill-improvement loop.

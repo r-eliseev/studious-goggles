@@ -11,4 +11,6 @@ Raw material for the software-factory concept. Sources are stored verbatim; inte
 | `warp-talk` | `warp-talk.md`: Zach Lloyd (Warp) talk | supporting (the process: lifecycle loop, skill loops) | en | `notes/warp-talk.md` |
 | `always-on-agents` | `always-on-agents.md`: Anthropic, "Building always-on agents" (W. Hu) | supporting, vendor (runtime skeleton: inbox, timers, memory, permissions, outbox) | en | `notes/always-on-agents.md` |
 
+| `cloud-factory-demo` | `cloud-factory-demo/`: the repository warpdotdev-demos/cloud-factory-demo, copied files with `PROVENANCE.md` (MIT) | supporting (a working implementation of the factory in `warp-talk`; repository recommended by the speaker according to the owner) | en | `notes/cloud-factory-demo.md` |
+
 Rules: sources are never edited; when sources conflict, the primary source and the owner's later statements win; every claim in a note names its source by name.
