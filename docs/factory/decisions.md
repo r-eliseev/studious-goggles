@@ -35,3 +35,4 @@ A log of decisions the owner made in the working sessions, so that none depends 
 | `english-before-merge`: all Russian text is removed before merging to `main`; the specs and documents will be built in English; the harness question (the CI check that rejects non-Latin text in `docs/`) is postponed and will be returned to later | 2026-11-18 | decided | yes (harness) |
 | `cp-dp-lists-from-slide`: the control-plane and data-plane lists in the owner's notes are rewritten from a slide of the talk (incomplete: a middle layer between the two planes is omitted, low interest) | 2026-11-18 | confirmed by the owner | no |
 | `cr-means-code-review`: "cr" in the owner's notes is code review | 2026-11-18 | confirmed | no |
+| `rules-also-called-steering`: the owner is used to calling rules "steering"; the meaning is understood and agreed, the word does not matter (the origin of the term was not verified) | 2026-11-18 | noted | no |

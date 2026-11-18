@@ -112,3 +112,6 @@
 ## Уровень по лестнице Шапиро (принято владельцем, 2026-11-17)
 
 ImageGen близок к уровню 4 и местами дальше: цели и решения у владельца, утверждение планов делегировано постоянной инструкцией, человек проверяет продукт у экрана и решает открытые вопросы, кода не читает. Основная работа владельца ближе к уровню 3 (диффы и спецификации). Один человек на разных репозиториях работает на разных уровнях: уровень принадлежит репозиторию (`imagegen-level-reading`).
+
+## Observed: fixes rolled back by later tasks (owner, 2026-11-18)
+The owner confirms that cases happened when a fix was rolled back by the next tasks; the cases were connected with how touch and clicks work on different platforms in MAUI. Related written knowledge exists: `docs/knowledge/maui.md` records that on Windows the CommunityToolkit.Maui `TouchBehavior` on a parent `Border` captures the pointer, so a nested `Button` does not get the click (task 088). Whether this is the very case was not checked. Reading (hypothesis, not verified): the knowledge was written, but no automated check protected it, and touch behaviour per platform is hard to test headless on Linux, so a later agent had nothing to fail on. This matches the quote "an agent does not know what it does not know". Registered as `fix-regressions-across-tasks` and as part of task 298.

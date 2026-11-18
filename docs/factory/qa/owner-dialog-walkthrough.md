@@ -643,6 +643,8 @@ Holdout-сценарии это приёмочные проверки, кото�
 
 Могут, и во многом так и работают: поиск по репозиторию, файлы памяти, субагенты с чистым контекстом, сжатие истории. Утверждение «без общего контекста выйдет хуже» не значит, что человек подаёт контекст вручную; оно значит, что нужные источники должны существовать и быть доступными. Оговорка: цитата из диалога взята из блога вендора Unblocked, который продаёт именно продукт общего контекста ✔ ([getunblocked.com/context-engine](https://getunblocked.com/context-engine/)); дословной фразы «more agents = more plausible-but-wrong code, only faster» помощник не нашёл (ближайший пост о параллельных агентах ◐).
 
+**Follow-up from the owner (2026-11-18):** after the quotes on compaction, sub-agents, the agent that is "sure by default" and the missing module map, the owner asked: (1) are there best practices for managing context, or is it better to rely on the agent's built-in functionality; (2) agents often write big answers into files, how to deal with it; (3) add a task for the module map (task 298); (4) confirmed that on ImageGen fixes were rolled back by later tasks (MAUI touch and click differences between platforms). Answers: `docs/factory/research/context-management-practices.md`, `docs/factory/case-study-imagegen.md`, `tasks/factory/298-imagegen-module-map-and-regression-guards.md`.
+
 **См. также (вопросы рабочей сессии):** [`same-question-for-human-orgs`](owner-session-answers.md#same-question-for-human-orgs)
 
 <a id="split-agents-by-errors"></a>
