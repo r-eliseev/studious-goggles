@@ -186,3 +186,4 @@ Applicability to this repository's planner/executor harness: **exists** (already
 | `model-benchmarks-on-own-work` | Model benchmarks on the team's own work | replay the team's agent conversations to compare models on correctness and cost | `warp-dev-site` | candidate (vendor claim) |
 | `routing-agent-foreman` | Routing agent | one orchestration agent receives work and delegates to specialized agents (triage, implementation, review, prototyping) | `warp-dev-site` | candidate |
 | `any-surface-steering` | Any surface | watch, steer and hand off runs from web, mobile, terminal or IDE | `warp-dev-site` | candidate |
+| `rules-advisory-vs-enforced` | Rules: advisory vs enforced | standing guidance in the agent's context (advisory, data plane) versus policy backed by permissions or checks (enforced, control plane); a rule without enforcement is a wish | `warp-dev-site` (rules docs), this repo's `AGENTS.md` and `scripts/check.sh` | candidate |

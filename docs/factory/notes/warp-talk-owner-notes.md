@@ -45,3 +45,10 @@ The struck-out "tsf skill?" and the circled line ending "... as it progresses" l
 2. What does **"formal proof"** refer to?
 3. Does **"cr"** mean code review, change request, or something else?
 4. Are the control-plane and data-plane lists from the talk's slides, or the owner's own synthesis?
+
+## Owner's answers (2026-11-18)
+
+1. **Rules** were on the slide in both places; the owner understands skills and permissions but sees rules as separate from them. Analysis: `notes/rules-vs-skills-vs-permissions.md`.
+2. **"Formal proof"**: a separate open question, recorded as `formal-proof-architecture-and-code`.
+3. **"cr"** = code review.
+4. The lists in the notes are **rewritten from a slide**; it is not the full slide: there was one more layer between the control plane and the data plane, which interests the owner less. Origin therefore confirmed (a slide, not a synthesis); the slide text itself is still not available (`warp-slides-infrastructure-part`).
