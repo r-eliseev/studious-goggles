@@ -119,3 +119,12 @@ The owner confirms that cases happened when a fix was rolled back by the next ta
 ## Owner's answers on acceptance tests (2026-11-18)
 - The Gherkin scenarios were written by **the same agents that write the code**; ImageGen has no factory yet. So its acceptance tests are **not independent** (in the sense of `independence-wording`).
 - All three weak points are weak at ImageGen: completeness of specs, independence of checks, enforcement of rules. **The main problem is regressions and the quality of acceptance tests.** This matches `fix-regressions-across-tasks` (task 298).
+
+### Found in history: the touch and tap family (2026-11-18; task texts read from git history, `tasks/DONE.md` lists titles)
+Facts (from the task texts of 211 and 214, which are in Russian in history; paraphrased):
+- 088 (Windows, 2026-11-01): the CommunityToolkit.Maui `TouchBehavior` on a parent card captures the pointer, a nested button gets no click; recorded in `docs/knowledge/maui.md`.
+- 162 (2026-10-31): Android, tapping a session row shows buttons instead of opening the session; fixed with a tap recogniser on the row inside a `SwipeView`.
+- 2026-11-07: the owner reported on build v0.1.11 (Android): "the click on the session is still not fixed, it still shows the buttons", and that taps on a card image and the "..." button do nothing. Two tasks followed the same day: **214** (the 162 fix did not work on the device: remove the `SwipeView` on phones, tap opens, long press shows actions) and **211** (the same `TouchBehavior` default, `ShouldMakeChildrenInputTransparent = true`, makes the buttons inside a card untappable on Android; and behaviours do not inherit the `BindingContext`, so the long-press command was bound to null).
+- The tests added in 211 and 214 are markup tests (the XAML is read as XML and checked for attributes) and model tests; the real touch check remains a manual item (task 140).
+- Other pairs that look like the same pattern (titles only, not read): 097 then 159 (chat timeline does not scroll, MAUI, then Android within a run); 089 and 096 (lists and summaries do not update).
+Reading: the same cause (a library default) hit a second platform after the first was recorded in the knowledge file; a fix was accepted with passing tests and failed on the device. This supports the earlier hypothesis (no automated check that fails on real touch behaviour). It is also a different defect class from "unclear spec": the missing piece was platform behaviour known to nobody involved. This matters for `small-model-spec-probe` (task 299).
