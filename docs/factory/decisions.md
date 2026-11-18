@@ -36,3 +36,4 @@ A log of decisions the owner made in the working sessions, so that none depends 
 | `cp-dp-lists-from-slide`: the control-plane and data-plane lists in the owner's notes are rewritten from a slide of the talk (incomplete: a middle layer between the two planes is omitted, low interest) | 2026-11-18 | confirmed by the owner | no |
 | `cr-means-code-review`: "cr" in the owner's notes is code review | 2026-11-18 | confirmed | no |
 | `rules-also-called-steering`: the owner is used to calling rules "steering"; the meaning is understood and agreed, the word does not matter (the origin of the term was not verified) | 2026-11-18 | noted | no |
+| `stack-neutral`: the concept is looked at without binding to a technology stack; the earlier dialog's "Java/Hibernate world" was an assumption that is not the owner's world (the example project is C#/.NET; the owner's main work is a mix of 10+ services in different languages) | 2026-11-18 | decided | no |

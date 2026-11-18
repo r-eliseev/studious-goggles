@@ -35,3 +35,6 @@ Environment: Linux for the map and headless tests; the platform checks of touch 
 
 ### 2026-11-18, planner-session
 Created on the owner's instruction ("add a task, we will do it") attached to the module map quote; if the owner meant another item, the task is to be redirected. Not started.
+
+### 2026-11-18, planner-session
+The owner cannot recall a specific rolled-back case now; the cases are to be found later in the history (commits and task reports). The search stays part of this task.
