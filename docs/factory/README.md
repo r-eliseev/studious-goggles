@@ -19,7 +19,7 @@ We are building a **universal** software-factory system, not a patch for one rep
 
 | Path | Content |
 |---|---|
-| `sources/` | the verbatim sources (`tsf-lesson`, `warp-talk`, `owner-dialog`, `always-on-agents`, and the copied repository `cloud-factory-demo`), the owner's messages (`owner-dialog-questions` from the web chat, `owner-session-questions` from the working session) and the index `sources/README.md` |
+| `sources/` | the verbatim sources (`tsf-lesson`, `warp-talk`, `owner-dialog`, `always-on-agents`, the copied repository `cloud-factory-demo`, and the owner's notes `warp-talk-owner-notes`), the owner's messages (`owner-dialog-questions` from the web chat, `owner-session-questions` from the working session) and the index `sources/README.md` |
 | `notes/` | interpretation per source (claims tables, open questions) |
 | `qa/` | answers to open questions (`tsf-lesson`), the walkthrough of all 43 owner questions (`owner-dialog`) and answers to the working-session questions (`owner-session-answers.md`) |
 | `research/` | research: public factory kits (README level and code reading) |

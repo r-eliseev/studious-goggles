@@ -13,4 +13,6 @@ Raw material for the software-factory concept. Sources are stored verbatim; inte
 
 | `cloud-factory-demo` | `cloud-factory-demo/`: the repository warpdotdev-demos/cloud-factory-demo, copied files with `PROVENANCE.md` (MIT) | supporting (a working implementation of the factory in `warp-talk`; repository recommended by the speaker according to the owner) | en | `notes/cloud-factory-demo.md` |
 
+| `warp-talk-owner-notes` | `warp-talk-owner-notes.md`: the owner's handwritten notes on the Warp talk (two photographed pages, transcribed) | **PRIMARY** (the owner's own notes; companion of `warp-talk`) | ru/en | `notes/warp-talk-owner-notes.md` |
+
 Rules: sources are never edited; when sources conflict, the primary source and the owner's later statements win; every claim in a note names its source by name.

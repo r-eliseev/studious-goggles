@@ -36,6 +36,10 @@ The factory is defined over an **executor profile**, not over "who the executor 
 
 **Claim (to be challenged):** these are parameters of one model, so the principles of a factory (independent verification, enforced boundaries, feedback, decision points, regular review) are the same for people and agents; replacing an executor changes parameter values, not the factory. **Where a real difference in kind might exist:** legal and moral accountability (stays with a human principal; the factory does not change it) and the nature of "stakes"; everything else in the table is a difference of degree, which becomes a difference in design only when it crosses a threshold (for example when review cost exceeds production cost).
 
+### Inputs and outputs (from `warp-talk-owner-notes`)
+
+Input: an **idea or a bug**, coming from trackers, chat and metrics or monitoring. Output: **shipped, verified software**. The factory is measured by `efficiency-formula` (software shipped over tokens plus human time). Two levels of loops run: the inner loop does the work, the outer loop improves the loop (`two-level-loops`).
+
 ### Why "factory" and not "agent"
 
 An agent is an executor inside one step. A factory is the **process around the agents**: stages, durable stores (inbox of work, memory, outbox of reports, timers), boundaries, measured output, and the rules for when a human is involved. A factory can run with no human at the keyboard (`always-on-agents`: runs triggered by events); a single chat agent cannot.
