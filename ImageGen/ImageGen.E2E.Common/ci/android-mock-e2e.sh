@@ -6,6 +6,33 @@ adb() {
   timeout --foreground --kill-after=5s 60s "$adb_binary" "$@"
 }
 
+adb_root() {
+  local output boot_state
+  for attempt in $(seq 1 5); do
+    if output="$(adb root 2>&1)"; then
+      printf '%s\n' "$output"
+      return 0
+    fi
+
+    printf 'adb root attempt %s/5 failed: %s\n' "$attempt" "$output" >&2
+    if ! grep -Eqi 'unable to connect|device offline|connection.*closed' <<< "$output"; then
+      return 1
+    fi
+
+    adb wait-for-device || true
+    for readiness_attempt in $(seq 1 30); do
+      boot_state="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+      if [[ "$boot_state" == 1 ]]; then
+        break
+      fi
+      sleep 1
+    done
+  done
+
+  echo 'Android emulator did not reconnect for adb root after 5 attempts.' >&2
+  return 1
+}
+
 mkdir -p reports/android/mock-provider
 dotnet ImageGen/ImageGen.E2E.MockProvider/bin/Release/net10.0/ImageGen.E2E.MockProvider.dll --urls https://0.0.0.0:5443 > reports/android/mock-provider/mock-provider.log 2>&1 &
 mock_pid=$!
@@ -26,7 +53,7 @@ if [[ "$ready" != true ]]; then
   exit 1
 fi
 
-adb root
+adb_root
 adb wait-for-device
 remount_output="$(adb remount 2>&1)" || { printf '%s\n' "$remount_output"; exit 1; }
 printf '%s\n' "$remount_output"

@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-11-17
+Updated: 2026-11-18
 
 Here are open questions, known problems, CI and the task queue; product decisions are collected in `docs/product.md`. Progress is not written here: what is done and what is in progress is shown by task statuses (`scripts/list-tasks.sh`, `scripts/list-tasks.sh --main in-progress`) and their "Reports".
 
@@ -66,3 +66,4 @@ Finished tasks and earlier waves are in `tasks/DONE.md`. The statuses of the tas
 - Replacing the E2E tests (owner, 2026-11-09: "we are essentially replacing the current e2e tests with these"): understood as rewriting the E2E tests as Gherkin scenarios that run on Reqnroll on top of the same Appium/FlaUI drivers (task 266), and replacing the Avalonia flow tests with acceptance scenarios (task 267). Whether the Appium/FlaUI runs of the built apps should be dropped completely is not decided; the assumption is that they stay.
 
 ## Known problems
+- PR #116 Android E2E (`test-android`, run [44194057784](https://github.com/r-eliseev/studious-goggles/actions/runs/44194057784)) exited during the first `adb root` call with `unable to connect for root: closed` just after emulator boot. The setup now retries this transient reconnect; a fresh CI run is pending. Details: `docs/log/2026-11-18-android-e2e-adb-reconnect.md`.
