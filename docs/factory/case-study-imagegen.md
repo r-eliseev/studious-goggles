@@ -115,3 +115,7 @@ ImageGen близок к уровню 4 и местами дальше: цели
 
 ## Observed: fixes rolled back by later tasks (owner, 2026-11-18)
 The owner confirms that cases happened when a fix was rolled back by the next tasks; the cases were connected with how touch and clicks work on different platforms in MAUI. Related written knowledge exists: `docs/knowledge/maui.md` records that on Windows the CommunityToolkit.Maui `TouchBehavior` on a parent `Border` captures the pointer, so a nested `Button` does not get the click (task 088). Whether this is the very case was not checked. Reading (hypothesis, not verified): the knowledge was written, but no automated check protected it, and touch behaviour per platform is hard to test headless on Linux, so a later agent had nothing to fail on. This matches the quote "an agent does not know what it does not know". Registered as `fix-regressions-across-tasks` and as part of task 298.
+
+## Owner's answers on acceptance tests (2026-11-18)
+- The Gherkin scenarios were written by **the same agents that write the code**; ImageGen has no factory yet. So its acceptance tests are **not independent** (in the sense of `independence-wording`).
+- All three weak points are weak at ImageGen: completeness of specs, independence of checks, enforcement of rules. **The main problem is regressions and the quality of acceptance tests.** This matches `fix-regressions-across-tasks` (task 298).
