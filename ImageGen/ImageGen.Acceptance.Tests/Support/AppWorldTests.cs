@@ -1,3 +1,4 @@
+using Avalonia.Threading;
 using ImageGen.Avalonia.Views;
 using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.Services;
@@ -7,6 +8,29 @@ namespace ImageGen.Acceptance.Tests.Support;
 
 public sealed class AppWorldTests
 {
+    [Fact]
+    public async Task WaitUntilAsync_EvaluatesConditionOnAvaloniaThread()
+    {
+        var world = new AppWorld();
+        try
+        {
+            await Task.Run(
+                () => world.WaitUntilAsync(
+                    () => Dispatcher.UIThread.CheckAccess(),
+                    "condition to run on the Avalonia thread",
+                    TestContext.Current.CancellationToken),
+                TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            await HeadlessApp.RunAsync(async cancellationToken =>
+            {
+                await world.DisposeAsync();
+                return true;
+            }, TestContext.Current.CancellationToken);
+        }
+    }
+
     [Fact]
     public async Task ReadLogFile_WhileRunningAndAfterRestart_AllowsSharedReadAndCleansUp()
     {

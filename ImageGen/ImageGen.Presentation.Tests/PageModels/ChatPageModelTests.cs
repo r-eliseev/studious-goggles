@@ -392,6 +392,36 @@ public class ChatPageModelTests
     }
 
     [Fact]
+    public async Task ReloadAsync_StaleCatalogResponse_DoesNotReplaceNewerTimeline()
+    {
+        var staleCatalogStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var staleCatalogResult = new TaskCompletionSource<IReadOnlyList<ImageModel>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var catalogCalls = 0;
+        _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            if (Interlocked.Increment(ref catalogCalls) == 1)
+            {
+                staleCatalogStarted.TrySetResult();
+                return staleCatalogResult.Task;
+            }
+
+            return Task.FromResult<IReadOnlyList<ImageModel>>([TestModels.Model(ImageModel, "Image")]);
+        });
+        var model = CreateModel(_session.Id, modelCatalog: Catalog);
+
+        var initialReload = model.ReloadAsync();
+        await staleCatalogStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+        model.InputText = "Draw a fox";
+        await model.SendCommand.ExecuteAsync(null);
+        Assert.Contains(model.Items.OfType<MessageItemViewModel>(), item => item.Text == "Draw a fox");
+
+        staleCatalogResult.SetResult([TestModels.Model(ImageModel, "Image")]);
+        await initialReload;
+
+        Assert.Contains(model.Items.OfType<MessageItemViewModel>(), item => item.Text == "Draw a fox");
+    }
+
+    [Fact]
     public async Task OnAppearingAsync_VideoModelsAreIncludedInNextRunEstimate()
     {
         _session.Settings.VideoModels = [new ModelRef(ProviderIds.OpenRouter, "google/veo")];

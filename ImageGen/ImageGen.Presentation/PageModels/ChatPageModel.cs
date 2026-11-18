@@ -232,7 +232,6 @@ public sealed partial class ChatPageModel(
                 return;
             }
             var settings = timeline.Session.Settings;
-            Title = timeline.Session.Title;
             var modelsButtonText = string.Format(
                 CultureInfo.CurrentCulture,
                 AppResources.ModelsButtonFormat,
@@ -241,10 +240,17 @@ public sealed partial class ChatPageModel(
                 settings.VideoModels.Count,
                 settings.AudioModels.Count);
             var unavailableCount = await CountUnavailableModelsAsync(settings);
+            var assistantUnavailable = await IsAssistantModelUnavailableAsync(settings.AssistantModel);
+            if (epoch != _imageDimensionsEpoch || sessionId != _sessionId)
+            {
+                return;
+            }
+
+            Title = timeline.Session.Title;
             ModelsButtonText = unavailableCount > 0
                 ? string.Format(CultureInfo.CurrentCulture, AppResources.ModelsButtonUnavailableFormat, modelsButtonText, unavailableCount)
                 : modelsButtonText;
-            AssistantText = await IsAssistantModelUnavailableAsync(settings.AssistantModel)
+            AssistantText = assistantUnavailable
                 ? string.Format(CultureInfo.CurrentCulture, AppResources.SelectedModelUnavailableFormat, settings.AssistantModel.ModelId)
                 : string.Format(CultureInfo.CurrentCulture, AppResources.AssistantLabelFormat, settings.AssistantModel.ModelId);
 
@@ -285,13 +291,18 @@ public sealed partial class ChatPageModel(
             }
 
             var summary = await sessions.GetSummaryAsync(_sessionId, CancellationToken.None);
+            if (epoch != _imageDimensionsEpoch || sessionId != _sessionId)
+            {
+                return;
+            }
+
             if (summary is not null)
             {
                 InsertSummaryMarker(summary);
             }
 
             UpdateRetry();
-            await UpdateNextRunEstimateAsync(settings);
+            await UpdateNextRunEstimateAsync(settings, sessionId, epoch);
         }
         catch (Exception ex)
         {
@@ -721,18 +732,30 @@ public sealed partial class ChatPageModel(
             image.IsApproximate || video.IsApproximate);
     }
 
-    private async Task UpdateNextRunEstimateAsync(ImageGen.Core.Domain.Sessions.SessionSettings settings)
+    private async Task UpdateNextRunEstimateAsync(
+        ImageGen.Core.Domain.Sessions.SessionSettings settings,
+        Guid sessionId,
+        int epoch)
     {
         if (_costEstimator is null)
         {
-            HasNextRunEstimate = false;
-            NextRunEstimateText = "";
+            if (epoch == _imageDimensionsEpoch && sessionId == _sessionId)
+            {
+                HasNextRunEstimate = false;
+                NextRunEstimateText = "";
+            }
+
             return;
         }
 
         try
         {
             var estimate = await EstimateAsync(settings, CancellationToken.None);
+            if (epoch != _imageDimensionsEpoch || sessionId != _sessionId)
+            {
+                return;
+            }
+
             NextRunEstimateText = string.Format(
                 CultureInfo.CurrentCulture,
                 AppResources.NextRunEstimateFormat,
@@ -741,6 +764,11 @@ public sealed partial class ChatPageModel(
         }
         catch (Exception)
         {
+            if (epoch != _imageDimensionsEpoch || sessionId != _sessionId)
+            {
+                return;
+            }
+
             NextRunEstimateText = AppResources.AssistantPriceUnknown;
             HasNextRunEstimate = true;
         }
