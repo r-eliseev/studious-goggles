@@ -1,0 +1,2 @@
+# Provenance
+Fetched 2026-11-18 (HTTP 200): `kleppmann-ai-formal-verification-2025-12-08.txt` = text of https://martin.kleppmann.com/2025/12/08/ai-formal-verification.html (tags stripped); `arxiv-abstracts.md` = abstracts of arXiv 2509.22908 (vericoding), 2310.10996 (ClarifyGPT), 2507.11538 (IFScale), 2305.11790 (pseudo-code prompts) from arxiv.org/abs pages. Only abstracts were read, not the full papers.

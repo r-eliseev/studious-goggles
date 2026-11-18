@@ -187,3 +187,8 @@ Applicability to this repository's planner/executor harness: **exists** (already
 | `routing-agent-foreman` | Routing agent | one orchestration agent receives work and delegates to specialized agents (triage, implementation, review, prototyping) | `warp-dev-site` | candidate |
 | `any-surface-steering` | Any surface | watch, steer and hand off runs from web, mobile, terminal or IDE | `warp-dev-site` | candidate |
 | `rules-advisory-vs-enforced` | Rules: advisory vs enforced | standing guidance in the agent's context (advisory, data plane) versus policy backed by permissions or checks (enforced, control plane); a rule without enforcement is a wish | `warp-dev-site` (rules docs), this repo's `AGENTS.md` and `scripts/check.sh` | candidate |
+| `spec-consistency-sampling` | Detect spec holes by sampling | several independent runs on one spec; disagreement of outputs marks under-specified places (ClarifyGPT) | arXiv 2310.10996; Böckeler 2025 | candidate |
+| `small-model-spec-probe` | Small-model probe of a spec | run a cheap local model several times on the spec before the large model; compare plans and assumption lists | synthesis; DisambiguSLM (search) | hypothesis |
+| `pseudocode-spec-level` | Pseudocode as a spec level | order, conditions, data flow stated in pseudocode | arXiv 2305.11790 | candidate |
+| `deterministic-path-for-simple-tasks` | Deterministic path first | a generator handles inputs that parse; parse failure routes the task to the LLM | owner's idea 2026-11-18 | hypothesis |
+| `vericoding` | Vericoding | LLM writes code and proof from a formal spec, proof checker rejects invalid proofs | arXiv 2509.22908; Kleppmann 2025 | candidate (small problems) |
