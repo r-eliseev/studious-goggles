@@ -181,3 +181,8 @@ Applicability to this repository's planner/executor harness: **exists** (already
 | `data-plane-contents` | What the data plane holds | artifacts and storage, skills, memory, MCP, knowledge base, rules? | `warp-talk-owner-notes`; `warp-talk` (name and purpose) | candidate |
 | `efficiency-formula` | Efficiency formula | efficiency = software shipped / (tokens + human time) | `warp-talk-owner-notes`; `warp-talk` (`efficiency-metrics`) | candidate |
 | `two-level-loops` | Two levels of loops | the inner loop does the work, the outer loop improves the loop (skills, rules, routing) | `warp-talk-owner-notes`; `cloud-factory-demo` (`skill-improvement-outer-loop`) | candidate |
+| `factory-as-code` | Factory defined as code | one versioned definition (`factory.yaml`: repositories, secrets, MCP servers, cloud providers, integrations, agent defaults) plus files for agents, automations, runners, skills, webhooks, scorers, benchmarks | `warp-dev-site` | candidate |
+| `scorers-on-agent-runs` | Scorers on agent runs | graders that score completed agent conversations (for example code quality) | `warp-dev-site` | candidate |
+| `model-benchmarks-on-own-work` | Model benchmarks on the team's own work | replay the team's agent conversations to compare models on correctness and cost | `warp-dev-site` | candidate (vendor claim) |
+| `routing-agent-foreman` | Routing agent | one orchestration agent receives work and delegates to specialized agents (triage, implementation, review, prototyping) | `warp-dev-site` | candidate |
+| `any-surface-steering` | Any surface | watch, steer and hand off runs from web, mobile, terminal or IDE | `warp-dev-site` | candidate |

@@ -15,4 +15,7 @@ Raw material for the software-factory concept. Sources are stored verbatim; inte
 
 | `warp-talk-owner-notes` | `warp-talk-owner-notes.md`: the owner's handwritten notes on the Warp talk (two photographed pages, transcribed) | **PRIMARY** (the owner's own notes; companion of `warp-talk`) | ru/en | `notes/warp-talk-owner-notes.md` |
 
+| `ai-engineer-talk-page` | `ai-engineer-talk-page/`: the AI Engineer page of the Warp talk (site essay, machine transcript, slide index of the first 447 s) | secondary (the essay is derived; the transcript is machine) | en | `notes/warp-site-and-ai-engineer-page.md` |
+| `warp-dev-site` | `warp-dev-site/`: text of the warp.dev homepage, with the vendor's definition of a factory (FAQ) | secondary (vendor marketing, state of 2026-11-18) | en | `notes/warp-site-and-ai-engineer-page.md` |
+
 Rules: sources are never edited; when sources conflict, the primary source and the owner's later statements win; every claim in a note names its source by name.

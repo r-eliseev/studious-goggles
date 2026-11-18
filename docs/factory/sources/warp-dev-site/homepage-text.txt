@@ -1,0 +1,410 @@
+
+Warp — Open Infrastructure for Cloud Software Factories
+Products
+Enterprise
+Resources
+Pricing
+Sign in
+Warp Terminal
+Warp Factories
+Book a demo
+Get started
+Build a software factory
+Run fleets of coding agents across your SDLC
+Download Warp Terminal
+A modern terminal designed for working with agents
+The software factory infrastructure platform
+build on Warp: factories as code, any model or harness, with evals, benchmarks, and self-improvement built in.
+request early access
+download warp terminal
+[ 
+fig. 1 — the factory
+ ]
+[ fig. t4 · the factory ]
+8 × 28 · live
+queued
+■
+working
+▨
+waiting
+□
+shipped
+224
+ tasks · 
+0
+ active · 
+1,422
+ PRs shipped
+Trusted by 800k+ devs at
+Livestream
+Livestream
+Case Study
+Launch Partner
+Course Partner
+Case Study
+Livestream
+Livestream
+Case Study
+Launch Partner
+Course Partner
+Case Study
+Your software factory, defined in code.
+Factories-as-code allows for a versioned and measured approach to optimizing costs and performance of your factories.
+learn more
+factory.yaml
+agents
+automations
+runners
+skills
+webhooks
+scorers
+benchmarks
+factory.yaml
+yaml
+1
+schemaVersion
+: v1alpha1
+2
+name
+: web-server-factory
+3
+description
+: Autonomous software-development factory for a web application.
+4
+alias
+: web-factory
+The alias is the Foreman’s @-mention handle in Slack and Linear, so teammates can route work to the Factory by name. It can differ from the Factory name.
+5
+repositories
+:
+6
+  - owner
+: acme
+7
+    name
+: web-server
+8
+  - owner
+: acme
+9
+    name
+: web-client
+Repositories define where Factory agents can work. Each run checks out the relevant code on its execution host so agents can inspect and change it.
+10
+secrets
+:
+11
+  - DEPLOY_API_TOKEN
+Secrets give agents protected credentials for the tools and services they need. Values are encrypted at rest and injected as environment variables only during runs.
+12
+mcpServers
+:
+13
+  sentry
+:
+14
+    warpId
+: YOUR_MCP_SERVER_ID
+MCP servers connect every agent to shared tools such as Sentry or internal services. Each named connection references a centrally managed server.
+15
+cloudProviders
+:
+16
+  aws
+:
+17
+    roleArn
+: arn:aws:iam::123456789012:role/factory-agent
+Cloud providers securely connect Factory agents to cloud accounts and resources for infrastructure work. Federated access lets runs assume an AWS role or use a GCP identity without embedding long-lived cloud keys in the definition.
+18
+integrations
+:
+19
+  - type
+: slack
+20
+  - type
+: linear
+Integrations connect the Factory to work sources such as Slack and to Linear or Jira for task tracking, so the Foreman can coordinate work where your team already works.
+21
+agentDefaults
+:
+22
+  model
+: auto
+23
+  runner
+: standard
+Agent defaults establish the model or harness, runner, and environment that roles inherit, while specialized agents can override those choices when needed.
+01
+Factory definition
+The Factory definition is the shared foundation for every agent. It connects repositories, credentials, work sources, and cloud access, then sets the execution choices agents inherit.
+02
+Agents
+Agents get work done in a factory. Start with one routing and orchestration agent called the Foreman, then add specialized agents it can delegate to for triage, implementation, code review, prototyping, and other categories of work.
+03
+Automations
+Automations define a trigger and a workflow to run against the Foreman agent. This example filters Sentry webhook deliveries to investigate fatal crashes.
+04
+Runners
+Runner files define the compute and operating system used by agent runs. This Linux runner supplies a repeatable x86-64 environment and setup commands. Runners support Mac and Windows as well as self-hosted setups
+05
+Skills
+Skills package repeatable procedures that agents can share. This sample guides an agent from a crash report to evidence-backed findings.
+06
+Webhooks
+Webhooks connect automations to third-party webhook sources. This Sentry source verifies signed deliveries before automations can act on them.
+07
+Scorers
+Scorers grade the quality of completed agent conversations. This code-quality scorer checks whether implementation output is correct, tested, and ready to merge.
+08
+Benchmarks
+Benchmarks compare models by replaying your team's agent conversations. The Implementation bench defines a set of full-stack tasks used to test models for correctness.
+Beyond CI/CD to automating the whole SDLC
+defined in code, built for scale, and easy to deploy.
+Opinionated, but flexible
+Set up your first factory in 5 minutes, build it out over time.
+Factories as code
+Repos, agents, models, permissions, and checkpoints in one definition.
+API, CLI, SDK and MCP
+Built as a platform, not a vertical product or AI teammate.
+Integrations
+Work flows in from chat, tickets, and source control; status flows back to where it started.
+Any surface
+Watch, steer, and hand off runs from web, mobile, terminal, or IDE.
+Evals, self-improvement, and memory
+Every run is scored; observer agents open PRs against your factory config to improve it.
+Let your factory learn how you use your tools
+Your workflow researches how tools are set up, then adapts its defaults.
+✓
+Connect work sources
+ · Slack and Linear ready
+✓
+Review a starter workflow
+→
+Set the first factory goal
+Baked-in measurement and self-improvement
+evals, benchmarks, and self-improvement loops drive measurable gains.
+[ 
+fig. 4 · quality loop · sample run
+ ]
+[ fig. t5 · quality loop · sample run ]
+1 ink · scrub to read
+EVAL
+pass
+Evals on your own work
+96%
+100%
+50%
+0%
+apr 01
+may 01
+jun 01
+jul 01
+8/13 07:03
+fail
+0.4
+8/13 07:02
+pass
+0.8
+8/13 07:02
+pass
+0.8
+BENCH
+best
+Benchmarks across models
+1.00x
+1.0x
+0.5x
+0x
+apr 01
+may 01
+jun 01
+jul 01
+Claude Fable 5
+pass
+1.00x
+GPT-5.6 Sol
+pass
+0.94x
+Gemini 3.6 Flash
+fail
+0.89x
+LOOP
+auto-fix
+Self-improvement loops
++3.7
++4
++2
+0
+apr 01
+may 01
+jun 01
+jul 01
+memory updated
+pass
++0.2
+prompts tuned
+pass
++3.2%
+regression caught
+fail
+-0.4
+Cutting our cost per PR from $80 to $30
+How we used Warp Factories Benchmarks to test models on our own engineering tasks and optimize for cost without sacrificing quality.
+read case study
+[ 
+WarpBench · benchmark results
+ ]
+Warp is enterprise ready
+Run agents confidently with guardrails in place, centrally configured agent access, and centrally managed permissions.
+Rectangle Health uses Warp to build a self-improving AI teammate
+Rectangle Health turned a senior engineer's side project into Rex, a self-improving AI teammate built on Oz that now writes 54% of its own code.
+read the story
+Docker uses Warp to reduce onboarding time and give every engineer a shared source of truth
+Docker adopted Warp for a more user-friendly terminal experience, using Warp Drive to streamline repetitive workflows and boost team productivity.
+read the story
+Open at every layer
+[ 
+fig. 3 · open at every layer
+ ]
+Layer 
+01
+Any agent
+any MCP-capable coding agent.
+warp
+claude code
+codex
+cursor
+Layer 
+02
+Any model
+frontier or open-weight, chosen per pipeline stage.
+frontier
+open-weight
+Layer 
+03
+Your compute or ours
+warp's cloud, or self-hosted in your own VPC.
+warp cloud
+self-hosted
+Layer 
+04
+Data lives where you want
+you own and store what your factory produces.
+pluggable
+zero-retention
+your VPC
+Control your coding agent chaos
+continuous improvement, better governance and security, by default.
+[ 
+fig. 5 · control plane
+ ]
+increase agent roi · cost per pr
+$—
+compute
+platform
+inference
+[ fig. t6 · agents · live roster ]
+3 agents
+ready for task
+GPT 5.2 CODEX
+CODEX
+r
+now
+drafting the spec
+OPUS
+CLAUDE CODE
+s
+14m
+routed to spec
+GPT 5.2
+WARP
+t
+37m
+Status advances on a shared clock; no agent is ever idle.
+Agents prove their work with computer use
+every factory agent captures a screenshot or video so you can verify its work before shipping a PR.
+Use Warp everywhere
+Warp is an open agentic development platform that was built to work wherever and however you work.
+Factories
+A software factory that automates and orchestrates software development.
+request access
+Terminal
+An open-source terminal built for AI-assisted software development.
+Download Warp
+Agent CLI
+A powerful coding agent that works in any terminal.
+$
+curl -fsSL https://app.warp.dev/download/agent-cli | bash
+Mac
+Linux
+Windows
+Frequently asked questions
+what is a cloud software factory?
+[+]
+a factory is a fleet of agents wired to your SDLC — triggered by an issue, a slack message, or a schedule, and coordinated by warp factories from triage through review to a mergeable PR.
+how do i define a factory?
+[+]
+as code, in a factory.yaml + supporting agent files. define triggers, agents, models, and approval gates — check it into your repo like any other config.
+do i have to use warp's models or config?
+[+]
+no. bring your own model or harness (e.g. claude code or codex) — warp factories works with whatever your team prefers and helps identify the most cost-effective configuration over time.
+do i need warp terminal to use factories?
+[+]
+no. factories is a separate product — nobody at your company has to use warp terminal. work comes in through tools you already use, like slack, linear, jira, github, and gitlab. if you do use warp terminal, it has built-in factory integrations (native mcp) so you can iterate locally.
+how much of my sdlc can be automated?
+[+]
+most orgs start around 20-30% of PRs fully automated, starting with simple tasks. over time this goes up as models improve and your factory self-improves.
+where does our data live?
+[+]
+wherever you choose — warp's cloud, or fully self-hosted inside your own VPC, under your existing retention and compliance rules.
+how do humans interact with the factory?
+[+]
+humans put work into the factory via your existing tools like slack, teams, linear, jira, github and gitlab. at any time you can iterate on that work locally and the factory agents loop you in proactively when they need help.
+can we start small?
+[+]
+yes — most teams start with a single low-risk workflow, like dependency bumps or flaky test triage, before expanding coverage.
+what does it cost?
+[+]
+usage-based, priced per agent run.
+The agentic development environment.
+Product
+Download
+Pricing
+Enterprise
+Changelog
+Docs
+Open Source
+Status
+Resources
+Blog
+FAQ
+Community
+Support
+Do Things with Warp
+Terminus
+Company
+About
+How We Work
+Careers
+Press
+Contact
+Legal
+Privacy Policy
+Terms of Service
+Security
+Cookie Notice
+Data Processing Addendum
+Your Privacy Choices
+Connect
+X
+GitHub
+YouTube
+Slack
+LinkedIn
+All Rights Reserved © 2026
+SOC 2 Certified
+Checking Status…
+Product Hunt 
+4.8★ (81)
