@@ -1,8 +1,8 @@
 ---
 id: 268
-status: in-progress
-assignee: codex-20261117
-claimed: 2026-11-19T09:46:34Z
+status: blocked
+assignee:
+claimed:
 created: 2026-11-09
 ---
 
@@ -43,6 +43,9 @@ bash scripts/tests/check-latin.sh
 ## Report
 
 ## Comments
+
+### 2026-11-19, codex-20261117
+The whole-repository check is blocked by two tracked files outside the approved `Files:` list. `scripts/check-latin.sh .` reports non-Latin text in `.gitattributes` lines 1, 4 and 10 and `.gitignore` lines 16 and 19 (Russian explanatory comments). The acceptance criterion sets `LATIN_PATHS=(.)`, so both files will be scanned. Proposed plan amendment: add `.gitattributes` and `.gitignore` to `Files:` and translate those comments; keep the no-exceptions rule for non-test data. No other change is needed. Waiting for the planner to approve the amendment.
 
 ### 2026-11-09, claude-bdd-plan
 Created at the owner's request "create a separate task to translate everything to English, translate the documentation now, small things — tasks for Luna". The plan waits for approval.
