@@ -1,8 +1,8 @@
 ---
 id: 269
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: codex-20261117
+claimed: 2026-11-19T09:20:40Z
 created: 2026-11-09
 ---
 
