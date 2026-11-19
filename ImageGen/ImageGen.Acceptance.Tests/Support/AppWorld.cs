@@ -162,6 +162,8 @@ public sealed class AppWorld : IDisposable
         services.AddSingleton<IDialogService>(Platform);
         services.AddSingleton<IImageSaver>(Platform);
         services.AddSingleton<IFilePickerService>(Platform);
+        services.AddSingleton<IImageViewerService>(Platform);
+        services.AddSingleton<IImageComparisonService>(Platform);
     }
 
     private async Task DrainBackgroundWorkAsync(CancellationToken cancellationToken)

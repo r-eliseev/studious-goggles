@@ -1,12 +1,15 @@
+using ImageGen.Presentation.PageModels;
 using ImageGen.Presentation.Services;
 
 namespace ImageGen.Acceptance.Tests.Support;
 
-public sealed class FakePlatform : IClipboardService, IDialogService, IImageSaver, IFilePickerService
+public sealed class FakePlatform : IClipboardService, IDialogService, IImageSaver, IFilePickerService, IImageViewerService, IImageComparisonService
 {
     private readonly Queue<bool> _confirmationAnswers = new();
     private readonly Queue<string?> _promptAnswers = new();
     private readonly Queue<PickedImage> _pickedImages = new();
+    private readonly Queue<string?> _chooseAnswers = new();
+    private bool _chooseFirstOption;
 
     public List<string> ClipboardWrites { get; } = [];
 
@@ -20,6 +23,12 @@ public sealed class FakePlatform : IClipboardService, IDialogService, IImageSave
 
     public int FilePickerRequests { get; private set; }
 
+    public IReadOnlyList<ImageViewerItem> ViewerItems { get; private set; } = [];
+
+    public int ViewerInitialIndex { get; private set; } = -1;
+
+    public ComparisonPageModel? Comparison { get; private set; }
+
     public string ActionLabel => "Save file";
 
     public void QueueConfirmation(bool answer) => _confirmationAnswers.Enqueue(answer);
@@ -27,6 +36,10 @@ public sealed class FakePlatform : IClipboardService, IDialogService, IImageSave
     public void QueuePrompt(string? answer) => _promptAnswers.Enqueue(answer);
 
     public void QueuePickedImage(PickedImage image) => _pickedImages.Enqueue(image);
+
+    public void QueueChoose(string? answer) => _chooseAnswers.Enqueue(answer);
+
+    public void QueueFirstChoice() => _chooseFirstOption = true;
 
     public Task SetTextAsync(string text)
     {
@@ -55,7 +68,25 @@ public sealed class FakePlatform : IClipboardService, IDialogService, IImageSave
     public Task<string?> ChooseAsync(string title, string cancel, IReadOnlyList<string> options)
     {
         ChooseRequests.Add((title, cancel, options.ToArray()));
-        return Task.FromResult<string?>(null);
+        if (_chooseFirstOption)
+        {
+            _chooseFirstOption = false;
+            return Task.FromResult(options.FirstOrDefault());
+        }
+        return Task.FromResult(_chooseAnswers.TryDequeue(out var answer) ? answer : null);
+    }
+
+    public Task ShowAsync(IReadOnlyList<ImageViewerItem> items, int initialIndex, CancellationToken cancellationToken)
+    {
+        ViewerItems = items;
+        ViewerInitialIndex = initialIndex;
+        return Task.CompletedTask;
+    }
+
+    public Task ShowAsync(ComparisonPageModel model, CancellationToken cancellationToken)
+    {
+        Comparison = model;
+        return Task.CompletedTask;
     }
 
     public Task<ImageSaveResult> SaveAsync(string sourcePath, string suggestedFileName, string mediaType, CancellationToken cancellationToken)

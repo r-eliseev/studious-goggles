@@ -155,11 +155,11 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 ### Gallery, viewer and comparison (`Gallery.feature`, task 264)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| GAL-01 | The gallery shows only successful pictures of all sessions, newest first | F7.3 | planned |
-| GAL-02 | Filter by model and period (7 and 30 days) | F7.4 | planned |
-| GAL-03 | Opening a picture from the gallery opens its source session | F7.3 | planned |
-| GAL-04 | Viewer: paging only within one run | F6.2 | planned |
-| GAL-05 | Comparing two successful pictures of one session: side-by-side and overlay modes; the zoom is shared | F6.3 | planned |
+| GAL-01 | The gallery shows only successful pictures of all sessions, newest first | F7.3 | done |
+| GAL-02 | Filter by model and period (7 and 30 days) | F7.4 | done |
+| GAL-03 | Opening a picture from the gallery opens its source session | F7.3 | done |
+| GAL-04 | Viewer: paging only within one run | F6.2 | done |
+| GAL-05 | Comparing two successful pictures of one session: side-by-side and overlay modes; the zoom is shared | F6.3 | done |
 
 ### Video (`Video.feature`, task 265)
 | id | Scenario | Requirements | Status |
