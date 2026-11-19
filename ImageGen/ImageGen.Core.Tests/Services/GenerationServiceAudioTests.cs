@@ -33,6 +33,31 @@ public sealed class GenerationServiceAudioTests
     }
 
     [Fact]
+    public async Task StartAudioRunAsync_SkipsUnavailableSelectedModel()
+    {
+        var fixture = new Fixture();
+
+        await fixture.Service.StartAudioRunAsync(
+            fixture.Session.Id, "music", [new ModelRef("openrouter", "model-a"), new ModelRef("openrouter", "discontinued")],
+            TestContext.Current.CancellationToken);
+        await fixture.Service.WhenIdleAsync();
+
+        Assert.Equal(["model-a"], fixture.Generations.Select(generation => generation.ModelId));
+    }
+
+    [Fact]
+    public async Task StartAudioRunAsync_AllSelectedModelsUnavailable_ThrowsWithoutCreatingRun()
+    {
+        var fixture = new Fixture();
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.StartAudioRunAsync(
+            fixture.Session.Id, "music", [new ModelRef("openrouter", "discontinued")], TestContext.Current.CancellationToken));
+
+        Assert.Contains("available", error.Message, StringComparison.OrdinalIgnoreCase);
+        await fixture.Runs.DidNotReceive().AddRunAsync(Arg.Any<Run>(), Arg.Any<IReadOnlyList<Generation>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task StartAudioRunAsync_ProviderSucceeds_SavesAudioAndPersistsRunParameters()
     {
         var fixture = new Fixture();
@@ -267,7 +292,10 @@ public sealed class GenerationServiceAudioTests
             Seeds.NextSeed().Returns(123L);
             Providers.GetAudioGenerationProvider("openrouter").Returns(AudioProvider);
             AudioModels.ListAsync("openrouter", Arg.Any<CancellationToken>()).Returns(call =>
-                Task.FromResult<IReadOnlyList<AudioModel>>([AudioModel]));
+                Task.FromResult<IReadOnlyList<AudioModel>>([
+                    AudioModel,
+                    new AudioModel { ProviderId = "openrouter", Id = "model-b", Name = "Model B", Output = AudioOutput.ChatAudio, FetchedAt = Now },
+                ]));
             var catalog = new ModelCatalogService(Providers, ImageModels, NullLogger<ModelCatalogService>.Instance);
             var audioCatalog = new AudioModelCatalogService(Providers, AudioModels, NullLogger<AudioModelCatalogService>.Instance);
             var attachmentService = new AttachmentService(Attachments, Files, time);

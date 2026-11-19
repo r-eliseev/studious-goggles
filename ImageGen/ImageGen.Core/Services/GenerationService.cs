@@ -30,6 +30,10 @@ public sealed class GenerationService(
     VideoModelCatalogService? videoCatalog = null,
     AudioModelCatalogService? audioCatalog = null) : ISessionGenerationCoordinator
 {
+    public const string NoSelectedImageModelsAvailableMessage = "None of the selected image models are currently available.";
+    public const string NoSelectedVideoModelsAvailableMessage = "None of the selected video models are currently available.";
+    public const string NoSelectedAudioModelsAvailableMessage = "None of the selected audio models are currently available.";
+
     private readonly IDebugTrace _trace = trace ?? NullDebugTrace.Instance;
     private readonly IAsyncDelay _delay = delay ?? new SystemAsyncDelay(timeProvider);
 
@@ -319,6 +323,29 @@ public sealed class GenerationService(
         var text = NormalizePrompt(prompt);
         using var lease = AcquireStartLease(sessionId);
         await GetSessionAsync(sessionId, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<AudioModel>? availableAudioModels = null;
+        if (audioCatalog is not null)
+        {
+            try
+            {
+                var catalogModels = await audioCatalog.GetAudioModelsAsync(forceRefresh: false, cancellationToken).ConfigureAwait(false);
+                availableAudioModels = catalogModels.Count == 0 ? null : catalogModels;
+            }
+            catch (ProviderException)
+            {
+                // An unavailable catalog cannot establish that a saved model disappeared.
+            }
+        }
+
+        var selectedModels = availableAudioModels is null
+            ? models
+            : models.Where(model => model.ProviderId != ProviderIds.OpenRouter
+                || availableAudioModels.Any(candidate => candidate.ProviderId == model.ProviderId && candidate.Id == model.ModelId)).ToArray();
+        if (selectedModels.Count == 0)
+        {
+            throw new InvalidOperationException(NoSelectedAudioModelsAvailableMessage);
+        }
+
         var now = timeProvider.GetUtcNow();
         var run = new Run
         {
@@ -329,7 +356,7 @@ public sealed class GenerationService(
             CreatedAt = now,
             AudioParameters = parameters,
         };
-        var generations = models.Select((model, index) => new Generation
+        var generations = selectedModels.Select((model, index) => new Generation
         {
             Id = Guid.NewGuid(),
             RunId = run.Id,
@@ -377,6 +404,29 @@ public sealed class GenerationService(
         var text = NormalizePrompt(prompt);
         using var lease = AcquireStartLease(sessionId);
         await GetSessionAsync(sessionId, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<VideoModel>? availableVideoModels = null;
+        if (videoCatalog is not null)
+        {
+            try
+            {
+                var catalogModels = await videoCatalog.GetVideoModelsAsync(forceRefresh: false, cancellationToken).ConfigureAwait(false);
+                availableVideoModels = catalogModels.Count == 0 ? null : catalogModels;
+            }
+            catch (ProviderException)
+            {
+                // An unavailable catalog cannot establish that a saved model disappeared.
+            }
+        }
+
+        var selectedModels = availableVideoModels is null
+            ? models
+            : models.Where(model => model.ProviderId != ProviderIds.OpenRouter
+                || availableVideoModels.Any(candidate => candidate.ProviderId == model.ProviderId && candidate.Id == model.ModelId)).ToArray();
+        if (selectedModels.Count == 0)
+        {
+            throw new InvalidOperationException(NoSelectedVideoModelsAvailableMessage);
+        }
+
         var firstFrame = await ReadFirstFrameAsync(sessionId, firstFrameGenerationId, cancellationToken).ConfigureAwait(false);
         var now = timeProvider.GetUtcNow();
         var run = new Run
@@ -390,22 +440,11 @@ public sealed class GenerationService(
             FirstFrameGenerationId = firstFrameGenerationId,
         };
 
-        var generations = new List<Generation>(models.Count);
-        for (var index = 0; index < models.Count; index++)
+        var generations = new List<Generation>(selectedModels.Count);
+        for (var index = 0; index < selectedModels.Count; index++)
         {
-            var model = models[index] ?? throw new ArgumentException("A video model reference cannot be null.", nameof(models));
-            var supportsSeed = false;
-            if (videoCatalog is not null)
-            {
-                try
-                {
-                    supportsSeed = (await videoCatalog.FindAsync(model, cancellationToken).ConfigureAwait(false))?.SupportsSeed == true;
-                }
-                catch (ProviderException)
-                {
-                    // An unavailable catalog does not prevent a video request; it means seed support is unknown.
-                }
-            }
+            var model = selectedModels[index] ?? throw new ArgumentException("A video model reference cannot be null.", nameof(models));
+            var supportsSeed = availableVideoModels?.FirstOrDefault(candidate => candidate.ProviderId == model.ProviderId && candidate.Id == model.ModelId)?.SupportsSeed == true;
 
             generations.Add(new Generation
             {
@@ -465,9 +504,42 @@ public sealed class GenerationService(
         var pairs = new List<(ModelRef Model, long Seed, IReadOnlyList<Guid> References)>();
         var skipped = new List<SkippedModel>();
         var notSent = 0;
+        var providerCatalogs = new Dictionary<string, IReadOnlyList<ImageModel>?>(StringComparer.Ordinal);
+        var availableModelCount = 0;
         foreach (var model in session.Settings.ImageModels)
         {
-            var limit = ReferenceImageLimit.Of(await ReadModelAsync(model, cancellationToken));
+            if (!providerCatalogs.TryGetValue(model.ProviderId, out var providerModels))
+            {
+                try
+                {
+                    var catalogModels = await catalog.GetImageModelsAsync(model.ProviderId, forceRefresh: false, cancellationToken);
+                    providerModels = catalogModels.Count == 0 ? null : catalogModels;
+                }
+                catch (ProviderException)
+                {
+                    // An unavailable catalog cannot establish that a saved model disappeared.
+                    providerModels = null;
+                }
+
+                providerCatalogs[model.ProviderId] = providerModels;
+            }
+
+            ImageModel? image;
+            if (providerModels is not null)
+            {
+                image = providerModels.FirstOrDefault(candidate => candidate.Id == model.ModelId);
+                if (image is null)
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                image = await ReadModelAsync(model, cancellationToken);
+            }
+
+            availableModelCount++;
+            var limit = ReferenceImageLimit.Of(image);
             if (attachmentIds.Count > 0 && limit == 0)
             {
                 skipped.Add(new SkippedModel(model, ModelSkipReason.NoReferenceSupport));
@@ -480,6 +552,11 @@ public sealed class GenerationService(
             {
                 pairs.Add((model, seed, references));
             }
+        }
+
+        if (availableModelCount == 0)
+        {
+            throw new InvalidOperationException(NoSelectedImageModelsAvailableMessage);
         }
 
         if (pairs.Count == 0)
@@ -972,7 +1049,7 @@ public sealed class GenerationService(
 
         if (generations.Count == 0)
         {
-            throw new InvalidOperationException("None of the selected image models are currently available.");
+            throw new InvalidOperationException(NoSelectedImageModelsAvailableMessage);
         }
 
         await runs.AddRunAsync(run, generations, cancellationToken);

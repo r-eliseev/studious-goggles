@@ -469,6 +469,24 @@ public class SessionsPageModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Rename_LongerThanMax_ShowsErrorAndKeepsTitle()
+    {
+        var session = NewSession("Keep name", DateTimeOffset.UtcNow);
+        _sessionRepository.ListAsync(Arg.Any<CancellationToken>()).Returns([session]);
+        _sessionRepository.GetAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        _dialogs.PromptAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(new string('x', Session.MaxTitleLength + 1));
+        var model = CreateModel();
+        await model.OnAppearingAsync();
+
+        await model.Sessions[0].RenameCommand.ExecuteAsync(null);
+
+        Assert.Equal("Keep name", model.Sessions[0].Title);
+        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, AppResources.RenameTooLong);
+        await _sessionRepository.DidNotReceive().UpdateAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Search_ShowsSessionWithSnippetOfMatchingText()
     {
         var fox = NewSession("Animals", DateTimeOffset.UtcNow);

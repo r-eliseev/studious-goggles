@@ -1,6 +1,6 @@
 ---
 id: 258
-status: approved
+status: review
 assignee:
 claimed:
 created: 2026-11-09
@@ -55,6 +55,16 @@ bash scripts/check.sh
 - In the “Report”, list passing scenarios, ignored scenarios and their tracking tasks, commands and results, and differences from the plan. Update scenario statuses in `docs/specs/acceptance-scenarios.md`.
 
 ## Report
+
+Implemented CAN-01…CAN-05 in `Features/CancelAndRecovery.feature`. CAN-02, CAN-03 and CAN-04 pass. CAN-01 and CAN-05 are tagged `@ignore @bug-287`; the catalog records both as discrepancies. Task 287 tracks that synchronous image cancellation does not persist the stopped-waiting status/time for restoration after restart. CAN-04 uses an additive `AppWorld.RestartAfterInterruptionAsync` harness path that stops the composition without waiting for the held generation, then starts a fresh composition over the same data directory.
+
+Verification (2026-11-17):
+- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait 'Category=cancel'` — passed: 3 passed, 2 ignored.
+- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` — passed: 85 passed, 2 ignored.
+- `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` — passed.
+- `bash scripts/check.sh` — passed.
+
+The implementation uses the approved additive test-harness changes. CAN-01, originally approved after task 284, now exposes the separate synchronous cancellation persistence issue tracked by task 287.
 
 ## Comments
 

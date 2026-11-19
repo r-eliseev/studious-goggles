@@ -34,7 +34,7 @@ Feature: Sessions
     Then the first session retains its original title
     And the app shows a rename error
 
-  @SES-04 @S1.2 @ignore @bug-276
+  @SES-04 @S1.2
   Scenario: A session title longer than 40 characters is rejected
     Given the user has a saved OpenRouter key
     When the user creates a new session
@@ -42,6 +42,7 @@ Feature: Sessions
     And the rename prompt will return "This title is deliberately longer than forty characters"
     And the user renames the first session
     Then the first session retains its original title
+    And the app shows a rename error
 
   @SES-05 @S1.1
   Scenario: Deleting a session requires confirmation and survives restart

@@ -42,6 +42,32 @@ public sealed class SessionsApiTests
     }
 
     [Fact]
+    public async Task Sessions_RenameWithOverlengthTitle_ReturnsBadRequest()
+    {
+        using var host = new TestHost();
+        using var client = host.Factory.CreateClient();
+        await host.LoginAsync(client);
+        var token = await host.GetCsrfTokenAsync(client);
+        using var createRequest = new HttpRequestMessage(HttpMethod.Post, "/api/sessions");
+        createRequest.Headers.Add("X-CSRF-TOKEN", token);
+        using var createResponse = await client.SendAsync(createRequest, TestContext.Current.CancellationToken);
+        var session = await createResponse.Content.ReadFromJsonAsync<SessionResponse>(TestContext.Current.CancellationToken);
+        Assert.NotNull(session);
+
+        using var renameRequest = new HttpRequestMessage(HttpMethod.Patch, $"/api/sessions/{session.Id}")
+        {
+            Content = JsonContent.Create(new { title = new string('x', 41) }),
+        };
+        renameRequest.Headers.Add("X-CSRF-TOKEN", token);
+
+        using var response = await client.SendAsync(renameRequest, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<ErrorResponse>(TestContext.Current.CancellationToken);
+        Assert.Equal("invalid_request", error?.Error);
+    }
+
+    [Fact]
     public async Task Providers_ListDoesNotExposeProviderConfigurationOrSecrets()
     {
         using var host = new TestHost();
@@ -58,6 +84,8 @@ public sealed class SessionsApiTests
     private sealed record SessionResponse(Guid Id, string Title);
 
     private sealed record TimelineResponse(SessionResponse Session, IReadOnlyList<object> Messages, IReadOnlyList<object> Runs, IReadOnlyList<object> Generations);
+
+    private sealed record ErrorResponse(string Error);
 
     private sealed class TestHost : IDisposable
     {

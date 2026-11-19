@@ -1,8 +1,8 @@
 ---
 id: 285
-status: approved
-assignee:
-claimed:
+status: in-progress
+assignee: codex-20261117
+claimed: 2026-11-17T18:39:03Z
 created: 2026-11-17
 ---
 
@@ -45,3 +45,14 @@ bash scripts/check.sh
 ### 2026-11-17, claude-planner
 Created from the review of task 274 (its proposed follow-up).
 Plan approved (standing instruction of 2026-11-07: "approve all tasks that will come").
+
+### 2026-11-17, codex-20261117 — dispatch 44150856492
+Dispatched `ios_smoke_repeats=20`, `ios_toolchain=26.4.1` on this task branch. MAUI iOS, MAUI Catalyst and Avalonia macOS builds succeeded. `build-avalonia-ios` was cancelled after 15m03s queued and `apple-preflight` after 17m24s queued; both jobs have no runner name and no steps ran. `smoke-ios-avalonia` was subsequently cancelled before its smoke step because its build produced no artifact. The MAUI 20-repeat smoke step started at 19:01:20Z and is still running. This dispatch does not count as a complete two-app run; retain its MAUI artifact/results, then dispatch another full run after it finishes.
+
+### 2026-11-17, codex-20261117 — MAUI artifact from dispatch 44150856492
+The MAUI smoke completed 20 repetitions and uploaded artifacts, but all 20 were invalid for the PID decision: each `summary.json` had `pid=null`, `launched=false`, `aliveAfter30s=false`; `launch.log` contained the `<bundle id>: <pid>` line only after the timeline sampling ended and cleanup killed `simctl launch --console-pty`. For example, run 01's app log records startup at 19:04:58Z and its launchctl timeline sees PID 4395 at the 5-second sample, while all PID columns stay empty; the final launch log then contains `com.eliseev.imagegen: 4395`. No app crash reports were collected. Changed the launch observer to omit `--console-pty`, so `simctl launch` returns its PID promptly while the launched app continues running. This dispatch does not count as a valid run; rerun the two-app workflow after the next check.
+
+### 2026-11-17, codex-20261117 — Avalonia smoke from dispatch 44173347606
+All 20 repetitions recorded a PID. The smoke step reported 3 failures (runs 02, 06, 09), but these are missed 30-second samples, not confirmed app exits: the timeline shows the PID alive at 25 seconds and again at 35 seconds, with no sample at 30 seconds because a `launchctl` diagnostic delayed the sampling loop past its scheduled tick. For example, run 02 has PID 6178 alive at 25.057 and 35.031 seconds and its app log records startup at 21:08:22.935Z. Updated the sampling schedule to preserve the required 30-second PID check after a delayed diagnostic. Dispatch 44173347606 is not a valid acceptance run; both apps must be rerun with this correction.
+
+MAUI also completed 20 repetitions in dispatch 44173347606. Three were marked failed (runs 06, 13, 20). Run 13's PID appeared at the 40-second sample (`firstSeenAtSeconds=46`), and the app log records startup at 22:07:39.578Z; this missed the required 30-second threshold. Runs 06 and 20 did not print a PID during the 60-second window and had no timeline process observations, although their copied app logs record later startup at 21:26:24.763Z and 22:47:50.613Z respectively. These are delayed simulator launches, not observed process exits, and no app crash reports were collected. The dispatch is not a valid acceptance run because its Avalonia 30-second sample was skipped; the corrected two-app runs remain pending.

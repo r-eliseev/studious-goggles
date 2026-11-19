@@ -21,6 +21,7 @@ public sealed class CommonSteps(ScenarioContext scenario)
     public async Task DisposeWorldAsync()
     {
         var world = World;
+        world.OpenRouter.CompleteAllHeldGenerations();
         await HeadlessApp.RunAsync(async _ =>
         {
             await world.DisposeAsync();
@@ -178,6 +179,13 @@ public sealed class CommonSteps(ScenarioContext scenario)
     public Task WhenTheUserRestartsTheApp() => HeadlessApp.RunAsync(async cancellationToken =>
     {
         await World.RestartAsync(cancellationToken);
+        return true;
+    }, TestContext.Current.CancellationToken);
+
+    [When("the user restarts the app while a generation is active")]
+    public Task WhenTheUserRestartsTheAppWhileAGenerationIsActive() => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        await World.RestartAfterInterruptionAsync(cancellationToken);
         return true;
     }, TestContext.Current.CancellationToken);
 

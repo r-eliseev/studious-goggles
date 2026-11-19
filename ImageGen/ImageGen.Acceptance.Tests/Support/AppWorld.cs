@@ -123,6 +123,14 @@ public sealed class AppWorld : IDisposable
         await StartAsync(cancellationToken);
     }
 
+    public async Task RestartAfterInterruptionAsync(CancellationToken cancellationToken)
+    {
+        _generations = null;
+        _imageFiles = null;
+        await StopCompositionAsync();
+        await StartAsync(cancellationToken);
+    }
+
     public Task WaitUntilAsync(Func<bool> condition, string description, CancellationToken cancellationToken) =>
         WaitUntilCoreAsync(condition, description, cancellationToken);
 
@@ -195,9 +203,22 @@ public sealed class AppWorld : IDisposable
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(OperationTimeout);
-        while (!condition())
+        while (true)
         {
-            Dispatcher.UIThread.RunJobs();
+            var onUiThread = Dispatcher.UIThread.CheckAccess();
+            var satisfied = onUiThread
+                ? condition()
+                : await HeadlessApp.RunAsync(_ => Task.FromResult(condition()), timeout.Token);
+            if (satisfied)
+            {
+                return;
+            }
+
+            if (onUiThread)
+            {
+                Dispatcher.UIThread.RunJobs();
+            }
+
             await Task.Delay(10, timeout.Token);
         }
     }

@@ -70,6 +70,23 @@
                 </HorizontalStackLayout>
                 <Label Grid.Row="1" StyleClass="section" Text="{Binding SelectedCountText}" VerticalOptions="Center" />
                 <ScrollView Grid.Row="2">
+                    <VerticalStackLayout Spacing="8">
+                    <VerticalStackLayout Spacing="4" BindableLayout.ItemsSource="{Binding UnavailableImageModels}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="pm:UnavailableModelOptionViewModel">
+                                <Border StyleClass="card" Padding="8">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <VerticalStackLayout>
+                                            <Label Text="{Binding Name}" LineBreakMode="WordWrap" />
+                                            <Label StyleClass="meta" Text="{Binding ProviderText}" />
+                                        </VerticalStackLayout>
+                                        <Button Grid.Column="1" StyleClass="ghost" Text="{x:Static strings:AppResources.ProviderKeyRemove}"
+                                                Command="{Binding RemoveCommand}" SemanticProperties.Description="{x:Static strings:AppResources.ProviderKeyRemove}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
                     <VerticalStackLayout Spacing="4" BindableLayout.ItemsSource="{Binding ImageModelGroups}">
                         <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="pm:ImageModelGroupViewModel">
@@ -107,10 +124,18 @@
                             </DataTemplate>
                         </BindableLayout.ItemTemplate>
                     </VerticalStackLayout>
+                    </VerticalStackLayout>
                 </ScrollView>
             </Grid>
 
             <ScrollView IsVisible="{Binding IsAssistantTabSelected}">
+                <VerticalStackLayout Spacing="8">
+                <Border StyleClass="card" Padding="8" IsVisible="{Binding HasUnavailableAssistantModel}">
+                    <VerticalStackLayout>
+                        <Label Text="{Binding UnavailableAssistantModel.Name}" LineBreakMode="WordWrap" />
+                        <Label StyleClass="meta" Text="{Binding UnavailableAssistantModel.ProviderText}" />
+                    </VerticalStackLayout>
+                </Border>
                 <VerticalStackLayout Spacing="4" RadioButtonGroup.GroupName="sessionAssistant" BindableLayout.ItemsSource="{Binding AssistantModelGroups}">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="pm:AssistantModelGroupViewModel">
@@ -156,10 +181,28 @@
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
                 </VerticalStackLayout>
+                </VerticalStackLayout>
             </ScrollView>
             <Grid RowDefinitions="Auto,*" IsVisible="{Binding IsVideoModelsTabSelected}">
                 <Label StyleClass="section" Text="{Binding SelectedVideoCountText}" />
                 <ScrollView Grid.Row="1">
+                    <VerticalStackLayout Spacing="8">
+                    <VerticalStackLayout Spacing="4" BindableLayout.ItemsSource="{Binding UnavailableVideoModels}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="pm:UnavailableModelOptionViewModel">
+                                <Border StyleClass="card" Padding="8">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <VerticalStackLayout>
+                                            <Label Text="{Binding Name}" LineBreakMode="WordWrap" />
+                                            <Label StyleClass="meta" Text="{Binding ProviderText}" />
+                                        </VerticalStackLayout>
+                                        <Button Grid.Column="1" StyleClass="ghost" Text="{x:Static strings:AppResources.ProviderKeyRemove}"
+                                                Command="{Binding RemoveCommand}" SemanticProperties.Description="{x:Static strings:AppResources.ProviderKeyRemove}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
                     <VerticalStackLayout Spacing="4" BindableLayout.ItemsSource="{Binding VideoModels}">
                         <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="pm:VideoModelOptionViewModel">
@@ -176,12 +219,29 @@
                             </DataTemplate>
                         </BindableLayout.ItemTemplate>
                     </VerticalStackLayout>
+                    </VerticalStackLayout>
                 </ScrollView>
             </Grid>
             <Grid RowDefinitions="Auto,*" IsVisible="{Binding IsAudioModelsTabSelected}">
                 <Label StyleClass="section" Text="{Binding SelectedAudioCountText}" />
                 <ScrollView Grid.Row="1">
                     <VerticalStackLayout Spacing="8">
+                            <VerticalStackLayout Spacing="4" BindableLayout.ItemsSource="{Binding UnavailableAudioModels}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="pm:UnavailableModelOptionViewModel">
+                                        <Border StyleClass="card" Padding="8">
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                <VerticalStackLayout>
+                                                    <Label Text="{Binding Name}" LineBreakMode="WordWrap" />
+                                                    <Label StyleClass="meta" Text="{Binding ProviderText}" />
+                                                </VerticalStackLayout>
+                                                <Button Grid.Column="1" StyleClass="ghost" Text="{x:Static strings:AppResources.ProviderKeyRemove}"
+                                                        Command="{Binding RemoveCommand}" SemanticProperties.Description="{x:Static strings:AppResources.ProviderKeyRemove}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
                         <Label StyleClass="section" Text="{x:Static strings:AppResources.AudioMusicSoundGroup}" />
                         <VerticalStackLayout Spacing="4" BindableLayout.ItemsSource="{Binding MusicSoundModels}">
                             <BindableLayout.ItemTemplate>

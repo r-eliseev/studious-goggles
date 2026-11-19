@@ -158,6 +158,17 @@ public sealed class FakeOpenRouter
         held.Release(HttpStatusCode.OK, responseBody);
     }
 
+    public void CompleteAllHeldGenerations()
+    {
+        foreach (var (modelId, reply) in _generationReplies.ToArray())
+        {
+            if (reply.Held is not null)
+            {
+                CompleteHeldGeneration(modelId);
+            }
+        }
+    }
+
     private Task<HttpResponseMessage> HandleChatAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

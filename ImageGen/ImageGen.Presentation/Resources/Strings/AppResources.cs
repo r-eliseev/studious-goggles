@@ -55,6 +55,8 @@ public static class AppResources
 
     public static string RenameEmpty => Get(nameof(RenameEmpty));
 
+    public static string RenameTooLong => Get(nameof(RenameTooLong));
+
     public static string RunsCountOne => Get(nameof(RunsCountOne));
 
     public static string SearchSessions => Get(nameof(SearchSessions));
@@ -161,6 +163,12 @@ public static class AppResources
     public static string AssistantRole => Get(nameof(AssistantRole));
 
     public static string ModelsButtonFormat => Get(nameof(ModelsButtonFormat));
+
+    public static string ModelsButtonUnavailableFormat => Get(nameof(ModelsButtonUnavailableFormat));
+
+    public static string SelectedModelUnavailableFormat => Get(nameof(SelectedModelUnavailableFormat));
+
+    public static string AssistantModelUnavailableMessage => Get(nameof(AssistantModelUnavailableMessage));
 
     public static string RunPromptFormat => Get(nameof(RunPromptFormat));
 

@@ -75,6 +75,9 @@
   <data name="RenameEmpty" xml:space="preserve">
     <value>Enter a name for the session.</value>
   </data>
+  <data name="RenameTooLong" xml:space="preserve">
+    <value>A session name can have at most 40 characters.</value>
+  </data>
   <data name="RunsCountOne" xml:space="preserve">
     <value>1 run</value>
   </data>
@@ -189,6 +192,15 @@
   </data>
   <data name="ModelsButtonFormat" xml:space="preserve">
     <value>Models: {0} × {1} · video {2} · audio {3}</value>
+  </data>
+  <data name="ModelsButtonUnavailableFormat" xml:space="preserve">
+    <value>⚠ {0} · {1} unavailable</value>
+  </data>
+  <data name="SelectedModelUnavailableFormat" xml:space="preserve">
+    <value>{0} — Unavailable — no longer offered by the provider</value>
+  </data>
+  <data name="AssistantModelUnavailableMessage" xml:space="preserve">
+    <value>The selected assistant model is no longer available. Choose another model to continue.</value>
   </data>
   <data name="RunPromptFormat" xml:space="preserve">
     <value>Prompt: {0}</value>

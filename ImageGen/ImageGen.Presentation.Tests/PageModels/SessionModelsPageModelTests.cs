@@ -250,7 +250,8 @@ public class SessionModelsPageModelTests
 
         model.Models[0].IsSelected = !model.Models[0].IsSelected;
 
-        var expected = string.Format(CultureInfo.CurrentCulture, AppResources.ImageModelsSelectedFormat, model.Models.Count(m => m.IsSelected));
+        var expected = string.Format(CultureInfo.CurrentCulture, AppResources.ImageModelsSelectedFormat,
+            model.Models.Count(m => m.IsSelected) + model.UnavailableImageModels.Count);
         Assert.Equal(expected, model.SelectedCountText);
     }
 
@@ -413,6 +414,65 @@ public class SessionModelsPageModelTests
         Assert.Equal(3, model.RunsPerModel);
         Assert.Equal("Runs per model: 3", model.RunsPerModelText);
         Assert.False(model.IsBusy);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_ShowsSelectedUnavailableImageModelAndRemoveDropsItOnSave()
+    {
+        var model = await OpenAsync();
+
+        var unavailable = Assert.Single(model.UnavailableImageModels);
+        Assert.Equal(Ref(RemovedModel), unavailable.Reference);
+        Assert.Equal(string.Format(AppResources.SelectedModelUnavailableFormat, RemovedModel), unavailable.Name);
+
+        unavailable.RemoveCommand.Execute(null);
+        await model.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal([Ref(Beta.Id)], _saved!.Settings.ImageModels);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_ShowsAndRemovesUnavailableVideoAudioAndAssistantModels()
+    {
+        _session.Settings.VideoModels = [Ref("google/veo"), Ref("video/discontinued")];
+        _session.Settings.AudioModels = [Ref("speech/tts"), Ref("audio/discontinued")];
+        _session.Settings.AssistantModel = Ref("assistant/discontinued");
+        var model = await OpenAsync();
+
+        Assert.Equal(Ref("assistant/discontinued"), model.UnavailableAssistantModel!.Reference);
+        model.AssistantModels.Single(option => option.Reference.ModelId == "vendor/zed").SelectCommand.Execute(null);
+        var missingVideo = Assert.Single(model.UnavailableVideoModels);
+        var missingAudio = Assert.Single(model.UnavailableAudioModels);
+        missingVideo.RemoveCommand.Execute(null);
+        missingAudio.RemoveCommand.Execute(null);
+        await model.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(Ref("vendor/zed"), _saved!.Settings.AssistantModel);
+        Assert.Equal([Ref("google/veo")], _saved.Settings.VideoModels);
+        Assert.Equal([Ref("speech/tts")], _saved.Settings.AudioModels);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_EmptyCatalogsKeepSelectedModelsUnverified()
+    {
+        _modelRepository.ListAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns([]);
+        _provider.ListImageModelsAsync(Arg.Any<CancellationToken>()).Returns([]);
+        _videoModelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns([]);
+        _videoProvider.ListVideoModelsAsync(Arg.Any<CancellationToken>()).Returns([]);
+        _audioModelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns([]);
+        _audioProvider.ListAudioModelsAsync(Arg.Any<CancellationToken>()).Returns([]);
+        _session.Settings.VideoModels = [Ref("video/discontinued")];
+        _session.Settings.AudioModels = [Ref("audio/discontinued")];
+        var model = await OpenAsync();
+
+        Assert.Empty(model.UnavailableImageModels);
+        Assert.Empty(model.UnavailableVideoModels);
+        Assert.Empty(model.UnavailableAudioModels);
+        await model.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal([Ref(Beta.Id), Ref(RemovedModel)], _saved!.Settings.ImageModels);
+        Assert.Equal([Ref("video/discontinued")], _saved.Settings.VideoModels);
+        Assert.Equal([Ref("audio/discontinued")], _saved.Settings.AudioModels);
     }
 
     [Fact]

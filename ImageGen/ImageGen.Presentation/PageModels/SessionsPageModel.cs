@@ -508,6 +508,12 @@ public sealed partial class SessionsPageModel(
                 return;
             }
 
+            if (title.Trim().Length > Session.MaxTitleLength)
+            {
+                await dialogs.AlertAsync(AppResources.ErrorTitle, AppResources.RenameTooLong);
+                return;
+            }
+
             var session = await sessionService.RenameAsync(item.Id, title, CancellationToken.None);
             item.Title = session.Title;
         }

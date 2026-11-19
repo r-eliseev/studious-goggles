@@ -39,6 +39,9 @@ public sealed partial class SessionModelsPageModel(
     private Guid _sessionId;
     private Session? _session;
     private bool _loaded;
+    private readonly List<ModelRef> _unverifiedImageModels = [];
+    private readonly List<ModelRef> _unverifiedVideoModels = [];
+    private readonly List<ModelRef> _unverifiedAudioModels = [];
 
     /// <summary>In pane mode (wide window) Save and Cancel raise <see cref="CloseRequested"/> instead of going back.</summary>
     public bool HostedInPane { get; set; }
@@ -57,6 +60,18 @@ public sealed partial class SessionModelsPageModel(
     public ObservableCollection<AudioModelOptionViewModel> MusicSoundModels { get; } = [];
 
     public ObservableCollection<AudioModelOptionViewModel> SpeechModels { get; } = [];
+
+    public ObservableCollection<UnavailableModelOptionViewModel> UnavailableImageModels { get; } = [];
+
+    public ObservableCollection<UnavailableModelOptionViewModel> UnavailableVideoModels { get; } = [];
+
+    public ObservableCollection<UnavailableModelOptionViewModel> UnavailableAudioModels { get; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUnavailableAssistantModel))]
+    public partial UnavailableModelOptionViewModel? UnavailableAssistantModel { get; set; }
+
+    public bool HasUnavailableAssistantModel => UnavailableAssistantModel is not null;
 
     public ObservableCollection<ImageModelGroupViewModel> ImageModelGroups { get; } = [];
 
@@ -140,13 +155,16 @@ public sealed partial class SessionModelsPageModel(
 
     /// <summary>"Image models · N selected" for the section header; updated when a row is checked or unchecked.</summary>
     public string SelectedCountText =>
-        string.Format(CultureInfo.CurrentCulture, AppResources.ImageModelsSelectedFormat, _all.Count(m => m.IsSelected));
+        string.Format(CultureInfo.CurrentCulture, AppResources.ImageModelsSelectedFormat,
+            _all.Count(m => m.IsSelected) + UnavailableImageModels.Count + _unverifiedImageModels.Count);
 
     public string SelectedVideoCountText =>
-        string.Format(CultureInfo.CurrentCulture, AppResources.VideoModelsSelectedFormat, _videoAll.Count(model => model.IsSelected));
+        string.Format(CultureInfo.CurrentCulture, AppResources.VideoModelsSelectedFormat,
+            _videoAll.Count(model => model.IsSelected) + UnavailableVideoModels.Count + _unverifiedVideoModels.Count);
 
     public string SelectedAudioCountText =>
-        string.Format(CultureInfo.CurrentCulture, AppResources.AudioModelsSelectedFormat, _audioAll.Count(model => model.IsSelected));
+        string.Format(CultureInfo.CurrentCulture, AppResources.AudioModelsSelectedFormat,
+            _audioAll.Count(model => model.IsSelected) + UnavailableAudioModels.Count + _unverifiedAudioModels.Count);
 
     public string RunsPerModelText =>
         string.Format(CultureInfo.CurrentCulture, AppResources.RunsPerModelFormat, (int)Math.Round(RunsPerModel));
@@ -182,12 +200,10 @@ public sealed partial class SessionModelsPageModel(
         try
         {
             var session = _session ?? throw new InvalidOperationException($"Session {_sessionId} is not loaded.");
-            var knownRefs = _all.Select(m => m.Reference).ToHashSet();
-            // Models that are saved but not in the catalog stay selected: the catalog may not list them.
-            var unknownSelected = session.Settings.ImageModels.Where(reference => !knownRefs.Contains(reference));
             var settings = new SessionSettings
             {
-                ImageModels = _all.Where(m => m.IsSelected).Select(m => m.Reference).Concat(unknownSelected).ToList(),
+                ImageModels = _all.Where(m => m.IsSelected).Select(m => m.Reference)
+                    .Concat(UnavailableImageModels.Select(m => m.Reference)).Concat(_unverifiedImageModels).Distinct().ToList(),
                 RunsPerModel = (int)Math.Round(RunsPerModel),
                 // Without a row chosen (the list is empty or failed to load) the saved assistant stays.
                 AssistantModel = _assistants.FirstOrDefault(a => a.IsSelected)?.Reference ?? session.Settings.AssistantModel,
@@ -195,18 +211,18 @@ public sealed partial class SessionModelsPageModel(
             await sessionService.UpdateSettingsAsync(_sessionId, settings, CancellationToken.None);
             if (_videoCatalog is not null)
             {
-                var selectedVideos = _videoAll.Where(model => model.IsSelected).Select(model => model.Reference).ToList();
+                var selectedVideos = _videoAll.Where(model => model.IsSelected).Select(model => model.Reference)
+                    .Concat(UnavailableVideoModels.Select(model => model.Reference)).Concat(_unverifiedVideoModels).Distinct().ToList();
                 await sessionService.UpdateVideoSettingsAsync(
                     _sessionId, selectedVideos, session.Settings.VideoParameters, CancellationToken.None);
             }
             if (_audioCatalog is not null)
             {
-                var selectedAudio = _audioAll.Where(model => model.IsSelected).Select(model => model.Reference).ToHashSet();
-                var knownAudio = _audioAll.Select(model => model.Reference).ToHashSet();
-                var unknownSavedAudio = session.Settings.AudioModels.Where(reference => !knownAudio.Contains(reference));
+                var selectedAudio = _audioAll.Where(model => model.IsSelected).Select(model => model.Reference)
+                    .Concat(UnavailableAudioModels.Select(model => model.Reference)).Concat(_unverifiedAudioModels).Distinct().ToList();
                 await sessionService.UpdateAudioSettingsAsync(
                     _sessionId,
-                    selectedAudio.Concat(unknownSavedAudio).Distinct().ToList(),
+                    selectedAudio,
                     session.Settings.AudioParameters,
                     CancellationToken.None);
             }
@@ -250,16 +266,16 @@ public sealed partial class SessionModelsPageModel(
 
             // After the first load the checkboxes and the chosen row are the source of truth (they may hold unsaved changes).
             var selected = _loaded
-                ? _all.Where(m => m.IsSelected).Select(m => m.Reference).ToHashSet()
+                ? _all.Where(m => m.IsSelected).Select(m => m.Reference).Concat(UnavailableImageModels.Select(m => m.Reference)).Concat(_unverifiedImageModels).ToHashSet()
                 : session.Settings.ImageModels.ToHashSet();
             var assistant = _loaded
-                ? _assistants.FirstOrDefault(a => a.IsSelected)?.Reference
+                ? _assistants.FirstOrDefault(a => a.IsSelected)?.Reference ?? UnavailableAssistantModel?.Reference
                 : session.Settings.AssistantModel;
             var selectedVideos = _loaded
-                ? _videoAll.Where(model => model.IsSelected).Select(model => model.Reference).ToHashSet()
+                ? _videoAll.Where(model => model.IsSelected).Select(model => model.Reference).Concat(UnavailableVideoModels.Select(m => m.Reference)).Concat(_unverifiedVideoModels).ToHashSet()
                 : session.Settings.VideoModels.ToHashSet();
             var selectedAudio = _loaded
-                ? _audioAll.Where(model => model.IsSelected).Select(model => model.Reference).ToHashSet()
+                ? _audioAll.Where(model => model.IsSelected).Select(model => model.Reference).Concat(UnavailableAudioModels.Select(m => m.Reference)).Concat(_unverifiedAudioModels).ToHashSet()
                 : session.Settings.AudioModels.ToHashSet();
             if (!_loaded)
             {
@@ -267,6 +283,35 @@ public sealed partial class SessionModelsPageModel(
             }
 
             var models = await catalog.GetAllImageModelsAsync(forceRefresh, CancellationToken.None);
+            UnavailableImageModels.Clear();
+            _unverifiedImageModels.Clear();
+            var imageCatalogs = models.GroupBy(model => model.ProviderId, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => (IReadOnlyList<ImageModel>?)group.ToArray(), StringComparer.Ordinal);
+            foreach (var reference in selected)
+            {
+                if (!imageCatalogs.TryGetValue(reference.ProviderId, out var providerModels))
+                {
+                    try
+                    {
+                        providerModels = await catalog.GetImageModelsAsync(reference.ProviderId, forceRefresh: false, CancellationToken.None);
+                    }
+                    catch (ProviderException)
+                    {
+                        providerModels = null;
+                    }
+
+                    imageCatalogs[reference.ProviderId] = providerModels;
+                }
+
+                if (providerModels is not { Count: > 0 })
+                {
+                    _unverifiedImageModels.Add(reference);
+                }
+                else if (providerModels.All(model => model.Id != reference.ModelId))
+                {
+                    UnavailableImageModels.Add(CreateUnavailable(reference, () => RemoveUnavailable(UnavailableImageModels, reference)));
+                }
+            }
             _all.Clear();
             _all.AddRange(models.Select(m => new ModelOptionViewModel(
                 m,
@@ -287,6 +332,16 @@ public sealed partial class SessionModelsPageModel(
                 };
             }
             OnPropertyChanged(nameof(SelectedCountText));
+
+            UnavailableAssistantModel = null;
+            if (assistant is not null)
+            {
+                var assistantCatalog = await chatModels.FindModelsAsync(assistant.ProviderId, CancellationToken.None);
+                if (assistantCatalog is { Count: > 0 } && !assistantCatalog.Any(model => model.Id == assistant.ModelId && model.SupportsTools))
+                {
+                    UnavailableAssistantModel = CreateUnavailable(assistant, remove: null);
+                }
+            }
 
             var assistants = await chatModels.ListAllAssistantModelsAsync(forceRefresh, CancellationToken.None);
             _assistants.Clear();
@@ -310,6 +365,19 @@ public sealed partial class SessionModelsPageModel(
                 }
             }
             _videoAll.Clear();
+            UnavailableVideoModels.Clear();
+            _unverifiedVideoModels.Clear();
+            foreach (var reference in selectedVideos)
+            {
+                if (_videoCatalog is null || reference.ProviderId != ProviderIds.OpenRouter || videos.Count == 0)
+                {
+                    _unverifiedVideoModels.Add(reference);
+                }
+                else if (videos.All(model => model.Id != reference.ModelId))
+                {
+                    UnavailableVideoModels.Add(CreateUnavailable(reference, () => RemoveUnavailable(UnavailableVideoModels, reference)));
+                }
+            }
             _videoAll.AddRange(videos.Select(video => new VideoModelOptionViewModel(
                 new ModelRef(video.ProviderId, video.Id),
                 video.Name,
@@ -342,6 +410,19 @@ public sealed partial class SessionModelsPageModel(
             }
 
             _audioAll.Clear();
+            UnavailableAudioModels.Clear();
+            _unverifiedAudioModels.Clear();
+            foreach (var reference in selectedAudio)
+            {
+                if (_audioCatalog is null || reference.ProviderId != ProviderIds.OpenRouter || audio.Count == 0)
+                {
+                    _unverifiedAudioModels.Add(reference);
+                }
+                else if (audio.All(model => model.Id != reference.ModelId))
+                {
+                    UnavailableAudioModels.Add(CreateUnavailable(reference, () => RemoveUnavailable(UnavailableAudioModels, reference)));
+                }
+            }
             _audioAll.AddRange(audio.Select(item => new AudioModelOptionViewModel(
                 item,
                 selectedAudio.Contains(new ModelRef(item.ProviderId, item.Id))))
@@ -374,9 +455,25 @@ public sealed partial class SessionModelsPageModel(
     /// <summary>One assistant model at a time: the chosen row is selected, the others are cleared.</summary>
     private void SelectAssistant(AssistantModelOptionViewModel chosen)
     {
+        UnavailableAssistantModel = null;
         foreach (var row in _assistants)
         {
             row.IsSelected = row == chosen;
+        }
+    }
+
+    private UnavailableModelOptionViewModel CreateUnavailable(ModelRef reference, Action? remove) =>
+        new(reference, $"{(providers.TryGet(reference.ProviderId, out var provider) ? provider.DisplayName : reference.ProviderId)} ({reference.ProviderId})", remove);
+
+    private void RemoveUnavailable(ObservableCollection<UnavailableModelOptionViewModel> collection, ModelRef reference)
+    {
+        var row = collection.FirstOrDefault(model => model.Reference == reference);
+        if (row is not null)
+        {
+            collection.Remove(row);
+            OnPropertyChanged(nameof(SelectedCountText));
+            OnPropertyChanged(nameof(SelectedVideoCountText));
+            OnPropertyChanged(nameof(SelectedAudioCountText));
         }
     }
 

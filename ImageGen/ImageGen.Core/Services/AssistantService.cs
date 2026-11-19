@@ -206,6 +206,10 @@ public sealed class AssistantService(
                 {
                     return new AcceptedTurnOutcome(null, string.Empty, ErrorKind.InvalidToolCall, messageCount, toolCallCount);
                 }
+                catch (InvalidOperationException ex) when (ex.Message == GenerationService.NoSelectedVideoModelsAvailableMessage)
+                {
+                    return new AcceptedTurnOutcome(null, ex.Message, ErrorKind.ModelUnavailable, messageCount, toolCallCount);
+                }
             }
 
             if (call?.Name == AssistantPrompts.GenerateAudioToolName)
@@ -225,6 +229,10 @@ public sealed class AssistantService(
                 catch (ArgumentException)
                 {
                     return new AcceptedTurnOutcome(null, string.Empty, ErrorKind.InvalidToolCall, messageCount, toolCallCount);
+                }
+                catch (InvalidOperationException ex) when (ex.Message == GenerationService.NoSelectedAudioModelsAvailableMessage)
+                {
+                    return new AcceptedTurnOutcome(null, ex.Message, ErrorKind.ModelUnavailable, messageCount, toolCallCount);
                 }
             }
 
@@ -422,7 +430,15 @@ public sealed class AssistantService(
             return (null, $"Session {session.Id} has no image models.", ErrorKind.ModelUnavailable);
         }
 
-        var result = await generations.StartRunWithAttachmentsAsync(session.Id, prompt, attachmentIds, cancellationToken);
+        StartRunResult result;
+        try
+        {
+            result = await generations.StartRunWithAttachmentsAsync(session.Id, prompt, attachmentIds, cancellationToken);
+        }
+        catch (InvalidOperationException ex) when (ex.Message == GenerationService.NoSelectedImageModelsAvailableMessage)
+        {
+            return (null, ex.Message, ErrorKind.ModelUnavailable);
+        }
         if (result.Run is null)
         {
             return (null, string.Empty, ErrorKind.ModelWithoutReferences);

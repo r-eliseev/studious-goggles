@@ -228,7 +228,8 @@ public class ChatPageModelTests
     private SessionParametersPageModel NewParametersPane() =>
         new(_sessionService, Catalog, _navigation, ErrorAlerts.Create(_dialogs));
 
-    private ChatPageModel CreateModel(Guid sessionId, CostEstimator? costEstimator = null, SpendingService? spendingService = null, IImageComparisonService? imageComparison = null)
+    private ChatPageModel CreateModel(Guid sessionId, CostEstimator? costEstimator = null, SpendingService? spendingService = null,
+        IImageComparisonService? imageComparison = null, ChatModelCatalogService? chatModels = null, ModelCatalogService? modelCatalog = null)
     {
         var model = new ChatPageModel(
             _sessionService,
@@ -248,7 +249,8 @@ public class ChatPageModelTests
             NewModelsPane,
             NewParametersPane,
             _imageViewer,
-            ErrorAlerts.Create(_dialogs), costEstimator, spendingService, imageComparison);
+            ErrorAlerts.Create(_dialogs), costEstimator, spendingService, imageComparison,
+            chatModels: chatModels, modelCatalog: modelCatalog);
         model.ApplyQueryAttributes(new Dictionary<string, object>
         {
             [Routes.SessionIdParameter] = sessionId.ToString("D"),
@@ -390,6 +392,36 @@ public class ChatPageModelTests
     }
 
     [Fact]
+    public async Task ReloadAsync_StaleCatalogResponse_DoesNotReplaceNewerTimeline()
+    {
+        var staleCatalogStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var staleCatalogResult = new TaskCompletionSource<IReadOnlyList<ImageModel>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var catalogCalls = 0;
+        _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            if (Interlocked.Increment(ref catalogCalls) == 1)
+            {
+                staleCatalogStarted.TrySetResult();
+                return staleCatalogResult.Task;
+            }
+
+            return Task.FromResult<IReadOnlyList<ImageModel>>([TestModels.Model(ImageModel, "Image")]);
+        });
+        var model = CreateModel(_session.Id, modelCatalog: Catalog);
+
+        var initialReload = model.ReloadAsync();
+        await staleCatalogStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+        model.InputText = "Draw a fox";
+        await model.SendCommand.ExecuteAsync(null);
+        Assert.Contains(model.Items.OfType<MessageItemViewModel>(), item => item.Text == "Draw a fox");
+
+        staleCatalogResult.SetResult([TestModels.Model(ImageModel, "Image")]);
+        await initialReload;
+
+        Assert.Contains(model.Items.OfType<MessageItemViewModel>(), item => item.Text == "Draw a fox");
+    }
+
+    [Fact]
     public async Task OnAppearingAsync_VideoModelsAreIncludedInNextRunEstimate()
     {
         _session.Settings.VideoModels = [new ModelRef(ProviderIds.OpenRouter, "google/veo")];
@@ -442,6 +474,39 @@ public class ChatPageModelTests
         await _model.OnAppearingAsync();
 
         Assert.Equal(string.Format(AppResources.ModelsButtonFormat, 1, 1, 1, 1), _model.ModelsButtonText);
+    }
+
+    [Fact]
+    public async Task OnAppearingAsync_ModelsButtonWarnsWhenSelectedImageModelIsUnavailable()
+    {
+        _modelRepository.ListAsync(ProviderIds.OpenRouter, Arg.Any<CancellationToken>()).Returns(
+            [TestModels.Model("vendor/other-image", "Other")]);
+        var catalog = new ModelCatalogService(ProviderDoubles.Router(), _modelRepository, NullLogger<ModelCatalogService>.Instance);
+        var model = CreateModel(_session.Id, modelCatalog: catalog);
+
+        await model.OnAppearingAsync();
+
+        Assert.Contains("⚠", model.ModelsButtonText, StringComparison.Ordinal);
+        Assert.Contains("1 unavailable", model.ModelsButtonText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SendCommand_UnavailableAssistantShowsAlertAndOpensModelPickerWithoutSending()
+    {
+        _chat.ListChatModelsAsync(Arg.Any<CancellationToken>()).Returns([
+            new ChatModel("vendor/other-assistant", "Other", false, 1000, SupportsTools: true),
+        ]);
+        var chatModels = new ChatModelCatalogService(ProviderDoubles.Router(chat: _chat), NullLogger<ChatModelCatalogService>.Instance);
+        var model = CreateModel(_session.Id, chatModels: chatModels);
+        await model.OnAppearingAsync();
+        model.InputText = "draw a fox";
+
+        await model.SendCommand.ExecuteAsync(null);
+
+        Assert.Equal("draw a fox", model.InputText);
+        await _chat.DidNotReceive().CompleteChatAsync(Arg.Any<AssistantChatRequest>(), Arg.Any<CancellationToken>());
+        await _dialogs.Received(1).AlertAsync(AppResources.ErrorTitle, AppResources.AssistantModelUnavailableMessage);
+        await _navigation.Received(1).GoToAsync(Routes.SessionModelsFor(_session.Id));
     }
 
     [Fact]
