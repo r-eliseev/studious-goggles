@@ -1,8 +1,8 @@
 ---
 id: 285
-status: in-progress
-assignee: codex-20261117
-claimed: 2026-11-17T18:39:03Z
+status: review
+assignee:
+claimed:
 created: 2026-11-17
 ---
 
@@ -37,6 +37,10 @@ bash scripts/check.sh
 ```
 
 ## Report
+
+Implemented PID-based liveness and completed two corrected 20-repeat hosted runs: [44194058365](https://github.com/r-eliseev/studious-goggles/actions/runs/44194058365) and [44475603240](https://github.com/r-eliseev/studious-goggles/actions/runs/44475603240). Each run completed all 20 repetitions for both apps. First run: MAUI 1/20 failures, Avalonia 4/20. Second run: MAUI 3/20, Avalonia 0/20. Across the eight failed samples, no previously observed PID was seen to exit and each failure had zero app crash reports.
+
+In the second run, MAUI run 11 had no PID in the observation window; runs 14 and 17 first showed PIDs 64826 and 80045 at 41 seconds, after the 30-second sample. The first run's five failures are detailed above with timeline and app-log excerpts. These results indicate delayed or missing simulator launches, not confirmed app process exits. Full second-run evidence is in `tmp/task-285/dispatch-44475603240-{maui,avalonia}/`; first-run evidence is in `tmp/task-285/dispatch-44194058365-{maui,avalonia}/`. Verification passed: `bash -n ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh`, `git diff --check`, and `scripts/check.sh`.
 
 ## Review
 
