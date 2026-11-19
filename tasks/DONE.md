@@ -266,3 +266,4 @@ Tasks with status `done` or `cancelled` removed from `tasks/` by `scripts/archiv
 - 282 | backlog | done | 2026-11-17 | Acceptance tests on Windows: the log file stays locked when a world is deleted | `tasks/backlog/282-acceptance-windows-log-file-lock.md`
 - 283 | backlog | done | 2026-11-17 | Windows UI E2E: the test writes providers.json to the old publisher folder | `tasks/backlog/283-windows-e2e-data-folder-after-publisher.md`
 - 284 | backlog | done | 2026-11-17 | Cancel of a submitted synchronous image request: stop waiting, mark Cancelled | `tasks/backlog/284-cancel-synchronous-image-stop-waiting.md`
+- 269 | backlog | done | 2026-11-19 | Translate the tasks and the task section names to English | `tasks/backlog/269-translate-tasks-to-english.md`
