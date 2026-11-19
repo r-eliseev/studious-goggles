@@ -1,8 +1,8 @@
 ---
 id: 269
-status: in-progress
-assignee: codex-20261117
-claimed: 2026-11-19T09:20:40Z
+status: review
+assignee:
+claimed:
 created: 2026-11-09
 ---
 
@@ -49,6 +49,13 @@ TASKS_BRANCH=main scripts/list-tasks.sh --main approved
 - After each commit run `bash scripts/check.sh`. In the Report: what was translated, the Cyrillic check command and its empty output, and the decision on `locale-independent.sh`.
 
 ## Report
+
+### 2026-11-19, codex-20261117
+- Confirmed `rg -n --pcre2 '\p{Cyrillic}' tasks` returns no matches; `tasks/DONE.md` is English, and `scripts/archive-tasks.sh` writes an English header and task rows.
+- Removed legacy section and approval parsing from `scripts/check-tasks.sh` and `scripts/submit-task.sh`, added `tasks` to `LATIN_PATHS`, removed the transition paragraph from `docs/tasks.md`, and rewrote `scripts/tests/locale-independent.sh` to check English headings and reject legacy headings under `LC_ALL=C`.
+- TDD: the rewritten locale regression failed before the parser changes because the old headings were accepted; it passes after the changes.
+- Verification passed: `bash scripts/check.sh`, `env LC_ALL=C bash scripts/check.sh`, `bash scripts/tests/task-roles.sh`, `bash scripts/tests/release-notes-empty-previous.sh`, `TASKS_BRANCH=main scripts/list-tasks.sh --main approved`, `bash scripts/tests/locale-independent.sh`, `bash scripts/check-tasks.sh`, `bash scripts/check-latin.sh`, and `git diff --check`.
+- Plan followed; no behavior or architecture documentation was needed.
 
 ### 2026-11-13, codex-gpt6
 - Translated the task template and cards 030, 046, 140, 168, 198, 230, 236, 237, and 245 in small batches. The 245 branch has no remote task branch or unmerged card edit.
