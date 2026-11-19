@@ -167,6 +167,9 @@ public sealed class CommonSteps(ScenarioContext scenario)
             case "generate_video":
                 World.OpenRouter.QueueGenerateVideo(row["prompt"]);
                 break;
+            case "generate_audio":
+                World.OpenRouter.QueueGenerateAudio(row["prompt"]);
+                break;
             case "error":
                 World.OpenRouter.QueueAssistantError((HttpStatusCode)ParseInteger(row["status"], 500), row["body"]);
                 break;

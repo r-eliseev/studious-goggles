@@ -164,11 +164,12 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 ### Video (`Video.feature`, task 265)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| VID-01 | Without selected video models the assistant is not offered `generate_video` (request body) | media-generation | planned |
-| VID-02 | With a video model: a `generate_video` call → an asynchronous job, polling, the card is "done" with a video file | media-generation | planned |
-| VID-03 | A video download error → "failed", no partial file | media-generation | planned |
-| VID-04 | Cancelling a video → "cancelled" with a warning that the provider may continue | media-generation | planned |
-| VID-05 | Audio: with an audio model the assistant gets `generate_audio`, the card becomes done with an audio file | media-generation | planned (265) |
+| VID-01 | Without selected video models the assistant is not offered `generate_video` (request body) | media-generation | done |
+| VID-02 | With a video model: a `generate_video` call → an asynchronous job, polling, the card is "done" with a video file | media-generation | done |
+| VID-03 | A video download error → "failed", no partial file | media-generation | done |
+| VID-04 | Cancelling a video → "cancelled" with a warning that the provider may continue | media-generation | done |
+| VID-05 | Audio: with an audio model the assistant gets `generate_audio`, the card becomes done with an audio file | media-generation | done |
+| VID-06 | Audio generation is not offered without a selected audio model | media-generation | done |
 
 ### Migrated flow tests (task 267)
 Task 267 maps every test of `ImageGen.Avalonia.Tests/Flows/*FlowTests.cs` to a scenario above; flow tests without a matching scenario get new rows here (next free id in the area) before they are deleted.
