@@ -120,3 +120,86 @@ Feature: Sessions
       | text     | Let's start with this. |
     When the user chooses the first example from the empty session list
     Then the selected example is sent once
+
+  @SES-11 @S1.4
+  Scenario: Declining to clear history keeps sessions and their files
+    Given the user has a saved OpenRouter key
+    And the assistant answers with:
+      | response        | prompt                    |
+      | generate_images | A blue house by the sea.  |
+    And the provider answers generation for model "black-forest-labs/flux.2-klein-4b" with:
+      | response | width | height | cost  |
+      | picture  | 64    | 64     | 0.014 |
+    When the user creates a new session
+    And the user sends the message "Draw a blue house"
+    Then model "black-forest-labs/flux.2-klein-4b" has a done generation card with an image
+    And the generation card shows model "black-forest-labs/flux.2-klein-4b", seed, and cost "$0.014"
+    When the user returns to the session list
+    And the user opens settings
+    And the user declines clearing history
+    And the user clears history
+    Then the session remains in the list
+    And its image files remain
+
+  @SES-11 @S1.4
+  Scenario: Clearing history from an open chat deletes sessions and files but keeps keys and settings
+    Given the user has a saved OpenRouter key
+    And the assistant answers with:
+      | response        | prompt                     |
+      | generate_images | A blue house by the sea.   |
+    And the provider answers generation for model "black-forest-labs/flux.2-klein-4b" with:
+      | response | width | height | cost  |
+      | picture  | 64    | 64     | 0.014 |
+    And the assistant answers with:
+      | response        | prompt                 |
+      | generate_images | A red boat at sunset. |
+    And the provider answers generation for model "black-forest-labs/flux.2-klein-4b" with:
+      | response | width | height | cost  |
+      | picture  | 64    | 64     | 0.014 |
+    When the user creates a new session
+    And the user sends the message "Draw a blue house"
+    Then model "black-forest-labs/flux.2-klein-4b" has a done generation card with an image
+    And the generation card shows model "black-forest-labs/flux.2-klein-4b", seed, and cost "$0.014"
+    When the user returns to the session list
+    And the user creates a new session
+    And the user sends the message "Draw a red boat"
+    Then model "black-forest-labs/flux.2-klein-4b" has a done generation card with an image
+    And the generation card shows model "black-forest-labs/flux.2-klein-4b", seed, and cost "$0.014"
+    And two session folders contain generated image files
+    When the user chooses the Gallery style and dark theme
+    And the user opens settings
+    And the user confirms clearing history
+    And the user clears history
+    Then no sessions are in the list
+    And all session image files are deleted
+    And the saved OpenRouter key remains
+    When the user opens settings
+    Then settings show the OpenRouter key ending in "-key"
+    And the active appearance is Gallery with the dark theme
+    And appearance settings remain Gallery with the dark theme
+
+  @SES-11 @S1.4 @ignore @bug-288
+  Scenario: Spending includes the costs of assistant-generated images across sessions
+    Given the spending clock is at "2026-01-01T12:00:00+00:00" in time zone "UTC"
+    And the user has a saved OpenRouter key
+    And the assistant answers with:
+      | response        | prompt                   |
+      | generate_images | A blue house by the sea. |
+    And the provider answers generation for model "black-forest-labs/flux.2-klein-4b" with:
+      | response | width | height | cost  |
+      | picture  | 64    | 64     | 0.014 |
+    And the assistant answers with:
+      | response        | prompt                |
+      | generate_images | A red boat at sunset. |
+    And the provider answers generation for model "black-forest-labs/flux.2-klein-4b" with:
+      | response | width | height | cost  |
+      | picture  | 64    | 64     | 0.014 |
+    When the user creates a new session
+    And the user sends the message "Draw a blue house"
+    Then the generation card shows model "black-forest-labs/flux.2-klein-4b", seed, and cost "$0.014"
+    When the user returns to the session list
+    And the user creates a new session
+    And the user sends the message "Draw a red boat"
+    Then the generation card shows model "black-forest-labs/flux.2-klein-4b", seed, and cost "$0.014"
+    When the user opens the spending screen for the current day
+    Then spending total is "$0.028"
