@@ -1,6 +1,6 @@
 ---
 id: 269
-status: review
+status: done
 assignee:
 claimed:
 created: 2026-11-09
@@ -70,6 +70,10 @@ TASKS_BRANCH=main scripts/list-tasks.sh --main approved
 - Cards 235 and 255 remain untouched because their remote task branches contain unmerged edits to those same cards. Card 243's remote branch has no card diff; it remains for the final translation pass as required by the plan.
 - Also left cards 256, 257, 260, 261, 266, 272, 274, 275, 276, and 277 untouched because their status differs from `origin/main` in this branch; the harness validates the fixed sections during these status transitions. The added historical task 276/277 cards also remain owned by the work that introduced them.
 - Quoted Russian UI/status literals remain unchanged as required by the plan (for example, in task 016 and cards 046, 198, 243, 248, 258, 259, 262–265). This conflicts with the current `check-latin.sh` rule, which permits exceptions only for non-English test data. Resolve this before adding `tasks` to `LATIN_PATHS`; a plan/owner decision is needed on whether those quoted literals may be translated or whitelisted.
+
+## Review
+
+Reviewed on 2026-11-19 against the plan and acceptance criteria. Confirmed task markdown has no Cyrillic (`rg -n --pcre2 '\p{Cyrillic}' tasks` returned no matches), `tasks/DONE.md` and archive output are English, legacy section and approval parsing is removed, `tasks` is in `LATIN_PATHS`, and the locale regression accepts English headings while rejecting legacy headings under `LC_ALL=C`. All listed checks pass, including both default and C-locale harness runs. Verdict: done.
 
 ## Comments
 
