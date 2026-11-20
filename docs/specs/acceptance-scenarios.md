@@ -62,7 +62,7 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 | SES-08 | The list row shows the number of runs ("· 2 runs") after two runs | S1.2 | done |
 | SES-09 | Sessions are grouped: today's in "Today", older ones in "Earlier" (time from `FakeTimeProvider`) | S1.1 | done |
 | SES-10 | An example from the empty list starts a new session with this text | S1.1 | done |
-| SES-11 | Clearing the whole history from Settings: sessions and files deleted, keys and settings kept | S1.4 | planned (273) |
+| SES-11 | Clearing the whole history from Settings: sessions and files deleted, keys and settings kept | S1.4 | blocked (288: spending total is already $0 before history clear in the two-session assistant-run setup) |
 
 ### Chat and assistant (`ChatAssistant.feature`, task 256)
 | id | Scenario | Requirements | Status |
@@ -155,20 +155,21 @@ Status: "planned" — the scenario is described, not automated; "done" — in a 
 ### Gallery, viewer and comparison (`Gallery.feature`, task 264)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| GAL-01 | The gallery shows only successful pictures of all sessions, newest first | F7.3 | planned |
-| GAL-02 | Filter by model and period (7 and 30 days) | F7.4 | planned |
-| GAL-03 | Opening a picture from the gallery opens its source session | F7.3 | planned |
-| GAL-04 | Viewer: paging only within one run | F6.2 | planned |
-| GAL-05 | Comparing two successful pictures of one session: side-by-side and overlay modes; the zoom is shared | F6.3 | planned |
+| GAL-01 | The gallery shows only successful pictures of all sessions, newest first | F7.3 | done |
+| GAL-02 | Filter by model and period (7 and 30 days) | F7.4 | done |
+| GAL-03 | Opening a picture from the gallery opens its source session | F7.3 | done |
+| GAL-04 | Viewer: paging only within one run | F6.2 | done |
+| GAL-05 | Comparing two successful pictures of one session: side-by-side and overlay modes; the zoom is shared | F6.3 | done |
 
 ### Video (`Video.feature`, task 265)
 | id | Scenario | Requirements | Status |
 |---|---|---|---|
-| VID-01 | Without selected video models the assistant is not offered `generate_video` (request body) | media-generation | planned |
-| VID-02 | With a video model: a `generate_video` call → an asynchronous job, polling, the card is "done" with a video file | media-generation | planned |
-| VID-03 | A video download error → "failed", no partial file | media-generation | planned |
-| VID-04 | Cancelling a video → "cancelled" with a warning that the provider may continue | media-generation | planned |
-| VID-05 | Audio: with an audio model the assistant gets `generate_audio`, the card becomes done with an audio file | media-generation | planned (265) |
+| VID-01 | Without selected video models the assistant is not offered `generate_video` (request body) | media-generation | done |
+| VID-02 | With a video model: a `generate_video` call → an asynchronous job, polling, the card is "done" with a video file | media-generation | done |
+| VID-03 | A video download error → "failed", no partial file | media-generation | done |
+| VID-04 | Cancelling a video → "cancelled" with a warning that the provider may continue | media-generation | done |
+| VID-05 | Audio: with an audio model the assistant gets `generate_audio`, the card becomes done with an audio file | media-generation | done |
+| VID-06 | Audio generation is not offered without a selected audio model | media-generation | done |
 
 ### Migrated flow tests (task 267)
 Task 267 maps every test of `ImageGen.Avalonia.Tests/Flows/*FlowTests.cs` to a scenario above; flow tests without a matching scenario get new rows here (next free id in the area) before they are deleted.

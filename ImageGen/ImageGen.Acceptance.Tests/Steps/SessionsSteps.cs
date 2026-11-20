@@ -1,8 +1,10 @@
 using ImageGen.Acceptance.Tests.Support;
 using ImageGen.Avalonia.Services.Navigation;
 using ImageGen.Avalonia.Views;
+using ImageGen.Core.Domain.Keys;
 using ImageGen.Core.Domain.Sessions;
 using ImageGen.Presentation;
+using ImageGen.Presentation.Appearance;
 using ImageGen.Presentation.PageModels;
 using Microsoft.Extensions.DependencyInjection;
 using Reqnroll;
@@ -139,6 +141,36 @@ public sealed class SessionsSteps(ScenarioContext scenario)
     [When("the delete confirmation is accepted")]
     public void WhenTheDeleteConfirmationIsAccepted() => World.Platform.QueueConfirmation(true);
 
+    [When("the user declines clearing history")]
+    public void WhenTheUserDeclinesClearingHistory()
+    {
+        scenario.Set(false, "history.confirmation");
+        World.Platform.QueueConfirmation(false);
+    }
+
+    [When("the user confirms clearing history")]
+    public void WhenTheUserConfirmsClearingHistory()
+    {
+        scenario.Set(true, "history.confirmation");
+        World.Platform.QueueConfirmation(true);
+    }
+
+    [When("the user clears history")]
+    public Task WhenTheUserClearsHistory() => HeadlessApp.RunAsync(async cancellationToken =>
+    {
+        await Settings.ClearHistoryCommand.ExecuteAsync(null);
+        var expectedRoute = scenario.Get<bool>("history.confirmation") ? Routes.Sessions : Routes.Settings;
+        await World.WaitUntilAsync(
+            () => World.Provider.GetRequiredService<AvaloniaNavigationService>().CurrentRoute == expectedRoute,
+            $"the '{expectedRoute}' route after the history confirmation",
+            cancellationToken);
+        if (expectedRoute == Routes.Sessions)
+        {
+            await World.WaitUntilAsync(() => Sessions.Sessions.Count == 0, "all sessions to be cleared", cancellationToken);
+        }
+        return true;
+    }, TestContext.Current.CancellationToken);
+
     [When("the user deletes the first session")]
     public async Task WhenTheUserDeletesTheFirstSession()
     {
@@ -198,6 +230,44 @@ public sealed class SessionsSteps(ScenarioContext scenario)
 
     [Then("no sessions are in the list")]
     public void ThenNoSessionsAreInTheList() => Assert.Empty(Sessions.Sessions);
+
+    [Then("the session remains in the list")]
+    public void ThenTheSessionRemainsInTheList() => Assert.Single(Sessions.Sessions);
+
+    [Then("its image files remain")]
+    public void ThenItsImageFilesRemain()
+    {
+        var imageRoot = Path.Combine(World.DataDirectory, "images");
+        Assert.True(Directory.Exists(imageRoot));
+        Assert.Single(Directory.EnumerateDirectories(imageRoot));
+        Assert.NotEmpty(Directory.EnumerateFiles(imageRoot, "*", SearchOption.AllDirectories));
+    }
+
+    [Then("two session folders contain generated image files")]
+    public void ThenTwoSessionFoldersContainGeneratedImageFiles()
+    {
+        var imageRoot = Path.Combine(World.DataDirectory, "images");
+        var folders = Directory.EnumerateDirectories(imageRoot).ToArray();
+        Assert.Equal(2, folders.Length);
+        Assert.All(folders, folder => Assert.NotEmpty(Directory.EnumerateFiles(folder)));
+    }
+
+    [Then("all session image files are deleted")]
+    public void ThenAllSessionImageFilesAreDeleted()
+    {
+        var imageRoot = Path.Combine(World.DataDirectory, "images");
+        Assert.False(Directory.Exists(imageRoot) && Directory.EnumerateFiles(imageRoot, "*", SearchOption.AllDirectories).Any());
+    }
+
+    [Then("the saved OpenRouter key remains")]
+    public async Task ThenTheSavedOpenRouterKeyRemains() => Assert.Equal(
+        "e2e-mock-key",
+        await World.Secrets.GetAsync(SecretNames.OpenRouterApiKey, TestContext.Current.CancellationToken));
+
+    [Then("appearance settings remain Gallery with the dark theme")]
+    public void ThenAppearanceSettingsRemainGalleryWithDarkTheme() => Assert.Equal(
+        new AppearanceSettings(AppearanceStyle.Gallery, AppearanceTheme.Dark),
+        World.Provider.GetRequiredService<AppearanceService>().Current);
 
     [Then("an empty session chat is shown")]
     public async Task ThenAnEmptySessionChatIsShown()

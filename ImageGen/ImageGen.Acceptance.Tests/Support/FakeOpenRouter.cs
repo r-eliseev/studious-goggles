@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Text.Json.Nodes;
+using ImageGen.Core.Domain.Models;
 
 namespace ImageGen.Acceptance.Tests.Support;
 
@@ -18,6 +19,12 @@ public sealed class FakeOpenRouter
     private IReadOnlyList<ImageModel> _imageModels = [];
     private IReadOnlyList<EmbeddingModelInfo> _embeddingModels = [new("baai/bge-m3", "BGE M3")];
     private IReadOnlyList<AssistantModel> _assistantModels = [new("anthropic/claude-haiku-5.5", "Claude Haiku 5.5")];
+    private IReadOnlyList<VideoModel> _videoModels = [];
+    private IReadOnlyList<AudioModel> _audioModels = [];
+    private readonly ConcurrentDictionary<string, VideoJob> _videoJobs = new(StringComparer.Ordinal);
+    private int _nextVideoId;
+    private HttpStatusCode _videoContentStatus = HttpStatusCode.OK;
+    private byte[] _videoContent = [0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70];
     private HttpStatusCode _keyStatusCode = HttpStatusCode.OK;
     private bool _keyNetworkError;
 
@@ -35,7 +42,11 @@ public sealed class FakeOpenRouter
         network.AddRoute(HttpMethod.Post, Host, "/api/v1/embeddings", HandleEmbeddingsAsync);
         network.AddRoute(HttpMethod.Get, Host, "/api/v1/models",
             (_, _) => Task.FromResult(JsonResponse(HttpStatusCode.OK, AssistantModelsJson())));
-        network.AddResponse(HttpMethod.Get, Host, "/api/v1/videos/models", HttpStatusCode.OK, "{\"data\":[]}");
+        network.AddRoute(HttpMethod.Get, Host, "/api/v1/videos/models", (_, _) =>
+            Task.FromResult(JsonResponse(HttpStatusCode.OK, VideoModelsJson())));
+        network.AddRoute(HttpMethod.Post, Host, "/api/v1/videos", HandleVideoSubmitAsync);
+        network.AddRoute(HttpMethod.Get, Host, "/api/v1/videos/*/content", HandleVideoContentAsync);
+        network.AddRoute(HttpMethod.Get, Host, "/api/v1/videos/*", HandleVideoPollAsync);
         network.AddRoute(HttpMethod.Get, Host, "/api/v1/images/models", (_, _) => Task.FromResult(JsonResponse(HttpStatusCode.OK, ImageModelsJson())));
         network.AddRoute(HttpMethod.Get, Host, "/api/v1/images/models/*/endpoints", (request, _) =>
         {
@@ -79,6 +90,7 @@ public sealed class FakeOpenRouter
             return Task.FromResult(JsonResponse(HttpStatusCode.OK, new JsonObject { ["endpoints"] = endpoints }.ToJsonString()));
         });
         network.AddRoute(HttpMethod.Post, Host, "/api/v1/chat/completions", HandleChatAsync);
+        network.AddRoute(HttpMethod.Post, Host, "/api/v1/audio/speech", HandleSpeechAsync);
         network.AddRoute(HttpMethod.Post, Host, "/api/v1/images", HandleImageAsync);
     }
 
@@ -93,6 +105,25 @@ public sealed class FakeOpenRouter
         ArgumentNullException.ThrowIfNull(models);
         _assistantModels = models.ToArray();
     }
+
+    public void SetVideoModels(IEnumerable<VideoModel> models)
+    {
+        ArgumentNullException.ThrowIfNull(models);
+        _videoModels = models.ToArray();
+    }
+
+    public void SetAudioModels(IEnumerable<AudioModel> models)
+    {
+        ArgumentNullException.ThrowIfNull(models);
+        _audioModels = models.ToArray();
+    }
+
+    public void CompleteVideoJobs()
+    {
+        foreach (var job in _videoJobs.Values) job.Status = "completed";
+    }
+
+    public void SetVideoContentError(HttpStatusCode statusCode) => _videoContentStatus = statusCode;
 
     public void SetEmbeddingModels(IEnumerable<EmbeddingModelInfo> models)
     {
@@ -120,6 +151,8 @@ public sealed class FakeOpenRouter
     public void QueueGenerateImages(string prompt) => _assistantReplies.Enqueue(new AssistantReply(ToolName: "generate_images", ToolArguments: new JsonObject { ["prompt"] = prompt }));
 
     public void QueueGenerateVideo(string prompt) => _assistantReplies.Enqueue(new AssistantReply(ToolName: "generate_video", ToolArguments: new JsonObject { ["prompt"] = prompt }));
+
+    public void QueueGenerateAudio(string prompt) => _assistantReplies.Enqueue(new AssistantReply(ToolName: "generate_audio", ToolArguments: new JsonObject { ["prompt"] = prompt }));
 
     public void QueueAssistantError(HttpStatusCode statusCode, string body) => _assistantReplies.Enqueue(new AssistantReply(ErrorStatus: statusCode, ErrorBody: body));
 
@@ -210,6 +243,76 @@ public sealed class FakeOpenRouter
             }),
         };
         return Task.FromResult(JsonResponse(HttpStatusCode.OK, root.ToJsonString()));
+    }
+
+    private Task<HttpResponseMessage> HandleSpeechAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent([0xFF, 0xFB, 0x90, 0x64]),
+        };
+        response.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("audio/mpeg");
+        return Task.FromResult(response);
+    }
+
+    private Task<HttpResponseMessage> HandleVideoSubmitAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var id = "acceptance-video-" + Interlocked.Increment(ref _nextVideoId).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var job = new VideoJob();
+        _videoJobs[id] = job;
+        return Task.FromResult(JsonResponse(HttpStatusCode.OK, new JsonObject
+        {
+            ["id"] = id,
+            ["polling_url"] = $"https://{Host}/api/v1/videos/{id}",
+        }.ToJsonString()));
+    }
+
+    private Task<HttpResponseMessage> HandleVideoPollAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (request.RequestUri!.AbsolutePath.EndsWith("/content", StringComparison.Ordinal))
+        {
+            return HandleVideoContentAsync(request, cancellationToken);
+        }
+        var id = request.RequestUri.AbsolutePath["/api/v1/videos/".Length..];
+        if (!_videoJobs.TryGetValue(id, out var job)) return Task.FromResult(JsonResponse(HttpStatusCode.NotFound, "{}"));
+        return Task.FromResult(JsonResponse(HttpStatusCode.OK, new JsonObject
+        {
+            ["status"] = job.Status,
+            ["cost"] = 0.01m,
+        }.ToJsonString()));
+    }
+
+    private Task<HttpResponseMessage> HandleVideoContentAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var response = new HttpResponseMessage(_videoContentStatus);
+        response.Content = new ByteArrayContent(_videoContent);
+        response.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("video/mp4");
+        return Task.FromResult(response);
+    }
+
+    private string VideoModelsJson() => new JsonObject
+    {
+        ["data"] = new JsonArray(_videoModels.Select(model => (JsonNode?)new JsonObject
+        {
+            ["id"] = model.Id,
+            ["name"] = model.Name,
+            ["supported_durations"] = new JsonArray(model.Durations.Select(value => (JsonNode?)JsonValue.Create(value)).ToArray()),
+            ["supported_resolutions"] = new JsonArray(model.Resolutions.Select(value => (JsonNode?)JsonValue.Create(value)).ToArray()),
+            ["supported_aspect_ratios"] = new JsonArray(model.AspectRatios.Select(value => (JsonNode?)JsonValue.Create(value)).ToArray()),
+            ["supported_frame_images"] = new JsonArray(model.FrameImages.Select(value => (JsonNode?)JsonValue.Create(value)).ToArray()),
+            ["generate_audio"] = model.GeneratesAudio,
+            ["seed"] = model.SupportsSeed,
+            ["pricing_skus"] = new JsonObject(model.PriceSkus.Select(pair => KeyValuePair.Create<string, JsonNode?>(pair.Key, JsonValue.Create(pair.Value))).ToArray()),
+        }).ToArray()),
+    }.ToJsonString();
+
+    private sealed class VideoJob
+    {
+        public string Status { get; set; } = "pending";
     }
 
     private async Task<HttpResponseMessage> HandleEmbeddingsAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -320,6 +423,21 @@ public sealed class FakeOpenRouter
                 ["id"] = model.Id,
                 ["name"] = model.Name,
                 ["supported_parameters"] = new JsonArray("tools"),
+            });
+        }
+
+        foreach (var model in _audioModels)
+        {
+            models.Add(new JsonObject
+            {
+                ["id"] = model.Id,
+                ["name"] = model.Name,
+                ["description"] = model.Description,
+                ["architecture"] = new JsonObject
+                {
+                    ["output_modalities"] = new JsonArray(JsonValue.Create(model.Output == AudioOutput.ChatAudio ? "audio" : "speech")),
+                },
+                ["pricing"] = new JsonObject { ["prompt"] = model.PricePerInputCharacterUsd?.ToString(System.Globalization.CultureInfo.InvariantCulture) },
             });
         }
 

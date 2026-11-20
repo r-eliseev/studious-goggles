@@ -1,6 +1,6 @@
 ---
 id: 265
-status: approved
+status: review
 assignee:
 claimed:
 created: 2026-11-09
@@ -55,6 +55,15 @@ bash scripts/check.sh
 - In the “Report”, list passing scenarios, ignored scenarios and their tracking tasks, commands and results, and differences from the plan. Update scenario statuses in `docs/specs/acceptance-scenarios.md`.
 
 ## Report
+
+Implemented the OpenRouter video catalog, asynchronous job submission/polling, and content routes in `Support/FakeOpenRouter.cs`, with route checks in `Support/FakeNetworkTests.cs`. Added acceptance scenarios VID-01 through VID-06 and their bindings. Video completion uses a test `IAsyncDelay` backed by `FakeTimeProvider`; the accepted test waits for polling to schedule before completing the job. Added speech model fixtures for audio tool inclusion and saved audio output. Cancellation asserts the exact “provider may continue” warning. Updated all six catalog rows to `done`.
+
+Verification:
+- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait 'Category=video'` — 6 passed.
+- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` — 98 passed, 2 ignored, 0 failed.
+- `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` — passed.
+- `scripts/check.sh` — passed.
+
 
 ## Comments
 

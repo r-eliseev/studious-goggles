@@ -1,6 +1,6 @@
 ---
 id: 273
-status: approved
+status: review
 assignee:
 claimed:
 created: 2026-11-10
@@ -44,6 +44,13 @@ bash scripts/check.sh
 - Run `dotnet` commands one at a time. Write everything in English; in the "Report": scenarios, commands and results.
 
 ## Report
+
+### 2026-11-19, codex-20261117
+- Added SES-11 coverage for declining confirmation and clearing history from an open chat. The passing clear scenario verifies two finished assistant-triggered runs, removal of session image files, return to the empty session list, and preservation of the OpenRouter key and Gallery/dark appearance.
+- Added a separate ignored SES-11 spending scenario tagged `@bug-288`. Its two generation cards and image files are present and each card shows `$0.014`, but the Spending screen shows `$0` instead of `$0.028` before history is cleared. This means ledger retention cannot yet be tested. Created `tasks/backlog/288-spending-assistant-costs-across-sessions.md` with evidence and a proposed diagnostic plan; it remains `todo` for planner analysis. Updated the SES-11 catalog status to `blocked (288: spending total is already $0 before history clear in the two-session assistant-run setup)`.
+- TDD: the SES-11 scenarios first failed with missing bindings; after adding the planned acceptance steps, the focused run passed 2 scenarios and skipped the one tracked by 288.
+- Verification: focused SES-11 — 2 passed, 1 skipped; full acceptance — 100 passed, 3 skipped on retry. Two earlier full-suite runs exposed known intermittent failures already recorded by task 286 (CardActions failed-generation menu, then the monthly-limit restart value); isolated `SPD-05` passed before the full suite passed. `dotnet format ... --verify-no-changes`, `bash scripts/check.sh`, `git diff --check`, the locale regression, task-role regression and release-notes regression all passed.
+- Difference from plan: the spending preservation criterion is blocked by the pre-clear spending discrepancy and is tracked in task 288; no production behavior was changed.
 
 ## Comments
 ### 2026-11-10, claude-bdd-plan

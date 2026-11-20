@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regression: legacy Russian task headings remain readable under the POSIX locale.
+# Regression: task parsing and submission use English headings under the POSIX locale.
 set -euo pipefail
 repo_root=$(cd "$(dirname "$0")/../.." && pwd)
 tmp_root="$repo_root/tmp/locale-independent-test-$$"
@@ -10,53 +10,65 @@ cp "$repo_root/scripts/check-tasks.sh" "$repo_root/scripts/tasks-lib.sh" \
 cd "$tmp_root/repo"
 git init -q
 
-plan=$(printf '\xD0\x9F\xD0\xBB\xD0\xB0\xD0\xBD')
-report=$(printf '\xD0\x9E\xD1\x82\xD1\x87\xD1\x91\xD1\x82')
-description=$(printf '\xD0\x9E\xD0\xBF\xD0\xB8\xD1\x81\xD0\xB0\xD0\xBD\xD0\xB8\xD0\xB5')
-acceptance=$(printf '\xD0\x9A\xD1\x80\xD0\xB8\xD1\x82\xD0\xB5\xD1\x80\xD0\xB8\xD0\xB8\x20\xD0\xB3\xD0\xBE\xD1\x82\xD0\xBE\xD0\xB2\xD0\xBD\xD0\xBE\xD1\x81\xD1\x82\xD0\xB8')
-analysis=$(printf '\xD0\x90\xD0\xBD\xD0\xB0\xD0\xBB\xD0\xB8\xD0\xB7')
-comments=$(printf '\xD0\x9A\xD0\xBE\xD0\xBC\xD0\xBC\xD0\xB5\xD0\xBD\xD1\x82\xD0\xB0\xD1\x80\xD0\xB8\xD0\xB8')
-
-make_task() { # <status> <assignee>
-  cat > tasks/backlog/001-legacy.md <<EOF
+make_task() { # <status> <plan heading> <report heading>
+  cat > tasks/backlog/001-locale.md <<EOF
 ---
 id: 001
 status: $1
-assignee: $2
-claimed: $([ -n "$2" ] && echo 2026-11-13T00:00:00Z)
+assignee: $([ "$1" = in-progress ] && echo codex)
+claimed: $([ "$1" = in-progress ] && echo 2026-11-13T00:00:00Z)
 created: 2026-11-13
 ---
 
-# Legacy task
+# Locale test
 
-## $description
+## Description
 Example.
 
-## $acceptance
-- It works.
+## Acceptance criteria
+- The English headings are accepted.
 
-## $analysis
+## Analysis
 No analysis needed.
 
-## $plan
+## Plan
 Step one.
 
-## $report
+## Report
 Completed step one.
 
-## $comments
+## Comments
 EOF
+  if [ "$2" != Plan ] || [ "$3" != Report ]; then
+    python3 - "$2" "$3" <<'PY'
+from pathlib import Path
+import sys
+p = Path("tasks/backlog/001-locale.md")
+s = p.read_text()
+s = s.replace("## Plan", "## " + sys.argv[1]).replace("## Report", "## " + sys.argv[2])
+p.write_text(s)
+PY
+  fi
 }
 
-make_task review ""
+make_task review Plan Report
 env LC_ALL=C bash scripts/check-tasks.sh >/dev/null || {
-  echo 'locale-independent regression: legacy Russian Plan and Report should pass check-tasks.sh' >&2
+  echo 'locale regression: English task sections should pass check-tasks.sh' >&2
   exit 1
 }
 
-make_task in-progress codex
+make_task in-progress Plan Report
 env LC_ALL=C bash scripts/submit-task.sh 1 >/dev/null || {
-  echo 'locale-independent regression: submit-task.sh should accept a filled legacy Report' >&2
+  echo 'locale regression: submit-task.sh should accept a filled English Report' >&2
   exit 1
 }
-echo 'locale-independent regression: ok'
+
+legacy_plan=$(printf '\xD0\x9F\xD0\xBB\xD0\xB0\xD0\xBD')
+legacy_report=$(printf '\xD0\x9E\xD1\x82\xD1\x87\xD1\x91\xD1\x82')
+make_task review "$legacy_plan" "$legacy_report"
+if env LC_ALL=C bash scripts/check-tasks.sh >/dev/null 2>&1; then
+  echo 'locale regression: check-tasks.sh must reject legacy task headings' >&2
+  exit 1
+fi
+
+echo 'locale regression: ok'

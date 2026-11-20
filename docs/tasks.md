@@ -37,7 +37,6 @@ Plans are written for the executor: concrete steps, the exact files, the expecte
 ## Answering a blocked task (planner)
 Read the executor's finding and proposed change, check it against the code, decide with the owner, then amend the "Plan" (or the criteria, with the owner), write a comment with the decision and a "Plan amendment approved" record, and set `approved`. If the work must be re-analysed, set `todo`.
 
-Section names. Task files are being translated to English (task 269). Until then the template `tasks/_template.md`, the scripts and the old task files keep the original section names; in the same order they mean: Description, Acceptance criteria, Analysis, Plan, Report, Comments (the "Review" section is English already); inside the Description the lines "Depends on" and "Environment", inside the Plan the lines "Files:" and "Verification". Use the names of the file you edit; task 269 switches the template, the scripts and all files at once.
 
 ## Agent name
 Your name is the `AGENT_NAME` environment variable or the name the user gave. If there is none, invent a unique one, for example `claude-4f2a`. Names of different agents must not coincide.

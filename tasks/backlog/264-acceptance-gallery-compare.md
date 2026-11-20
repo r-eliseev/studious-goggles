@@ -1,6 +1,6 @@
 ---
 id: 264
-status: approved
+status: review
 assignee:
 claimed:
 created: 2026-11-09
@@ -54,6 +54,15 @@ bash scripts/check.sh
 - In the “Report”, list passing scenarios, ignored scenarios and their tracking tasks, commands and results, and differences from the plan. Update scenario statuses in `docs/specs/acceptance-scenarios.md`.
 
 ## Report
+
+Implemented GAL-01 through GAL-05 in `Features/Gallery.feature` and `Steps/GallerySteps.cs`. Added fake viewer and comparison services to the acceptance harness so the scenarios exercise chat commands and assert the viewer snapshot, run-bounded navigation state, comparison modes, and shared zoom. Gallery fixtures use repositories only in Given setup and the GalleryPageModel for filtering and navigation. Updated all five scenario statuses to `done` in `docs/specs/acceptance-scenarios.md`.
+
+Verification passed:
+- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj` — 91 passed, 2 existing ignored, 0 failed.
+- `dotnet test --project ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj -- --filter-trait 'Category=gallery'` — 5 passed.
+- `dotnet format ImageGen/ImageGen.Acceptance.Tests/ImageGen.Acceptance.Tests.csproj --verify-no-changes` — passed after correcting import ordering.
+- `scripts/check.sh` — passed.
+
 
 ## Comments
 

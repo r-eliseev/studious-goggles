@@ -1,8 +1,8 @@
 ---
 id: 285
-status: in-progress
-assignee: codex-20261117
-claimed: 2026-11-17T18:39:03Z
+status: review
+assignee:
+claimed:
 created: 2026-11-17
 ---
 
@@ -38,6 +38,10 @@ bash scripts/check.sh
 
 ## Report
 
+Implemented PID-based liveness and completed two corrected 20-repeat hosted runs: [44194058365](https://github.com/r-eliseev/studious-goggles/actions/runs/44194058365) and [44475603240](https://github.com/r-eliseev/studious-goggles/actions/runs/44475603240). Each run completed all 20 repetitions for both apps. First run: MAUI 1/20 failures, Avalonia 4/20. Second run: MAUI 3/20, Avalonia 0/20. Across the eight failed samples, no previously observed PID was seen to exit and each failure had zero app crash reports.
+
+In the second run, MAUI run 11 had no PID in the observation window; runs 14 and 17 first showed PIDs 64826 and 80045 at 41 seconds, after the 30-second sample. The first run's five failures are detailed above with timeline and app-log excerpts. These results indicate delayed or missing simulator launches, not confirmed app process exits. Full second-run evidence is in `tmp/task-285/dispatch-44475603240-{maui,avalonia}/`; first-run evidence is in `tmp/task-285/dispatch-44194058365-{maui,avalonia}/`. Verification passed: `bash -n ImageGen/ImageGen.E2E.Common/ci/apple-sim-smoke.sh`, `git diff --check`, and `scripts/check.sh`.
+
 ## Review
 
 ## Comments
@@ -56,3 +60,14 @@ The MAUI smoke completed 20 repetitions and uploaded artifacts, but all 20 were 
 All 20 repetitions recorded a PID. The smoke step reported 3 failures (runs 02, 06, 09), but these are missed 30-second samples, not confirmed app exits: the timeline shows the PID alive at 25 seconds and again at 35 seconds, with no sample at 30 seconds because a `launchctl` diagnostic delayed the sampling loop past its scheduled tick. For example, run 02 has PID 6178 alive at 25.057 and 35.031 seconds and its app log records startup at 21:08:22.935Z. Updated the sampling schedule to preserve the required 30-second PID check after a delayed diagnostic. Dispatch 44173347606 is not a valid acceptance run; both apps must be rerun with this correction.
 
 MAUI also completed 20 repetitions in dispatch 44173347606. Three were marked failed (runs 06, 13, 20). Run 13's PID appeared at the 40-second sample (`firstSeenAtSeconds=46`), and the app log records startup at 22:07:39.578Z; this missed the required 30-second threshold. Runs 06 and 20 did not print a PID during the 60-second window and had no timeline process observations, although their copied app logs record later startup at 21:26:24.763Z and 22:47:50.613Z respectively. These are delayed simulator launches, not observed process exits, and no app crash reports were collected. The dispatch is not a valid acceptance run because its Avalonia 30-second sample was skipped; the corrected two-app runs remain pending.
+
+### 2026-11-19, codex-20261117 — dispatch 44194058365
+Both iOS builds and preflight passed; both apps completed 20 repetitions. MAUI had 1/20 failures and Avalonia 4/20. The PID method distinguishes these from the previous launchctl timeouts: none of these five failures showed an observed PID exit, and all summaries had `crashReports=0`.
+
+- MAUI run 20: `process-timeline.txt` says `30.132 ... no ... not-launched` and `50.031 ... yes 92498 alive`; the app log says `2026-11-18 00:31:05.239 ... starting in the MAUI shell`. This is a late launch; PID 92498 was alive at 50 and 60 seconds, not an observed exit.
+- Avalonia run 07: timeline at 30.044 seconds is `no / not-launched`; it first observes PID 34133 alive at 45.060 seconds. The app log says `2026-11-17 23:37:58.518 ... starting in the Avalonia iOS shell`. This is a late launch after the 30-second threshold, not an observed exit.
+- Avalonia run 09: timeline at 30.644 seconds is `no / not-launched`; PID 43005 is alive at 46.187 seconds. The app log says `2026-11-17 23:47:19.792 ... starting in the Avalonia iOS shell`. This is a late launch, not an observed exit.
+- Avalonia run 12: timeline samples through 55.156 seconds have no PID; `launch.log` eventually contains `com.eliseev.imagegen.avalonia: 59244`. The app log says `2026-11-18 00:03:04.196 ... starting in the Avalonia iOS shell`, after the last sample (`00:02:57Z`). The app launched after the 60-second observation window; there is no evidence that a started PID exited.
+- Avalonia run 14: timeline at 30.026 seconds is `no / not-launched`; PID 66597 is alive at 50.148 and 60.242 seconds. The app log says `2026-11-18 00:11:29.992 ... starting in the Avalonia iOS shell`. This is a late launch, not an observed exit.
+
+The complete timeline and app-log files are retained under `tmp/task-285/dispatch-44194058365-{maui,avalonia}/`. A second corrected 20-repeat dispatch is running as [44475603240](https://github.com/r-eliseev/studious-goggles/actions/runs/44475603240); its results are needed before submitting the task.

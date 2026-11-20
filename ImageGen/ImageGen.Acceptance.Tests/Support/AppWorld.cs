@@ -48,6 +48,7 @@ public sealed class AppWorld : IDisposable
             new FakeOpenRouter.ImageModel("vendor/beta", "Beta Pro", SupportsSeed: false, PricePerMegapixel: null),
         ]);
         Time = new FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+        Delay = new FakeTimeAsyncDelay(Time);
         Seeds = new SequenceSeedSource();
         Platform = new FakePlatform();
     }
@@ -59,6 +60,8 @@ public sealed class AppWorld : IDisposable
     public FakeOpenRouter OpenRouter { get; }
 
     public FakeTimeProvider Time { get; }
+
+    public FakeTimeAsyncDelay Delay { get; }
 
     public TimeZoneInfo LocalTimeZone { get; set; } = TimeZoneInfo.Local;
 
@@ -156,12 +159,15 @@ public sealed class AppWorld : IDisposable
         services.ConfigureHttpClientDefaults(builder => builder.ConfigurePrimaryHttpMessageHandler(() => Network));
         services.AddHttpClient(FalImageProvider.TransportName).ConfigurePrimaryHttpMessageHandler(() => Network);
         services.AddSingleton<TimeProvider>(Time);
+        services.AddSingleton<IAsyncDelay>(Delay);
         services.AddSingleton(LocalTimeZone);
         services.AddSingleton<ISeedSource>(Seeds);
         services.AddSingleton<IClipboardService>(Platform);
         services.AddSingleton<IDialogService>(Platform);
         services.AddSingleton<IImageSaver>(Platform);
         services.AddSingleton<IFilePickerService>(Platform);
+        services.AddSingleton<IImageViewerService>(Platform);
+        services.AddSingleton<IImageComparisonService>(Platform);
     }
 
     private async Task DrainBackgroundWorkAsync(CancellationToken cancellationToken)
@@ -243,5 +249,19 @@ public sealed class AppWorld : IDisposable
     private sealed class WorldAppPaths(string dataDirectory) : IAppPaths
     {
         public string DataDirectory { get; } = dataDirectory;
+    }
+}
+
+public sealed class FakeTimeAsyncDelay(TimeProvider timeProvider) : IAsyncDelay
+{
+    private int _delayCount;
+
+    public int DelayCount => Volatile.Read(ref _delayCount);
+
+    public Task DelayAsync(TimeSpan delay, CancellationToken cancellationToken)
+    {
+        var task = Task.Delay(delay, timeProvider, cancellationToken);
+        Interlocked.Increment(ref _delayCount);
+        return task;
     }
 }
