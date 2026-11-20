@@ -1,5 +1,7 @@
 # Software factory concept: working folder
 
+**Resuming a conversation? Start with [`SESSION-STATE.md`](SESSION-STATE.md)** (resume prompt, agreements, where we stopped, what waits for the owner).
+
 **Goal (owner, 2026-11-17):** an **instruction (guide) on how to build a universal software factory**. The definition, the sources, the catalog and the concepts are means to that goal, not the goal. The guide must treat people and agents without a difference in kind and must state clearly why (see `definition.md`, "executor profile"; task 292).
 
 We are building a **universal** software-factory system, not a patch for one repository. This repository's harness (planner and executor roles, task files, `scripts/`) is one implementation and the first test bed.
