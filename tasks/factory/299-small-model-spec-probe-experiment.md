@@ -1,6 +1,6 @@
 ---
 id: 299
-status: todo
+status: review
 assignee:
 claimed:
 created: 2026-11-18
@@ -36,6 +36,13 @@ Environment: this sandbox has 4 CPUs, 15 GB RAM and reaches huggingface.co (chec
 ## Plan
 
 ## Report
+Done 2026-11-20 to 2026-11-21 (owner, 2026-11-20: run both a local small model and a small Claude model; the assistant pre-writes the hit rules, disputed ones go to the owner).
+- Protocol, rubric and inputs committed before any run: `docs/factory/experiments/small-model-spec-probe/protocol.md` (`19f2732`). Seven cases (162, 097, 069, 067, 068, 105, 113 with fixes 214, 159, 211, 089, 096, 226, 144) and four controls (101, 150, 182, 190); inputs are the task texts at the executor's claim commit.
+- Runs: Qwen2.5 3B (Ollama in Docker, CPU) 5 per spec; Claude Haiku 5.5 5 per spec; Claude Sonnet 5.5 (reference) 3 per spec; all without tools or repository access. Raw outputs in `runs/`, scores with quotes in `scores.csv`, summary in `results.md`.
+- Result (hit = 1, partial = 0.5): qwen 0.13, haiku 0.56, sonnet 0.71. Platform-assumption risks found by haiku and sonnet (162, 069, partly 097); the missing sentence (067) found by no model; unstated transitions (105) only as generic questions. Noise: 10 to 25 items per run on every spec, including two-line controls.
+- Recommendation: do not use the local 3B model; a small Claude model only with a changed protocol (two narrow prompts, hard output limit, new measurement). Details and limits in `results.md`.
+- Disputed score for the owner: haiku 097 run 5 (counted as hit).
+- Cost: haiku $0.088, sonnet $1.07, qwen CPU time about 60 minutes.
 
 ## Review
 

@@ -1,0 +1,92 @@
+model,spec,case,run,score,evidence
+haiku,162,swipe-row-tap,1,hit,"Risk 1: TapGestureRecognizer on Grid inside SwipeView; on Android the same gesture conflict may reappear"
+haiku,162,swipe-row-tap,2,hit,"Risk 1: Grid with a tap recognizer inside a SwipeView can still lose the gesture to the swipe recognizer"
+haiku,162,swipe-row-tap,3,hit,"Risk 1: tap on the Grid may still lose to SwipeView gesture handling on Android"
+haiku,162,swipe-row-tap,4,hit,"Risk 2: SwipeView may still intercept the gesture; step 1 does not guarantee the fix"
+haiku,162,swipe-row-tap,5,hit,"Risk 1: TapGestureRecognizer on a Grid inside SwipeView may still lose the tap on Android"
+sonnet,162,swipe-row-tap,1,hit,"Risk 2: a tap gesture on a Grid inside SwipeView can still fail on Android; step 5 is then the real fix"
+sonnet,162,swipe-row-tap,2,hit,"Assumption 2: no evidence that the tap gesture avoids the same conflict"
+sonnet,162,swipe-row-tap,3,hit,"Risk 1: TapGestureRecognizer inside SwipeView may be swallowed; plan for step 5 early"
+haiku,097,autoscroll-tall-row,1,partial,"Question 4: a tall last run may leave the bottom hidden while follow resumes (no link to ScrollTo or the gesture loop)"
+haiku,097,autoscroll-tall-row,2,partial,"Question 3: last row taller than the viewport, last index reached but not its bottom"
+haiku,097,autoscroll-tall-row,3,miss,
+haiku,097,autoscroll-tall-row,4,miss,
+haiku,097,autoscroll-tall-row,5,hit,"Assumption 1: ScrollTo(index, End) assumed to land the last card's bottom edge; the plan relies on it (disputed: does not name the tall row)"
+sonnet,097,autoscroll-tall-row,1,hit,"Assumption 3 (ScrollTo End on Android for rows taller than the viewport) and risk 2 (scroll down to last index snaps the reader)"
+sonnet,097,autoscroll-tall-row,2,hit,"Assumption 3 and risk 4: tall last row, nudge down snaps to the end"
+sonnet,097,autoscroll-tall-row,3,hit,"Assumption 2: RecyclerView often aligns an oversized item by its top"
+haiku,069,touch-behavior-children,1,hit,"Risk 3: LongPressCommand on TouchBehavior may conflict with the Button or tap handler; which element receives the gesture"
+haiku,069,touch-behavior-children,2,partial,"Assumption 5: long press conflicts with scrolling"
+haiku,069,touch-behavior-children,3,partial,"Risk 3: inner button clicks may swallow pointer events (reverse direction)"
+haiku,069,touch-behavior-children,4,partial,"Risk 3: context menu on the card fires on child icon buttons (event routing, Avalonia)"
+haiku,069,touch-behavior-children,5,hit,"Risk 3: long press on a card that contains buttons can conflict with the button taps themselves"
+sonnet,069,touch-behavior-children,1,hit,"Risk 3: TouchBehavior may consume taps; CommandParameter binding inside DataTemplate is a problem point"
+sonnet,069,touch-behavior-children,2,hit,"Risk 3: TouchBehavior may break the card's own tap; long press fires together with the tap"
+sonnet,069,touch-behavior-children,3,hit,"Risk 2: TouchBehavior can intercept taps; conflict with the ... button's tap"
+haiku,067,sidebar-no-refresh,1,miss,
+haiku,067,sidebar-no-refresh,2,miss,
+haiku,067,sidebar-no-refresh,3,miss,
+haiku,067,sidebar-no-refresh,4,miss,
+haiku,067,sidebar-no-refresh,5,miss,
+sonnet,067,sidebar-no-refresh,1,miss,"Only IsCurrent mark lost on list reload (not stale titles or run counts)"
+sonnet,067,sidebar-no-refresh,2,miss,"Only IsCurrent ordering race"
+sonnet,067,sidebar-no-refresh,3,miss,"Only IsCurrent reapplied on list refresh"
+haiku,068,run-header-static,1,partial,"Risk 5: subscription without unsubscribe gives a stale header under parallel updates"
+haiku,068,run-header-static,2,hit,"Risk 2: update path left open; if generations change without PropertyChanged the header goes stale"
+haiku,068,run-header-static,3,hit,"Risk 2: spec does not say which; a missed notification leaves the header stale"
+haiku,068,run-header-static,4,partial,"Question 1: which one is intended and who owns recalculation"
+haiku,068,run-header-static,5,hit,"Risk 1: two options without choosing one invites inconsistent updates"
+sonnet,068,run-header-static,1,partial,"Risk 2: subscriptions leak, recompute races (risk of the mechanism, not of it being undecided or untested)"
+sonnet,068,run-header-static,2,partial,"Risk 3: may be stale if generations are replaced"
+sonnet,068,run-header-static,3,hit,"Risk 2: spec does not say which of the two options to choose; leaks and races"
+haiku,105,index-status-stuck,1,partial,"Question 5: re-enable after Disable (cost confirmation), not the status"
+haiku,105,index-status-stuck,2,miss,
+haiku,105,index-status-stuck,3,partial,"Question 5: recovery after Failed: does EnableAsync restart"
+haiku,105,index-status-stuck,4,partial,"Risk 6: stuck in Failed with no resume action"
+haiku,105,index-status-stuck,5,partial,"Question 1: is Ready sticky after the first pass or do edits flip it back"
+sonnet,105,index-status-stuck,1,partial,"Question 6: after Failed, retry button or toggle"
+sonnet,105,index-status-stuck,2,partial,"Question 3: after Failed, manual restart or auto resume"
+sonnet,105,index-status-stuck,3,partial,"Questions 6 and 7: Failed recovery; incremental updates after Ready"
+haiku,113,file-save-not-terminal,1,partial,"Risk 6: supervisor swallows, row may remain Running (DB failure, not file save)"
+haiku,113,file-save-not-terminal,2,partial,"Question 3: supervisor-observed failure leaves the generation Running indefinitely"
+haiku,113,file-save-not-terminal,3,hit,"Risk 3: the 106 boundary test change stops terminal persistence after a file-save failure; Question 1: silent stall"
+haiku,113,file-save-not-terminal,4,partial,"Question 2: terminal update fails, permanently Running; Risk 5: orphaned file"
+haiku,113,file-save-not-terminal,5,partial,"Questions 4 and 5: generation left Running, UI never learns"
+sonnet,113,file-save-not-terminal,1,hit,"Question 2: if the file Save throws the Failed path would persist Failed; step 6 conflicts"
+sonnet,113,file-save-not-terminal,2,partial,"Question 2: file orphaned when the terminal update fails"
+sonnet,113,file-save-not-terminal,3,hit,"Question 5: DB write succeeded but file save failed (the 106 boundary test): what status does the DB hold"
+qwen-local,097,autoscroll-tall-row,1,miss,
+qwen-local,097,autoscroll-tall-row,2,miss,"Risk 3: image size changes affect the viewport (generic)"
+qwen-local,097,autoscroll-tall-row,3,miss,"Question 1: dynamic item sizes (generic)"
+qwen-local,097,autoscroll-tall-row,4,miss,
+qwen-local,069,touch-behavior-children,1,miss,"Only the toolkit version"
+qwen-local,069,touch-behavior-children,2,miss,
+qwen-local,069,touch-behavior-children,3,miss,
+qwen-local,069,touch-behavior-children,4,partial,"Risk 4: TouchBehavior may not work with existing gesture recognizers"
+qwen-local,069,touch-behavior-children,5,miss,
+qwen-local,067,sidebar-no-refresh,1,partial,"Risk 3: changes not synchronized between views sharing the session model (generic)"
+qwen-local,067,sidebar-no-refresh,2,miss,
+qwen-local,067,sidebar-no-refresh,3,miss,
+qwen-local,067,sidebar-no-refresh,4,miss,
+qwen-local,067,sidebar-no-refresh,5,miss,
+qwen-local,068,run-header-static,1,miss,
+qwen-local,068,run-header-static,2,miss,
+qwen-local,068,run-header-static,3,miss,
+qwen-local,068,run-header-static,4,miss,
+qwen-local,068,run-header-static,5,miss,
+qwen-local,097,autoscroll-tall-row,5,miss,"Risk 2: jumping during scrolling from concurrent users (generic, wrong cause)"
+qwen-local,162,swipe-row-tap,1,partial,"Question 5 restates step 5 (remove SwipeView if steps 1-2 fail); no doubt about the tap fix itself"
+qwen-local,162,swipe-row-tap,2,partial,"Risks 1-2: SwipeView touch sensitivity reveals buttons (restates the reported bug)"
+qwen-local,162,swipe-row-tap,3,partial,"Risk 1: gesture recognizers may open Rename/Delete unintentionally (generic)"
+qwen-local,162,swipe-row-tap,4,miss,
+qwen-local,162,swipe-row-tap,5,partial,"Risk 1: a tap with a slight horizontal offset may not open the session (restates the bug)"
+qwen-local,105,index-status-stuck,1,partial,"Question 2: is a failed index update recoverable (generic)"
+qwen-local,105,index-status-stuck,2,miss,
+qwen-local,105,index-status-stuck,3,miss,
+qwen-local,105,index-status-stuck,4,miss,"Only fallback when key or network is missing, not recovery"
+qwen-local,105,index-status-stuck,5,miss,
+qwen-local,113,file-save-not-terminal,1,partial,"Supervisor may leave a failed task in an unexpected state (generic)"
+qwen-local,113,file-save-not-terminal,2,miss,
+qwen-local,113,file-save-not-terminal,3,miss,"Generic data inconsistencies"
+qwen-local,113,file-save-not-terminal,4,partial,"Risks 4 and 8: files left inconsistent after a failed task; stuck states"
+qwen-local,113,file-save-not-terminal,5,miss,
