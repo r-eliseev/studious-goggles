@@ -66,6 +66,10 @@ The last message (2026-11-18) answered three questions (how seL4 proofs work: C 
 - **Warp**: control plane and data plane lists in the owner's notes come from a slide (confirmed), efficiency = software shipped / (tokens + human time), two loop levels; the warp.dev definition of a factory differs from the repository's (`notes/warp-site-and-ai-engineer-page.md`).
 - **Research results**: scripted harness around agents (ACP does not enforce control; needs OS-level isolation and host-served tools); classic factory adoption (first pass); context management (repository as memory, files for large results with a fixed output contract); formal specs (cheap proofs by LLM are real for small units, the spec problem remains); small-model probe (ClarifyGPT-style sampling is established, the confound is capability versus ambiguity).
 
+## 5a. Update 2026-11-23
+- Task 299 was executed in another session (results in `experiments/small-model-spec-probe/results.md`, task report): local 3B model not useful (hit rate 0.13), Haiku 0.56, Sonnet 0.71; the missing-sentence case was found by no model; one disputed score for the owner (haiku, case 097, run 5). Section 4.2 item 1 is therefore answered by events (both a local model and a small Claude model were run, the assistant pre-writes the hit rules, disputed ones go to the owner).
+- The owner started a digression on spec-driven development and spec trees: `research/spec-driven-development-approaches-and-tree.md`, thread `spec-tree-organization`. After the digression, return to the walkthrough (section 4.1).
+
 ## 6. First actions in the new session
 
 1. Sync and read (section 1). 2. Tell the owner in a few sentences where we are. 3. Ask the two items of 4.2 (small model choice, who approves the hit rule), unless the owner already answered in the resume message. 4. If the owner says "go on" without answering, continue the walkthrough with `old-new-same-axis-objection` (section 4.1) and keep task 299 pending. 5. Update this file at the end of the session (section 4 changes), commit and push.

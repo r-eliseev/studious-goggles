@@ -192,3 +192,11 @@ Applicability to this repository's planner/executor harness: **exists** (already
 | `pseudocode-spec-level` | Pseudocode as a spec level | order, conditions, data flow stated in pseudocode | arXiv 2305.11790 | candidate |
 | `deterministic-path-for-simple-tasks` | Deterministic path first | a generator handles inputs that parse; parse failure routes the task to the LLM | owner's idea 2026-11-18 | hypothesis |
 | `vericoding` | Vericoding | LLM writes code and proof from a formal spec, proof checker rejects invalid proofs | arXiv 2509.22908; Kleppmann 2025 | candidate (small problems) |
+| `spec-three-depths` | Spec-first, spec-anchored, spec-as-source | how long a spec lives and who edits the code | Böckeler 2025 | candidate |
+| `spec-current-truth-tree` | Current-truth spec tree by domain | behaviour contracts by domain, changed only by reviewed deltas | OpenSpec concepts | candidate |
+| `spec-change-folder-with-deltas` | Change folder with delta specs | proposal, design, tasks, ADDED/MODIFIED/REMOVED requirements, archived after merge | OpenSpec concepts | candidate |
+| `spec-per-feature-folder` | Per-feature spec folder | requirements, design, tasks (Kiro); spec, plan, research, data model, contracts, tasks (spec-kit) | Kiro docs; spec-kit | candidate |
+| `constitution-and-steering` | Constitution and steering files | project principles and always-on context, with gates or inclusion modes | spec-kit; Kiro | candidate |
+| `requirements-first-vs-design-first` | Requirements-first or design-first | which artifact is written first | Kiro docs | candidate |
+| `spec-progressive-rigor` | Progressive rigor | lite spec by default, full spec for higher risk | OpenSpec concepts | candidate |
+| `path-scoped-spec-loading` | Load specs by path | root rules plus the spec of the module being edited | Warp rules docs; Kiro inclusion modes | candidate |
