@@ -1,0 +1,161 @@
+
+AWS Builder Center
+...
+‘Twas the night before launch, and our agents weren’t building
+AWS Builder Center
+‘Twas the night before launch, and our agents weren’t building
+‘Twas the night before launch, and our agents weren’t building
+AWS Emulator, a local emulator of AWS services that you can run on your machine to build and test your AWS applications, was written entirely by autonomous AI agents. This article talks about some of the techniques the team employed that ensured they had a robust and stable software factory.
+Series
+: 
+AWS Emulator
+(2 articles)
+1
+Teach an agent to fish and it will maintain your code for a lifetime
+2
+‘Twas the night before launch, and our agents weren’t building
+This article
+Goldberg, Matt
+Follow
+AWS Employee
+Amazon Thought Leader
+Senior Principal Engineer, AWS Emulator
+Published Nov 25, 2026
+Last modified Nov 25, 2026
+19
+13
+I grew up celebrating Christmas. I fondly recall trying to go to bed the night before, restlessly thinking about what Santa might bring. My parents always waited until the last minute, wrapping presents late on Christmas Eve. One year, my father was so exhausted that he wrote notes on all the presents like “To: Santa, From: Matt” instead of the other way around. My brothers and I, still believing in the magic of Santa, were very confused.
+﻿
+Our team has been building the system that drives the agents that build AWS Emulator for months. It’s been some of the most exciting work I’ve done in my career. I often stayed up late trying to push out fixes to improve how the agents would work. I felt like my childhood self, going to bed after committing my code and waiting to see what these magical agents would bring me the next morning. I often woke up wishing it was just a mislabeled present. Things often just didn’t work.
+﻿
+I have a confession. We were actually in an outage when we launched AWS Emulator on November 11
+th
+. If you look at the release history, there’s a roughly 39-hour gap that starts around 2am Berlin time on the 11
+th
+ when the agents released 
+version 1.0.322
+ and ends around 5pm the next day when they released 
+version 1.0.336
+. Before and after this, our agents have mostly released every 2 hours. I say mostly because they don’t achieve that every time. In fact, as I write this, they haven’t released in about 10 hours.
+﻿
+In this article, I’m going to share some of the engineering that’s gone into achieving an unsupervised 2-hour release cadence, and why sometimes the agents still bring us coal.
+﻿
+An unconventional choice for managing agents’ work
+A lot of people are building software factories these days. The approach I’ve most typically seen starts with an AI coding agent that runs on a developer’s machine with an orchestrator that delegates to sub-agents. They proceed to add functionality on top that enables autonomous building, such as tracking work items or defining workflows. AWS Emulator is built with a software factory that takes a radically different approach.
+﻿
+Our team worked backwards from the requirement that the agents’ software development lifecycle (SDLC) needed to be operationally stable at AWS scale. The system is divided into 
+three teams of agents
+: one that generates fidelity tests and verifies them against real AWS, one that replays the fidelity tests to find gaps in the emulator, and one that fixes the issues. Each of these is a deterministic workflow that is modeled as a state machine on AWS StepFunctions.
+﻿
+For example, the state machine that fixes issues has the following steps:
+Claim the issue. This ensures that multiple agents don’t try to work on the same issue concurrently.
+Create a feature branch for the agent to work on.
+Start an AgentCore Runtime session, passing in the issue that needs to be fixed.
+Poll for the result of the session. Because the agent can work on the issue for many hours, we loop between this step and a wait state until the session has finished.
+Run the fidelity test suite to generate the fidelity score for the commit.
+Mark the issue as completed. This releases the earlier claim.
+﻿
+Using AWS StepFunctions gives our system several characteristics that are important. First, we’ve reduced the cognitive load on both us and the agents, because the state machine is deterministically modeled and edge cases can be easily reasoned about. Second, we can start many executions of the state machine in parallel, and trust that AWS StepFunctions will reliably handle the scale for us. Perhaps most importantly, by breaking up our workflow into a state machine with many small steps, we can handle failures in a more reliable way.
+﻿
+An earlier version of our state machine did not have the second step that created a feature branch. Rather, this was done from within AgentCore Runtime. The problem is that starting an AgentCore Runtime session is expensive, with our observed p50 latency taking over a minute. When a call to AWS CodeCommit to create a branch fails, you don’t really want to throw that work away. We retried from within AgentCore Runtime, obviously with 
+exponential backoff and jitter
+, but we were not retrying with enough of a delay and just ended up getting throttled. As soon as we moved creation of the branch out of AgentCore Runtime and into a dedicated step of our state machine, the system stabilized because we could offload retries to AWS StepFunctions which can back off more aggressively to distribute traffic. When we made this change on October 19
+th
+, our system recovered and the agents were able to fix issues again.
+﻿
+Unlocking agents to build and review a large Rust application
+Our agents run on AgentCore Runtime and are modeled as 
+Strands Agents
+. AgentCore Runtime makes it very simple for us to deploy the agents that generate fidelity tests, find issues, and fix those issues. But the agents are working on a very large Rust project. AgentCore Runtime offers up to 8 vCPUs, 32GB of RAM, and a maximum runtime of 8 hours. This was not enough for our agents, especially given that reviewers can take a very long time to build the Rust crates. The reviewers that run in the merge gate before changes are merged onto mainline take anywhere from a few seconds to many minutes, with the longest running one taking over an hour.
+﻿
+AWS announced 
+AgentCore Runtime instances
+ on August 6
+th
+, and we were among the first customers to on board. With AgentCore Runtime instances, we were able to select more powerful hardware and run our sessions for longer. This was essential not only to build the emulator’s code, but to ensure that we could run multiple reviewers in parallel during the merge gate while forcing the agents to iterate through the merge gate multiple times until their code met our bar.
+﻿
+Working on a code repository at agentic levels
+We publish the release branch of the AWS Emulator source code to 
+GitHub
+ for you to look at and to use. But our agents actively collaborate on the codebase using CodeCommit. This repository and the agents’ use of it look very different than a normal code repository. As of November 22
+nd
+, the repository has over 130K branches, and the agents create about 6,300 branches per day. The mainline branch has about 40K commit. The repository is currently around 80 GB when fully cloning it.
+﻿
+Handling this load required us to rethink how we use CodeCommit. The first thing that we saw fail on our side was calling git clone. With this many branches and commits, our client would timeout trying to pull down the entire repository. But all this data was unnecessary. For example, the agent fixing an issue only needs the tip of their feature branch, and enough of the history of that branch and mainline to understand where they diverged. We updated our calls to git clone to pass in the flags 
+–single-branch
+, to only retrieve the feature branch, and 
+--depth=1
+, to only get the latest commit on that branch. We then wrote logic to progressively deepen the history of the feature branch and mainline to find their shared ancestor.
+﻿
+We also made improvements to CodeCommit to handle agentic use cases like ours. For example, we updated CodeCommit to serve repeat clones of the same commit from a cache. This reduced shallow clones for us from 60-90s down to around 7s. And we optimized how pushes work for very large repos, reducing the latency of our slowest pushes from 21.8s to 3.2s. We’re continuing to invest in CodeCommit to handle this kind of agentic workload. What’s exciting is not just that it’s helped stabilize our system, but it will help any customers building a software factory.
+﻿
+Handling merge conflicts at scale
+One interesting thing about using CodeCommit at this scale is that agents run into merge conflicts. We use a process that mirrors a typical pull request workflow. We create a feature branch from the tip of mainline and hand it to the agent. The agent works on their changes and hands it to the merge gate. The merge gate performs a 3-way merge to pick up any changes pushed to mainline while the agent was working on their fix before then running the reviewers. Once the reviewers are done, the merge gate attempts a squash merge back into mainline. Because of how long the reviewers take, mainline can move considerably underneath the agent. This often led to merge conflict, which resulted in agents spending hours doing work only to have it thrown away.
+﻿
+We’ve driven down the number of merge conflicts by helping the agents organize their code better. For example, each service has a directory 
+tests/all
+ for unit tests. The agents would write one file in that directory per test and then register the test in the file 
+tests/all.rs
+. This file naturally became incredibly contentious, with every agent touching that same service needing to edit that file. Most fixes would run into a merge conflict, and the agent would need to go back through the merge gate. We completely removed this point of contention by guiding the agents to use automod, a Rust library which uses a macro to auto-generate the mod statements. Compare the files all/main.rs (see above) and all.rs in commit 
+c9ecacb
+.
+﻿
+Constantly testing the infrastructure
+From the beginning, we’ve approached AWS Emulator more like a traditional distributed system problem than a purely agentic one. That also means that we’ve invested in things like canaries. For example, we periodically pass the 
+AWS API Models
+ to our system and ask them to build an emulator from scratch and measure the fidelity score.
+﻿
+The graph above shows the fidelity score of an SQS-only emulator. We run the project until at least 80% of the fidelity tests are passing or 24 hours have elapsed. Then we start a new one. We run canaries for other combinations of services besides just SQS and fire alarms if they’re not working.
+﻿
+Agents run into the same things as humans
+So, let’s go back to the outage that we had on launch day. I just spent most of this article telling you about how much we’ve invested in our infrastructure. That infrastructure has been remarkably stable since well before the launch. The agents have fixed between 1400 and 2200 issues every day since launch.
+﻿
+What actually happened was a very relatable story. An agent pushed a change that broke the build and the release pipeline blocked it. The release pipeline files a high-priority issue to fix the build in these situations. But the turnaround time is much higher than if it were caught before pushed to mainline.
+﻿
+There are two main ways that this happens. One is that two agents concurrently working on a service can break each other’s logic without touching the same file and causing a merge conflict. For example, commit 
+d587c76096
+ added a test called 
+rds_cluster_one_database_behind_both_doors.rs
+, which verified that a table created on the AWS RDS could be read through a native PostgresSQL connection. But as this was being built, commit 
+d05a3b765d
+ updated the business logic to always return a URL in the form of “
+<identifier>.cluster-<label>.<region>.<suffix>”
+. The test no longer worked after this update, because the DNS name did not resolve to the emulator and thus could not be used in the test.
+﻿
+The other way that agents break each other is with flakey tests. As the agents write their unit tests, they adopt patterns similar to what any of us might do. For example, the test 
+the_version_a_session_is_served_follows_the_clock_through_the_rollout
+ starts an AppConfig deployment and then asserts that the next poll still returns the previous version. But this is only true for 3 seconds, a hard coded value in the actual service logic in the emulator. If the host stalls for more than 3 seconds, this test can and has failed. With 400 agents concurrently fixing issues on this code base, it’s not uncommon for us to run into both cases.
+﻿
+Takeaways
+I think one of the best decisions we made on this project was to approach the software factory as a distributed system. We’ve chosen to build on top of scalable AWS services like StepFunctions, AgentCore Runtime Instances, and CodeCommit, as well as others that I haven’t specifically talked about in this article such as CodeArtifact, CodePipeline, and CodeBuild. This has made it possible to build a system that we just trust works.
+﻿
+We’re still working on helping the agents not break the pipeline. The techniques we’ve used to avoid merge conflicts have enabled the agents to crank out fixes at a very high rate. The next step is to help them not break each other and to stop writing flakey tests.
+﻿
+Oh, and I mentioned earlier that the agents had broken the pipeline while I was writing this. As expected, they worked their way through it and just released version 
+1.0.577
+. I’m going to head to bed now, trusting the agents will bring us more such presents by morning.
+#
+agentic-ai
+#
+ai-engineering
+#
+ai-for-developers
+#
+developer-tools
+Series
+: 
+AWS Emulator
+(2 articles)
+1
+Teach an agent to fish and it will maintain your code for a lifetime
+2
+‘Twas the night before launch, and our agents weren’t building
+This article
+Any opinions in this article are those of the individual author and may not reflect the opinions of AWS.
+19
+13
+Enjoyed reading this content? Let the author know!
+Your likes, comments, shares, and saves help creators reach more builders.
+Loading recommendations
+Loading article
+Loading recommendations

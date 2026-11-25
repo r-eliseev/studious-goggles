@@ -200,3 +200,14 @@ Applicability to this repository's planner/executor harness: **exists** (already
 | `requirements-first-vs-design-first` | Requirements-first or design-first | which artifact is written first | Kiro docs | candidate |
 | `spec-progressive-rigor` | Progressive rigor | lite spec by default, full spec for higher risk | OpenSpec concepts | candidate |
 | `path-scoped-spec-loading` | Load specs by path | root rules plus the spec of the module being edited | Warp rules docs; Kiro inclusion modes | candidate |
+| `reference-implementation-as-oracle` | Reference implementation as the oracle | a spec plus a real system whose behaviour the agents' tests are verified against; the factory's score is the fidelity against it | AWS Emulator articles | candidate |
+| `three-agent-teams-by-role` | Three agent teams by role | one team writes and verifies tests, one replays them and files issues, one fixes one issue each | AWS Emulator launch post | candidate |
+| `workflow-state-machine-around-agents` | Deterministic state machine around agents | claim, branch, agent session, poll, check, release the claim; retries and backoff outside the agent session | AWS Emulator article 2 | candidate |
+| `merge-gate-with-parallel-reviewers` | Merge gate with parallel reviewers | compile, standards, security, fidelity-regression reviewers; failing changes go back to the agent | AWS Emulator launch post | candidate |
+| `agent-immutable-vendored-framework` | Agent-immutable framework | human-owned framework code the agents cannot edit (checked), with override hooks (escape hatches) | AWS Emulator article 1 and `AGENTS.md` | candidate |
+| `file-size-gate` | File-size gate | a reviewer that rejects touched files over a limit (5,000 lines) so files fit the context window and conflicts drop | AWS Emulator article 1 | candidate |
+| `issue-references-failing-checks` | Issue references its failing checks | a task states which checks fail, so the fixer can verify its own work | AWS Emulator article 1 | candidate |
+| `factory-canary` | Factory canary | periodically rebuild a small system from scratch with the factory and score it; alarm on failure | AWS Emulator article 2 | candidate |
+| `external-issue-classification-as-factory-recall` | External issues classified as factory defects | public reports split into already fixed, known not fixed, never found (no check existed), real feature requests | AWS Emulator article 1 | candidate |
+| `semantic-conflict-without-merge-conflict` | Semantic conflicts between agents | two changes touch different files and break each other's logic; flaky agent-written tests; unsolved at the source | AWS Emulator article 2 | observed problem |
+| `no-internet-no-customer-data-for-agents` | No internet and no real data for agents | boundaries against prompt injection and customer-data exposure | AWS Emulator article 1 | candidate |

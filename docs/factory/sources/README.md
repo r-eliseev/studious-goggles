@@ -18,4 +18,6 @@ Raw material for the software-factory concept. Sources are stored verbatim; inte
 | `ai-engineer-talk-page` | `ai-engineer-talk-page/`: the AI Engineer page of the Warp talk (site essay, machine transcript, slide index of the first 447 s) | secondary (the essay is derived; the transcript is machine) | en | `notes/warp-site-and-ai-engineer-page.md` |
 | `warp-dev-site` | `warp-dev-site/`: text of the warp.dev homepage, with the vendor's definition of a factory (FAQ) | secondary (vendor marketing, state of 2026-11-18) | en | `notes/warp-site-and-ai-engineer-page.md` |
 
+| `aws-emulator` | `aws-emulator/`: two articles by the AWS Emulator lead engineer, the launch post, the public repository's `AGENTS.md` and `README.md` | secondary, practitioner report by a vendor employee (single case) | en | `notes/aws-emulator.md` |
+
 Rules: sources are never edited; when sources conflict, the primary source and the owner's later statements win; every claim in a note names its source by name.

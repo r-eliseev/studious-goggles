@@ -1,0 +1,152 @@
+
+AWS Builder Center
+...
+Teach an agent to fish and it will maintain your code for a lifetime
+AWS Builder Center
+Teach an agent to fish and it will maintain your code for a lifetime
+Teach an agent to fish and it will maintain your code for a lifetime
+AWS Emulator, a local emulator of AWS services that you can run on your machine to build and test your AWS applications, was written entirely by autonomous AI agents. This article talks about some of the techniques the team employed that taught the agents how to effectively build the AWS Emulator.
+Series
+: 
+AWS Emulator
+(2 articles)
+1
+Teach an agent to fish and it will maintain your code for a lifetime
+This article
+2
+‘Twas the night before launch, and our agents weren’t building
+Goldberg, Matt
+Follow
+AWS Employee
+Amazon Thought Leader
+Senior Principal Engineer, AWS Emulator
+Published Nov 19, 2026
+Last modified Nov 25, 2026
+38
+16
+I told a little white lie.
+﻿
+We launched 
+AWS Emulator last week
+ and I said that 100% of the code was written by agents. That’s mostly true. As of November 19
+th
+, the AWS Emulator project has about 20 million lines of Rust code that has been written entirely by agents without any human reviewing it over a roughly four-week period. To achieve that, our team had to write about 1 million lines of code ourselves over the past five months.
+﻿
+There’s a famous saying that if you catch a man a fish, he’ll eat for a day; but if you teach him to fish, he’ll eat for a lifetime. Our goal was to build an emulator that faithfully behaves like AWS, a huge surface area that we are just scratching the surface of. To do this, we set out to teach our agents to fish.
+﻿
+Catching an agent a fish
+I built an initial version of AWS Emulator in February. It was a one-shot implementation of the AWS APIs built over a weekend, and there were obviously gaps in it. Our team used it for about a month before I released it internally to any Amazon developer. I then asked those developers to go fishing for me.
+﻿
+My approach was to crowdsource the bug bashing. Anyone in the company could report an issue. An AI agent running on my personal machine would monitor for issues and start working on them after some basic input validation. The agent would then send me a pull request, and I would merge it after a cursory scan. This process used the same “issues/” folder structure that you see today in the 
+AWS Emulator code repository
+.
+﻿
+I got mixed reviews. Some people loved that their issues were typically addressed within 24 hours. Since launching this version 9 months ago, my agent has fixed almost 1,000 issues. But adoption of the emulator was limited because many developers didn’t want to use a product that required them to find the bugs. There’s a ceiling it will never really push through because it’s reactive to customer feedback instead of proactively building what they need.
+﻿
+Teaching an agent to fish
+Our agents have fixed 17,392 issues in AWS Emulator as of November 19
+th
+. 12,951 of those issues were fixed in the 21 days before we launched on November 11
+th
+ while 4,441 of those have been fixed in the week since. This is possible because we have focused on building a machine that has learned how to find and fix these issues on its own. We’re teaching the agents how to fish. And they’re still learning.
+﻿
+﻿
+﻿
+As of November 19
+th
+, we have 564 issues filed on our public GitHub repository, including already closed ones. These roughly break down into four categories:
+~20% of them are issues that have already been fixed. Our agents are pushing nearly 600 fixes per day, and it’s not surprising that you might be testing against an old version.
+~35% are due to issues that the agents have already found. This means that the agents did not fix a known issue before you noticed.
+~40% are due to an issue that the agents have not yet found. This means that the agents did not create a fidelity test to measure your scenario.
+~5% are feature requests of the emulator itself, for example to support snapshotting the state of the emulator. Our team needs to design and implement this feature so that it works consistently for you.
+﻿
+If an issue falls into one of the first three categories, that means that our agents failed to find and fix the issue before you encountered it. That’s a defect in our system. There are obviously a lot of things that our agents are still learning to do.
+﻿
+Our team’s role is to teach those agents how to more effectively build the emulator. We do this through techniques such as providing agents more context, building tools and libraries for them to use, or refining guardrails to more strictly guide them. There are five primary touchpoints in the system where our team engineers solutions to steer the agents. This is how we teach them to fish.
+﻿
+Teaching an agent how to use AWS
+It’s important that our agents generate high-quality fidelity tests because they are our ground truth. One way that we help agents is by giving them context to generate these tests. We have generally been conservative about giving agents too much context. For example, we don’t give them access to actual AWS usage to protect AWS customer data, and we don’t give them access to the internet to avoid prompt injection attacks.
+﻿
+We initially didn’t let the agents look at anything except for the 
+AWS API models
+. We observed them write high-quality behavioral tests for services like Amazon Simple Queue Service (SQS), Amazon S3, and Amazon DynamoDB Database. But we found that the quality of the fidelity tests varied considerably across services because the models don’t inherently know all of them as well.
+﻿
+The 
+AWS MCP Server
+ provides tools to help agents use AWS more effectively. We gave the agents that generate fidelity tests access to the tool that exposes AWS documentation. Unsurprisingly, exposing curated information about how to use AWS to our agents helped them better reason about what needed to be built. This significantly increased the quality of the fidelity tests generated across AWS services.
+﻿
+Teaching an agent how to tell what’s wrong
+Many agentic workflows build solutions to pass context between agents. In our system, we have one team of agents running the fidelity tests and finding issues, and another team of agents fixing those issues. These agents communicate via issues that are committed to their shared CodeCommit repository, and this becomes their shared context. Our initial implementation of the issues was naïve and simply described what was not working. The agents were not very effective at fixing these.
+﻿
+The problem was that while the agents could reason about the issue, they had no way to verify that their fix actually addressed it. We updated our logic to file issues more intelligently. The agents are now instructed to file issues that group multiple failing fidelity tests together and, importantly, to reference the failing fidelity tests explicitly. With a way to verify their work, our agents more reliably fix the issue they’re supposed to address and thus more quickly increase fidelity. In our testing, agents achieve the same level of fidelity in approximately half the time.
+﻿
+Teaching an agent to build AWS Relational Database Service (RDS)
+When our agents first built RDS, they built their own SQL implementation. And the fidelity tests did pass. But that is because the agents built just enough of the SQL language to ensure the tests passed. RDS support was actually quite high, but predictably incomplete. Agents are very good at building code from scratch but will overfit to your tests if the tests are not comprehensive enough. We added guidance to the agents’ prompts to use libraries available in CodeArtifact. They pulled in SQLite, which enabled them to build a more faithful implementation of RDS. They did the same thing to support Lambda, reaching for RustPython. Polly uses Libvorbis to generate a file that, while not text to speech, is valid audio.
+﻿
+You can see in the code repository that they are still making mistakes. The RDS Postgres and MySQL wire protocols are still written by hand. The agents are building their own implementation of Botocore for use inside Lambda, one service at a time. DynamoDB has its own PartiQL implementation, Rekognition its own face detection, and CodeCommit its own git implementation. The agents will get better over time, as we continue to build tools that help them find the correct existing libraries when possible.
+﻿
+Teaching an agent to serialize an error message
+The agents write code without human supervision. But they’re not allowed to touch everything in the code base. For example, we have checks that ensure that they do not touch the 
+vendor/
+ directory. This directory contains framework-level code that humans “own” and edit with AI coding tools like 
+KiroCrew
+. We use this framework to both enforce certain behaviors such as how authentication is done and to give agents selective flexibility in their implementation.
+﻿
+For example, Smithy defines standard ways to serialize error messages such as when a request is invalid. Most services leverage this standard. Initially, we gave the agents no guidance and let them implement serialization. They do figure it out, but it is slow and they implement it case by case. This leads to an inconsistent experience. To give them a head start, we leveraged the fact that most services use the standard serialization and built it into the vendored code. This worked, until we realized that some AWS services actually build their own serialization.
+﻿
+fn override_routing_error(&self,
+  req: &aws_smithy_runtime_api::http::Request,
+) -> Option<aws_smithy_runtime_api::http::Response> {
+  // A query service's default is the protocol-correct 400 `InvalidAction`, which is
+  // an EC2 ERROR RESPONSE and so closes the same envelope every other one does: this
+  // takes that default rendering, code and message and all, and stamps the envelope
+  // on it rather than wording the failure again.
+  let mut response = self.entry.routing_error_response(req);
+  stamp_envelope(&mut response);
+  Some(response)
+}
+﻿
+We still want to make it easy for agents to do the right thing without much effort. But they need a way to faithfully build the non-standard scenarios. This is an example where we built an escape hatch. Before using the standard serialization, our framework asks the emulated service if it would like to override the serialized error. If it doesn’t, the framework uses the default. This gives agents a way to benefit from reasonable defaults, while being able to adapt the behavior when they need to. You can see in the code above how the agents overwrote EC2's serialization logic in the 
+service.rs
+ implementation.
+﻿
+Teaching an agent to refactor code
+Agents write a lot of code, and they do so very quickly. Before we realized, they had created some files that were incredibly large. At one point, one of the files for the EC2 service was 48K lines of code. This caused two significant problems. First, that much code equates to about 850K tokens. This nearly filled up the agents’ context window, inhibiting their ability to effectively fix issues. Second, it was a huge source of merge conflicts, as multiple agents tried to edit the same file. The agents were unable to make progress on building EC2. They needed to learn how to write maintainable code.
+﻿
+﻿
+﻿
+Each issue fixer works in a feature branch. Before merging their code to mainline, they have to pass through what we call the merge gate. The merge gate’s original purpose was to ensure quality checks. But we’ve found it can be used to guide agents to refactor code. When we encountered the issue with the large EC2 file, we added a reviewer to the merge gate that enforced that no file touched by an agent could exceed 5K lines of code. We also gave the agents tools to efficiently refactor files. Within a day, the agents had broken up 59 files that had each exceeded the 5K limit into smaller more manageable files. This enabled the agents to ship fixes faster, because they ran into roughly half as many merge conflicts while trying to submit their work.
+﻿
+Gone fishing!
+﻿
+﻿
+Agents need tools to verify their changes locally, which is why we initially set out to build AWS Emulator. Agents also offer us a way to emulate the vast AWS surface area at a speed not previously imagined. But this is only possible if agents can operate autonomously. We’ve learned that they can’t do that reliably without our help. We needed to teach them to be self-sufficient, and not to just build features or address gaps as we find them. The above examples are just a few of the techniques we have put in place to guide our agents to effectively build the AWS Emulator. But the concept of teaching agents to fish applies to anyone building with AI.
+﻿
+How are you teaching your agents to fish?
+#
+agentic-ai
+#
+ai-engineering
+#
+ai-for-developers
+#
+developer-tools
+#
+builders-library
+Series
+: 
+AWS Emulator
+(2 articles)
+1
+Teach an agent to fish and it will maintain your code for a lifetime
+This article
+2
+‘Twas the night before launch, and our agents weren’t building
+Any opinions in this article are those of the individual author and may not reflect the opinions of AWS.
+38
+16
+Enjoyed reading this content? Let the author know!
+Your likes, comments, shares, and saves help creators reach more builders.
+Loading recommendations
+Loading article
+Loading recommendations
